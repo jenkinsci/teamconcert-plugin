@@ -1,0 +1,73 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2013 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <?jelly escape-by-default='true'?>
+    
+    <f:block>
+    <table>
+        <f:optionalBlock name="overrideGlobal" title="${%overrideGlobal.title(descriptor.globalUserId, descriptor.globalServerURI)}" field="overrideGlobal" checked="${instance.overrideGlobal}" inline="true" >
+    
+        <j:invokeStatic var="installations" className="com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation" method="allInstallations"/>
+        <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" >
+            <select name="buildTool">
+                <j:forEach var="i" items="${installations}" varStatus="current">
+                    <j:choose>
+                        <j:when test="${instance.buildTool==i.name}">
+                            <option value="${i.name}" selected="SELECTED">${i.name}</option>
+                        </j:when>
+                        <j:otherwise>
+                            <option value="${i.name}">${i.name}</option>
+                        </j:otherwise>
+                    </j:choose>
+                </j:forEach>
+            </select>
+        </f:entry>
+    
+        <f:entry title="${%serverURI.title}"  field="serverURI" >
+            <f:textbox name="serverURI" default="${descriptor.globalServerURI}" clazz="required" checkMessage="${%serverURI.checkMessage}" />
+        </f:entry>
+
+        <f:entry title="${%timeout.title}" field="timeout">
+            <f:textbox name="timeout" default="${descriptor.globalTimeout}" />
+        </f:entry>
+
+        <f:entry title="${%userId.title}"  field="userId" >
+            <f:textbox name="userId" default="${descriptor.globalUserId}" clazz="required" checkMessage="${%userId.checkMessage}" />
+        </f:entry>
+
+        <f:entry title="${%password.title}" field="password" >
+            <f:password name="password" />
+        </f:entry>
+    
+        <f:entry title="${%passwordFile.title}" field="passwordFile" >
+            <f:textbox name="passwordFile" default="${descriptor.globalPasswordFile}"/>
+        </f:entry>
+    
+        <f:validateButton title="${%checkJobConnection.title}" progress="${%checkJobConnection.progress}" 
+            method="checkJobConnection" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout" />
+        
+        </f:optionalBlock>
+    </table>
+    </f:block>
+        
+    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
+        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" />
+    </f:entry>
+    
+    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
+        method="validateBuildWorkspace" with="buildWorkspace,overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout" />
+            
+</j:jelly>

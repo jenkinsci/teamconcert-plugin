@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.ibm.team.build</groupId>
+  <artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
+  <versioning>
+    <versions>
+      <version>1.0.0-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20130319175832</lastUpdated>
+  </versioning>
+</metadata>
