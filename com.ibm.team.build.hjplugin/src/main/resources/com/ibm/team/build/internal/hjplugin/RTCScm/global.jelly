@@ -1,0 +1,61 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2013 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <?jelly escape-by-default='true'?>
+
+    <f:section title="Rational Team Concert (RTC)">
+    
+        <j:invokeStatic var="installations" className="com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation" method="allInstallations"/>
+        <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalBuildTool.html">
+            <select name="buildTool">
+                <j:forEach var="i" items="${installations}" varStatus="current">
+                    <j:choose>
+                        <j:when test="${descriptor.globalBuildTool==i.name}">
+                            <option value="${i.name}" selected="SELECTED">${i.name}</option>
+                        </j:when>
+                        <j:otherwise>
+                            <option value="${i.name}">${i.name}</option>
+                        </j:otherwise>
+                    </j:choose>
+                </j:forEach>
+            </select>
+        </f:entry>
+
+        <f:entry title="${%serverURI.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalServerURI.html" field="serverURI" >
+            <f:textbox name="serverURI" value="${descriptor.globalServerURI}" clazz="required" checkMessage="${%serverURI.checkMessage}" />
+        </f:entry>
+
+        <f:entry title="${%timeout.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalTimeout.html" field="timeout" >
+            <f:textbox name="timeout" value="${descriptor.globalTimeout}" />
+        </f:entry>
+
+        <f:entry title="${%userId.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalUserId.html" field="userId" >
+            <f:textbox name="userId" clazz="required" value="${descriptor.globalUserId}" checkMessage="${%userId.checkMessage}"/>
+        </f:entry>
+    
+        <f:entry title="${%password.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalPassword.html" field="password" >
+            <f:password name="password" value="${descriptor.globalPassword}" />
+        </f:entry>
+    
+        <f:entry title="${%passwordFile.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalPasswordFile.html" field="passwordFile" >
+            <f:textbox name="passwordFile" value="${descriptor.globalPasswordFile}" />
+        </f:entry>
+        
+        <f:validateButton title="${%checkGlobalConnection.title}" progress="${%checkGlobalConnection.progress}" 
+            method="checkGlobalConnection" with="buildTool,serverURI,timeout,userId,password,passwordFile" />
+                
+    </f:section>
+</j:jelly>
