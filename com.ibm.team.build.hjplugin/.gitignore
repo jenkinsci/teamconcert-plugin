@@ -1,11 +1,11 @@
-/build
 /.settings
+/build
 /launches
 /loadrules
-/work
-/target
 /META-INF
-/build.properties
-/.project
-/.jazzIgnore
+/target
+/work
 /.classpath
+/.jazzIgnore
+/.project
+/build.properties

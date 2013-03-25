@@ -1,8 +1,8 @@
-/build.properties
-/.project
-/.jazzignore
-/.classpath
-/target
-/META-INF
-/launches
 /.settings
+/launches
+/META-INF
+/target
+/.classpath
+/.jazzignore
+/.project
+/build.properties

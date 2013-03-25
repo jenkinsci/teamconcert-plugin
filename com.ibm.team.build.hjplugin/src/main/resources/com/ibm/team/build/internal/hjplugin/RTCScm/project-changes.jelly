@@ -39,7 +39,7 @@
 				<j:set var="reported" value="${true}"/>
 				<h2><a href="${b.number}/changes">${b.displayName}
 					(<i:formatDate value="${b.timestamp.time}" type="both" dateStyle="medium" timeStyle="medium"/>)</a></h2>
- 				<b>Summary of Changes</b>
+ 				<b>${%changes.summary}</b>
 				<br/>
 				<j:set var="snapshotName" value="${b.changeSet.getBaselineSetName()}"/>
 				<j:if test="${snapshotlink!=null}">
@@ -110,7 +110,7 @@
 													<j:text>&lt;</j:text>${%changeSet.noComment}<j:text>&gt;</j:text>
 												</j:if>
 												<nbsp/>
-												(<a href="${b.number}/changes#component${cmp.index}accepted${loop.index}">detail</a>)
+												(<a href="${b.number}/changes#component${cmp.index}accepted${loop.index}">${%detail}</a>)
 												<j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
 												<j:if test="${cslink!=null}">
 													<j:text> / </j:text>
@@ -149,7 +149,7 @@
 														<j:text>&lt;</j:text>${%changeSet.noComment}<j:text>&gt;</j:text>
 													</j:if>
 													<nbsp/>
-													(<a href="${b.number}/changes#discarded${loop.index}">detail</a>)
+													(<a href="${b.number}/changes#discarded${loop.index}">${%detail}</a>)
 													<j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
 													<j:if test="${cslink!=null}">
 														<j:text> / </j:text>

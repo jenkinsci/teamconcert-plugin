@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/*******************************************************************************
+ * Copyright (c) 2013 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+<changelog baselineSetName="Jenkins RTC Plugin Selfhost Build #31" baselineSetItemId="_MIYgw4gaEeKBi6C3NnsqSw" workspaceItemId="_kqTC4GWVEeKrn420h2wzFA">
+    <changeset action="Added" owner="heatherf" date="1362765453239" comment="Organize parsed changesets by component" changeSetItemId="_Wo5UR4Z8EeKQ4Y7z7aHw2Q" componentItemId="_ew5VMBDuEdyJqvumb3iZNg"  >
+        <changes>
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/java/com/ibm/team/build/internal/hjplugin/RTCChangeLogSet.java" itemType="FileItem" itemId="_n1c10F56EeKKCfmLrfuzWg" stateId="_O4D6dIgXEeKBi6C3NnsqSw" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/java/com/ibm/team/build/internal/hjplugin/RTCRepositoryBrowser.java" itemType="FileItem" itemId="_ZshRUF_wEeKU7_4z76cMSQ" stateId="_WxsD5oZ8EeKQ4Y7z7aHw2Q" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/java/com/ibm/team/build/internal/hjplugin/RTCChangeLogChangeSetEntry.java" itemType="FileItem" itemId="_3TJPcF8VEeKZzNvFOOekrA" stateId="_WxtSBIZ8EeKQ4Y7z7aHw2Q" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/java/com/ibm/team/build/internal/hjplugin/RTCChangeLogParser.java" itemType="FileItem" itemId="_fkfBAF6BEeKKCfmLrfuzWg" stateId="_Wxsq9IZ8EeKQ4Y7z7aHw2Q" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/java/com/ibm/team/build/internal/hjplugin/RTCFacadeFactory.java" itemType="FileItem" itemId="_A9y4IFOXEeKtv-zu-9dd1Q" stateId="_Wxt5FIZ8EeKQ4Y7z7aHw2Q" />
+        </changes>
+        <workItems>
+            <workItem number="253233" summary="HPI: Make Change Log page look more like RTC build compare " />
+        </workItems>
+    </changeset>
+    <changeset action="Added" owner="heatherf" date="1362765453239" comment="presentation changes" changeSetItemId="_5qksdId7EeKBi6C3NnsqSw" componentItemId="_ew5VMBDuEdyJqvumb3iZNg"  >
+        <changes>
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/resources/com/ibm/team/build/internal/hjplugin/RTCChangeLogSet/digest.jelly" itemType="FileItem" itemId="_sm604F_nEeKU7_4z76cMSQ" stateId="_U0OPxId7EeKBi6C3NnsqSw" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/resources/com/ibm/team/build/internal/hjplugin/RTCChangeLogSet/index.jelly" itemType="FileItem" itemId="_n7eZcF_nEeKU7_4z76cMSQ" stateId="_9OPM4YgFEeKBi6C3NnsqSw" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/resources/com/ibm/team/build/internal/hjplugin/RTCScm/project-changes.jelly" itemType="FileItem" itemId="_xfdAgGDsEeKMbJRirrI_Sw" stateId="_bEVFBIgBEeKBi6C3NnsqSw" />
+        </changes>
+        <workItems>
+            <workItem number="253233" summary="HPI: Make Change Log page look more like RTC build compare " />
+        </workItems>
+    </changeset>
+    <changeset action="Added" owner="heatherf" date="1362765453239" comment="JUnit tests" changeSetItemId="_exuP4YgZEeKBi6C3NnsqSw" componentItemId="_ew5VMBDuEdyJqvumb3iZNg"  >
+        <changes>
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/test/java/com/ibm/team/build/internal/hjplugin/tests/RTCChangeLogParserTest.java" itemType="FileItem" itemId="_K0UOYF8pEeKZzNvFOOekrA" stateId="_O4EhhIgXEeKBi6C3NnsqSw" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/test/java/com/ibm/team/build/internal/hjplugin/tests/RepositoryConnectionIT.java" itemType="FileItem" itemId="_Lwz9YGYwEeKQHbKaEXc_eA" stateId="_O4EhlIgXEeKBi6C3NnsqSw" />
+        </changes>
+        <workItems>
+            <workItem number="253233" summary="HPI: Make Change Log page look more like RTC build compare " />
+        </workItems>
+    </changeset>
+</changelog>
