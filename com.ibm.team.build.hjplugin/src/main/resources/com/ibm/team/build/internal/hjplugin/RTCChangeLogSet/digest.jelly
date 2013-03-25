@@ -93,7 +93,7 @@
                     <j:text>&lt;</j:text>${%changeSet.nocomment}<j:text>&gt;</j:text>
                   </j:if>
                
-                  (<a href="changes#component${cmp.index}accepted${loop.index}">detail</a>)
+                  (<a href="changes#component${cmp.index}accepted${loop.index}">${%detail}</a>)
                   <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
                   <j:if test="${cslink!=null}">
                     <j:text> / </j:text>
@@ -131,7 +131,7 @@
                       <j:text>&lt;</j:text>${%changeSet.nocomment}<j:text>&gt;</j:text>
                     </j:if>
  
-                    (<a href="changes#component${cmp.index}discarded${loop.index}">detail</a>)
+                    (<a href="changes#component${cmp.index}discarded${loop.index}">${%detail}</a>)
                     <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
                     <j:if test="${cslink!=null}">
                       <j:text> / </j:text>

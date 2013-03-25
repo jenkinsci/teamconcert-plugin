@@ -51,11 +51,19 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		}
 
 		public int compareTo(ComponentDescriptor o) {
-			// sort by name
-			if (name == null) {
+			// sort by name, but also be consistent with equals 
+			if (name != null && o.name != null) {
+				int result = name.compareTo(o.name);
+				if (result == 0) {
+					return itemId.compareTo(o.itemId);
+				}
+				return result;
+			} else if (name == null && o.name == null) {
+				return itemId.compareTo(o.itemId);
+			} else if (name == null) {
 				return -1;
 			} else {
-				return name.compareTo(o.name);
+				return 1;
 			}
 		}
 

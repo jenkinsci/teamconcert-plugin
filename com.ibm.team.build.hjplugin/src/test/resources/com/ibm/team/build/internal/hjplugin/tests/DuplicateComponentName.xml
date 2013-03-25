@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/*******************************************************************************
+ * Copyright (c) 2013 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+<changelog baselineSetName="Jenkins RTC Plugin Selfhost Build #50" baselineSetItemId="_IEaLMJJxEeKSpIQ-W8HL4A" workspaceItemId="_kqTC4GWVEeKrn420h2wzFA">
+    <changeset action="Added" owner="heatherf" date="1363902163567" comment="JUnit" changeSetItemId="_4RvzgZGbEeKSpIQ-W8HL4A" componentItemId="_ew5VMBDuEdyJqvumb3iZNg" componentName="Build"  >
+        <changes>
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/test/java/com/ibm/team/build/internal/hjplugin/tests/RTCChangeLogParserTest.java" itemType="FileItem" itemId="_K0UOYF8pEeKZzNvFOOekrA" stateId="_UtI4NJJvEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources" itemType="Folder" itemId="_kO6-YJGbEeK4j5beHR5pDQ" stateId="_4Z_JiZGbEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com/ibm/team/build/internal/hjplugin/tests/MissingComponentName.xml" itemType="FileItem" itemId="_s6AfMJGbEeK4j5beHR5pDQ" stateId="_8mucZZJvEeKSpIQ-W8HL4A" />
+            <change kind="2" name="/com.ibm.team.build.hjplugin/.classpath" itemType="FileItem" itemId="_-MDVIEhlEeKPGrKg4rWKbQ" stateId="__qYHVpIyEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com/ibm" itemType="Folder" itemId="_Z_DsUJJEEeK0I7PNa7i7KQ" stateId="_57IYpJJKEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com" itemType="Folder" itemId="_Z_CeMJJEEeK0I7PNa7i7KQ" stateId="_57F8YJJKEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com/ibm/team" itemType="Folder" itemId="_Z_FhgJJEEeK0I7PNa7i7KQ" stateId="_57IYoJJKEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com/ibm/team/build" itemType="Folder" itemId="_Z_GIkJJEEeK0I7PNa7i7KQ" stateId="_57Hxk5JKEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com/ibm/team/build/internal" itemType="Folder" itemId="_Z_HWsJJEEeK0I7PNa7i7KQ" stateId="_57HKg5JKEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com/ibm/team/build/internal/hjplugin" itemType="Folder" itemId="_Z_Ik0JJEEeK0I7PNa7i7KQ" stateId="_57HKgJJKEeKSpIQ-W8HL4A" />
+            <change kind="1" name="/com.ibm.team.build.hjplugin/src/test/resources/com/ibm/team/build/internal/hjplugin/tests" itemType="Folder" itemId="_Z_JL4JJEEeK0I7PNa7i7KQ" stateId="_57GjcpJKEeKSpIQ-W8HL4A" />
+        </changes>
+        <workItems>
+            <workItem number="255363" summary="HPI: Change log repeats change sets" />
+        </workItems>
+    </changeset>
+    <changeset action="Added" owner="heatherf" date="1363902163567" comment="" changeSetItemId="_7dNp-ZGbEeKSpIQ-W8HL4A" componentItemId="_u1CB8V-JEeKvo5cWqp-wYg" componentName="Build"  >
+        <changes>
+            <change kind="2" name="/com.ibm.team.build.hjplugin/src/main/java/com/ibm/team/build/internal/hjplugin/RTCChangeLogSet.java" itemType="FileItem" itemId="_n1c10F56EeKKCfmLrfuzWg" stateId="_N2yrdJJvEeKSpIQ-W8HL4A" />
+        </changes>
+        <workItems>
+            <workItem number="255363" summary="HPI: Change log repeats change sets" />
+        </workItems>
+    </changeset>
+</changelog>

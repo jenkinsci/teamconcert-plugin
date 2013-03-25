@@ -19,7 +19,7 @@
     <f:section title="Rational Team Concert (RTC)">
     
         <j:invokeStatic var="installations" className="com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation" method="allInstallations"/>
-        <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalBuildTool.html">
+        <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool">
             <select name="buildTool">
                 <j:forEach var="i" items="${installations}" varStatus="current">
                     <j:choose>
@@ -34,23 +34,23 @@
             </select>
         </f:entry>
 
-        <f:entry title="${%serverURI.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalServerURI.html" field="serverURI" >
+        <f:entry title="${%serverURI.title}" field="serverURI" >
             <f:textbox name="serverURI" value="${descriptor.globalServerURI}" clazz="required" checkMessage="${%serverURI.checkMessage}" />
         </f:entry>
 
-        <f:entry title="${%timeout.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalTimeout.html" field="timeout" >
+        <f:entry title="${%timeout.title}" field="timeout" >
             <f:textbox name="timeout" value="${descriptor.globalTimeout}" />
         </f:entry>
 
-        <f:entry title="${%userId.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalUserId.html" field="userId" >
+        <f:entry title="${%userId.title}" field="userId" >
             <f:textbox name="userId" clazz="required" value="${descriptor.globalUserId}" checkMessage="${%userId.checkMessage}"/>
         </f:entry>
     
-        <f:entry title="${%password.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalPassword.html" field="password" >
+        <f:entry title="${%password.title}" field="password" >
             <f:password name="password" value="${descriptor.globalPassword}" />
         </f:entry>
     
-        <f:entry title="${%passwordFile.title}" help="/plugin/com.ibm.team.build.hjplugin/RTCScm/help-globalPasswordFile.html" field="passwordFile" >
+        <f:entry title="${%passwordFile.title}" field="passwordFile" >
             <f:textbox name="passwordFile" value="${descriptor.globalPasswordFile}" />
         </f:entry>
         

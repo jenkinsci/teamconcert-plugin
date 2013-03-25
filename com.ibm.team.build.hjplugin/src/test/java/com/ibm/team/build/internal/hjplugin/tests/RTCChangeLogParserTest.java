@@ -14,6 +14,9 @@ package com.ibm.team.build.internal.hjplugin.tests;
 import hudson.Util;
 import hudson.scm.EditType;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashSet;
@@ -209,7 +212,46 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		}
 	}
 
-	@Test
+    protected BufferedReader getReader(String fileName) {
+        InputStream in = getClass().getResourceAsStream(fileName);
+        return new BufferedReader(new InputStreamReader(in));
+    }
+
+    @Test
+    public void testMissingComponentName() throws Exception {
+    	
+		Reader changeLog =  getReader("MissingComponentName.xml");    	
+		RTCChangeLogParser parser = new RTCChangeLogParser();
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		
+		Assert.assertEquals(1, result.getAffectedComponents().size());
+		Assert.assertEquals(3, result.getChangeSetsAcceptedCount());
+		String componentItemId = result.getAffectedComponents().iterator().next().getItemId();
+		String componentName = result.getAffectedComponents().iterator().next().getName();
+		Assert.assertNull(componentName);
+		Assert.assertEquals(3, result.getChangeSetsAccepted(componentItemId).size());
+    }
+
+    @Test
+    public void testDuplicateComponentName() throws Exception {
+    	
+		Reader changeLog =  getReader("DuplicateComponentName.xml");    	
+		RTCChangeLogParser parser = new RTCChangeLogParser();
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		
+		Assert.assertEquals(2, result.getAffectedComponents().size());
+		Assert.assertEquals(2, result.getChangeSetsAcceptedCount());
+		Iterator<ComponentDescriptor> iterator = result.getAffectedComponents().iterator();
+		ComponentDescriptor descriptor1 = iterator.next();
+		ComponentDescriptor descriptor2 = iterator.next();
+		Assert.assertNotNull(descriptor1.getName());
+		Assert.assertEquals(descriptor1.getName(), descriptor2.getName());
+		Assert.assertNotSame(descriptor1.getItemId(), descriptor2.getItemId());
+		Assert.assertEquals(1, result.getChangeSetsAccepted(descriptor1.getItemId()).size());
+		Assert.assertEquals(1, result.getChangeSetsAccepted(descriptor2.getItemId()).size());
+    }
+
+    @Test
 	public void testEmpty() throws Exception {
 		Reader changeLog =  new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
 				"<changelog version=\"1\" >" + EOL +
