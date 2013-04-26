@@ -157,57 +157,57 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		assertEquals(1, result.getChangeSetsDiscarded(affectedComponent2.getItemId()).size());
 		
 		for (RTCChangeLogChangeSetEntry changeSetEntry : acceptedEntries) {
-			String changeSetModDate = changeSetEntry.getChangeSetModDate();
-			if (changeSetModDate.equals("2013-01-28 11:05:20")) {
+			String changeSetItemId = changeSetEntry.getChangeSetItemId();
+			if (changeSetItemId.equals("_ojFTsVwQEeKvo5cWqp-wYg")) {
 				Assert.assertEquals("author", "heatherf", changeSetEntry.getOwner());
-				Assert.assertEquals("comment", Util.escape("my comment is really long from a UI perspective\nAnd spans 3 lines containing incredibly awesome essential\ninformation about the myriad of changes in the change set."), changeSetEntry.getComment());
-				Assert.assertEquals("Change count for " + changeSetModDate, 6, changeSetEntry.getAffectedPaths().size());
-				Assert.assertEquals("Versionable change count for " + changeSetModDate, 6, changeSetEntry.getAffectedVersionables().size());
-				Assert.assertEquals("Work item count " + changeSetModDate, 0, changeSetEntry.getAdditionalWorkItems().size());
+				Assert.assertEquals("comment", "my comment is really long from a UI perspective\nAnd spans 3 lines containing incredibly awesome essential\ninformation about the myriad of changes in the change set.", changeSetEntry.getComment());
+				Assert.assertEquals("Change count for " + changeSetItemId, 6, changeSetEntry.getAffectedPaths().size());
+				Assert.assertTrue("change set date missmatch expected 2013-01-28 was " + changeSetEntry.getChangeSetModDate(), changeSetEntry.getChangeSetModDate().startsWith("2013-01-28"));
+				Assert.assertEquals("Versionable change count for " + changeSetItemId, 6, changeSetEntry.getAffectedVersionables().size());
+				Assert.assertEquals("Work item count " + changeSetItemId, 0, changeSetEntry.getAdditionalWorkItems().size());
 				WorkItemDesc workItem = changeSetEntry.getWorkItem();
 				Assert.assertEquals("Work item Number", "246737", workItem.getNumber());
 				Assert.assertEquals("Work item summary", "HPI: Simple Hudson/Jenkins", workItem.getSummary());
 				Assert.assertEquals("Additional work items",  0, changeSetEntry.getAdditionalWorkItems().size());
-			} else if (changeSetModDate.equals("2013-01-28 11:06:21")) {
+			} else if (changeSetItemId.equals("_NIoxMVuWEeKvo5cWqp-wYg")) {
 				Assert.assertEquals("author", "nedgar", changeSetEntry.getOwner());
-				Assert.assertEquals("change set item id", "_NIoxMVuWEeKvo5cWqp-wYg", changeSetEntry.getChangeSetItemId());
 				Assert.assertEquals("Component item id", "_K7ukIGPuEeKs7d1U683ZJg", changeSetEntry.getComponentItemId());
 				Assert.assertEquals("Component name", "TestComponent1", changeSetEntry.getComponentName());
 				Assert.assertEquals("workspace item id", "_cc-LYUhlEeK5tewUzhIIVw", changeSetEntry.getWorkspaceItemId());
-				Assert.assertEquals("Change count for " + changeSetModDate, 3, changeSetEntry.getAffectedPaths().size());
+				Assert.assertEquals("Change count for " + changeSetItemId, 3, changeSetEntry.getAffectedPaths().size());
 				Assert.assertNotNull("Null primary work item", changeSetEntry.getWorkItem());
-				Assert.assertEquals("Work item count " + changeSetModDate, 2, changeSetEntry.getAdditionalWorkItems().size());
+				Assert.assertEquals("Work item count " + changeSetItemId, 2, changeSetEntry.getAdditionalWorkItems().size());
 				WorkItemDesc workItem = changeSetEntry.getWorkItem();
 				Assert.assertEquals("Work item Number", "246335", workItem.getNumber());
-			} else if (changeSetModDate.equals("2013-01-25 11:27:07")) {
+			} else if (changeSetItemId.equals("_W8i8kUuCEeK5tewUzhIIVw")) {
 				Assert.assertEquals("author", "ADMIN", changeSetEntry.getOwner());
-				Assert.assertEquals("Change count for " + changeSetModDate, 1, changeSetEntry.getAffectedPaths().size());
-				Assert.assertEquals("Work item count " + changeSetModDate, 0, changeSetEntry.getAdditionalWorkItems().size());
+				Assert.assertEquals("Change count for " + changeSetItemId, 1, changeSetEntry.getAffectedPaths().size());
+				Assert.assertEquals("Work item count " + changeSetItemId, 0, changeSetEntry.getAdditionalWorkItems().size());
 				ChangeDesc change = changeSetEntry.getAffectedVersionables().iterator().next();
 				Assert.assertEquals("Versionable name", "pom.xml", change.getName());
 				Assert.assertEquals("Change Kind",  EditType.EDIT, change.getType());
 				WorkItemDesc workItem = changeSetEntry.getWorkItem();
 				Assert.assertEquals("Work item Number", "246737", workItem.getNumber());
-			} else if (changeSetModDate.equals("2013-01-25 10:54:17")) {
-				Assert.assertEquals("Change count for " + changeSetModDate, 0, changeSetEntry.getAffectedVersionables().size());
+			} else if (changeSetItemId.equals("_H7VJsUuOEeK5tewUzhIIVw")) {
+				Assert.assertEquals("Change count for " + changeSetItemId, 0, changeSetEntry.getAffectedVersionables().size());
 				String path = changeSetEntry.getAffectedPaths().iterator().next();
 				Assert.assertTrue(path, path.contains("2034") || path.contains("2,034"));
 				Assert.assertTrue("Doesn't report back too many changes", changeSetEntry.isTooManyChanges());
 				Assert.assertTrue(changeSetEntry.getTooManyChangesMsg(),
 						changeSetEntry.getTooManyChangesMsg().contains("2034") || path.contains("2,034"));
 				Assert.assertNull("Primary work item", changeSetEntry.getWorkItem());
-				Assert.assertEquals("Work item count " + changeSetModDate, 0, changeSetEntry.getAdditionalWorkItems().size());
+				Assert.assertEquals("Work item count " + changeSetItemId, 0, changeSetEntry.getAdditionalWorkItems().size());
 				WorkItemDesc workItem = changeSetEntry.getWorkItem();
 				Assert.assertNull("primary work item", workItem);
-			} else if (changeSetModDate.equals("2013-01-25 11:38:07")) {
-				Assert.assertEquals("Change count for " + changeSetModDate, 0, changeSetEntry.getAffectedVersionables().size());
+			} else if (changeSetItemId.equals("_AJnUgVpuEeKvo5cWqp-wYg")) {
+				Assert.assertEquals("Change count for " + changeSetItemId, 0, changeSetEntry.getAffectedVersionables().size());
 				String path = changeSetEntry.getAffectedPaths().iterator().next();
 				Assert.assertTrue(path, path.contains("129"));
 				Assert.assertTrue("Doesn't report back too many changes", changeSetEntry.isTooManyChanges());
 				Assert.assertTrue(changeSetEntry.getTooManyChangesMsg(), changeSetEntry.getTooManyChangesMsg().contains("129"));
-				Assert.assertEquals("Work item count " + changeSetModDate, 2, changeSetEntry.getAdditionalWorkItems().size());
+				Assert.assertEquals("Work item count " + changeSetItemId, 2, changeSetEntry.getAdditionalWorkItems().size());
 			} else {
-				Assert.fail("Unexpected change set " + changeSetModDate + " id=" + changeSetEntry.getOwner());
+				Assert.fail("Unexpected change set " + changeSetItemId + " id=" + changeSetEntry.getOwner());
 			}
 		}
 	}
