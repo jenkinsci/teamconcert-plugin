@@ -78,44 +78,44 @@ public class RTCScmTest extends HudsonTestCase {
 		Assert.assertEquals(TEST_BUILD_WORKSPACE, scm.getBuildWorkspace());
 	}
 
-	public void xtestDoCheckBuildToolkit() throws IOException {
-		DescriptorImpl descriptor = (DescriptorImpl) hudson.getDescriptor(RTCScm.class);
-
-		// null is not a build toolkit
-		assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, null);
-
-		File tempFolder = Files.createTempDir();
-		File tempBuildToolkitTaskDefsXmlFile = new File(tempFolder, RTCBuildToolInstallation.BUILD_TOOLKIT_TASK_DEFS_XML);
-		tempBuildToolkitTaskDefsXmlFile.createNewFile();
-		String tempBuildToolkitTaskDefsXmlPath = tempBuildToolkitTaskDefsXmlFile.getAbsolutePath();
-
-		// build toolkit task defs file is not a build toolkit
-		assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempBuildToolkitTaskDefsXmlPath);
-
-		String tempFolderPath = tempFolder.getAbsolutePath();
-
-		// folder containing build toolkit task defs file is a build toolkit ... probably ;-)
-		assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.OK, tempFolderPath);
-
-		boolean deleted = tempBuildToolkitTaskDefsXmlFile.delete();
-
-		if (deleted) {
-
-			// folder not containing build toolkit task defs file is not a build toolkit
-			assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempFolderPath);
-			
-			// missing file is not a build toolkit
-			assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempBuildToolkitTaskDefsXmlPath);
-		}
-
-		deleted = tempFolder.delete();
-
-		if (deleted) {
-			
-			// missing folder is not a build toolkit
-			assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempFolderPath);
-		}
-	}
+//	public void testDoCheckBuildToolkit() throws IOException {
+//		DescriptorImpl descriptor = (DescriptorImpl) hudson.getDescriptor(RTCScm.class);
+//
+//		// null is not a build toolkit
+//		assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, null);
+//
+//		File tempFolder = Files.createTempDir();
+//		File tempBuildToolkitTaskDefsXmlFile = new File(tempFolder, RTCBuildToolInstallation.BUILD_TOOLKIT_TASK_DEFS_XML);
+//		tempBuildToolkitTaskDefsXmlFile.createNewFile();
+//		String tempBuildToolkitTaskDefsXmlPath = tempBuildToolkitTaskDefsXmlFile.getAbsolutePath();
+//
+//		// build toolkit task defs file is not a build toolkit
+//		assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempBuildToolkitTaskDefsXmlPath);
+//
+//		String tempFolderPath = tempFolder.getAbsolutePath();
+//
+//		// folder containing build toolkit task defs file is a build toolkit ... probably ;-)
+//		assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.OK, tempFolderPath);
+//
+//		boolean deleted = tempBuildToolkitTaskDefsXmlFile.delete();
+//
+//		if (deleted) {
+//
+//			// folder not containing build toolkit task defs file is not a build toolkit
+//			assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempFolderPath);
+//			
+//			// missing file is not a build toolkit
+//			assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempBuildToolkitTaskDefsXmlPath);
+//		}
+//
+//		deleted = tempFolder.delete();
+//
+//		if (deleted) {
+//			
+//			// missing folder is not a build toolkit
+//			assertDoCheckBuildToolkit(descriptor, FormValidation.Kind.ERROR, tempFolderPath);
+//		}
+//	}
 
 	private void assertDoCheckBuildToolkit(DescriptorImpl descriptor, FormValidation.Kind kind, String buildToolkit) {
 		FormValidation validation = descriptor.doCheckBuildToolkit(buildToolkit);
