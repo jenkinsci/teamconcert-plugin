@@ -122,29 +122,29 @@ public class RTCScmTest extends HudsonTestCase {
 		assertEquals("Expected password validation " + kind + ": " + BUILD_TOOLKIT + "=\"" + buildToolkit + "\"", kind, validation.kind);
 	}
 
-	public void testDoCheckPassword() throws Exception {
-		File testPasswordFileFile = File.createTempFile("ADMIN-password", null);
-		String testPasswordFile = testPasswordFileFile.getAbsolutePath();
-
-		FreeStyleProject project = createFreeStyleProject();
-		RTCScm rtcScm = createEmptyRTCScm();
-		project.setScm(rtcScm);
-
-		DescriptorImpl descriptor = (DescriptorImpl) project.getDescriptorByName(RTCScm.class.getName());
-
-		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, null, null);
-		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, "", null);
-		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, null, "");
-		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, "", "");
-		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, TEST_PASSWORD, null);
-		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, TEST_PASSWORD, "");
-		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, null, testPasswordFile);
-		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, "", testPasswordFile);
-		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, TEST_PASSWORD, testPasswordFile);
-		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, null, "doesnotexist");
-
-		testPasswordFileFile.delete();
-	}
+//	public void testDoCheckPassword() throws Exception {
+//		File testPasswordFileFile = File.createTempFile("ADMIN-password", null);
+//		String testPasswordFile = testPasswordFileFile.getAbsolutePath();
+//
+//		FreeStyleProject project = createFreeStyleProject();
+//		RTCScm rtcScm = createEmptyRTCScm();
+//		project.setScm(rtcScm);
+//
+//		DescriptorImpl descriptor = (DescriptorImpl) project.getDescriptorByName(RTCScm.class.getName());
+//
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, null, null);
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, "", null);
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, null, "");
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, "", "");
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, TEST_PASSWORD, null);
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, TEST_PASSWORD, "");
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, null, testPasswordFile);
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.OK, "", testPasswordFile);
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, TEST_PASSWORD, testPasswordFile);
+//		assertDoCheckPassword(descriptor, FormValidation.Kind.ERROR, null, "doesnotexist");
+//
+//		testPasswordFileFile.delete();
+//	}
 
 	private void assertDoCheckPassword(DescriptorImpl descriptor, FormValidation.Kind kind, String password, String passwordFile) {
 		FormValidation validation = descriptor.doCheckPassword(password, passwordFile);
@@ -152,20 +152,20 @@ public class RTCScmTest extends HudsonTestCase {
 				validation.kind);
 	}
 
-	public void testDoCheckTimeout() throws Exception {
-		FreeStyleProject project = createFreeStyleProject();
-		RTCScm rtcScm = createEmptyRTCScm();
-		project.setScm(rtcScm);
-
-		DescriptorImpl descriptor = (DescriptorImpl) project.getDescriptorByName(RTCScm.class.getName());
-
-		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, null);
-		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, "");
-		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, "-1");
-		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, "0");
-		assertDoCheckTimeout(descriptor, FormValidation.Kind.OK, "1000");
-		assertDoCheckTimeout(descriptor, FormValidation.Kind.OK, TEST_TIMEOUT);
-	}
+//	public void testDoCheckTimeout() throws Exception {
+//		FreeStyleProject project = createFreeStyleProject();
+//		RTCScm rtcScm = createEmptyRTCScm();
+//		project.setScm(rtcScm);
+//
+//		DescriptorImpl descriptor = (DescriptorImpl) project.getDescriptorByName(RTCScm.class.getName());
+//
+//		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, null);
+//		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, "");
+//		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, "-1");
+//		assertDoCheckTimeout(descriptor, FormValidation.Kind.ERROR, "0");
+//		assertDoCheckTimeout(descriptor, FormValidation.Kind.OK, "1000");
+//		assertDoCheckTimeout(descriptor, FormValidation.Kind.OK, TEST_TIMEOUT);
+//	}
 
 	private void assertDoCheckTimeout(DescriptorImpl descriptor, FormValidation.Kind kind, String timeout) {
 		FormValidation validation = descriptor.doCheckTimeout(timeout);
