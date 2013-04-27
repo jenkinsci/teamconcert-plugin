@@ -160,7 +160,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 			String changeSetItemId = changeSetEntry.getChangeSetItemId();
 			if (changeSetItemId.equals("_ojFTsVwQEeKvo5cWqp-wYg")) {
 				Assert.assertEquals("author", "heatherf", changeSetEntry.getOwner());
-				Assert.assertEquals("comment", "my comment is really long from a UI perspective\nAnd spans 3 lines containing incredibly awesome essential\ninformation about the myriad of changes in the change set.", changeSetEntry.getComment());
+				Assert.assertEquals("comment", Util.escape("my comment is really long from a UI perspective\nAnd spans 3 lines containing incredibly awesome essential\ninformation about the myriad of changes in the change set."), changeSetEntry.getComment());
 				Assert.assertEquals("Change count for " + changeSetItemId, 6, changeSetEntry.getAffectedPaths().size());
 				Assert.assertTrue("change set date missmatch expected 2013-01-28 was " + changeSetEntry.getChangeSetModDate(), changeSetEntry.getChangeSetModDate().startsWith("2013-01-28"));
 				Assert.assertEquals("Versionable change count for " + changeSetItemId, 6, changeSetEntry.getAffectedVersionables().size());
