@@ -7,7 +7,7 @@
 	</parent>
 
 	<artifactId>teamconcert</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.1-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 
 	<name>Team Concert Plugin</name>
@@ -48,8 +48,8 @@
 	</developers>
 
 	<scm>
-		<connection>scm:git:git://github.com/jenkinsci/teamconcert-plugin.git</connection>
-		<developerConnection>scm:git:git@github.com/jenkinsci/teamconcert-plugin.git</developerConnection>
+		<connection>scm:git:https://github.com/jenkinsci/teamconcert-plugin.git</connection>
+		<developerConnection>scm:git:https://github.com/jenkinsci/teamconcert-plugin.git</developerConnection>
 		<url>https://github.com/jenkinsci/teamconcert-plugin</url>
 	</scm>
 
