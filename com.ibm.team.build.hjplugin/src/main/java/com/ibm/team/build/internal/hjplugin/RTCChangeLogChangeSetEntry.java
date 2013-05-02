@@ -92,7 +92,6 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 			this.stateId = versionableStateId;
 		}
 
-		@Exported
 		public String getName() {
 			// if a folder and not the root folder append a slash on the end of the name
 			if (isFolderChange() && this.name.length() != 1) {
@@ -109,12 +108,10 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 			return stateId;
 		}
 
-		@Exported
 		public boolean isFolderChange() {
 			return itemType != null && itemType.endsWith("Folder"); //$NON-NLS-1$
 		}
 		
-		@Exported
 		public String getModificationKind() {
 			String result;
 			if (kind == NONE) {
@@ -135,7 +132,6 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 			return result;
 		}
 		
-		@Exported
 		public EditType getType() {
 			EditType result;
 			if (kind == ADD) {
@@ -166,17 +162,14 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
     		this.summary = summary;
     	}
     	
-		@Exported
 		public String getNumber() {
 			return number;
 		}
 		
-		@Exported
 		public String getSummary() {
 			return summary;
 		}
 		
-		@Exported
 		public String getMsg() {
 			return Util.escape( number + ": " + summary); //$NON-NLS-1$
 		}
@@ -213,27 +206,23 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 	}
 
 	@Override
-	@Exported
+    @Exported
 	public String getMsg() {
-		if (workItems.isEmpty()) {
+		if (primaryWorkItem == null) {
 			return comment;
 		} else {
-			WorkItemDesc workItem = workItems.get(0);
-			return workItem.getMsg() + " - " + comment; //$NON-NLS-1$
+			return primaryWorkItem.getMsg() + " - " + comment; //$NON-NLS-1$
 		}
 	}
 	
-	@Exported
 	public String getComment() {
-		return Util.escape(comment);
+		return comment;
 	}
 
-	@Exported
 	public WorkItemDesc getWorkItem() {
 		return primaryWorkItem;
 	}
 	
-	@Exported
 	public List<WorkItemDesc> getAdditionalWorkItems() {
 		return workItems;
 	}
@@ -263,7 +252,6 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 		return result;
 	}
 	
-	@Exported
 	public List<ChangeDesc> getAffectedVersionables() {
 		if (!changesSorted) {
 			Collections.sort(changes);
@@ -272,12 +260,10 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 		return changes;
 	}
 	
-	@Exported
 	public boolean isTooManyChanges() {
 		return additionalChanges > 0;
 	}
 
-	@Exported
 	public String getTooManyChangesMsg() {
 		return Messages.RTCChangeLogChangeSetEntry_too_many_changes(additionalChanges);
 	}
@@ -288,17 +274,15 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 		return changeSetModDate.getTime();
 	}
 
-	@Exported
 	public String getChangeSetModDate() {
 		SimpleDateFormat formatter = new SimpleDateFormat(FORMAT);
 		return formatter.format(changeSetModDate);
 	}
 	
-	@Exported
 	public String getOwner() {
 		return owner;
 	}
-	
+
 	public boolean isAccept() {
 		return action.equalsIgnoreCase("Added"); //$NON-NLS-1$
 	}

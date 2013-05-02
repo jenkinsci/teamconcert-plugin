@@ -17,6 +17,7 @@ import java.text.MessageFormat;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
+@SuppressWarnings("nls")
 public class Messages {
 
 	private static final String BUNDLE_NAME = "com.ibm.team.build.internal.hjplugin.rtc.messages"; //$NON-NLS-1$
@@ -115,13 +116,16 @@ public class Messages {
     }
 
     /**
-     * Unable to find a workspace with name : {0}
+     * Unable to find a workspace with name "{0}"
      * 
      */
     public static String RepositoryConnection_workspace_not_found(Object arg1) {
         return MessageFormat.format(getString("RepositoryConnection.workspace_not_found"), arg1);
     }
 
+    public static String RepositoryConnection_build_definition_not_found(String arg1) {
+    	return MessageFormat.format(getString("RepositoryConnection_build_definition_not_found"), arg1);
+    }
     /**
      * &lt;unknown>
      * 
@@ -251,6 +255,214 @@ public class Messages {
     }
 
     /**
+     * The RTC Build definition {0} does not have the SCM build workspace defined.
+     */
+    public static String RepositoryConnection_build_definition_no_workspace(Object arg1) {
+    	return MessageFormat.format(getString("RepositoryConnection.build_definition_no_workspace"), arg1);
+    }
+
+    /**
+     * Jazz Source Control setup
+     */
+	public static String RepositoryConnection_pre_build_activity() {
+		return getString("RepositoryConnection.pre_build_activity");
+	}
+
+    /**
+     * Accepting changes
+     */
+	public static String RepositoryConnection_activity_accepting_changes() {
+		return getString("RepositoryConnection.activity_accepting_changes");
+	}
+
+	/**
+	 * Fetching files
+	 */
+	public static String RepositoryConnection_activity_fetching() {
+		return getString("RepositoryConnection.activity_fetching");
+	}
+
+    /**
+     * Unable to find a build definition with name "{0}"
+     */
+    public static String BuildConnection_build_definition_not_found(Object arg1) {
+        return MessageFormat.format(getString("BuildConnection_build_definition_not_found"), arg1);
+    }
+
+    /**
+     * Build definition is not a Hudson/Jenkins build definition
+     */
+    public static String BuildConnection_build_definition_missing_hudson_config() {
+        return getString("BuildConnection_build_definition_missing_hudson_config");
+    }
+
+    /**
+     * Build definition has no supporting build engines
+     */
+    public static String BuildConnection_build_definition_missing_build_engine() {
+        return getString("BuildConnection_build_definition_missing_build_engine");
+    }
+
+    /**
+     * Supporting build engine is not a Hudson/Jenkins build engine
+     */
+    public static String BuildConnection_build_definition_missing_build_engine_hudson_config() {
+        return getString("BuildConnection_build_definition_missing_build_engine_hudson_config");
+    }
+    
+    /**
+     * Build definition has no Jazz Source Control option
+     */
+    public static String BuildConnection_build_definition_missing_jazz_scm_config() {
+    	return getString("BuildConnection_build_definition_missing_jazz_scm_config");
+    }
+
+    /**
+     * snapshot {0}
+     */
+    public static String BuildConnection_snapshot_label(Object arg1) {
+    	return MessageFormat.format(getString("BuildConnection_snapshot_label"), arg1);
+    }
+    
+    /**
+     * There are no RTC build engines associated with the RTC build definition {0}. The build definition must have a supported active build engine.
+     */
+    public static String BuildConnection_no_build_engine_for_defn(Object arg1) {
+    	return MessageFormat.format(getString("BuildConnection_no_build_engine_for_defn"),  arg1);
+    }
+    /**
+     * Missing Hudson/Jenkins root url from configuation; unable to link Hudson/Jenkins build with the RTC build result
+     */
+    public static String BuildConnection_missing_root_url() {
+    	return getString("BuildConnection_missing_root_url");
+    }
+
+    /**
+     * Hudson/Jenkins Job
+     */
+    public static String BuildConnection_hj_job() {
+    	return getString("BuildConnection_hj_job");
+    }
+    /**
+     * Hudson/Jenkins Build
+     */
+    public static String BuildConnection_hj_build() {
+    	return getString("BuildConnection_hj_build");
+    }
+
+    /**
+     * The load directory at "{0}" could not be deleted because the directory is either the current working directory or an ancestor of it.
+     */
+    public static String BuildConfiguration_deleting_working_directory(Object arg1) {
+    	return MessageFormat.format(getString("BuildConfiguration_deleting_working_directory"), arg1);
+    }
+
+    /**
+     * User {0} is unable to access the load rule for component {1}
+     */
+    public static String BuildConfiguration_load_rule_access_failed(String arg1, String arg2) {
+    	return MessageFormat.format(getString("BuildConfiguration_load_rule_access_failed"), arg1, arg2);
+    }
+    
+    /**
+     * Load directory {0} is invalid : {1}
+     */
+    public static String BuildConfiguration_invalid_fetch_destination(String arg1, String arg2) {
+    	return MessageFormat.format(getString("BuildConfiguration_invalid_fetch_destination"), arg1, arg2);
+    }
+
+    /**
+     * Substituted the following build property variables:
+     */
+    public static String BuildConfiguration_substituted_build_variables() {
+    	return getString("BuildConfiguration_substituted_build_variables");
+    }
+
+    /**
+     * Substituted the following configuration element property variables:
+     */
+    public static String BuildConfiguration_substituted_config_variables() {
+    	return getString("BuildConfiguration_substituted_config_variables");
+    }
+
+    /**
+     * Build definition {0} is not configured for Jazz SCM
+     */
+    public static String BuildConfiguration_scm_not_configured(String arg1) {
+    	return MessageFormat.format(getString("BuildConfiguration_scm_not_configured"), arg1);
+    }
+
+    /**
+     * Unable to determine load rule type due to {0}
+     */
+    public static String NonValidatingLoadRuleFactory_load_rule_type_failure(Object arg1) {
+    	return MessageFormat.format(getString("NonValidatingLoadRuleFactory_load_rule_type_failure"),  arg1);
+    }
+
+    /**
+     * Unable to retrieve load rule from {0}, unsupported encoding {1}
+     */
+    public static String NonValidatingLoadRuleFactory_bad_encoding(Object arg1, Object arg2) {
+    	return MessageFormat.format(getString("NonValidatingLoadRuleFactory_bad_encoding"),  arg1, arg2);
+    }
+
+    /**
+     * Error parsing load rule {0} at line {1}
+     */
+    public static String NonValidatingLoadRuleFactory_parsing_failed_at_line(Object arg1, Object arg2) {
+    	return MessageFormat.format(getString("NonValidatingLoadRuleFactory_parsing_failed_at_line"),  arg1, arg2);
+    }
+
+    /**
+     * Error parsing load rule: {0}
+     */
+    public static String NonValidatingLoadRuleFactory_parsing_failure(Object arg1) {
+    	return MessageFormat.format(getString("NonValidatingLoadRuleFactory_parsing_failure"),  arg1);
+    }
+
+    /**
+     * Error reading load rule file
+     */
+    public static String NonValidatingLoadRuleFactory_read_failure() {
+    	return getString("NonValidatingLoadRuleFactory_read_failure");
+    }
+
+    /**
+     * Unable to locate the load rule schema
+     */
+    public static String NonValidatingLoadRuleFactory_missing_schema() {
+    	return getString("NonValidatingLoadRuleFactory_missing_schema");
+    }
+
+    /**
+     * {0} = {1}   -->   {2} = {3}
+     */
+    public static String PropertyVariableHelper_substitution(String arg1, String arg2, String arg3, String arg4) {
+    	return MessageFormat.format(getString("PropertyVariableHelper_substitution"), arg1, arg2, arg3, arg4);
+    }
+
+    /**
+     * {0} : {1} = {2}   -->   {3} = {4}
+     */
+    public static String PropertyVariableHelper_substitution_for_element(String arg1, String arg2, String arg3, String arg4, String arg5) {
+    	return MessageFormat.format(getString("PropertyVariableHelper_substitution_for_element"), arg1, arg2, arg3, arg4, arg5);
+    }
+
+    /**
+     * A cycle was found while replacing property variable references. {0} = {1}
+     */
+    public static String PropertyVariableHelper_cycle(String arg1, String arg2) {
+    	return MessageFormat.format(getString("PropertyVariableHelper_cycle"), arg1, arg2);
+    }
+
+    /**
+     * The following replacements were made:
+     */
+    public static String PropertyVariableHelper_cycle_description() {
+    	return getString("PropertyVariableHelper_cycle_description");
+    }
+
+    /**
      * Get the message from the bundle
      * 
      * @param key
@@ -263,5 +475,4 @@ public class Messages {
             return '!' + key + '!';
         }
     }
-
 }

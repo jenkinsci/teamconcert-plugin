@@ -108,7 +108,7 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
 		}
 		File[] files = toolkitFile.listFiles(new FileFilter() {
 			public boolean accept(File file) {
-				return file.getName().equals(BUILD_TOOLKIT_TASK_DEFS_XML) && !file.isDirectory(); //$NON-NLS-1$
+				return file.getName().equals(BUILD_TOOLKIT_TASK_DEFS_XML) && !file.isDirectory();
 			}
 		});
 		if (files == null) {

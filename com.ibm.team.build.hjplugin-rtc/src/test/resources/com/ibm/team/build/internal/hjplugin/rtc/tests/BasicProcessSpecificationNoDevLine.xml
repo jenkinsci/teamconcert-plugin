@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/*******************************************************************************
+ * Copyright (c) 2013 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+<process-specification xmlns="http://com.ibm.team.process">
+    <project-configuration>
+        <permissions>
+            <role id="default">
+                <project-operation id="com.ibm.team.process.server.saveProjectArea">
+                    <action id="any"/>
+                </project-operation>
+                <project-operation id="com.ibm.team.workitem.server.saveCategory">
+                    <action id="any"/>
+                </project-operation>
+	            <project-operation id="com.ibm.team.workitem.server.saveDeliverable">
+					<action id="any"/>
+				</project-operation>                
+            </role>
+        </permissions>
+        <data>
+			<configuration-data xmlns="http://com.ibm.team.workitem.editor/presentations" id="com.ibm.team.workitem.editor.configuration.presentations">
+			    <editor id="com.ibm.team.workitem.editor.default">
+			        <tab tabId="com.ibm.team.workitem.editor.default.internalHeader" title="none"/>
+			        <tab tabId="com.ibm.team.workitem.editor.tab.main" title="Main"/>
+			    </editor>
+			    <tab id="com.ibm.team.workitem.editor.tab.main" layout="builtInCustomAttributesLayout">
+			        <section sectionId="com.ibm.team.workitem.editor.section.main" slot="left" title="Main Section"/>
+			    </tab>
+			    <section id="com.ibm.team.workitem.editor.section.main">
+			        <presentation attributeId="com.ibm.team.workitem.attribute.creator"/>
+			        <presentation attributeId="com.ibm.team.workitem.attribute.category"/>
+			    </section>
+			    <tab id="com.ibm.team.workitem.tab.approvals" layout="builtInApprovalsLayout"/>
+			    <tab id="com.ibm.team.workitem.editor.default.internalHeader" layout="internalHeader">
+			        <section sectionId="com.ibm.team.workitem.editor.default.header" title="none"/>
+			    </tab>
+			    <section id="com.ibm.team.workitem.editor.default.header">
+			        <presentation attributeId="com.ibm.team.workitem.attribute.summary"/>
+			        <presentation kind="com.ibm.team.workitem.kind.separator"/>
+			        <presentation kind="com.ibm.team.workitem.kind.workflow.state">
+			            <property key="labelVisible" value="false"/>
+			        </presentation>
+			        <presentation kind="com.ibm.team.workitem.kind.workflow.resolution">
+			            <property key="labelVisible" value="false"/>
+			        </presentation>
+			    </section>
+			</configuration-data>
+			
+			<configuration-data id="com.ibm.team.workitem.configuration.workItemTypes" xmlns="http://com.ibm.team.workitem/workitemTypes">
+				<type id="defect"
+					name="Defect"
+					category="com.ibm.team.workitem.workItemType"
+					dimmedicon="platform:/plugin/com.ibm.team.workitem.common/icons/obj16/wi_bug_dim.gif"
+					icon="platform:/plugin/com.ibm.team.workitem.common/icons/obj16/wi_bug.gif">
+					<alias name="bug"/>
+				</type>
+			</configuration-data>
+        </data>
+    </project-configuration>
+    <team-configuration>
+                        <permissions>
+                            <role id="default">
+                                <operation id="com.ibm.team.process.server.saveTeamArea">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.scm.server.modifyStream">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.scm.server.modifyComponent">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.scm.server.deliver">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.workitem.operation.workItemSave">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.workitem.operation.workItemDelete">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.abandonBuild">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.cancelPendingRequest">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.deleteBuildDefinition">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.saveBuildDefinition">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.deleteBuildEngine">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.saveBuildEngine">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.deleteBuildResult">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.saveBuildResult">
+                                    <action id="any"/>
+                                </operation>
+                                <operation id="com.ibm.team.build.server.requestBuild">
+                                    <action id="any"/>
+                                </operation>
+	                        	<operation id="com.ibm.team.build.server.buildLifecycle">
+                                    <action id="any"/>
+                                </operation>
+                            </role>
+                        </permissions>
+    </team-configuration>
+</process-specification>

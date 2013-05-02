@@ -18,9 +18,13 @@ import hudson.scm.ChangeLogSet.Entry;
 import hudson.util.Digester2;
 
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 
 import org.xml.sax.SAXException;
 
@@ -29,7 +33,9 @@ public class RTCChangeLogParser extends ChangeLogParser {
 	@Override
 	public ChangeLogSet<? extends Entry> parse(AbstractBuild build,
 			File changelogFile) throws IOException, SAXException {
-		FileReader reader = new FileReader(changelogFile);
+		FileInputStream inputStream = new FileInputStream(changelogFile);
+        CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT); //$NON-NLS-1$
+		Reader reader = new InputStreamReader(inputStream, decoder);
 		return parse(build, reader);
 	}
 	

@@ -18,7 +18,6 @@ import hudson.util.StreamTaskListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.Map;
@@ -35,7 +34,9 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
 
+@SuppressWarnings("nls")
 public class RepositoryConnectionIT extends HudsonTestCase {
 
 	private RTCFacadeWrapper testingFacade;
@@ -63,7 +64,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 		// delete the sandbox after Hudson/Jenkins is shutdown
 		if (Config.DEFAULT.isConfigured()) {
 			super.tearDown();
-			delete(sandboxDir);
+			FileUtils.delete(sandboxDir);
 		}
 	}
 
@@ -87,19 +88,13 @@ public class RepositoryConnectionIT extends HudsonTestCase {
      */
 	public void testComponentChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			// create the build workspace & stream for this test
-			// Stream has a component not in the build workspace
-			// Build workspace has a component not in the stream
-			File passwordFileFile = null;
-			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
-					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
-				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
-			}
+			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String workspaceName = getTestName() + System.currentTimeMillis();
 			String componentAddedName = getTestName() + "_added";
 			String componentDroppedName = getTestName() + "_dropped";
 
+			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupComponentChanges",
 							new Class[] { String.class, // serverURL,
@@ -115,6 +110,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 							Config.DEFAULT.getPassword(), passwordFileFile,
 							Config.DEFAULT.getTimeout(), workspaceName,
 							componentAddedName, componentDroppedName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+			
 			try {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
@@ -126,6 +126,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -133,6 +134,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertTrue(changesIncoming.booleanValue());
@@ -156,6 +158,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // userId,
 								String.class, // password,
 								int.class, // timeout,
+								String.class, // buildResultUUID,
 								String.class, // workspaceName,
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
@@ -164,7 +167,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
-						Config.DEFAULT.getTimeout(), workspaceName,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						(String) null, listener);
 
@@ -198,7 +202,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 			} finally {
 				// clean up
 				testingFacade.invoke(
-						"tearDownComponentChanges",
+						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -220,16 +224,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	 */
 	public void testAcceptDiscardChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			// some change sets are accepted, others are discarded
-			File passwordFileFile = null;
-			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
-					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
-				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
-			}
+			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String workspaceName = getTestName() + System.currentTimeMillis();
 			String componentName = getTestName();
 
+			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupAcceptDiscardChanges",
 							new Class[] { String.class, // serverURL,
@@ -244,6 +244,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 							Config.DEFAULT.getPassword(), passwordFileFile,
 							Config.DEFAULT.getTimeout(), workspaceName,
 							componentName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+			
 			try {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
@@ -255,6 +260,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -262,6 +268,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertTrue(changesIncoming.booleanValue());
@@ -284,6 +291,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // userId,
 								String.class, // password,
 								int.class, // timeout,
+								String.class, // buildResultUUID,
 								String.class, // workspaceName,
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
@@ -292,7 +300,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
-						Config.DEFAULT.getTimeout(), workspaceName,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener);
 
@@ -330,6 +339,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -337,6 +347,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertFalse(changesIncoming.booleanValue());
@@ -344,7 +355,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 			} finally {
 				// clean up
 				testingFacade.invoke(
-						"tearDownAcceptDiscardChanges",
+						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -369,16 +380,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	 */
 	public void testAcceptChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			// Accept all the different kinds of change sets we have for the test suites
-			File passwordFileFile = null;
-			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
-					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
-				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
-			}
+			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String workspaceName = getTestName() + System.currentTimeMillis();
 			String componentName = getTestName();
 
+			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupAcceptChanges",
 							new Class[] { String.class, // serverURL,
@@ -393,6 +400,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 							Config.DEFAULT.getPassword(), passwordFileFile,
 							Config.DEFAULT.getTimeout(), workspaceName,
 							componentName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+
 			try {
 				
 				TaskListener listener = new StreamTaskListener(System.out, null);
@@ -405,6 +417,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -412,6 +425,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertTrue(changesIncoming.booleanValue());
@@ -434,6 +448,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // userId,
 								String.class, // password,
 								int.class, // timeout,
+								String.class, // buildResultUUID,
 								String.class, // workspaceName,
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
@@ -442,7 +457,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
-						Config.DEFAULT.getTimeout(), workspaceName,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener);
 
@@ -478,6 +494,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -485,6 +502,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertFalse(changesIncoming.booleanValue());
@@ -492,7 +510,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 			} finally {
 				// clean up
 				testingFacade.invoke(
-						"tearDownAcceptChanges",
+						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -513,18 +531,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	 */
 	public void testEmptyChangeSet() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			// create the build workspace & stream for this test
-			// Stream has a component not in the build workspace
-			// Build workspace has a component not in the stream
-			File passwordFileFile = null;
-			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
-					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
-				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
-			}
+			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String workspaceName = getTestName() + System.currentTimeMillis();
 			String componentName = getTestName();
 
+			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupEmptyChangeSets",
 							new Class[] { String.class, // serverURL,
@@ -539,6 +551,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 							Config.DEFAULT.getPassword(), passwordFileFile,
 							Config.DEFAULT.getTimeout(), workspaceName,
 							componentName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+
 			try {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
@@ -550,6 +567,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -557,6 +575,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertTrue(changesIncoming.booleanValue());
@@ -579,6 +598,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // userId,
 								String.class, // password,
 								int.class, // timeout,
+								String.class, // buildResultUUID,
 								String.class, // workspaceName,
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
@@ -587,7 +607,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
-						Config.DEFAULT.getTimeout(), workspaceName,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener);
 
@@ -611,7 +632,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 			} finally {
 				// clean up
 				testingFacade.invoke(
-						"tearDownEmptyChangeSets",
+						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -636,18 +657,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 		// add & delete versionable in the cs
 		// mod & restore versionable in the cs
 		if (Config.DEFAULT.isConfigured()) {
-			// create the build workspace & stream for this test
-			// Stream has a component not in the build workspace
-			// Build workspace has a component not in the stream
-			File passwordFileFile = null;
-			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
-					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
-				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
-			}
+			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String workspaceName = getTestName() + System.currentTimeMillis();
 			String componentName = getTestName();
 
+			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupNoopChanges",
 							new Class[] { String.class, // serverURL,
@@ -662,6 +677,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 							Config.DEFAULT.getPassword(), passwordFileFile,
 							Config.DEFAULT.getTimeout(), workspaceName,
 							componentName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+			
 			try {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
@@ -673,6 +693,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -680,6 +701,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertTrue(changesIncoming.booleanValue());
@@ -702,6 +724,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // userId,
 								String.class, // password,
 								int.class, // timeout,
+								String.class, // buildResultUUID,
 								String.class, // workspaceName,
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
@@ -710,7 +733,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
-						Config.DEFAULT.getTimeout(), workspaceName,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener);
 
@@ -733,7 +757,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 			} finally {
 				// clean up
 				testingFacade.invoke(
-						"tearDownNoopChanges",
+						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -756,15 +780,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	public void testComponentRootMod() throws Exception {
 		// change the properties of the component root folder
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = null;
-			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
-					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
-				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
-			}
+			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String workspaceName = getTestName() + System.currentTimeMillis();
 			String componentName = getTestName();
 
+			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupComponentRootChange",
 							new Class[] { String.class, // serverURL,
@@ -779,6 +800,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 							Config.DEFAULT.getPassword(), passwordFileFile,
 							Config.DEFAULT.getTimeout(), workspaceName,
 							componentName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+
 			try {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
@@ -790,6 +816,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -797,6 +824,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertTrue(changesIncoming.booleanValue());
@@ -819,6 +847,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // userId,
 								String.class, // password,
 								int.class, // timeout,
+								String.class, // buildResultUUID,
 								String.class, // workspaceName,
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
@@ -827,7 +856,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
-						Config.DEFAULT.getTimeout(), workspaceName,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener);
 
@@ -849,7 +879,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 			} finally {
 				// clean up
 				testingFacade.invoke(
-						"tearDownComponentRootChange",
+						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -871,15 +901,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	 */
 	public void testMultipleComponentChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = null;
-			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
-					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
-				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
-			}
+			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String workspaceName = getTestName() + System.currentTimeMillis();
 			String componentName = getTestName();
 
+			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupMultipleComponentChanges",
 							new Class[] { String.class, // serverURL,
@@ -894,6 +921,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 							Config.DEFAULT.getPassword(), passwordFileFile,
 							Config.DEFAULT.getTimeout(), workspaceName,
 							componentName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+
 			try {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
@@ -905,6 +937,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -912,6 +945,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertTrue(changesIncoming.booleanValue());
@@ -934,6 +968,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // userId,
 								String.class, // password,
 								int.class, // timeout,
+								String.class, // buildResultUUID,
 								String.class, // workspaceName,
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
@@ -942,7 +977,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
-						Config.DEFAULT.getTimeout(), workspaceName,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot #42", listener);
 
@@ -1000,6 +1036,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // password
 								File.class, // password file
 								int.class, // timeout
+								String.class, // buildDefinition
 								String.class, // build workspace name
 								Object.class}, // listener
 						Config.DEFAULT.getServerURI(),
@@ -1007,6 +1044,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
+						null,
 						workspaceName, listener);
 
 				Assert.assertFalse(changesIncoming.booleanValue());
@@ -1014,7 +1052,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 			} finally {
 				// clean up
 				testingFacade.invoke(
-						"tearDownMultipleComponentChanges",
+						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -1027,6 +1065,142 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Config.DEFAULT.getTimeout(), setupArtifacts);
 			}
 		}
+	}
+	
+	private static final String XML_ENCODED_CHARACTERS = "<'&\">";
+
+	/**
+	 * Verify the XML encoding of <code>XML_ENCODED_CHARACTERS</code> in the following,
+	 * 	snapshot name
+	 * 	TODO component name
+	 *  TODO versionable path
+	 * 	change set comment
+	 * 	TODO work item summary
+	 * @throws Exception
+	 */
+	public void testXMLEncoding() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			// create the build workspace & stream for this test
+			// Stream has a component not in the build workspace
+			// Build workspace has a component not in the stream
+			File passwordFileFile = null;
+			if (Config.DEFAULT.getPasswordFile() != null && !Config.DEFAULT.getPasswordFile().isEmpty()
+					&& !Config.DEFAULT.getPasswordFile().equalsIgnoreCase("none")) {
+				passwordFileFile = new File(Config.DEFAULT.getPasswordFile());
+			}
+			
+			String workspaceName = getTestName() + XML_ENCODED_CHARACTERS + System.currentTimeMillis();
+			String componentName = getTestName();
+
+			@SuppressWarnings("unchecked")
+			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+					.invoke("setupXMLEncodingTestChangeSets",
+							new Class[] { String.class, // serverURL,
+									String.class, // userId,
+									String.class, // password,
+									File.class, // passwordFile,
+									int.class, // timeout,
+									String.class, // workspaceName,
+									String.class}, // componentName
+							Config.DEFAULT.getServerURI(),
+							Config.DEFAULT.getUserID(),
+							Config.DEFAULT.getPassword(), passwordFileFile,
+							Config.DEFAULT.getTimeout(), workspaceName,
+							componentName);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+
+			try {
+				TaskListener listener = new StreamTaskListener(System.out, null);
+				
+				// ensure that the incoming changes are detected
+				Boolean changesIncoming = (Boolean) testingFacade.invoke(
+						"incomingChanges",
+						new Class[] { String.class, // serverURL
+								String.class, // userid
+								String.class, // password
+								File.class, // password file
+								int.class, // timeout
+								String.class, // buildDefinition
+								String.class, // build workspace name
+								Object.class}, // listener
+						Config.DEFAULT.getServerURI(),
+						Config.DEFAULT.getUserID(),
+						Config.DEFAULT.getPassword(),
+						passwordFileFile,
+						Config.DEFAULT.getTimeout(),
+						null,
+						workspaceName, listener);
+
+				Assert.assertTrue(changesIncoming.booleanValue());
+				
+				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
+				String password = (String) testingFacade.invoke(
+						"determinePassword", 
+						new Class[] {
+								String.class, // password
+								File.class // password file
+						},
+						Config.DEFAULT.getPassword(),
+						passwordFileFile);
+
+				String snapshotName = XML_ENCODED_CHARACTERS;
+				
+				// checkout the changes
+				testingFacade.invoke(
+						"checkout",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // buildResultUUID,
+								String.class, // workspaceName,
+								String.class, // hjWorkspacePath,
+								OutputStream.class, // changeLog,
+								String.class, // baselineSetName,
+								Object.class}, // listener
+						Config.DEFAULT.getServerURI(),
+						Config.DEFAULT.getUserID(),
+						password,
+						Config.DEFAULT.getTimeout(),
+						null, workspaceName,
+						sandboxDir.getCanonicalPath(), changeLog,
+						snapshotName, listener);
+
+	    		// parse the change report and ensure the expected components are reported.
+	    		RTCChangeLogParser parser = new RTCChangeLogParser();
+	    		FileReader changeLogReader = new FileReader(changeLogFile);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		
+	    		// verify the result
+	    		Assert.assertNotNull(result.getBaselineSetItemId());
+	    		Assert.assertEquals(snapshotName, result.getBaselineSetName());
+	    		Assert.assertEquals(0, result.getComponentChangeCount());
+	    		Assert.assertEquals(1, result.getChangeSetsAcceptedCount());
+	    		Assert.assertEquals(setupArtifacts.get("workspaceItemId"), result.getWorkspaceItemId());
+	    		String componentItemId = setupArtifacts.get("component1ItemId");
+    			validateXMLEncodingTestChangeSet(result.getChangeSetsAccepted(componentItemId).get(0), setupArtifacts, componentName, componentItemId, XML_ENCODED_CHARACTERS);
+	    		
+			} finally {
+				// clean up
+				testingFacade.invoke(
+						"tearDown",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								File.class, // passwordFile,
+								int.class, // timeout,
+								Map.class}, // setupArtifacts
+						Config.DEFAULT.getServerURI(),
+						Config.DEFAULT.getUserID(),
+						Config.DEFAULT.getPassword(), passwordFileFile,
+						Config.DEFAULT.getTimeout(), setupArtifacts);
+			}
+		}
+		
 	}
 
 	private void validateCS1(RTCChangeLogChangeSetEntry csEntry,
@@ -1243,40 +1417,172 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 		validateChange(change, setupArtifacts);
 	}
 
-	/**
-     * Recursively delete starting at the given file.
-     */
-    private boolean delete(File file) throws Exception {
-    	// paranoia check... Don't delete root directory because somehow the path was empty
-    	if (file.getParent() == null) {
-    		return false;
-    	}
-    	return deleteUsingJavaIO(file);
-    }
-    
-    private boolean deleteUsingJavaIO(File file) throws IOException {
-        // take into account file or its children may be valid symbolic links.
-        // we do not want to follow them.
-        // The alternative to this is to use EFS to do the delete which does
-        // essentially the same thing.
-        // The other alternative is to use EFS to get the attributes and see
-        // if it is a symbolic link and tailor the delete according to that.
-        // This may have incorrect behaviour if the file is a link
-        // and read-only.
-        if (file.delete() || !file.exists()) {
-            // Try to delete the file/link first without recursing to avoid
-            // traversing into links
-            return true;
-        }
-        if (file.isDirectory()) {
-            File[] children = file.listFiles();
-            if (children != null) {
-                for (File child : children) {
-                	deleteUsingJavaIO(child);
-                }
-            }
-        }
-        return file.delete();
-    }
 
+	public void testBuildResultContributions() throws Exception {
+		// test add snapshot contribution (happens during checkout)
+		// test add workspace contribution (happens during checkout)
+		// test build activity added (happens during checkout)
+		// test workitems associated with build result (during checkout)
+		
+		if (Config.DEFAULT.isConfigured()) {
+			File passwordFileFile = FileUtils.getPasswordFile();
+			
+			String workspaceName = getTestName() + System.currentTimeMillis();
+			String componentName = getTestName();
+			String buildDefinitionId = getTestName() + System.currentTimeMillis();
+
+			@SuppressWarnings("unchecked")
+			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+					.invoke("setupBuildResultContributions",
+							new Class[] { String.class, // serverURL,
+									String.class, // userId,
+									String.class, // password,
+									File.class, // passwordFile,
+									int.class, // timeout,
+									String.class, // workspaceName,
+									String.class, // componentName
+									String.class}, // buildDefinitionId
+							Config.DEFAULT.getServerURI(),
+							Config.DEFAULT.getUserID(),
+							Config.DEFAULT.getPassword(), passwordFileFile,
+							Config.DEFAULT.getTimeout(), workspaceName,
+							componentName, buildDefinitionId);
+			
+			if (Config.DEFAULT.isSetUpOnly()) {
+				return;
+			}
+			
+			try {
+				
+				TaskListener listener = new StreamTaskListener(System.out, null);
+				
+				// ensure that the incoming changes are detected
+				Boolean changesIncoming = (Boolean) testingFacade.invoke(
+						"incomingChanges",
+						new Class[] { String.class, // serverURL
+								String.class, // userid
+								String.class, // password
+								File.class, // password file
+								int.class, // timeout
+								String.class, // buildDefinition
+								String.class, // build workspace name
+								Object.class}, // listener
+						Config.DEFAULT.getServerURI(),
+						Config.DEFAULT.getUserID(),
+						Config.DEFAULT.getPassword(),
+						passwordFileFile,
+						Config.DEFAULT.getTimeout(),
+						null,
+						workspaceName, listener);
+
+				Assert.assertTrue(changesIncoming.booleanValue());
+				
+				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
+				String password = (String) testingFacade.invoke(
+						"determinePassword", 
+						new Class[] {
+								String.class, // password
+								File.class // password file
+						},
+						Config.DEFAULT.getPassword(),
+						passwordFileFile);
+
+				// create the build result
+				String buildResultItemId = (String) testingFacade.invoke(
+						"createBuildResult", new Class[] { //$NON-NLS-1$
+								String.class, // serverURI,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // buildDefinition,
+								String.class, // buildLabel,
+								Object.class, // listener)
+						}, Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
+						password, Config.DEFAULT.getTimeout(),
+						buildDefinitionId, "TestBuildResultContributions", listener);
+				setupArtifacts.put("buildResultItemId", buildResultItemId);
+				
+				// checkout the changes
+				testingFacade.invoke(
+						"checkout",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // buildResultUUID,
+								String.class, // workspaceName,
+								String.class, // hjWorkspacePath,
+								OutputStream.class, // changeLog,
+								String.class, // baselineSetName,
+								Object.class}, // listener
+						Config.DEFAULT.getServerURI(),
+						Config.DEFAULT.getUserID(),
+						password,
+						Config.DEFAULT.getTimeout(),
+						buildResultItemId, workspaceName,
+						sandboxDir.getCanonicalPath(), changeLog,
+						"Snapshot", listener);
+
+
+	    		// parse the change report and ensure the expected components are reported.
+	    		RTCChangeLogParser parser = new RTCChangeLogParser();
+	    		FileReader changeLogReader = new FileReader(changeLogFile);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		
+	    		// verify the result
+	    		Assert.assertNotNull(result.getBaselineSetItemId());
+	    		setupArtifacts.put("baselineSetItemId", result.getBaselineSetItemId());
+
+	    		// Verify the build result
+				testingFacade.invoke(
+						"verifyBuildResultContributions",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								Map.class}, // listener
+						Config.DEFAULT.getServerURI(),
+						Config.DEFAULT.getUserID(),
+						password,
+						Config.DEFAULT.getTimeout(),
+						setupArtifacts);
+			} finally {
+				// clean up
+				testingFacade.invoke(
+						"tearDown",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								File.class, // passwordFile,
+								int.class, // timeout,
+								Map.class}, // setupArtifacts
+						Config.DEFAULT.getServerURI(),
+						Config.DEFAULT.getUserID(),
+						Config.DEFAULT.getPassword(), passwordFileFile,
+						Config.DEFAULT.getTimeout(), setupArtifacts);
+			}
+		}
+	}
+
+	private void validateXMLEncodingTestChangeSet(RTCChangeLogChangeSetEntry csEntry,
+			Map<String, String> setupArtifacts, String componentName,
+			String componentItemId, String comment) {
+		Assert.assertEquals(setupArtifacts.get("cs1"), csEntry.getChangeSetItemId());
+		Assert.assertEquals(componentItemId, csEntry.getComponentItemId());
+		Assert.assertEquals(componentName, csEntry.getComponentName());
+		Assert.assertEquals(comment, csEntry.getComment());
+		Assert.assertNotNull(csEntry.getTimestamp());
+		Assert.assertEquals(1, csEntry.getAffectedVersionables().size());
+		// cs1 modifies the file
+		for (RTCChangeLogChangeSetEntry.ChangeDesc change : csEntry.getAffectedVersionables()) {
+			String name = change.getName();
+			assertEquals("/f/a.txt", name);
+			validateChange(change, setupArtifacts);
+		}
+		Assert.assertNull(csEntry.getWorkItem());
+		Assert.assertTrue(csEntry.getAdditionalWorkItems().isEmpty());
+		Assert.assertEquals(csEntry.getAffectedVersionables().size(), csEntry.getAffectedPaths().size());
+		Assert.assertFalse(csEntry.isTooManyChanges());
+	}
 }

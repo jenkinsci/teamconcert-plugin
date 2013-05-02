@@ -291,10 +291,12 @@ public class ChangeReport {
 					"\" baselineSetItemId=\"" + baselineSet.itemId +  //$NON-NLS-1$
 					"\" workspaceItemId=\"" + workspaceItemId + //$NON-NLS-1$
 					"\">"); //$NON-NLS-1$
-		} else {
+		} else if (workspaceItemId != null) {
 			writer.println(
 					"<changelog workspaceItemId=\"" + workspaceItemId + //$NON-NLS-1$
 					"\">"); //$NON-NLS-1$
+		} else {
+			writer.println("<changelog>"); //$NON-NLS-1$
 		}
 	}
 

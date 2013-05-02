@@ -40,12 +40,10 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 			this.name = componentName;
 		}
 		
-		@Exported
 		public String getItemId() {
 			return itemId;
 		}
 
-		@Exported
 		public String getName() {
 			return name;
 		}
@@ -123,7 +121,6 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		return changes.iterator();
 	}
 
-	@Exported
 	@Override
 	public boolean isEmptySet() {
 		return changesAccepted.isEmpty() && changesDiscarded.isEmpty() && componentChanges.isEmpty();
@@ -187,7 +184,6 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		this.baselineSetName = name;
 	}
 
-	@Exported
 	public String getBaselineSetName() {
 		return baselineSetName;
 	}
@@ -200,7 +196,6 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		return workspaceItemId;
 	}
 
-	@Exported
 	public List<RTCChangeLogComponentEntry> getComponentChanges() {
 		synchronized (componentChanges) {
 			if (!componentChangesSorted) {
@@ -211,12 +206,10 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		return componentChanges;
 	}
 	
-	@Exported
 	public Set<ComponentDescriptor> getAffectedComponents() {
 		return affectedComponents;
 	}
 	
-	@Exported
 	public List<RTCChangeLogChangeSetEntry> getChangeSetsAccepted(String componentItemId) {
 		List<RTCChangeLogChangeSetEntry> result = changesAccepted.get(componentItemId);
 		if (result == null) {
@@ -224,8 +217,7 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		}
 		return result;
 	}
-	
-	@Exported
+
 	public List<RTCChangeLogChangeSetEntry> getChangeSetsDiscarded(String componentItemId) {
 		List<RTCChangeLogChangeSetEntry> result = changesDiscarded.get(componentItemId);
 		if (result == null) {
@@ -234,17 +226,14 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		return result;
 	}
 	
-	@Exported
 	public int getComponentChangeCount() {
 		return componentChanges.size();
 	}
 	
-	@Exported
 	public int getChangeSetsAcceptedCount() {
 		return changesAcceptedCount;
 	}
 	
-	@Exported
 	public int getChangeSetsDiscardedCount() {
 		return changesDiscardedCount;
 	}

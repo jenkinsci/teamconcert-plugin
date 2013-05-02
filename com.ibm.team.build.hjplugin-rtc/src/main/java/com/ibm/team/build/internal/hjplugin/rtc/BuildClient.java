@@ -53,7 +53,7 @@ public class BuildClient extends AbstractBuildClient {
 		if (passwordToUse == null || passwordToUse.length() == 0) {
 			LOGGER.finer("No password determined because password determined is "  //$NON-NLS-1$
 					+ (passwordToUse == null ? "null" : "empty"));  //$NON-NLS-1$ //$NON-NLS-2$
-			throw new Exception(Messages.BuildClient_no_password());
+			throw new RTCConfigurationException(Messages.BuildClient_no_password());
 		}
 		return passwordToUse;
 	}
@@ -67,13 +67,13 @@ public class BuildClient extends AbstractBuildClient {
             try {
     			decryptedPassword = PasswordHelper.getPassword(passwordFile);
             } catch (Exception exception) {
-                throw new RTCValidationException(Messages.BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
+                throw new RTCConfigurationException(Messages.BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
             }
             
             // An empty password text file returns an empty password string instead of throwing an exception
             // See 255010: PasswordHelper.getPassword(passwordFile) returns empty string for invalid password file
 			if (decryptedPassword != null && decryptedPassword.length() == 0) {
-				throw new RTCValidationException(Messages.BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
+				throw new RTCConfigurationException(Messages.BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
 			} else {
 				return decryptedPassword;
 			}

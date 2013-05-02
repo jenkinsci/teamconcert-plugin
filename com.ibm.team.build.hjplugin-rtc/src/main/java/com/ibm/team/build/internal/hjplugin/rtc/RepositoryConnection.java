@@ -13,35 +13,41 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
 
 import com.ibm.team.build.common.TeamBuildException;
+import com.ibm.team.build.common.model.IBuildDefinition;
+import com.ibm.team.build.common.model.IBuildProperty;
+import com.ibm.team.build.common.model.IBuildResult;
+import com.ibm.team.build.common.model.IBuildResultHandle;
+import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
+import com.ibm.team.build.internal.publishing.WorkItemPublisher;
 import com.ibm.team.build.internal.scm.AcceptReport;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
 import com.ibm.team.build.internal.scm.RepositoryManager;
 import com.ibm.team.build.internal.scm.SourceControlUtility;
 import com.ibm.team.filesystem.client.FileSystemCore;
+import com.ibm.team.filesystem.client.ILocation;
 import com.ibm.team.filesystem.client.ISandbox;
 import com.ibm.team.filesystem.client.ISharingManager;
-import com.ibm.team.filesystem.client.internal.PathLocation;
 import com.ibm.team.filesystem.client.internal.SharingManager;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaEvent;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaListener;
-import com.ibm.team.filesystem.client.operations.ILoadRule2;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.ServerVersionCheckException;
 import com.ibm.team.repository.common.TeamRepositoryException;
+import com.ibm.team.repository.common.UUID;
 import com.ibm.team.repository.transport.client.AuthenticationException;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
-import com.ibm.team.scm.common.IComponentHandle;
+import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IWorkspaceSearchCriteria;
 
@@ -57,6 +63,7 @@ public class RepositoryConnection {
 	private final ConnectionDetails fConnectionDetails;
 	private final RepositoryManager fRepositoryManager;
 	private final ITeamRepository fRepository;
+	private BuildConnection fBuildConnection;
 	
 	public RepositoryConnection(AbstractBuildClient buildClient, ConnectionDetails connectionDetails, RepositoryManager repositoryManager, ITeamRepository repository) {
 		this.fBuildClient = buildClient;
@@ -79,6 +86,13 @@ public class RepositoryConnection {
 	
 	public ITeamRepository getTeamRepository() {
 		return fRepository;
+	}
+	
+	public BuildConnection getBuildConnection() {
+		if (fBuildConnection == null) {
+			fBuildConnection = new BuildConnection(getTeamRepository());
+		}
+		return fBuildConnection;
 	}
 
 	/**
@@ -109,7 +123,11 @@ public class RepositoryConnection {
 	 * @LongOp
 	 */
 	public void testBuildWorkspace(String workspaceName) throws Exception {
-		getWorkspace(workspaceName);
+		try {
+			getWorkspace(workspaceName);
+		} catch (RTCConfigurationException e) {
+			throw new RTCValidationException(e.getMessage());
+		}
 	}
 
 	/**
@@ -117,10 +135,9 @@ public class RepositoryConnection {
 	 * be to a workspace or a stream. If there is more than 1 repository workspace with the name
 	 * it is an error.  If there are no repository workspaces with the name it is an error.
 	 * 
-	 * @param repo The team repository containing that is to contain the workspace
 	 * @param workspaceName The name of the workspace. Never <code>null</code>
 	 * @return The workspace connection for the workspace. Never <code>null</code>
-	 * @throws TeamRepositoryException if an error occurs
+	 * @throws Exception if an error occurs
 	 */
 	protected IWorkspaceHandle getWorkspace(String workspaceName) throws Exception {
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(getTeamRepository());
@@ -130,60 +147,151 @@ public class RepositoryConnection {
 				.setKind(IWorkspaceSearchCriteria.WORKSPACES);
 		List<IWorkspaceHandle> workspaceHandles = workspaceManager.findWorkspaces(searchCriteria, 2, null);
 		if (workspaceHandles.size() > 1) {
-			throw new RTCValidationException(Messages.RepositoryConnection_name_not_unique(workspaceName));
+			throw new RTCConfigurationException(Messages.RepositoryConnection_name_not_unique(workspaceName));
 		}
 		if (workspaceHandles.size() == 0) {
-			throw new RTCValidationException(Messages.RepositoryConnection_workspace_not_found(workspaceName));
+			throw new RTCConfigurationException(Messages.RepositoryConnection_workspace_not_found(workspaceName));
 		}
 		return workspaceHandles.get(0);
+	}
+
+	/**
+	 * Tests that the specified build definition is valid.
+	 * 
+	 * @param buildDefinitionId ID of the RTC build definition
+	 * @throw Exception if an error occurs
+     * @throws RTCValidationException
+     *             If a build definition for the build definition id could not
+     *             be found.
+	 * @LongOp
+	 */
+	public void testBuildDefinition(String buildDefinitionId) throws Exception {
+		getBuildConnection().testBuildDefinition(buildDefinitionId);
 	}
 
 	/**
 	 * Determines if there are changes for the build workspace which would result in a need for a build.
 	 * We are interested in components to be added/removed, change sets to be added/removed.
 	 * 
-	 * @param buildWorkspaceName Name of the RTC build workspace
+	 * @param buildDefinitionId The name (id) of the build definition to use. May be <code>null</code>
+	 * if buildWorkspaceName is supplied instead. Only one of buildWorkspaceName/buildDefinitionId
+	 * should be supplied
+	 * @param buildWorkspaceName Name of the RTC build workspace. May be <code>null</code>
+	 * if buildDefinitionId is supplied instead. Only one of buildWorkspaceName/buildDefinitionId
+	 * should be supplied
+	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @return <code>true</code> if there are changes for the build workspace
 	 * <code>false</code> otherwise
 	 * @throws Exception Thrown if anything goes wrong.
 	 */
-	public boolean incomingChanges(String buildWorkspaceName, IConsoleOutput listener) throws Exception {
+	public boolean incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener) throws Exception {
 		ensureLoggedIn();
-		IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName);
-		BuildWorkspaceDescriptor workspace = new BuildWorkspaceDescriptor(fRepository, workspaceHandle.getItemId().getUuidValue(), buildWorkspaceName);
+		BuildWorkspaceDescriptor workspace;
+		if (buildDefinitionId != null && buildDefinitionId.length() > 0) {
+			BuildConnection buildConnection = getBuildConnection();
+			IBuildDefinition buildDefinition = buildConnection.getBuildDefinition(buildDefinitionId);
+			if (buildDefinition == null) {
+				throw new RTCConfigurationException(Messages.RepositoryConnection_build_definition_not_found(buildDefinitionId));
+			}
+				
+			IBuildProperty property = buildDefinition.getProperty(
+                    IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID);
+            if (property != null && property.getValue().length() > 0) {
+                workspace = new BuildWorkspaceDescriptor(getTeamRepository(), property.getValue(), null);
+            } else {
+            	throw new RTCConfigurationException(Messages.RepositoryConnection_build_definition_no_workspace(buildDefinitionId));
+            }
+		} else {
+			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName);
+			workspace = new BuildWorkspaceDescriptor(fRepository, workspaceHandle.getItemId().getUuidValue(), buildWorkspaceName);
+		}
+
 		AcceptReport report = SourceControlUtility.checkForIncoming(fRepositoryManager, workspace, null);
 		return report.getChangesAcceptedCount() > 0;
 	}
 
-	public void checkout(String buildWorkspaceName, String fetchDestination, ChangeReport changeReport,
-			String snapshotName, final IConsoleOutput listener) throws Exception {
+	/**
+	 * Update the build workspace and load it. Create a snapshot of the build workspace and
+	 * report on the changes made to it. Update the build result with information about the build.
+	 * 
+	 * @param buildResultUUID The id of the build result (which also contains the build request & build definition instance)
+	 * May be <code>null</code> if buildWorkspaceName is supplied. Only one of buildResultUUID/buildWorkspaceName should be
+	 * supplied
+	 * @param buildWorkspaceName Name of the RTC build workspace (changes will be accepted into it)
+	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName should be
+	 * supplied
+	 * @param fetchDestination The location the build workspace is to be loaded
+	 * @param changeReport The report to be built of all the changes accepted/discarded
+	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @return <code>Map<String, String></code> of build properties
+	 * @throws Exception Thrown if anything goes wrong
+	 */
+	public Map<String, String> checkout(String buildResultUUID, String buildWorkspaceName, String hjFetchDestination, ChangeReport changeReport,
+			String defaultSnapshotName, final IConsoleOutput listener) throws Exception {
 		ensureLoggedIn();
-		IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName);
-		BuildWorkspaceDescriptor workspace = new BuildWorkspaceDescriptor(fRepository, workspaceHandle.getItemId().getUuidValue(), buildWorkspaceName);
-		AcceptReport acceptReport = null;
+		
+		BuildWorkspaceDescriptor workspace;
+        
+		BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), hjFetchDestination);
+		
+		// If we have a build result, the build definition that describes what is to be accepted into & how to load
+		// Otherwise, the build workspace on the Jenkins definition is used.
+		IBuildResultHandle buildResultHandle = null;
+		if (buildResultUUID != null && buildResultUUID.length() > 0) {
+			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+	        buildConfiguration.initialize(buildResultHandle, listener);
 
-        File fetchDestinationFile = new File(fetchDestination);
-        final Path fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
-        
+		} else {
+			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName);
+			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName);
+		}
+		
+		Map<String, String> buildProperties = buildConfiguration.getBuildProperties();
+
+        workspace = buildConfiguration.getBuildWorkspaceDescriptor();
+
         listener.log(Messages.RepositoryConnection_checkout_setup());
+        String parentActivityId = getBuildConnection().startBuildActivity(buildResultHandle,
+                Messages.RepositoryConnection_pre_build_activity(), null, false, null);
+
+		AcceptReport acceptReport = null;
         
+        getBuildConnection().addWorkspaceContribution(workspace.getWorkspace(fRepositoryManager, null), buildResultHandle, null);
+
         // Ensure we hang onto this between the accept and the load steps so that if 
         // we are synchronizing, we use the same cached sync times.
         IWorkspaceConnection workspaceConnection = workspace.getConnection(fRepositoryManager, false, null);
-
         boolean synchronizeLoad = false;
-        boolean acceptBeforeFetch = true;
-        boolean isPersonalBuild = false;
-        boolean deleteNeeded = false;
-        
-        if (!isPersonalBuild && acceptBeforeFetch) {
+
+        if (!buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch()) {
             listener.log(Messages.RepositoryConnection_checkout_accept(
             		workspaceConnection.getName()));
-            
-            acceptReport = SourceControlUtility.acceptAllIncoming(
-                    fRepositoryManager, workspace, snapshotName,
+
+            getBuildConnection().startBuildActivity(buildResultHandle,
+                    Messages.RepositoryConnection_activity_accepting_changes(), parentActivityId, true,
                     null);
+
+            acceptReport = SourceControlUtility.acceptAllIncoming(
+                    fRepositoryManager, workspace, buildConfiguration.getSnapshotName(),
+                    null);
+            getBuildConnection().addSnapshotContribution(acceptReport.getSnapshot(), buildResultHandle, null);
             
+            int acceptCount = acceptReport.getChangesAcceptedCount();
+            if (acceptCount > 0) {
+                buildProperties.put(IJazzScmConfigurationElement.PROPERTY_CHANGES_ACCEPTED, String.valueOf(acceptCount));
+            }
+
+            IBaselineSet snapshot = acceptReport.getSnapshot();
+            if (snapshot != null) {
+            	buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, snapshot.getItemId().getUuidValue());
+            }
+            
+            if (buildResultHandle != null) {
+            	WorkItemPublisher workItemPublisher = new WorkItemPublisher();
+            	workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), getTeamRepository());
+            }
+
             // build change report
             ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
             changeReportBuilder.populateChangeReport(changeReport,
@@ -194,14 +302,15 @@ public class RepositoryConnection {
         }
 
         ISharingManager manager = FileSystemCore.getSharingManager();
-        ISandbox sandbox = manager.getSandbox(new PathLocation(fetchDestinationPath), false);
+        final ILocation fetchLocation = buildConfiguration.getFetchDestinationPath();
+        ISandbox sandbox = manager.getSandbox(fetchLocation, false);
 
         // Create a listener to handle corrupt states which may happen during loading
         ICorruptCopyFileAreaListener corruptSandboxListener = new ICorruptCopyFileAreaListener () {
             public void corrupt(ICorruptCopyFileAreaEvent event) {
-                if (event.isCorrupt() && event.getRoot().equals(fetchDestinationPath)) {
+                if (event.isCorrupt() && event.getRoot().equals(fetchLocation)) {
                     listener.log(Messages.RepositoryConnection_corrupt_metadata(
-                    		fetchDestinationPath.toOSString()));
+                    		fetchLocation.toOSString()));
                 }
             }
         };
@@ -209,6 +318,8 @@ public class RepositoryConnection {
         try {
             
             // we don't need to check for a corrupt sandbox if it doesn't exist or is marked as "Delete Before Fetch"
+        	File fetchDestinationFile = buildConfiguration.getFetchDestinationFile();
+        	boolean deleteNeeded = buildConfiguration.isDeleteNeeded();
             if (fetchDestinationFile.exists() && !deleteNeeded) { 
                
                 if (!sandbox.isRegistered()) {
@@ -246,15 +357,21 @@ public class RepositoryConnection {
 
             listener.log(Messages.RepositoryConnection_checkout_fetch_start(
                     fetchDestinationFile.getCanonicalPath()));
+            
+            getBuildConnection().startBuildActivity(buildResultHandle, Messages.RepositoryConnection_activity_fetching(),
+                    parentActivityId, true, null);
 
-            // figure out the handles from the load rules property
-            Collection<ILoadRule2> loadRules = Collections.emptyList();
-            Collection<IComponentHandle> components = Collections.emptyList();
+            // TODO This affects all loads ever after (and with multi-threaded ...)
+            // setScmMaxContentThreads(getMaxScmContentThreads(buildDefinitionInstance));
+
             SourceControlUtility.updateFileCopyArea(workspaceConnection,
-                    fetchDestinationFile.getCanonicalPath(), false, components,
-                    synchronizeLoad, loadRules, false, null);
+                    fetchDestinationFile.getCanonicalPath(), buildConfiguration.includeComponents(),
+                    buildConfiguration.getComponents(),
+                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection),
+                    buildConfiguration.createFoldersForComponents(), new NullProgressMonitor());
 
             listener.log(Messages.RepositoryConnection_checkout_fetch_complete());
+            getBuildConnection().completeBuildActivity(buildResultHandle, parentActivityId, null);
 
         } finally {
             /*
@@ -268,7 +385,39 @@ public class RepositoryConnection {
             	listener.log(Messages.RepositoryConnection_checkout_termination_error(e.getMessage()), e);
             }
         }
+        
+        buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
+        return buildProperties;
 	}
+
+
+	/**
+	 * Create an RTC build result.
+	 * @param buildDefinition The name of the build definition that is behind the request
+	 * for the build.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @return The item id of the build result created
+	 * @throws Exception Thrown if anything goes wrong
+	 */
+	public String createBuildResult(String buildDefinition, String personalBuildWorkspaceName, String buildLabel, IConsoleOutput listener) throws Exception {
+		ensureLoggedIn();
+		
+		IWorkspaceHandle personalBuildWorkspace = null;
+		if (personalBuildWorkspaceName != null && personalBuildWorkspaceName.length() > 0) {
+			personalBuildWorkspace = getWorkspace(personalBuildWorkspaceName);
+		}
+		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
+		IBuildResultHandle buildResult = buildConnection.createBuildResult(buildDefinition, personalBuildWorkspace, buildLabel, listener);
+		
+		return buildResult.getItemId().getUuidValue();
+	}
+
+	public void terminateBuild(String buildResultUUID,  boolean aborted, int buildState,
+			IConsoleOutput listener) throws Exception {
+		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
+		buildConnection.terminateBuild(buildResultUUID, aborted, buildState, listener);
+	}
+
 	public void ensureLoggedIn() throws TeamRepositoryException {
 		if (!fRepository.loggedIn()) {
 			try {
@@ -322,5 +471,11 @@ public class RepositoryConnection {
         }
         return file.delete();
     }
+
+	public void createBuildLinks(String buildResultUUID, String rootUrl,
+			String projectUrl, String buildUrl, IConsoleOutput clientConsole) throws TeamRepositoryException {
+		getBuildConnection().createBuildLinks(buildResultUUID, rootUrl, projectUrl,
+				buildUrl, clientConsole);
+	}
 
 }

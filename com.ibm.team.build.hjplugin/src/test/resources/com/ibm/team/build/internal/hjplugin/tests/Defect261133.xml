@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/*******************************************************************************
+ * Copyright (c) 2013 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+<changelog baselineSetName="ハローワールド #6" baselineSetItemId="_UmU8sKdDEeKcuK73L2Ob6A" workspaceItemId="_huemEKdAEeKcuK73L2Ob6A">
+    <changeset action="Added" owner="chris" date="1366190870776" comment="共有" changeSetItemId="_AU7yEKdBEeKcuK73L2Ob6A" componentItemId="_MQczsKc_EeKcuK73L2Ob6A" componentName="Jenkinsプロジェクト デフォルト・コンポーネント"  >
+        <changes>
+            <change kind="1" name="/HelloWorld" itemType="Folder" itemId="_AUyoEKdBEeKliO3nvCMoAA" stateId="_AavfEKdBEeKcuK73L2Ob6A" />
+            <change kind="1" name="/HelloWorld/.project" itemType="FileItem" itemId="_Adt6kadBEeKliO3nvCMoAA" stateId="_AhIbD6dBEeKcuK73L2Ob6A" />
+            <change kind="1" name="/HelloWorld/.settings/org.eclipse.jdt.core.prefs" itemType="FileItem" itemId="_Ad3EgadBEeKliO3nvCMoAA" stateId="_AhIa-6dBEeKcuK73L2Ob6A" />
+            <change kind="1" name="/HelloWorld/src" itemType="Folder" itemId="_Ad3EgqdBEeKliO3nvCMoAA" stateId="_AhIbAadBEeKcuK73L2Ob6A" />
+            <change kind="1" name="/HelloWorld/src/HelloWorld.java" itemType="FileItem" itemId="_Ad3Eg6dBEeKliO3nvCMoAA" stateId="_AhIbCKdBEeKcuK73L2Ob6A" />
+            <change kind="1" name="/HelloWorld/.settings" itemType="Folder" itemId="_Ad3EgKdBEeKliO3nvCMoAA" stateId="_AhIa_qdBEeKcuK73L2Ob6A" />
+            <change kind="1" name="/HelloWorld/.classpath" itemType="FileItem" itemId="_Adt6kKdBEeKliO3nvCMoAA" stateId="_AhIa9KdBEeKcuK73L2Ob6A" />
+        </changes>
+    </changeset>
+    <changeset action="Added" owner="chris" date="1366191024117" comment="" changeSetItemId="_Vit-dKdBEeKcuK73L2Ob6A" componentItemId="_MQczsKc_EeKcuK73L2Ob6A" componentName="Jenkinsプロジェクト デフォルト・コンポーネント"  >
+        <changes>
+            <change kind="2" name="/HelloWorld/src/HelloWorld.java" itemType="FileItem" itemId="_Ad3Eg6dBEeKliO3nvCMoAA" stateId="_VkgHJ6dBEeKcuK73L2Ob6A" />
+        </changes>
+        <workItems>
+            <workItem number="7" summary="あ" />
+        </workItems>
+    </changeset>
+</changelog>

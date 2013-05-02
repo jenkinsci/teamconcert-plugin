@@ -23,6 +23,7 @@ import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 
+@SuppressWarnings("nls")
 public class RTCFacadeFactoryIT extends HudsonTestCase {
 
 	@Override
