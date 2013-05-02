@@ -20,6 +20,7 @@ import org.jvnet.hudson.test.HudsonTestCase;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 
+@SuppressWarnings("nls")
 public class RTCFacadeIT extends HudsonTestCase {
 
 	RTCFacadeWrapper facade = null;
@@ -159,7 +160,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 				}
 			} finally {
 				testingFacade.invoke(
-						"tearDownTestBuildWorkspace",
+						"tearDown",
 						new Class[] { String.class, // serverURI
 								String.class, // userId
 								String.class, // password

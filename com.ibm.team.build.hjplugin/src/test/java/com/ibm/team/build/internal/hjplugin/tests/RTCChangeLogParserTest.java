@@ -14,11 +14,10 @@ package com.ibm.team.build.internal.hjplugin.tests;
 import hudson.Util;
 import hudson.scm.EditType;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.File;
 import java.io.Reader;
 import java.io.StringReader;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -28,14 +27,15 @@ import org.junit.Test;
 import org.jvnet.hudson.test.HudsonTestCase;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
+import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
+import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemDesc;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSetEntry;
-import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
-import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemDesc;
 
+@SuppressWarnings("nls")
 public class RTCChangeLogParserTest extends HudsonTestCase {
 
 	private static final String EOL = System.getProperty("line.separator", "\n"); 
@@ -160,7 +160,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 			String changeSetItemId = changeSetEntry.getChangeSetItemId();
 			if (changeSetItemId.equals("_ojFTsVwQEeKvo5cWqp-wYg")) {
 				Assert.assertEquals("author", "heatherf", changeSetEntry.getOwner());
-				Assert.assertEquals("comment", Util.escape("my comment is really long from a UI perspective\nAnd spans 3 lines containing incredibly awesome essential\ninformation about the myriad of changes in the change set."), changeSetEntry.getComment());
+				Assert.assertEquals("comment", "my comment is really long from a UI perspective\nAnd spans 3 lines containing incredibly awesome essential\ninformation about the myriad of changes in the change set.", changeSetEntry.getComment());
 				Assert.assertEquals("Change count for " + changeSetItemId, 6, changeSetEntry.getAffectedPaths().size());
 				Assert.assertTrue("change set date missmatch expected 2013-01-28 was " + changeSetEntry.getChangeSetModDate(), changeSetEntry.getChangeSetModDate().startsWith("2013-01-28"));
 				Assert.assertEquals("Versionable change count for " + changeSetItemId, 6, changeSetEntry.getAffectedVersionables().size());
@@ -212,17 +212,13 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		}
 	}
 
-    protected BufferedReader getReader(String fileName) {
-        InputStream in = getClass().getResourceAsStream(fileName);
-        return new BufferedReader(new InputStreamReader(in));
-    }
-
     @Test
     public void testMissingComponentName() throws Exception {
     	
-		Reader changeLog =  getReader("MissingComponentName.xml");    	
+		URL changeLogURL = getClass().getResource("MissingComponentName.xml");
+		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
 		
 		Assert.assertEquals(1, result.getAffectedComponents().size());
 		Assert.assertEquals(3, result.getChangeSetsAcceptedCount());
@@ -235,9 +231,10 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
     @Test
     public void testDuplicateComponentName() throws Exception {
     	
-		Reader changeLog =  getReader("DuplicateComponentName.xml");    	
+		URL changeLogURL = getClass().getResource("DuplicateComponentName.xml");
+		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
 		
 		Assert.assertEquals(2, result.getAffectedComponents().size());
 		Assert.assertEquals(2, result.getChangeSetsAcceptedCount());
@@ -263,4 +260,27 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		Assert.assertTrue("Expected it to be an empty set", result.isEmptySet());
 		Assert.assertEquals(0, result.getAffectedComponents().size());
 	}
+
+    @Test
+    public void testDefect261133() throws Exception {
+		URL changeLogURL = getClass().getResource("Defect261133.xml");
+		File changeLogFile = new File(changeLogURL.toURI());
+		RTCChangeLogParser parser = new RTCChangeLogParser();
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		
+		Assert.assertEquals("ハローワールド #6", result.getBaselineSetName());
+		Assert.assertEquals(1, result.getAffectedComponents().size());
+		Assert.assertEquals(2, result.getChangeSetsAcceptedCount());
+		Iterator<ComponentDescriptor> iterator = result.getAffectedComponents().iterator();
+		ComponentDescriptor descriptor1 = iterator.next();
+		Assert.assertEquals("Jenkinsプロジェクト デフォルト・コンポーネント", descriptor1.getName());
+		Assert.assertEquals(2, result.getChangeSetsAccepted(descriptor1.getItemId()).size());
+		for (RTCChangeLogChangeSetEntry changeSet : result.getChangeSetsAccepted(descriptor1.getItemId())) {
+			if (changeSet.getChangeSetItemId().equals("_AU7yEKdBEeKcuK73L2Ob6A")) {
+				assertEquals("共有", changeSet.getComment());
+			} else {
+				assertEquals("あ", changeSet.getWorkItem().getSummary());
+			}
+		}
+    }
 }

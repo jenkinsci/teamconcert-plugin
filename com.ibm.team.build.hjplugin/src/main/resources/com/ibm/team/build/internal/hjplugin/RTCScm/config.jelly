@@ -63,11 +63,30 @@
     </table>
     </f:block>
         
-    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
-        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" />
-    </f:entry>
-    
-    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
-        method="validateBuildWorkspace" with="buildWorkspace,overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout" />
+	    <f:block>
+	    <table>
+	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildType == 'buildDefinition'}" inline="true" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
+        
+			    <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >
+			        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" />
+			    </f:entry>
+			    
+			    <f:validateButton title="${%validateBuildDefinition.title}" progress="${%validateBuildDefinition.progress}" 
+			        method="validateBuildDefinition" with="overrideGlobal,buildTool,serverURI,timeout,userId,password,passwordFile,buildDefinition" />
+	        
+	        </f:radioBlock>
+
+	        <f:radioBlock title="${%buildWorkspace.type}" name="buildType" value="buildWorkspace" checked="${instance.buildType == 'buildWorkspace'}" inline="true" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildWorkspaceType" >
+        
+			    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
+			        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" />
+			    </f:entry>
+			    
+			    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
+			        method="validateBuildWorkspace" with="overrideGlobal,buildTool,serverURI,timeout,userId,password,passwordFile,buildWorkspace" />
+		        
+		    </f:radioBlock>
+	    </table>
+	    </f:block>
             
 </j:jelly>

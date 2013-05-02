@@ -30,7 +30,6 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 	private String componentName;
 	private String action;
 	
-	@Exported
 	public void setItemId(String itemId) {
 		componentItemId = itemId;
 	}
@@ -39,12 +38,10 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 		return componentItemId;
 	}
 
-	@Exported
 	public void setName(String name) {
 		componentName = name;
 	}
 
-	@Exported
 	public void setAction(String action) {
 		this.action = action;
 	}
@@ -74,12 +71,10 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 		return Collections.emptyList();
 	}
 	
-	@Exported
 	public String getName() {
 		return componentName;
 	}
 	
-	@Exported
 	public EditType getActionType() {
 		if (action.equalsIgnoreCase("Added")) { //$NON-NLS-1$
 			return ADD_COMPONENT;

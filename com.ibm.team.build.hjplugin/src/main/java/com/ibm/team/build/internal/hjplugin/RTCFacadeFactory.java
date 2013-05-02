@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.logging.Level;
@@ -48,9 +50,9 @@ public class RTCFacadeFactory {
 			try {
 				mapSize = Integer.parseInt(mapSizeProperty);
 			} catch (NumberFormatException e) {
-				debug(debugLog, "Unable to parse system property " + CACHE_SIZE_PROPERTY + "=" + mapSizeProperty); 
+				debug(debugLog, "Unable to parse system property " + CACHE_SIZE_PROPERTY + "=" + mapSizeProperty);   //$NON-NLS-1$//$NON-NLS-2$
 			}
-			debug(debugLog, "Class loader cache size is " + mapSize);
+			debug(debugLog, "Class loader cache size is " + mapSize); //$NON-NLS-1$
 			fgRTCFacadeCache = new LRUMap(mapSize);
 		}
 		
@@ -62,14 +64,14 @@ public class RTCFacadeFactory {
 		String stdBuildToolkitPath = buildToolkitFile.getAbsolutePath();
 		RTCFacadeWrapper rtcFacade = (RTCFacadeWrapper) fgRTCFacadeCache.get(stdBuildToolkitPath);
 		if (rtcFacade == null) {
-			rtcFacade = RTCFacadeFactory.newFacade("com.ibm.team.build.internal.hjplugin.rtc.RTCFacade",
+			rtcFacade = RTCFacadeFactory.newFacade("com.ibm.team.build.internal.hjplugin.rtc.RTCFacade", //$NON-NLS-1$
 					buildToolkitFile, debugLog);
 			if (fgRTCFacadeCache.isFull()) {
-				debug(debugLog, "Class loader cache(" + fgRTCFacadeCache.maxSize() + ") is full.");
+				debug(debugLog, "Class loader cache(" + fgRTCFacadeCache.maxSize() + ") is full."); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 			fgRTCFacadeCache.put(stdBuildToolkitPath, rtcFacade);  // only cache if successful
 		} else {
-			debug(debugLog, "Reusing facade for " + stdBuildToolkitPath);
+			debug(debugLog, "Reusing facade for " + stdBuildToolkitPath); //$NON-NLS-1$
 		}
 		return rtcFacade;
 	}
@@ -86,8 +88,34 @@ public class RTCFacadeFactory {
 			
 			ClassLoader currentClassLoader = setContextClassLoader();
 			try {
-	    		return facade.getClass().getMethod(methodName, argumentTypes)
-	    			.invoke(facade, arguments);
+	    		Method m = facade.getClass().getMethod(methodName, argumentTypes);
+	    		return m.invoke(facade, arguments);
+			} catch (NoSuchMethodException e) {
+				LOGGER.finer(e.getMessage());
+				StringBuilder lookingFor = new StringBuilder("Looking for: ");
+				lookingFor.append(methodName).append("(");
+				boolean first = true;
+				for (Class argument : argumentTypes) {
+					if (!first) {
+						lookingFor.append(",");
+					} else {
+						first = false;
+					}
+					lookingFor.append(argument.getSimpleName());
+				}
+				lookingFor.append(")");
+				LOGGER.finer(lookingFor.toString());
+				for (Method method : facade.getClass().getMethods()) {
+					LOGGER.finer(method.toString());
+				}
+				throw e;
+	    	} catch (InvocationTargetException e) {
+	    		Throwable eToReport = e.getCause();
+	    		if (eToReport instanceof Exception) {
+	    			throw (Exception) eToReport;
+	    		} else {
+	    			throw e;
+	    		}
 			} finally {
 				resetContextClassLoader(currentClassLoader);
 			}

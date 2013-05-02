@@ -13,6 +13,7 @@ package com.ibm.team.build.internal.hjplugin.tests;
 
 import java.text.MessageFormat;
 
+@SuppressWarnings("nls")
 public class Config {
 
 	public static final String CONFIGURED = "com.ibm.team.build.configured";
@@ -22,6 +23,8 @@ public class Config {
 	public static final String PASSWORD = "com.ibm.team.build.password";
 	public static final String PASSWORD_FILE = "com.ibm.team.build.passwordFile";
 	public static final String TIMEOUT = "com.ibm.team.build.timeout";
+	
+	public static final String SET_UP_ONLY = "com.ibm.team.build.setUpOnly";
 
 	private static final String MISSING_PROPERTY = "Missing {0} property";
 	private static final String NOT_CONFIGURED = "Not configured";
@@ -33,6 +36,7 @@ public class Config {
 	private String password;
 	private String passwordFile;
 	private int timeout;
+	private boolean setUpOnly;
 
 	public static final Config DEFAULT = new Config();
 
@@ -81,7 +85,12 @@ public class Config {
 						MISSING_PROPERTY, TIMEOUT));
 			}
 			timeout = Integer.parseInt(timeoutString);
-
+			
+			String setUpOnlyString = System.getProperty(SET_UP_ONLY);
+			if (setUpOnlyString == null) {
+				setUpOnly = false;
+			}
+			setUpOnly = Boolean.parseBoolean(setUpOnlyString);
 		}
 	}
 
@@ -123,6 +132,11 @@ public class Config {
 	public int getTimeout() {
 		validateConfigured();
 		return timeout;
+	}
+
+	public boolean isSetUpOnly() {
+		validateConfigured();
+		return setUpOnly;
 	}
 
 }

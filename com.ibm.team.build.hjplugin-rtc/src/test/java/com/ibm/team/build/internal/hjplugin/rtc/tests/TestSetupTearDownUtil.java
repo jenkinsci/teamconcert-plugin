@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
@@ -26,7 +27,6 @@ import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
-import com.ibm.team.repository.common.UUID;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceConnection.IConfigurationOp;
 import com.ibm.team.scm.client.IWorkspaceConnection.IMarkAsMergedOp;
@@ -39,14 +39,21 @@ import com.ibm.team.scm.common.IChangeSet;
 import com.ibm.team.scm.common.IChangeSetHandle;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IVersionableHandle;
-import com.ibm.team.scm.common.IWorkspace;
-import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IItemConflictReport;
 import com.ibm.team.scm.common.dto.IUpdateReport;
 import com.ibm.team.workitem.common.model.IWorkItem;
 import com.ibm.team.workitem.common.model.IWorkItemHandle;
 
+@SuppressWarnings("nls")
 public class TestSetupTearDownUtil extends BuildClient {
+	
+	public static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
+	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
+	public static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
+	public static final String ARTIFACT_BASELINE_SET_ITEM_ID = "baselineSetItemId";
+	public static final String ARTIFACT_BUILD_DEFINITION_ITEM_ID = "buildDefinitionItemId";
+	public static final String ARTIFACT_BUILD_ENGINE_ITEM_ID = "buildEngineItemId";
+	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 	
 	public TestSetupTearDownUtil() {
 	}
@@ -59,21 +66,17 @@ public class TestSetupTearDownUtil extends BuildClient {
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
-		IWorkspaceConnection buildStream = RepositoryUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
-		Map<String, IItemHandle> cAdded = RepositoryUtil.addComponent(workspaceManager, buildStream, componentAddedName, new String[] {componentAddedName + "/" });
-		Map<String, IItemHandle> cDropped = RepositoryUtil.addComponent(workspaceManager, buildWorkspace, componentDroppedName, new String[] {componentDroppedName + "/" });
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		Map<String, IItemHandle> cAdded = SCMUtil.addComponent(workspaceManager, buildStream, componentAddedName, new String[] {componentAddedName + "/" });
+		Map<String, IItemHandle> cDropped = SCMUtil.addComponent(workspaceManager, buildWorkspace, componentDroppedName, new String[] {componentDroppedName + "/" });
 		
 		Map<String, String> result = new HashMap<String, String>();
-		result.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		result.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
+		result.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		result.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
 		result.put("componentAddedItemId", ((IComponent) cAdded.get(componentAddedName)).getItemId().getUuidValue());
 		result.put("componentDroppedItemId", ((IComponent) cDropped.get(componentDroppedName)).getItemId().getUuidValue());
 		return result;
-	}
-
-	public void tearDownComponentChanges(ConnectionDetails connectionDetails, Map<String, String> setup) throws Exception {
-		deleteWorkspaceAndStream(connectionDetails, setup);
 	}
 	
 	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String workspaceName,
@@ -86,9 +89,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
-		IWorkspaceConnection buildStream = RepositoryUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
 		String c1 = "/" + componentName;
-		Map<String, IItemHandle> pathToHandle = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 				c1 + "/",
 				c1 + "/f/",
 				c1 + "/f/a.txt",
@@ -101,13 +104,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 				c1 + "/f2/",
 				});
 		
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
 		// capture interesting uuids to verify against
-		artifactIds.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("component1ItemId", component.getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/a.txt", pathToHandle.get(c1 + "/f/a.txt").getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/c.txt", pathToHandle.get(c1 + "/f/c.txt").getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/tree/e.txt", pathToHandle.get(c1 + "/f/tree/e.txt").getItemId().getUuidValue());
@@ -133,15 +136,15 @@ public class TestSetupTearDownUtil extends BuildClient {
 		//     modifies & renames bRenamed.txt
 		//     reparents c.txt
 		IChangeSetHandle cs1 = workspace.createChangeSet(component, null);
-		RepositoryUtil.modifyFiles(workspace, component, cs1, pathToHandle, new String[] {
+		SCMUtil.modifyFiles(workspace, component, cs1, pathToHandle, new String[] {
 				root + "/f/a.txt",
 				root + "/f/b.txt",
 		});
-		RepositoryUtil.moveVersionable(workspace, component, cs1, pathToHandle, 
+		SCMUtil.moveVersionable(workspace, component, cs1, pathToHandle, 
 				root + "/f/b.txt",
 				root + "/f/bRenamed.txt"
 		);
-		RepositoryUtil.moveVersionable(workspace, component, cs1, pathToHandle, 
+		SCMUtil.moveVersionable(workspace, component, cs1, pathToHandle, 
 				root + "/f/c.txt",
 				root + "/f2/c.txt"
 		);
@@ -174,7 +177,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		// cs2 has a comment
 		//     deletes f/tree/  f/tree/e.txt 
 		IChangeSetHandle cs2 = workspace.createChangeSet(component, "comment of the change set", false, null);
-		RepositoryUtil.deleteVersionables(workspace, component, cs2, pathToHandle, new String[] {
+		SCMUtil.deleteVersionables(workspace, component, cs2, pathToHandle, new String[] {
 				root + "/f/tree/",
 				root + "/f/tree/e.txt",
 		});
@@ -200,16 +203,17 @@ public class TestSetupTearDownUtil extends BuildClient {
 		// cs3 has a work item associated with it but no comment
 		// The workitems are dependent on the test repo being setup with some work items
 		IChangeSetHandle cs3 = workspace.createChangeSet(component, "", false, null);
-		RepositoryUtil.addVersionables(workspace, component, cs3, pathToHandle, new String[] {
+		SCMUtil.addVersionables(workspace, component, cs3, pathToHandle, new String[] {
 				root + "/f/newTree/",
 				root + "/f/newTree/newFile.txt"
 		});
-		List<IWorkItemHandle> workItems = RepositoryUtil.findSomeWorkItems(repo, 1);
+		List<IWorkItemHandle> workItems = WorkItemUtil.findSomeWorkItems(repo, 1);
 		if (!workItems.isEmpty()) {
-			RepositoryUtil.createWorkItemChangeSetLink(repo, new IWorkItemHandle[] { workItems.get(0) }, cs3);
+			SCMUtil.createWorkItemChangeSetLink(repo, new IWorkItemHandle[] { workItems.get(0) }, cs3);
 			IWorkItem fullWorkItem = (IWorkItem) repo.itemManager().fetchCompleteItem(workItems.get(0), IItemManager.DEFAULT, null);
 			artifacts.put(Integer.toString(fullWorkItem.getId()), fullWorkItem.getHTMLSummary().toString());
 			artifacts.put("cs3wi1", Integer.toString(fullWorkItem.getId()));
+			artifacts.put("cs3wi1itemId", fullWorkItem.getItemId().getUuidValue());
 		}
 		workspace.closeChangeSets(Collections.singletonList(cs3), null);
 
@@ -246,15 +250,16 @@ public class TestSetupTearDownUtil extends BuildClient {
 		for (int i = 0; i < 257; i++) {
 			toAdd[i+1] = "/newTree2/newF" + i + ".txt";
 		}
-		RepositoryUtil.addVersionables(workspace, component, cs4, pathToHandle, toAdd);
-		workItems = RepositoryUtil.findSomeWorkItems(repo, 5);
+		SCMUtil.addVersionables(workspace, component, cs4, pathToHandle, toAdd);
+		workItems = WorkItemUtil.findSomeWorkItems(repo, 5);
 		if (!workItems.isEmpty()) {
-			RepositoryUtil.createWorkItemChangeSetLink(repo, workItems.toArray(new IWorkItemHandle[workItems.size()]), cs4);
+			SCMUtil.createWorkItemChangeSetLink(repo, workItems.toArray(new IWorkItemHandle[workItems.size()]), cs4);
 			List<IWorkItem> fullWorkItems = repo.itemManager().fetchCompleteItems(workItems, IItemManager.DEFAULT, null);
 			int i = 1;
 			for (IWorkItem wi : fullWorkItems) {
 				artifacts.put(Integer.toString(wi.getId()), wi.getHTMLSummary().toString());
 				artifacts.put("cs4wi" + i, Integer.toString(wi.getId()));
+				artifacts.put("cs4wi" + i + "itemId", wi.getItemId().getUuidValue());
 				i++;
 			}
 		}
@@ -262,23 +267,21 @@ public class TestSetupTearDownUtil extends BuildClient {
 		artifacts.put("cs4", cs4.getItemId().getUuidValue());
 	}
 
-	public void tearDownAcceptChanges(ConnectionDetails connectionDetails, Map<String, String> setupArtifacts) throws Exception {
-		deleteWorkspaceAndStream(connectionDetails, setupArtifacts);
-	}
-
-	private void deleteWorkspaceAndStream(ConnectionDetails connectionDetails,
+	public void tearDown(ConnectionDetails connectionDetails,
 			Map<String, String> setupArtifacts) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn();
 		ITeamRepository repo = connection.getTeamRepository(); 
-		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
-
 		// Can't delete components just the workspaces
-		IWorkspaceHandle toDelete = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(setupArtifacts.get("workspaceItemId")), null);
-		workspaceManager.deleteWorkspace(toDelete, null);
-		toDelete =  (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(setupArtifacts.get("streamItemId")), null);
-		workspaceManager.deleteWorkspace(toDelete, null);
+		SCMUtil.deleteWorkspace(repo, setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID));
+		SCMUtil.deleteWorkspace(repo, setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID));
+		SCMUtil.deleteWorkspace(repo, setupArtifacts.get("singleWorkspaceItemId"));
+		SCMUtil.deleteWorkspace(repo, setupArtifacts.get("multipleWorkspaceItemId1"));
+		SCMUtil.deleteWorkspace(repo, setupArtifacts.get("multipleWorkspaceItemId2"));
+		
+		// Delete the build defn related artifacts
+		BuildUtil.deleteBuildArtifacts(repo, setupArtifacts);
 	}
 
 	public Map<String, String> setupTestBuildWorkspace(ConnectionDetails connectionDetails, String singleWorkspaceName,
@@ -289,9 +292,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createWorkspace(workspaceManager, singleWorkspaceName);
-		IWorkspaceConnection buildWorkspace2 = RepositoryUtil.createWorkspace(workspaceManager, multipleWorkspaceName);
-		IWorkspaceConnection buildWorkspace3 = RepositoryUtil.createWorkspace(workspaceManager, multipleWorkspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, singleWorkspaceName);
+		IWorkspaceConnection buildWorkspace2 = SCMUtil.createWorkspace(workspaceManager, multipleWorkspaceName);
+		IWorkspaceConnection buildWorkspace3 = SCMUtil.createWorkspace(workspaceManager, multipleWorkspaceName);
 		
 		Map<String, String> result = new HashMap<String, String>();
 		result.put("singleWorkspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
@@ -299,21 +302,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		result.put("multipleWorkspaceItemId2", buildWorkspace3.getContextHandle().getItemId().getUuidValue());
 		repo.logout();
 		return result;
-	}
-
-	public void tearDownTestBuildWorkspace(ConnectionDetails connectionDetails, Map<String, String> setupArtifacts) throws Exception {
-		
-		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
-		ITeamRepository repo = connection.getTeamRepository(); 
-		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
-
-		IWorkspaceHandle toDelete = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(setupArtifacts.get("singleWorkspaceItemId")), null);
-		workspaceManager.deleteWorkspace(toDelete, null);
-		toDelete = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(setupArtifacts.get("multipleWorkspaceItemId1")), null);
-		workspaceManager.deleteWorkspace(toDelete, null);
-		toDelete = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(setupArtifacts.get("multipleWorkspaceItemId2")), null);
-		workspaceManager.deleteWorkspace(toDelete, null);
 	}
 
 	public Map<String, String> setupAcceptDiscardChanges(
@@ -327,9 +315,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
-		IWorkspaceConnection buildStream = RepositoryUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
 		String c1 = "/" + componentName;
-		Map<String, IItemHandle> pathToHandle = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 				c1 + "/",
 				c1 + "/f/",
 				c1 + "/f/a.txt",
@@ -342,13 +330,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 				c1 + "/f2/",
 				});
 		
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
 		// capture interesting uuids to verify against
-		artifactIds.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("component1ItemId", component.getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/a.txt", pathToHandle.get(c1 + "/f/a.txt").getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/c.txt", pathToHandle.get(c1 + "/f/c.txt").getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/tree/e.txt", pathToHandle.get(c1 + "/f/tree/e.txt").getItemId().getUuidValue());
@@ -370,12 +358,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
-	public void tearDownAcceptDiscardChanges(
-			ConnectionDetails connectionDetails,
-			Map<String, String> setupArtifacts) throws Exception {
-		deleteWorkspaceAndStream(connectionDetails, setupArtifacts);
-	}
-
 	public Map<String, String> setupEmptyChangeSets(ConnectionDetails connectionDetails, String workspaceName,
 			String componentName) throws Exception {
 		
@@ -386,22 +368,22 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
-		IWorkspaceConnection buildStream = RepositoryUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
 		String c1 = "/" + componentName;
-		Map<String, IItemHandle> pathToHandle = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 				c1 + "/",
 				c1 + "/f/",
 				c1 + "/f/a.txt",
 				c1 + "/f/b.txt",
 				});
 		
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
 		// capture interesting uuids to verify against
-		artifactIds.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("component1ItemId", component.getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 		
 		createEmptyChangeSets(repo, buildStream, component, artifactIds, 1, 2);
 		
@@ -420,11 +402,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 			artifactIds.put("cs" + (csStartNumber + i), cs.getItemId().getUuidValue());
 		}
 	}
-
-	public void tearDownEmptyChangeSets(ConnectionDetails connectionDetails,
-			Map<String, String> setupArtifacts) throws Exception {
-		deleteWorkspaceAndStream(connectionDetails, setupArtifacts);
-	}
 	
 	public Map<String, String> setupNoopChanges(ConnectionDetails connectionDetails,
 			String workspaceName, String componentName) throws Exception {
@@ -436,9 +413,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
-		IWorkspaceConnection buildStream = RepositoryUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
 		String c1 = "/" + componentName;
-		Map<String, IItemHandle> pathToHandle = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 				c1 + "/",
 				c1 + "/f/",
 				c1 + "/f/a.txt",
@@ -451,13 +428,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 				c1 + "/f2/",
 				});
 		
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
 		// capture interesting uuids to verify against
-		artifactIds.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("component1ItemId", component.getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/n.txt", pathToHandle.get(c1 + "/f/n.txt").getItemId().getUuidValue());
 
 		createNoopChangeSets(repo, buildStream, component, c1, pathToHandle, artifactIds, 1);
@@ -474,10 +451,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 		// 2) file is changed & restored to original state (before == after)
 		// we will introduce a merge state so that the change will remain (otherwise the server just removes it from the change set)
 		IChangeSetHandle csSuspend = workspace.createChangeSet(component, "change set to force conflict", false, null);
-		RepositoryUtil.modifyFiles(workspace, component, csSuspend, pathToHandle, new String[] {
+		SCMUtil.modifyFiles(workspace, component, csSuspend, pathToHandle, new String[] {
 				c1 + "/f/n.txt"
 		});
-		RepositoryUtil.addVersionables(workspace, component, csSuspend, pathToHandle, new String[] {
+		SCMUtil.addVersionables(workspace, component, csSuspend, pathToHandle, new String[] {
 				c1 + "/f/NoopFolder/",
 				c1 + "/f/NoopFolder/Noop.txt",
 		});
@@ -486,10 +463,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 		IChangeSetHandle cs = workspace.createChangeSet(component, "Noop change set", false, null);
 		IFileItem current = (IFileItem) workspace.configuration(component).fetchCompleteItem((IFileItemHandle) pathToHandle.get(c1 + "/f/n.txt"), null);
-		RepositoryUtil.modifyFiles(workspace, component, cs, pathToHandle, new String[] {
+		SCMUtil.modifyFiles(workspace, component, cs, pathToHandle, new String[] {
 				c1 + "/f/n.txt"
 		});
-		RepositoryUtil.addVersionables(workspace, component, cs, pathToHandle, new String[] {
+		SCMUtil.addVersionables(workspace, component, cs, pathToHandle, new String[] {
 				c1 + "/f/NoopFolder/",
 				c1 + "/f/NoopFolder/Noop.txt",
 		});
@@ -514,7 +491,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		artifactIds.put(c1 + "/f/n.txt", pathToHandle.get(c1 + "/f/n.txt").getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/NoopFolder/", pathToHandle.get(c1 + "/f/NoopFolder/").getItemId().getUuidValue());
 		artifactIds.put(c1 + "/f/NoopFolder/Noop.txt", pathToHandle.get(c1 + "/f/NoopFolder/Noop.txt").getItemId().getUuidValue());
-		RepositoryUtil.deleteVersionables(workspace, component, cs, pathToHandle, new String[] {
+		SCMUtil.deleteVersionables(workspace, component, cs, pathToHandle, new String[] {
 				c1 + "/f/NoopFolder/Noop.txt",
 				c1 + "/f/NoopFolder/",
 		});
@@ -534,11 +511,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		artifactIds.put("cs" + (changeSetNumber + 1), cs.getItemId().getUuidValue());
 	}
 
-	public void tearDownNoopChanges(ConnectionDetails connectionDetails,
-			Map<String, String> setupArtifacts) throws Exception {
-		deleteWorkspaceAndStream(connectionDetails, setupArtifacts);
-	}
-
 	public Map<String, String> setupComponentRootChange(
 			ConnectionDetails connectionDetails, String workspaceName,
 			String componentName) throws Exception {
@@ -550,19 +522,19 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
-		IWorkspaceConnection buildStream = RepositoryUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
 		String c1 = "/" + componentName;
-		Map<String, IItemHandle> pathToHandle = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 				c1 + "/",
 				});
 		
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
 		// capture interesting uuids to verify against
-		artifactIds.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("component1ItemId", component.getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 
 		createComponentRootChangeSet(repo, buildStream, component, pathToHandle, artifactIds, 1);
 
@@ -577,7 +549,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		artifactIds.put("/", component.getRootFolder().getItemId().getUuidValue());
 		IChangeSetHandle cs = workspace.createChangeSet(component, "Component Root property changes", false, null);
 		artifactIds.put("cs" + changeSetNumber, cs.getItemId().getUuidValue());
-		RepositoryUtil.makePropertyChanges(workspace, component, cs, component.getRootFolder());
+		SCMUtil.makePropertyChanges(workspace, component, cs, component.getRootFolder());
 		workspace.closeChangeSets(Collections.singletonList(cs), null);
 		IChangeSet changeSet = (IChangeSet) repo.itemManager().fetchCompleteItem(cs, IItemManager.DEFAULT, null);
 		for (IChange change : (List<IChange>) changeSet.changes()) {
@@ -590,12 +562,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	}
 
-	public void tearDownComponentRootChange(
-			ConnectionDetails connectionDetails,
-			Map<String, String> setupArtifacts) throws Exception {
-		deleteWorkspaceAndStream(connectionDetails, setupArtifacts);
-	}
-
 	public Map<String, String> setupMultipleComponentChanges(ConnectionDetails connectionDetails,
 			String workspaceName, String componentPrefix) throws Exception {
 		
@@ -606,7 +572,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
-		IWorkspaceConnection buildStream = RepositoryUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
 		String componentName1 = componentPrefix + "1";
 		String componentName2 = componentPrefix + "2";
 		String componentName3 = componentPrefix + "3";
@@ -617,7 +583,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		String c3 = "/" + componentName3;
 		String c4 = "/" + componentName4;
 		
-		Map<String, IItemHandle> pathToHandle1 = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName1, new String[] {
+		Map<String, IItemHandle> pathToHandle1 = SCMUtil.addComponent(workspaceManager, buildStream, componentName1, new String[] {
 				c1 + "/",
 				c1 + "/f/",
 				c1 + "/f/a.txt",
@@ -629,20 +595,20 @@ public class TestSetupTearDownUtil extends BuildClient {
 				c1 + "/f2/",
 		});
 
-		Map<String, IItemHandle> pathToHandle2 = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName2, new String[] {
+		Map<String, IItemHandle> pathToHandle2 = SCMUtil.addComponent(workspaceManager, buildStream, componentName2, new String[] {
 				c2 + "/",
 				c2 + "/f/",
 		});
 
-		Map<String, IItemHandle> pathToHandle3 = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName3, new String[] {
+		Map<String, IItemHandle> pathToHandle3 = SCMUtil.addComponent(workspaceManager, buildStream, componentName3, new String[] {
 				c3 + "/",
 				c3 + "/f/",
 				c3 + "/f/n.txt",
 		});
 
-		IWorkspaceConnection buildWorkspace = RepositoryUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
 
-		Map<String, IItemHandle> pathToHandle4 = RepositoryUtil.addComponent(workspaceManager, buildStream, componentName4, new String[] {
+		Map<String, IItemHandle> pathToHandle4 = SCMUtil.addComponent(workspaceManager, buildStream, componentName4, new String[] {
 				c4 + "/",
 		});
 
@@ -652,9 +618,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IComponent component4 = (IComponent) pathToHandle4.get(componentName4);
 
 		// capture interesting uuids to verify against
-		artifactIds.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put("component1ItemId", component1.getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component1.getItemId().getUuidValue());
 		artifactIds.put("component2ItemId", component2.getItemId().getUuidValue());
 		artifactIds.put("component3ItemId", component3.getItemId().getUuidValue());
 		artifactIds.put("component4ItemId", component4.getItemId().getUuidValue());
@@ -677,10 +643,240 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 		return artifactIds;
 	}
+	
+	public Map<String, String> setupBuildResultContributions(ConnectionDetails connectionDetails,
+									String workspaceName,
+									String componentName,
+									String buildDefinitionId) throws Exception {
 
-	public void tearDownMultipleComponentChanges(
-			ConnectionDetails connectionDetails,
-			Map<String, String> setupArtifacts) throws Exception {
-		deleteWorkspaceAndStream(connectionDetails, setupArtifacts);
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn();
+		ITeamRepository repo = connection.getTeamRepository(); 
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		String c1 = "/" + componentName;
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
+				c1 + "/",
+				c1 + "/f/",
+				c1 + "/f/a.txt",
+				c1 + "/f/b.txt",
+				c1 + "/f/c.txt",
+				c1 + "/f/d.txt",
+				c1 + "/f/n.txt",
+				c1 + "/f/tree/",
+				c1 + "/f/tree/e.txt",
+				c1 + "/f2/",
+				});
+		
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IComponent component = (IComponent) pathToHandle.get(componentName);
+		
+		// capture interesting uuids to verify against
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/a.txt", pathToHandle.get(c1 + "/f/a.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/c.txt", pathToHandle.get(c1 + "/f/c.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/tree/e.txt", pathToHandle.get(c1 + "/f/tree/e.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/tree/", pathToHandle.get(c1 + "/f/tree/").getItemId().getUuidValue());
+		
+		createChangeSet3(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
+		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
+		
+		BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
+				IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+				IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+		return artifactIds;
+	}
+
+	public void verifyBuildResultContributions(
+			ConnectionDetails connectionDetails, Map<String, String> artifacts) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.verifyBuildResultContributions(artifacts);
+	}
+
+	public void testCreateBuildResult(ConnectionDetails connectionDetails,
+			String testName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.testCreateBuildResult(testName);
+	}
+
+	public void testCreateBuildResultFail(ConnectionDetails connectionDetails,
+			String testName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.testCreateBuildResultFail(testName);
+	}
+
+	public void testExternalLinks(ConnectionDetails connectionDetails,
+			String testName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.testExternalLinks(testName);
+	}
+	
+	private static final String XML_ENCODED_CHARACTERS = "<'&\">";
+
+	public Map<String, String> setupXMLEncodingTestChangeSets(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName) throws Exception {
+				
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn();
+		ITeamRepository repo = connection.getTeamRepository(); 
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		String c1 = "/" + componentName;
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
+				"/f/",
+				"/f/a.txt"
+				});
+		
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IComponent component = (IComponent) pathToHandle.get(componentName);
+
+		// capture interesting uuids to verify against
+		artifactIds.put("workspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put("streamItemId", buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		artifactIds.put("/f/a.txt", pathToHandle.get("/f/a.txt").getItemId().getUuidValue());
+		
+		createXMLEncodingTestChangeSet(repo, buildStream, component, pathToHandle, artifactIds);
+		
+		return artifactIds;
+	}
+
+	private void createXMLEncodingTestChangeSet(ITeamRepository repo,
+			IWorkspaceConnection workspace, IComponent component,
+			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts)
+			throws TeamRepositoryException {
+		// cs1 modifies the file
+		IChangeSetHandle cs1 = workspace.createChangeSet(component, XML_ENCODED_CHARACTERS, false, null);
+		SCMUtil.modifyFiles(workspace, component, cs1, pathToHandle, new String[] {
+				"/f/a.txt"
+		});
+		workspace.closeChangeSets(Collections.singletonList(cs1), null);
+		
+		IChangeSet changeSet = (IChangeSet) repo.itemManager().fetchCompleteItem(cs1, IItemManager.DEFAULT, null);
+		for (IChange change : (List<IChange>) changeSet.changes()) {
+			IVersionableHandle state = change.afterState();
+			if (state == null) {
+				state = change.beforeState();
+			}
+			artifacts.put(state.getItemId().getUuidValue(), state.getStateId().getUuidValue());
+		}
+		artifacts.put("cs1", cs1.getItemId().getUuidValue());
+	}
+	
+	public void testBuildTermination(ConnectionDetails connectionDetails,
+			String testName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.testBuildTermination(testName);
+	}
+	
+	public Map<String, String> testComponentLoading(ConnectionDetails connectionDetails,
+			String workspaceName, String componentName, String hjPath, String buildPath) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = buildConfigurationTests.setupComponentLoading(workspaceName,
+				componentName, hjPath, buildPath);
+		try {
+			buildConfigurationTests.testComponentLoading(workspaceName, componentName, hjPath, buildPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> testNewLoadRules(ConnectionDetails connectionDetails,
+			String workspaceName, String testName, String hjPath, String buildPath) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = buildConfigurationTests.setupNewLoadRules(workspaceName,
+				testName, hjPath, buildPath);
+		try {
+			buildConfigurationTests.testNewLoadRules(workspaceName, testName, hjPath, buildPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> testOldLoadRules(ConnectionDetails connectionDetails,
+			String workspaceName, String testName, String hjPath) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = buildConfigurationTests.setupOldLoadRules(workspaceName,
+				testName, hjPath);
+		try {
+			buildConfigurationTests.testOldLoadRules(workspaceName, testName, hjPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> testPersonalBuild(
+			ConnectionDetails connectionDetails, String workspaceName,
+			String testName, String hjPath, String buildPath) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = buildConfigurationTests.setupPersonalBuild(workspaceName,
+				testName, hjPath, buildPath);
+		try {
+			buildConfigurationTests.testPersonalBuild(workspaceName, testName, hjPath, buildPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> testBadFetchLocation(
+			ConnectionDetails connectionDetails, String workspaceName,
+			String testName, String hjPath, String buildPath) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = buildConfigurationTests.setupBadFetchLocation(workspaceName,
+				testName, hjPath, buildPath);
+		try {
+			buildConfigurationTests.testBadFetchLocation(workspaceName, testName, hjPath, buildPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
 	}
 }

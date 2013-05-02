@@ -42,7 +42,6 @@ public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry
         }
 	}
 	
-	@Exported
 	@Override
 	public URL getChangeSetLink(RTCChangeLogSetEntry changeSet)
 			throws IOException {
@@ -82,7 +81,6 @@ public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry
 		return null;
 	}
 	
-	@Exported
 	public URL getWorkItemLink(RTCChangeLogChangeSetEntry.WorkItemDesc workItem) throws MalformedURLException {
 		if (url != null && workItem != null && workItem.getNumber() != null && workItem.getNumber().length() > 0) {
 			StringBuilder buffer = new StringBuilder(url);

@@ -44,6 +44,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -74,11 +75,14 @@ public class RTCScm extends SCM {
 	private String passwordFile;
 
 	// Job configuration settings
+	public static final String BUILD_WORKSPACE_TYPE = "buildWorkspace"; //$NON-NLS-1$
+	public static final String BUILD_DEFINITION_TYPE = "buildDefinition"; //$NON-NLS-1$
+	
+	private String buildType;
 	private String buildWorkspace;
+	private String buildDefinition;
 
 	private RTCRepositoryBrowser browser;
-	
-	// unpersisted fields : should be transient fields
 	
 	// Descriptor class - contains the global configuration settings
 	@Extension
@@ -100,8 +104,6 @@ public class RTCScm extends SCM {
 		private String globalUserId;
 		private Secret globalPassword;
 		private String globalPasswordFile;
-
-		// unpresisted fields : should be transient fields
 		
 		public DescriptorImpl() {
 			super(RTCScm.class, RTCRepositoryBrowser.class);
@@ -285,8 +287,8 @@ public class RTCScm extends SCM {
 	    			return passwordCheck;
 	    		}
 
-	    		return checkConnect(buildToolkitPath, serverURI, userId, password,
-	    				passwordFile == null ? null : new File(passwordFile), Integer.parseInt(timeout));
+	    		return checkConnect(buildToolkitPath, serverURI, userId, Integer.parseInt(timeout), password,
+	    				passwordFile == null ? null : new File(passwordFile));
 
 	    	} else {
 		    	String buildToolkitPath;
@@ -302,19 +304,19 @@ public class RTCScm extends SCM {
 	    		
 	    		String globalPasswordFile = getGlobalPasswordFile();
 	    		File passwordFileFile = globalPasswordFile == null ? null : new File(globalPasswordFile);
-	    		return checkConnect(buildToolkitPath, getGlobalServerURI(), getGlobalUserId(), getGlobalPassword(), passwordFileFile, getGlobalTimeout());
+	    		return checkConnect(buildToolkitPath, getGlobalServerURI(), getGlobalUserId(), getGlobalTimeout(), getGlobalPassword(), passwordFileFile);
 	    	}
 	    }
 
 	    public FormValidation doValidateBuildWorkspace(
-	    		@QueryParameter("buildWorkspace") final String buildWorkspace,
 	    		@QueryParameter("overrideGlobal") final String override,
 	    		@QueryParameter("buildTool") final String buildTool,
 	    		@QueryParameter("serverURI") final String serverURI,
+	    		@QueryParameter("timeout") final String timeout,
 	    		@QueryParameter("userId") final String userId,
 	    		@QueryParameter("password") String password,
 	    		@QueryParameter("passwordFile") String passwordFile,
-	    		@QueryParameter("timeout") final String timeout) {
+	    		@QueryParameter("buildWorkspace") final String buildWorkspace) {
 
 	    	password = Util.fixEmptyAndTrim(password);
 	    	passwordFile = Util.fixEmptyAndTrim(passwordFile);
@@ -344,8 +346,8 @@ public class RTCScm extends SCM {
 	    			return passwordCheck;
 	    		}
 
-	    		return checkBuildWorkspace(buildWorkspace, buildToolkitPath, serverURI, userId, password,
-	    				passwordFile == null ? null : new File(passwordFile), Integer.parseInt(timeout));
+	    		return checkBuildWorkspace(buildToolkitPath, serverURI, Integer.parseInt(timeout), userId, password,
+	    				passwordFile == null ? null : new File(passwordFile), buildWorkspace);
 
 	    	} else {
 		    	String buildToolkitPath;
@@ -360,8 +362,67 @@ public class RTCScm extends SCM {
 		    	}
 
 		    	String passwordFileToUse = getGlobalPasswordFile();
-	    		return checkBuildWorkspace(buildWorkspace, buildToolkitPath, getGlobalServerURI(), getGlobalUserId(), getGlobalPassword(),
-	    				passwordFileToUse == null ? null : new File(getGlobalPasswordFile()), getGlobalTimeout());
+	    		return checkBuildWorkspace(buildToolkitPath, getGlobalServerURI(), getGlobalTimeout(), getGlobalUserId(), getGlobalPassword(),
+	    				passwordFileToUse == null ? null : new File(getGlobalPasswordFile()), buildWorkspace);
+	    	}
+	    }
+
+	    public FormValidation doValidateBuildDefinition(
+	    		@QueryParameter("overrideGlobal") final String override,
+	    		@QueryParameter("buildTool") final String buildTool,
+	    		@QueryParameter("serverURI") final String serverURI,
+	    		@QueryParameter("timeout") final String timeout,
+	    		@QueryParameter("userId") final String userId,
+	    		@QueryParameter("password") String password,
+	    		@QueryParameter("passwordFile") String passwordFile,
+	    		@QueryParameter("buildDefinition") final String buildDefinition) {
+
+	    	password = Util.fixEmptyAndTrim(password);
+	    	passwordFile = Util.fixEmptyAndTrim(passwordFile);
+
+	    	boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+	    	if (overrideGlobalSettings) {
+		    	String buildToolkitPath;
+				try {
+					buildToolkitPath = getMasterBuildToolkit(buildTool, TaskListener.NULL);
+				} catch (Exception e) {
+					return FormValidation.error(e, Messages.RTCScm_no_build_toolkit2(e.getMessage()));
+				}
+		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
+		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
+		    		return buildToolkitCheck;
+		    	}
+
+		    	// validate the timeout value
+	    		FormValidation timeoutCheck = doCheckTimeout(timeout);
+	    		if (!timeoutCheck.kind.equals(FormValidation.Kind.OK)) {
+	    			return timeoutCheck;
+	    		}
+	    		
+	    		// validate password specification
+	    		FormValidation passwordCheck = doCheckPassword(password, passwordFile);
+	    		if (!passwordCheck.kind.equals(FormValidation.Kind.OK)) {
+	    			return passwordCheck;
+	    		}
+
+	    		return checkBuildDefinition(buildToolkitPath, serverURI, Integer.parseInt(timeout), userId, password,
+	    				passwordFile == null ? null : new File(passwordFile), buildDefinition);
+
+	    	} else {
+		    	String buildToolkitPath;
+				try {
+					buildToolkitPath = getMasterBuildToolkit(getGlobalBuildTool(), TaskListener.NULL);
+				} catch (Exception e) {
+					return FormValidation.error(e, Messages.RTCScm_no_global_build_toolkit2(e.getMessage()));
+				}
+		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
+		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
+		    		return buildToolkitCheck;
+		    	}
+
+		    	String passwordFileToUse = getGlobalPasswordFile();
+	    		return checkBuildDefinition(buildToolkitPath, getGlobalServerURI(), getGlobalTimeout(), getGlobalUserId(), getGlobalPassword(),
+	    				passwordFileToUse == null ? null : new File(getGlobalPasswordFile()), buildDefinition);
 	    	}
 	    }
 
@@ -401,11 +462,11 @@ public class RTCScm extends SCM {
     		}
     		
     		// validate the connection
-			return checkConnect(buildToolkitPath, serverURI, userId, password,
-					passwordFile == null ? null : new File(passwordFile), Integer.parseInt(timeout));
+			return checkConnect(buildToolkitPath, serverURI, userId, Integer.parseInt(timeout), password,
+					passwordFile == null ? null : new File(passwordFile));
 	    }
 	    
-		private FormValidation checkConnect(String buildToolkitPath, String serverURI, String userId, String password, File passwordFile, int timeout) {
+		private FormValidation checkConnect(String buildToolkitPath, String serverURI, String userId, int timeout, String password, File passwordFile) {
 
 	    	try {
 	    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
@@ -452,7 +513,7 @@ public class RTCScm extends SCM {
 	    	return FormValidation.ok(Messages.RTCScm_connect_success());
 	    }
 
-		private FormValidation checkBuildWorkspace(String buildWorkspace, String buildToolkitPath, String serverURI, String userId, String password, File passwordFile, int timeout) {
+		private FormValidation checkBuildWorkspace(String buildToolkitPath, String serverURI, int timeout, String userId, String password, File passwordFile, String buildWorkspace) {
 
 			try {
 	    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
@@ -502,11 +563,62 @@ public class RTCScm extends SCM {
 	    	
 	    	return FormValidation.ok(Messages.RTCScm_build_workspace_success());
 	    }
+
+		private FormValidation checkBuildDefinition(String buildToolkitPath, String serverURI, int timeout, String userId, String password, File passwordFile, String buildDefinition) {
+
+			try {
+	    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
+	    		String errorMessage = (String) facade.invoke("testBuildDefinition", //$NON-NLS-1$
+						new Class[] { String.class, // serverURI
+								String.class, // userId
+								String.class, // password
+								File.class, // passwordFile
+								int.class, // timeout
+								String.class}, // buildDefinition
+						serverURI, userId, password, passwordFile, timeout,
+						buildDefinition);
+				if (errorMessage != null && errorMessage.length() != 0) {
+	    			return FormValidation.error(errorMessage);
+				}
+	    	} catch (InvocationTargetException e) {
+	    		Throwable eToReport = e.getCause();
+	    		if (eToReport == null) {
+	    			eToReport = e;
+	    		}
+	    		if (LOGGER.isLoggable(Level.FINER)) {
+	    	    	LOGGER.finer("checkBuildDefinition attempted with " +  //$NON-NLS-1$
+	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + timeout +  //$NON-NLS-1$
+	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
+	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
+	    	    	        "\" buildDefinition=\"" + buildDefinition +"\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    			LOGGER.log(Level.FINER, "checkBuildDefinition invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
+	    		}
+	    		return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
+	    	} catch (Exception e) {
+	    		if (LOGGER.isLoggable(Level.FINER)) {
+	    	    	LOGGER.finer("checkBuildDefinition attempted with " +  //$NON-NLS-1$
+	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + timeout + //$NON-NLS-1$
+	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
+	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
+	    	    	        "\" buildDefinition=\"" + buildDefinition + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    			LOGGER.log(Level.FINER, "checkBuildDefinition failed " + e.getMessage(), e); //$NON-NLS-1$
+	    		}
+	    		return FormValidation.error(e, e.getMessage());
+	    	}
+	    	
+	    	return FormValidation.ok(Messages.RTCScm_build_definition_success());
+	    }
 	}
 	
 	@DataBoundConstructor
 	public RTCScm(boolean overrideGlobal, String buildTool, String serverURI, int timeout, String userId, Secret password, String passwordFile,
-			String buildWorkspace) {
+			String buildType, String buildDefinition, String buildWorkspace) {
 
 		this.overrideGlobal = overrideGlobal;
 		if (this.overrideGlobal) {
@@ -516,8 +628,11 @@ public class RTCScm extends SCM {
 			this.userId = userId;
 			this.password = password;
 			this.passwordFile = passwordFile;
+			
 		}
+		this.buildType = buildType;
 		this.buildWorkspace = buildWorkspace;
+		this.buildDefinition = buildDefinition;
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
 			LOGGER.finer("RTCScm constructed with " + //$NON-NLS-1$
@@ -528,7 +643,9 @@ public class RTCScm extends SCM {
 					"\" userId=\"" + this.userId + //$NON-NLS-1$
 					"\" password " + (this.password == null ? "is not supplied" : "(" + Secret.toString(this.password).length() +" characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 					" passwordFile=\"" + this.passwordFile + //$NON-NLS-1$
-					"\" buildWorkspace=\"" + this.buildWorkspace + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					"\" buildType=\"" + this.buildType + //$NON-NLS-1$
+					"\" buildWorkspace=\"" + this.buildWorkspace + //$NON-NLS-1$
+					"\" buildDefinition=\"" + this.buildDefinition + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 	
@@ -554,25 +671,44 @@ public class RTCScm extends SCM {
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
 
 		File passwordFileFile = getPasswordFileFile();
-		String baselineSetName = getBaselineSetName(build);
+		String label = getLabel(build);
 		String localBuildToolKit;
 		String nodeBuildToolKit;
 		String passwordToUse = null;
+		String jazzServerURI = getServerURI();
+		String jazzUserId = getUserId();
+		int jazzTimeout = getTimeout();
+		String buildWorkspace = getBuildWorkspace();
+		String buildDefinition = getBuildDefinition();
+		String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
+		String buildType = getBuildType();
+		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
 
+		// Log in build result where the build was initiated from RTC
+		// Because if initiated from RTC we will ignore build workspace if its a buildWorkspaceType
+		if (buildResultUUID != null) {
+			listener.getLogger().println(Messages.RTCScm_build_initiated_by());
+		}
+		
+		RTCBuildResultAction buildResultAction = null;
+		
 		try {
 			localBuildToolKit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
 			nodeBuildToolKit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
+			
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 						" Load directory=\"" + workspacePath.getRemote() + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" Build tool=\"" + getBuildTool() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Local Build toolkit=\"" + localBuildToolKit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Node Build toolkit=\"" + nodeBuildToolKit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Server URI=\"" + getServerURI() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Userid=\"" + getUserId() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Server URI=\"" + jazzServerURI + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Userid=\"" + jazzUserId + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Authenticating with " + (passwordFileFile == null ? " configured password " : passwordFileFile.getAbsolutePath()) +  //$NON-NLS-1$ //$NON-NLS-2$
-						" Build workspace=\"" + getBuildWorkspace() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Baseline Set name=\"" + baselineSetName + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+						" Build definition=\"" + buildDefinition + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Build workspace=\"" + buildWorkspace + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" useBuildDefinitionInBuild=\"" + useBuildDefinitionInBuild + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 			
     		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(localBuildToolKit, null);
@@ -580,6 +716,66 @@ public class RTCScm extends SCM {
 					String.class, // password,
 					File.class, // passwordFile,
 			}, getPassword(), getPasswordFileFile());
+			
+			// If we don't have a build result but have a build definition, create the
+			// build result prior to going to the slave so that it can be in the slave's
+			// environment. Also we don't depend on slave giving it back and that helps
+			// with terminating the build result during failure cases.
+			boolean createdBuildResult = false;
+			if (buildResultUUID == null && useBuildDefinitionInBuild) {
+				buildResultUUID = (String) facade.invoke(
+						"createBuildResult", new Class[] { //$NON-NLS-1$
+								String.class, // serverURI,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // buildDefinition,
+								String.class, // buildLabel,
+								Object.class, // listener)
+						}, jazzServerURI, jazzUserId, passwordToUse,
+						jazzTimeout, buildDefinition, label, listener);
+				createdBuildResult = true;
+			}
+
+			// publish in the build result links to the project and the build
+			if (buildResultUUID != null) {
+				String root = Hudson.getInstance().getRootUrl();
+				if (root != null) {
+					root = Util.encode(root);
+				}
+				String projectUrl = build.getProject().getUrl();
+				if (projectUrl != null) {
+					projectUrl = Util.encode(projectUrl);
+				}
+				String buildUrl = build.getUrl();
+				if (buildUrl != null) {
+					buildUrl = Util.encode(buildUrl);
+				}
+				try {
+					facade.invoke(
+							"createBuildLinks", new Class[] { //$NON-NLS-1$
+							String.class, // serverURI,
+									String.class, // userId,
+									String.class, // password,
+									int.class, // timeout,
+									String.class, // buildResultUUID
+									String.class, // rootUrl
+									String.class, // projectUrl
+									String.class, // buildUrl
+									Object.class, // listener)
+							}, jazzServerURI, jazzUserId, passwordToUse,
+							jazzTimeout, buildResultUUID, root, projectUrl,
+							buildUrl, listener);
+				} catch (Exception e) {
+					listener.getLogger().println(Messages.RTCScm_link_creation_failure(e.getMessage()));
+					LOGGER.log(Level.FINER, "Unable to link Hudson/Jenkins build with the RTC build result", e); //$NON-NLS-1$
+				}
+			
+				// add the build result information to the build through an action
+				buildResultAction = new RTCBuildResultAction(jazzServerURI, buildResultUUID, createdBuildResult);
+				build.addAction(buildResultAction);
+			}
+
 
     	} catch (InvocationTargetException e) {
     		Throwable eToReport = e.getCause();
@@ -587,14 +783,18 @@ public class RTCScm extends SCM {
     			eToReport = e;
     		}
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure(eToReport.getMessage()));
-    		eToReport.printStackTrace(writer);
+    		if (RTCScm.unexpectedFailure(eToReport)) {
+    			eToReport.printStackTrace(writer);
+    		}
     		LOGGER.log(Level.FINER, "determinePassword had invocation failure " + eToReport.getMessage(),  eToReport); //$NON-NLS-1$
     		
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure2(eToReport.getMessage()));
     	} catch (Exception e) {
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(e.getMessage()));
-    		e.printStackTrace(writer);
+    		if (RTCScm.unexpectedFailure(e)) {
+    			e.printStackTrace(writer);
+    		}
     		LOGGER.log(Level.FINER, "determinePassword failure " + e.getMessage(), e); //$NON-NLS-1$
 
     		// if we can't check out then we can't build it
@@ -613,13 +813,18 @@ public class RTCScm extends SCM {
 		RTCCheckoutTask checkout = new RTCCheckoutTask(
 				build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
 				nodeBuildToolKit,
-				getServerURI(), getUserId(), passwordToUse,
-				getTimeout(), getBuildWorkspace(),
-				baselineSetName,
+				jazzServerURI, jazzUserId, passwordToUse,
+				jazzTimeout, buildResultUUID,
+				buildWorkspace,
+				label,
 				listener, changeLog,
 				workspacePath.isRemote(), debug);
 		
-		workspacePath.act(checkout);
+		Map<String, String> buildProperties = workspacePath.act(checkout);
+		
+		if (buildResultAction != null) {
+			buildResultAction.addBuildProperties(buildProperties);
+		}
 
 		return true;
 	}
@@ -647,7 +852,7 @@ public class RTCScm extends SCM {
 		}
 	}
 
-	private String getBaselineSetName(AbstractBuild<?, ?> build) {
+	private String getLabel(AbstractBuild<?, ?> build) {
 		// TODO if we have a build definition & build result id we should probably
 		// follow a similar algorithm to RTC?
 		// In the simple plugin case, generate the name from the project and the build
@@ -675,6 +880,7 @@ public class RTCScm extends SCM {
 
 		// check to see if there are incoming changes
     	try {
+    		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(getBuildType());
     		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(getDescriptor().getMasterBuildToolkit(getBuildTool(), listener), null);
 			Boolean changesIncoming = (Boolean) facade.invoke(
 					"incomingChanges", //$NON-NLS-1$
@@ -683,10 +889,13 @@ public class RTCScm extends SCM {
 							String.class, // password
 							File.class, // passwordFile
 							int.class, // timeout
+							String.class, // buildDefinition
 							String.class, // buildWorkspace
 							Object.class,}, // listener
 					getServerURI(), getUserId(), getPassword(),
-					getPasswordFileFile(), getTimeout(), getBuildWorkspace(),
+					getPasswordFileFile(), getTimeout(), 
+					(useBuildDefinitionInBuild ? getBuildDefinition() : ""),
+					(useBuildDefinitionInBuild ? "" : getBuildWorkspace()),
 					listener);
     		if (changesIncoming.equals(Boolean.TRUE)) {
     			listener.getLogger().println(Messages.RTCScm_changes_found());
@@ -702,18 +911,30 @@ public class RTCScm extends SCM {
     			eToReport = e;
     		}
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checking_for_changes_failure(eToReport.getMessage()));
-    		eToReport.printStackTrace(writer);
+    		if (RTCScm.unexpectedFailure(eToReport)) {
+    			eToReport.printStackTrace(writer);
+    		}
     		
     		// if we can't check for changes then we can't build it
     		throw new AbortException(Messages.RTCScm_checking_for_changes_failure2(eToReport.getMessage()));
     		
     	} catch (Exception e) {
     		PrintWriter writer = listener.error(Messages.RTCScm_checking_for_changes_failure3(e.getMessage()));
-    		e.printStackTrace(writer);
+    		if (RTCScm.unexpectedFailure(e)) {
+    			e.printStackTrace(writer);
+    		}
 
     		// if we can't check for changes then we can't build it
     		throw new AbortException(Messages.RTCScm_checking_for_changes_failure3(e.getMessage()));
     	}
+	}
+
+	public static boolean unexpectedFailure(Throwable e) {
+		// This project can not reference types defined in the -rtc project, so we
+		// need to do some clunky testing to see if the exception is notification of
+		// a badly configured build. In that case, we just want to report the error
+		// but not the whole stack trace.
+		return !(e.getClass().getName().equals("RTCConfigurationException"));
 	}
 
 	@Override
@@ -784,8 +1005,21 @@ public class RTCScm extends SCM {
 		}
 		return null;
 	}
+
+	public String getBuildType() {
+
+		// migrate existing jobs with only build workspace defined to build workspace type
+		if (buildType == null && buildWorkspace != null) {
+			buildType = BUILD_WORKSPACE_TYPE;
+		}
+		return buildType;
+	}
 	
 	public String getBuildWorkspace() {
 		return buildWorkspace;
+	}
+	
+	public String getBuildDefinition() {
+		return buildDefinition;
 	}
 }

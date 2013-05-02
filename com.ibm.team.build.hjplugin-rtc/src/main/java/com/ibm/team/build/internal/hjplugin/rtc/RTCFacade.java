@@ -16,6 +16,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -62,12 +63,13 @@ public class RTCFacade {
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection();
+		} catch (RTCConfigurationException e) {
+			errorMessage = e.getMessage();
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		}
 		return errorMessage;
 	}
-
 	
 	/**
 	 * Logs into the repository to test the connection and validates the RTC build workspace is valid for use.
@@ -94,7 +96,42 @@ public class RTCFacade {
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection();
 			repoConnection.testBuildWorkspace(buildWorkspace);
+		} catch (RTCConfigurationException e) {
+			errorMessage = e.getMessage();
 		} catch (RTCValidationException e) {
+			errorMessage = e.getMessage();
+		}
+		return errorMessage;
+	}
+	
+	/**
+	 * Logs into the repository to test the connection and validates the RTC build definition is valid for use.
+	 * This is expected to be called on the Master. If the decision changes and we are to pass the request
+	 * out to a slave, then {@link #determinePassword(String, File)} should be used to determine the
+	 * password first.
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server. May be <code>null</code>
+	 * 				in which case passwordFile should be supplied.
+	 * @param passwordFile The file containing an obfuscated password to use when logging into
+	 * 				the server. May be <code>null</code> in which case password should be supplied.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildDefinition The name of the RTC build definition
+	 * @return an error message to display, or null if no problem
+	 * @throws Exception
+	 */
+	public String testBuildDefinition(String serverURI, String userId, String password, File passwordFile, int timeout, String buildDefinition) throws Exception {
+		String errorMessage = null;
+		try {
+			AbstractBuildClient buildClient = getBuildClient(); 
+			String passwordToUse = buildClient.determinePassword(password, passwordFile);
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
+			repoConnection.testConnection();
+			repoConnection.testBuildDefinition(buildDefinition);
+		} catch (RTCValidationException e) {
+			errorMessage = e.getMessage();
+		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
 		}
 		return errorMessage;
@@ -112,7 +149,12 @@ public class RTCFacade {
 	 * @param passwordFile The file containing an obfuscated password to use when logging into
 	 * 				the server. May be <code>null</code> in which case password should be supplied.
 	 * @param timeout The timeout period for requests made to the server
-	 * @param buildWorkspace The name of the RTC build workspace
+	 * @param buildDefinition The name (id) of the build definition that describes the build workspace.
+	 * May be <code>null</code> if a buildWorkspace is supplied. Only one of buildWorkspace/buildDefinition
+	 * should be supplied.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
+	 * buildDefinition is supplied. Only one of buildWorkspace/buildDefinition
+	 * should be supplied.
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
@@ -120,14 +162,16 @@ public class RTCFacade {
 	 * <code>false</code> otherwise
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
-	public boolean incomingChanges(String serverURI, String userId, String password, File passwordFile, int timeout, String buildWorkspace,
-			Object listener) throws Exception {
+	public boolean incomingChanges(String serverURI, String userId,
+			String password, File passwordFile, int timeout,
+			String buildDefinition, String buildWorkspace, Object listener)
+			throws Exception {
 		AbstractBuildClient buildClient = getBuildClient();
 		String passwordToUse = buildClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
-		return repoConnection.incomingChanges(buildWorkspace, clientConsole);
+		return repoConnection.incomingChanges(buildDefinition, buildWorkspace, clientConsole);
 	}
 
 	/**
@@ -146,8 +190,68 @@ public class RTCFacade {
 	}
 	
 	/**
-	 * Accept changes into the build workspace and write a description of the changes into the ChangeLogFile.
-	 * Load the contents of the updated build workspace at hjWorkspacePath.
+	 * Request & start an RTC Build to provide a build result
+	 * 
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildDefinition The name (id) of the build definition to create the
+	 * request and result for.
+	 * @param buildLabel The label to give to the RTC build
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @return The item id of the build result created
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
+	public String createBuildResult(String serverURI,
+			String userId,
+			String password,
+			int timeout,
+			String buildDefinition,
+			String buildLabel,
+			Object listener) throws Exception {
+		
+		AbstractBuildClient buildClient = getBuildClient(); 
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		return repoConnection.createBuildResult(buildDefinition, null, buildLabel, clientConsole);
+	}
+
+	/**
+	 * Create links in the RTC build result back to the H/J Job and build
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The UUID for the build result to be ended.
+	 * @param rootUrl Hudson/Jenkins root url if known. <code>null</code> otherwise
+	 * @param projectUrl Relative link to the Hudson/Jenkins job being built
+	 * @param buildUrl Relative link to the Hudson/Jenkins build
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * This is defined as an Object due to class loader issues. It is expected to implement
+	 * {@link TaskListener}.
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
+	public void createBuildLinks(String serverURI,
+			String userId,
+			String password,
+			int timeout,
+			String buildResultUUID,
+			String rootUrl,
+			String projectUrl,
+			String buildUrl,
+			Object listener) throws Exception {
+		AbstractBuildClient buildClient = getBuildClient(); 
+
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		repoConnection.createBuildLinks(buildResultUUID, rootUrl, projectUrl, buildUrl, clientConsole);
+	}
+
+	/**
+	 * Terminate an RTC build previously started by the H/J build 
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server. May be <code>null</code>
@@ -155,7 +259,45 @@ public class RTCFacade {
 	 * @param passwordFile The file containing an obfuscated password to use when logging into
 	 * 				the server. May be <code>null</code> in which case password should be supplied.
 	 * @param timeout The timeout period for requests made to the server
-	 * @param workspaceName The name of the RTC build workspace
+	 * @param buildResultUUID The UUID for the build result to be ended.
+	 * @param aborted Whether the Jenkins build was aborted
+	 * @param buildState Whether the Jenkins build was a success, failure, or unstable
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * This is defined as an Object due to class loader issues. It is expected to implement
+	 * {@link TaskListener}.
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
+	public void terminateBuild(String serverURI,
+			String userId,
+			String password,
+			File passwordFile,
+			int timeout,
+			String buildResultUUID,
+			boolean aborted, int buildState,
+			Object listener) throws Exception {
+		
+		AbstractBuildClient buildClient = getBuildClient();
+		String passwordToUse = buildClient.determinePassword(password, passwordFile);
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		repoConnection.terminateBuild(buildResultUUID, aborted, buildState, clientConsole);
+
+	}
+
+	/**
+	 * Accept changes into the build workspace and write a description of the changes into the ChangeLogFile.
+	 * Load the contents of the updated build workspace at hjWorkspacePath.
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
+	 * buildResultUUID is supplied. Only one of buildWorkspace/buildResultUUID
+	 * should be supplied.
+	 * @param buildResultUUID The build result to relate build results with. It also specifies the
+	 * build configuration. May be <code>null</code> if buildWorkspace is supplied. Only one of
+	 * buildWorkspace/buildResultUUID should be supplied.
 	 * @param hjWorkspacePath The path where the contents of the RTC workspace should be loaded.
 	 * @param changeLog The file where a description of the changes made should be written.
 	 * @param baselineSetName The name to give the snapshot created. If <code>null</code> no snapshot
@@ -163,17 +305,21 @@ public class RTCFacade {
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
+	 * @return <code>Map<String, String></code> of build properties
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
-	public void checkout(String serverURI, String userId, String password, int timeout, 
-		String buildWorkspace, String hjWorkspacePath, OutputStream changeLog, String baselineSetName, final Object listener) throws Exception {
+	public Map<String, String> checkout(String serverURI, String userId, String password,
+			int timeout, String buildResultUUID, String buildWorkspace,
+			String hjWorkspacePath, OutputStream changeLog,
+			String baselineSetName, final Object listener) throws Exception {
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		ChangeReport report = new ChangeReport(changeLog);
 		try	{
-			repoConnection.checkout(buildWorkspace, hjWorkspacePath, report, baselineSetName, clientConsole);
+			return repoConnection.checkout(buildResultUUID, buildWorkspace,
+					hjWorkspacePath, report, baselineSetName, clientConsole);
 		} finally {
 			report.prepareChangeSetLog();
 		}
