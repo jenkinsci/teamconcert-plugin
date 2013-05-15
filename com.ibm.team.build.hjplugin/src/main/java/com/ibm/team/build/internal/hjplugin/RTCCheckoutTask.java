@@ -85,7 +85,7 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
     	this.debug = debug;
 	}
 
-	public Map<String, String> invoke(File workspace, VirtualChannel channel) throws IOException {
+	public Map<String, String> invoke(File workspace, VirtualChannel channel) throws IOException, InterruptedException {
 		if (debug) {
 			listener.getLogger().println("Running " + contextStr); //$NON-NLS-1$
 			listener.getLogger().println("serverURI " + serverURI); //$NON-NLS-1$
@@ -117,11 +117,15 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
 					changeLog, baselineSetName,
 					listener);
 
-    	} catch (InvocationTargetException e) {
-    		Throwable eToReport = e.getCause();
-    		if (eToReport == null) {
-    			eToReport = e;
+    	} catch (Exception e) {
+    		Throwable eToReport = e;
+    		if (eToReport instanceof InvocationTargetException && e.getCause() != null) {
+				eToReport = e.getCause();
     		}
+    		if (eToReport instanceof InterruptedException) {
+				listener.getLogger().println(Messages.RTCScm_checkout_failure3(eToReport.getMessage()));
+    			throw (InterruptedException) eToReport;
+    		} 
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure(eToReport.getMessage()));
     		if (RTCScm.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
@@ -129,14 +133,6 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
     		
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure2(eToReport.getMessage()));
-    	} catch (Exception e) {
-    		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(e.getMessage()));
-    		if (RTCScm.unexpectedFailure(e)) {
-    			e.printStackTrace(writer);
-    		}
-    		
-    		// if we can't check out then we can't build it
-    		throw new AbortException(Messages.RTCScm_checkout_failure4(e.getMessage()));
     	}
     }
 }

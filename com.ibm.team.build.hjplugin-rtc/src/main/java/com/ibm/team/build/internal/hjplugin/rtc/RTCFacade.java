@@ -20,12 +20,23 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.SubMonitor;
+
+import com.ibm.team.repository.common.TeamRepositoryException;
 
 /**
  * High-level facade for all things RTC.  Any requests that need to interface with RTC must go through here.
+ * 
  * The API may only refer to plain Java types, not Hudson/Jenkins/Jazz/Eclipse types.
  * If you must pass through a more complex type in the API then supply it as an Object and use reflection to
  * access it. Not an ideal scenario, so avoid it if possible.
+ * 
+ * To signal cancellation {@link InterruptedException} is thrown. RTC reports it through {@link OperationCanceledException}
+ * sometimes its embedded within the {@link TeamRepositoryException} or subclass exceptions, so some translation of the exception
+ * is required.
  */
 public class RTCFacade {
 
@@ -56,17 +67,23 @@ public class RTCFacade {
 	 * @throws Exception
 	 */
 	public String testConnection(String serverURI, String userId, String password, File passwordFile, int timeout) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
+
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient();
 			String passwordToUse = buildClient.determinePassword(password, passwordFile);
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
-			repoConnection.testConnection();
+			repoConnection.testConnection(monitor);
 		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
 		}
 		return errorMessage;
 	}
@@ -88,18 +105,23 @@ public class RTCFacade {
 	 * @throws Exception
 	 */
 	public String testBuildWorkspace(String serverURI, String userId, String password, File passwordFile, int timeout, String buildWorkspace) throws Exception {
+		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient(); 
 			String passwordToUse = buildClient.determinePassword(password, passwordFile);
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
-			repoConnection.testConnection();
-			repoConnection.testBuildWorkspace(buildWorkspace);
+			repoConnection.testConnection(monitor.newChild(50));
+			repoConnection.testBuildWorkspace(buildWorkspace, monitor.newChild(50));
 		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
 		}
 		return errorMessage;
 	}
@@ -121,18 +143,23 @@ public class RTCFacade {
 	 * @throws Exception
 	 */
 	public String testBuildDefinition(String serverURI, String userId, String password, File passwordFile, int timeout, String buildDefinition) throws Exception {
+		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient(); 
 			String passwordToUse = buildClient.determinePassword(password, passwordFile);
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
-			repoConnection.testConnection();
-			repoConnection.testBuildDefinition(buildDefinition);
+			repoConnection.testConnection(monitor.newChild(50));
+			repoConnection.testBuildDefinition(buildDefinition, monitor.newChild(50));
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
 		}
 		return errorMessage;
 	}
@@ -166,12 +193,19 @@ public class RTCFacade {
 			String password, File passwordFile, int timeout,
 			String buildDefinition, String buildWorkspace, Object listener)
 			throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
 		String passwordToUse = buildClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
-		return repoConnection.incomingChanges(buildDefinition, buildWorkspace, clientConsole);
+		try {
+			return repoConnection.incomingChanges(buildDefinition, buildWorkspace, clientConsole, monitor);
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
 	}
 
 	/**
@@ -211,11 +245,21 @@ public class RTCFacade {
 			String buildLabel,
 			Object listener) throws Exception {
 		
+		IProgressMonitor monitor = getProgressMonitor();
+		if (monitor.isCanceled()) {
+			throw new InterruptedException();
+		}
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
-		return repoConnection.createBuildResult(buildDefinition, null, buildLabel, clientConsole);
+		try {
+			return repoConnection.createBuildResult(buildDefinition, null, buildLabel, clientConsole, monitor);
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
 	}
 
 	/**
@@ -242,12 +286,19 @@ public class RTCFacade {
 			String projectUrl,
 			String buildUrl,
 			Object listener) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
-		repoConnection.createBuildLinks(buildResultUUID, rootUrl, projectUrl, buildUrl, clientConsole);
+		try {
+			repoConnection.createBuildLinks(buildResultUUID, rootUrl, projectUrl, buildUrl, clientConsole, monitor);
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
 	}
 
 	/**
@@ -276,13 +327,19 @@ public class RTCFacade {
 			boolean aborted, int buildState,
 			Object listener) throws Exception {
 		
+		SubMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
 		String passwordToUse = buildClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
-		repoConnection.terminateBuild(buildResultUUID, aborted, buildState, clientConsole);
-
+		try {
+			repoConnection.terminateBuild(buildResultUUID, aborted, buildState, clientConsole, monitor);
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
 	}
 
 	/**
@@ -312,6 +369,7 @@ public class RTCFacade {
 			int timeout, String buildResultUUID, String buildWorkspace,
 			String hjWorkspacePath, OutputStream changeLog,
 			String baselineSetName, final Object listener) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
@@ -319,10 +377,28 @@ public class RTCFacade {
 		ChangeReport report = new ChangeReport(changeLog);
 		try	{
 			return repoConnection.checkout(buildResultUUID, buildWorkspace,
-					hjWorkspacePath, report, baselineSetName, clientConsole);
-		} finally {
-			report.prepareChangeSetLog();
+					hjWorkspacePath, report, baselineSetName, clientConsole, monitor);
+		} catch (OperationCanceledException e) {
+			throw new InterruptedException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
 		}
+	}
+
+
+	protected SubMonitor getProgressMonitor() {
+		IProgressMonitor progress = new NullProgressMonitor() {
+
+			@Override
+			public boolean isCanceled() {
+				if (Thread.interrupted()) {
+					setCanceled(true);
+				}
+				return super.isCanceled();
+			}
+			
+		};
+		return SubMonitor.convert(progress, 100);
 	}
 
 	/**

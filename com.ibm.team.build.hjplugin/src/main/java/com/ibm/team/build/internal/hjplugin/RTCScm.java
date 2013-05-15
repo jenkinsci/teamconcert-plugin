@@ -114,7 +114,16 @@ public class RTCScm extends SCM {
 		public SCM newInstance(StaplerRequest req, JSONObject formData)
 				throws FormException {
  			RTCScm scm = (RTCScm) super.newInstance(req, formData);
-			scm.browser = new RTCRepositoryBrowser(scm.getServerURI());
+
+ 			// buildType is a radio button. Hudson gave errors on constructing a string from the req.
+ 			scm.buildType = req.getParameter("buildType");
+
+ 			// buildWorkspace, buildDefinition are fields within the radio buttons.
+ 			// Hudson doesn't manage to populate these fields from the req. Jenkins does.
+ 			scm.buildWorkspace = req.getParameter("buildWorkspace");
+ 			scm.buildDefinition = req.getParameter("buildDefinition");
+			
+ 			scm.browser = new RTCRepositoryBrowser(scm.getServerURI());
 			return scm;
 		}
 
@@ -618,7 +627,7 @@ public class RTCScm extends SCM {
 	
 	@DataBoundConstructor
 	public RTCScm(boolean overrideGlobal, String buildTool, String serverURI, int timeout, String userId, Secret password, String passwordFile,
-			String buildType, String buildDefinition, String buildWorkspace) {
+			String buildDefinition, String buildWorkspace) {
 
 		this.overrideGlobal = overrideGlobal;
 		if (this.overrideGlobal) {
@@ -630,7 +639,6 @@ public class RTCScm extends SCM {
 			this.passwordFile = passwordFile;
 			
 		}
-		this.buildType = buildType;
 		this.buildWorkspace = buildWorkspace;
 		this.buildDefinition = buildDefinition;
 		
@@ -767,6 +775,14 @@ public class RTCScm extends SCM {
 							jazzTimeout, buildResultUUID, root, projectUrl,
 							buildUrl, listener);
 				} catch (Exception e) {
+					Throwable eToReport = e;
+					if (e instanceof InvocationTargetException) {
+						eToReport = e.getCause();
+					}
+		    		if (eToReport instanceof InterruptedException) {
+		        		LOGGER.log(Level.FINER, "build link creation interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
+		    			throw (InterruptedException) eToReport;
+		    		}
 					listener.getLogger().println(Messages.RTCScm_link_creation_failure(e.getMessage()));
 					LOGGER.log(Level.FINER, "Unable to link Hudson/Jenkins build with the RTC build result", e); //$NON-NLS-1$
 				}
@@ -777,25 +793,22 @@ public class RTCScm extends SCM {
 			}
 
 
-    	} catch (InvocationTargetException e) {
-    		Throwable eToReport = e.getCause();
-    		if (eToReport == null) {
-    			eToReport = e;
+    	} catch (Exception e) {
+    		Throwable eToReport = e;
+    		if (eToReport instanceof InvocationTargetException) {
+    			if (e.getCause() != null) {
+    				eToReport = e.getCause();
+    			}
     		}
-    		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure(eToReport.getMessage()));
+    		if (eToReport instanceof InterruptedException) {
+        		LOGGER.log(Level.FINER, "build interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
+    			throw (InterruptedException) eToReport;
+    		}
+    		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(eToReport.getMessage()));
     		if (RTCScm.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
     		}
-    		LOGGER.log(Level.FINER, "determinePassword had invocation failure " + eToReport.getMessage(),  eToReport); //$NON-NLS-1$
-    		
-    		// if we can't check out then we can't build it
-    		throw new AbortException(Messages.RTCScm_checkout_failure2(eToReport.getMessage()));
-    	} catch (Exception e) {
-    		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(e.getMessage()));
-    		if (RTCScm.unexpectedFailure(e)) {
-    			e.printStackTrace(writer);
-    		}
-    		LOGGER.log(Level.FINER, "determinePassword failure " + e.getMessage(), e); //$NON-NLS-1$
+    		LOGGER.log(Level.FINER, "determinePassword/create build result failure " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
 
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure4(e.getMessage()));
@@ -848,7 +861,7 @@ public class RTCScm extends SCM {
 			LOGGER.finer("Found " + ourJars.size() + " jars for remote prefetch"); //$NON-NLS-1$ //$NON-NLS-2$
 			URL [] jars = ourJars.toArray(new URL[ourJars.size()]);
 			boolean result = ((Channel) channel).preloadJar(originalClassLoader, jars);
-			LOGGER.finer("Prefetch result for " + ((Channel) channel).getName() + " is " + result);  //$NON-NLS-1$ //$NON-NLS-2$
+			LOGGER.finer("Prefetch result for sending jars is " + result);  //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 
@@ -905,10 +918,16 @@ public class RTCScm extends SCM {
     			return PollingResult.NO_CHANGES;
     		}
     		
-    	} catch (InvocationTargetException e) {
-    		Throwable eToReport = e.getCause();
-    		if (eToReport == null) {
-    			eToReport = e;
+    	} catch (Exception e) {
+    		Throwable eToReport = e;
+    		if (eToReport instanceof InvocationTargetException) {
+    			if (e.getCause() != null) {
+    				eToReport = e.getCause();
+    			}
+    		}
+    		if (e instanceof InterruptedException) {
+        		LOGGER.log(Level.FINER, "Checking for changes interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
+    			throw (InterruptedException) e;
     		}
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checking_for_changes_failure(eToReport.getMessage()));
     		if (RTCScm.unexpectedFailure(eToReport)) {
@@ -917,16 +936,7 @@ public class RTCScm extends SCM {
     		
     		// if we can't check for changes then we can't build it
     		throw new AbortException(Messages.RTCScm_checking_for_changes_failure2(eToReport.getMessage()));
-    		
-    	} catch (Exception e) {
-    		PrintWriter writer = listener.error(Messages.RTCScm_checking_for_changes_failure3(e.getMessage()));
-    		if (RTCScm.unexpectedFailure(e)) {
-    			e.printStackTrace(writer);
-    		}
-
-    		// if we can't check for changes then we can't build it
-    		throw new AbortException(Messages.RTCScm_checking_for_changes_failure3(e.getMessage()));
-    	}
+    	}    		
 	}
 
 	public static boolean unexpectedFailure(Throwable e) {
@@ -934,7 +944,8 @@ public class RTCScm extends SCM {
 		// need to do some clunky testing to see if the exception is notification of
 		// a badly configured build. In that case, we just want to report the error
 		// but not the whole stack trace.
-		return !(e.getClass().getName().equals("RTCConfigurationException"));
+		String name = e.getClass().getSimpleName();
+		return !("RTCConfigurationException".equals(name) || e instanceof InterruptedException);
 	}
 
 	@Override
