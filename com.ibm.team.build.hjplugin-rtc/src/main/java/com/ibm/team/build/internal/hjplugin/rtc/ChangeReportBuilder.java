@@ -19,6 +19,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
+
 import com.ibm.team.build.internal.hjplugin.rtc.ChangeReport.BaselineSetReport;
 import com.ibm.team.build.internal.hjplugin.rtc.ChangeReport.ChangeSetReport;
 import com.ibm.team.build.internal.hjplugin.rtc.ChangeReport.ComponentReport;
@@ -85,23 +88,27 @@ public class ChangeReportBuilder {
 	 */
 	public void populateChangeReport(ChangeReport changeReport,
 			IWorkspaceHandle workspaceHandle, 
-			AcceptReport acceptReport, IConsoleOutput listener) {
+			AcceptReport acceptReport, IConsoleOutput listener,
+			IProgressMonitor progress) throws TeamRepositoryException {
+		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
 		// record build workspace
 		changeReport.setWorkspaceItemId(workspaceHandle.getItemId().getUuidValue());
 		
 		// record snapshot if one was created
-		fillSnapshot(changeReport, acceptReport, listener);
+		fillSnapshot(changeReport, acceptReport, listener, monitor.newChild(5));
 		
 		// record component additions/removals
-		fillComponentChanges(changeReport, acceptReport, listener); 
+		fillComponentChanges(changeReport, acceptReport, listener, monitor.newChild(10)); 
 
 		// record change sets accepted/discarded
-		fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener);
+		fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener, monitor.newChild(85));
 	}
 
 	private void fillSnapshot(ChangeReport changeReport,
-			AcceptReport acceptReport, IConsoleOutput listener) {
+			AcceptReport acceptReport, IConsoleOutput listener,
+			IProgressMonitor progress) {
 		IBaselineSet snapshot = acceptReport.getSnapshot();
 		if (snapshot != null) {
 			ChangeReport.BaselineSetReport baseLineSet = new BaselineSetReport(snapshot.getItemId().getUuidValue(), snapshot.getName());
@@ -111,7 +118,7 @@ public class ChangeReportBuilder {
 
 	private void fillChangeSetChanges(ChangeReport changeReport,
 			AcceptReport acceptReport, IWorkspaceHandle workspaceHandle,
-			IConsoleOutput listener) {
+			IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
 		// Retrieve the full changesets and create reports representing them
 		// then free memory for the full change sets
 		// Retrieve the links and get just the minimum work item info needed.
@@ -119,6 +126,7 @@ public class ChangeReportBuilder {
 		// and full workitems all at the same time because we don't need the full work items and we don't expect
 		// the full info to be previously cached.
 		// My concern is that the ChangeSetLinks might not scale for larger build accepts
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IChangeSetHandle[] changeSetsAccepted = acceptReport.getAcceptChangeSets();
 		IChangeSetHandle[] changeSetsDisarded = acceptReport.getDiscardChangeSets();
 		List<IChangeSetHandle> changeSetHandles = new ArrayList<IChangeSetHandle>(changeSetsAccepted.length + changeSetsDisarded.length);
@@ -131,7 +139,7 @@ public class ChangeReportBuilder {
 		}
 
 		try {
-			List<IChangeSet> changeSets = fRepository.itemManager().fetchCompleteItems(changeSetHandles, IItemManager.DEFAULT, null);
+			List<IChangeSet> changeSets = fRepository.itemManager().fetchCompleteItems(changeSetHandles, IItemManager.DEFAULT, monitor.newChild(25));
 			List<ChangeSetReport> changeSetReports = new ArrayList<ChangeReport.ChangeSetReport>(changeSetHandles.size());
 			Map<UUID, IContributorHandle> contributorHandles = new HashMap<UUID, IContributorHandle>();
 			Map<UUID, IComponentHandle> componentHandles = new HashMap<UUID, IComponentHandle>();
@@ -166,18 +174,18 @@ public class ChangeReportBuilder {
 				i++;
 			}
 			
-			fillChangeSetDetails(changeSets, changeSetReports, contributorHandles, componentHandles, listener);
+			fillChangeSetDetails(changeSets, changeSetReports, contributorHandles, componentHandles, listener, monitor.newChild(25));
 			// free memory
 			contributorHandles = null;
 			componentHandles = null;
 			
 			fillVersionables(changeSets, changeSetReports, workspaceHandle, uniqueVersionableByComponent,
-					listener);
+					listener, monitor.newChild(25));
 			// free memory
 			uniqueVersionableByComponent = null;
 			changeSets = null;
 			
-			fillWorkItems(changeSetHandles, changeSetReports, listener);
+			fillWorkItems(changeSetHandles, changeSetReports, listener, monitor.newChild(25));
 			
 		} catch (TeamRepositoryException e) {
 			listener.log(Messages.ChangeReportBuilder_unable_to_expand_change_sets(e.getMessage()), e);
@@ -189,16 +197,21 @@ public class ChangeReportBuilder {
 						null, Messages.ChangeReportBuilder_unable_to_get_change_set2(), null, 0));
 				i++;
 			}
+			if (Utils.isCancellation(e)) {
+				throw e;
+			}
 		}
 	}
 
 	private void fillChangeSetDetails(List<IChangeSet> changeSets, List<ChangeSetReport> changeSetReports,
-			Map<UUID, IContributorHandle> contributorHandles, Map<UUID, IComponentHandle> componentHandles, IConsoleOutput listener) {
+			Map<UUID, IContributorHandle> contributorHandles, Map<UUID, IComponentHandle> componentHandles,
+			IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		try {
 			List<IItemHandle> itemsToFetch = new ArrayList<IItemHandle>(componentHandles.size() + contributorHandles.size());
 			itemsToFetch.addAll(contributorHandles.values());
 			itemsToFetch.addAll(componentHandles.values());
-			List<IItem> fullItems = fRepository.itemManager().fetchCompleteItems(itemsToFetch, IItemManager.DEFAULT, null);
+			List<IItem> fullItems = fRepository.itemManager().fetchCompleteItems(itemsToFetch, IItemManager.DEFAULT, monitor);
 			Map<UUID, IContributor> contributors = new HashMap<UUID, IContributor>();
 			Map<UUID, IComponent> components = new HashMap<UUID, IComponent>();
 			for (IItem item : fullItems) {
@@ -230,11 +243,18 @@ public class ChangeReportBuilder {
 			for (ChangeSetReport changeSetReport : changeSetReports) {
 				changeSetReport.setOwner(UNKNOWN_AUTHOR);	
 			}
+			
+			if (Utils.isCancellation(e)) {
+				throw e;
+			}
 		}
 	}
 
 	private void fillComponentChanges(ChangeReport changeReport,
-			AcceptReport acceptReport, IConsoleOutput listener) {
+			AcceptReport acceptReport, IConsoleOutput listener,
+			IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
 		// look up the components added & removed to get their names
 		IComponentHandle[] componentAdds = acceptReport.getComponentAdds();
 		IComponentHandle[] componentRemovals = acceptReport.getComponentRemovals();
@@ -249,7 +269,7 @@ public class ChangeReportBuilder {
 		componentAdds = null;
 		componentRemovals = null;
 		try {
-			List<IComponent> components = fRepository.itemManager().fetchCompleteItems(componentHandles, IItemManager.DEFAULT, null);
+			List<IComponent> components = fRepository.itemManager().fetchCompleteItems(componentHandles, IItemManager.DEFAULT, monitor);
 			int i = 0;
 			for (IComponent component : components) {
 				if (component == null) {
@@ -270,6 +290,10 @@ public class ChangeReportBuilder {
 						Messages.ChangeReportBuilder_unable_to_get_component_name2()));
 				i++;
 			}
+			
+			if (Utils.isCancellation(e)) {
+				throw e;
+			}
 		}
 	}
 
@@ -277,7 +301,9 @@ public class ChangeReportBuilder {
 			List<ChangeSetReport> changeSetReports,
 			IWorkspaceHandle workspaceHandle,
 			Map<UUID, Map<UUID, IVersionableHandle>> uniqueVersionableByComponent,
-			IConsoleOutput listener) {
+			IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
+		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
 		// We will get the repository path of the versionable as it is NOW within the build workspace
 		// This is cheaper than interpretting the change set which would attempt to give us the path
@@ -292,8 +318,9 @@ public class ChangeReportBuilder {
 		// the lookup after loading, we would then not be able to get the path for the items deleted.
 		try {
 			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(fRepository);
-			IWorkspaceConnection workspaceConnection = workspaceManager.getWorkspaceConnection(workspaceHandle, null);
+			IWorkspaceConnection workspaceConnection = workspaceManager.getWorkspaceConnection(workspaceHandle, monitor.newChild(25));
 			Map<UUID, Map<UUID, String>> pathsByComponent = new HashMap<UUID, Map<UUID,String>>();
+			monitor.setWorkRemaining(25 + uniqueVersionableByComponent.size() * 10);
 			for (Map.Entry<UUID, Map<UUID, IVersionableHandle>> entryByComponent : uniqueVersionableByComponent.entrySet()) {
 				IComponentHandle componentHandle = (IComponentHandle) IComponent.ITEM_TYPE.createItemHandle(entryByComponent.getKey(), null);
 				Map<UUID, IVersionableHandle> uniqueVersionables = entryByComponent.getValue();
@@ -303,7 +330,7 @@ public class ChangeReportBuilder {
 
 					List<IVersionableHandle> versionables = new ArrayList<IVersionableHandle>(uniqueVersionables.size());
 					versionables.addAll(uniqueVersionables.values());
-					List<IAncestorReport> ancestorReports = workspaceConnection.configuration(componentHandle).determineAncestorsInHistory(versionables, null);
+					List<IAncestorReport> ancestorReports = workspaceConnection.configuration(componentHandle).determineAncestorsInHistory(versionables, monitor.newChild(10));
 					for (IAncestorReport ancestorReport : ancestorReports) {
 						if (!ancestorReport.getNameItemPairs().isEmpty()) {
 							IVersionableHandle lastItem = null;
@@ -383,7 +410,7 @@ public class ChangeReportBuilder {
 			if (!versionablesMissingPaths.isEmpty()) {
 				// Have to ask for whole state because we have a mix of types even though we only want the common name property of them all.
 				IVersionableManager versionableManager = workspaceManager.versionableManager();
-				List<IVersionable> fullVersionables = versionableManager.fetchCompleteStates(versionablesMissingPaths, null);
+				List<IVersionable> fullVersionables = versionableManager.fetchCompleteStates(versionablesMissingPaths, monitor.newChild(25));
 				int j=0;
 				for (IVersionable versionable : fullVersionables) {
 					ChangeSetReport report = reportsMissingChanges.get(j);
@@ -412,18 +439,24 @@ public class ChangeReportBuilder {
 			// The record was already created with the additional change count so no need to do anything else.
 			listener.log(Messages.ChangeReportBuilder_unable_to_get_versionable_names(e.getMessage()), e);
 			LOGGER.log(Level.FINER, "Unable to resolve versionable names " + e.getMessage(), e); //$NON-NLS-1$
+			
+			if (Utils.isCancellation(e)) {
+				throw e;
+			}
 		}
 	}
 
     private void fillWorkItems(List<IChangeSetHandle> changeSetHandles,
-			List<ChangeSetReport> changeSetReports, IConsoleOutput listener) {
+			List<ChangeSetReport> changeSetReports, IConsoleOutput listener,
+			IProgressMonitor progress) throws TeamRepositoryException {
+    	SubMonitor monitor = SubMonitor.convert(progress, 100);
     	ProviderFactory providerFactory = (ProviderFactory) fRepository.getClientLibrary(ProviderFactory.class);
         ScmProvider scmProvider = providerFactory.getScmProvider();
         
         try {
 	        // get the IChangeSetLinkSummary for all change sets
         	if (!changeSetHandles.isEmpty()) {
-		        List<IChangeSetLinkSummary> linkSummaries = scmProvider.getChangeSetLinkSummary(changeSetHandles, null);
+		        List<IChangeSetLinkSummary> linkSummaries = scmProvider.getChangeSetLinkSummary(changeSetHandles, monitor.newChild(10));
 		        Map<UUID, IChangeSetLinkSummary> linkSummaryByChangeSet = new HashMap<UUID, IChangeSetLinkSummary>();
 		        List<ILinkHandle> toRetrieve = new ArrayList<ILinkHandle>(linkSummaries.size());
 		        for (IChangeSetLinkSummary summary : linkSummaries) {
@@ -431,7 +464,7 @@ public class ChangeReportBuilder {
 		        	toRetrieve.addAll(summary.getLinks());
 		        }
 		        // get the ILink referenced by all the change set link summaries
-		        List<ILink> linksFetched = fRepository.itemManager().fetchCompleteItems(toRetrieve, IItemManager.DEFAULT, null);
+		        List<ILink> linksFetched = fRepository.itemManager().fetchCompleteItems(toRetrieve, IItemManager.DEFAULT, monitor.newChild(10));
 		        List<IWorkItemHandle> toFetch = new ArrayList<IWorkItemHandle>();
 		        Map<UUID, ILink> links = new HashMap<UUID, ILink>();
 		        for (ILink link : linksFetched) {
@@ -447,7 +480,7 @@ public class ChangeReportBuilder {
 	        
 		        // get the IWorkItem (small profile) for all links referencing them
 				List<IWorkItem> workItemsFetched = fRepository.itemManager().fetchPartialItems(toFetch,
-						IItemManager.DEFAULT, IWorkItem.SMALL_PROFILE.getProperties(), null);
+						IItemManager.DEFAULT, IWorkItem.SMALL_PROFILE.getProperties(), monitor.newChild(10));
 				Map<UUID, IWorkItem> workItems = new HashMap<UUID, IWorkItem>();
 				for (IWorkItem workItem : workItemsFetched) {
 					if (workItem != null) {
@@ -485,6 +518,10 @@ public class ChangeReportBuilder {
         } catch (TeamRepositoryException e) {
         	listener.log(Messages.ChangeReportBuilder_unable_to_get_work_items(e.getMessage()), e);
         	LOGGER.log(Level.FINER, "Unable to resolve work items " + e.getMessage(), e); //$NON-NLS-1$
+
+        	if (Utils.isCancellation(e)) {
+				throw e;
+			}
         }
 	}
 }

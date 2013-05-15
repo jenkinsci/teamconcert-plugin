@@ -99,9 +99,13 @@ public class RTCFacadeFactoryIT extends HudsonTestCase {
 				}
 			} finally {
 				if (destDir != null) {
-					
-					// delete the build toolkit copy
-					FileUtils.deleteDirectory(destDir);
+					 try {
+						 // delete the build toolkit copy
+						 FileUtils.deleteDirectory(destDir);
+					 } catch (Exception e) {
+						 // don't let the cleanup fail the build
+						 e.printStackTrace(System.out);
+					 }
 				}
 			}
 			

@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.client.ClientFactory;
 import com.ibm.team.build.client.ITeamBuildClient;
@@ -96,13 +96,19 @@ public class BuildConnection {
 	 * @param personalBuildWorkspace Override the build workspace in the build definition with a personal workspace
 	 * @param buildLabel The label to assign to the build
 	 * @param listener A log to report progress and failures to.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @return The build result to update with progress of the Jenkins build. May be <code>null</code>
 	 * if there is no build engine associated with the build definition
 	 * @throws TeamRepositoryException Thrown if problems are encountered
 	 * @throws RTCConfigurationException Thrown if the build definition is not valid
 	 */
-	public IBuildResultHandle createBuildResult(String buildDefinitionId, IWorkspaceHandle personalBuildWorkspace, String buildLabel, IConsoleOutput listener) throws TeamRepositoryException, RTCConfigurationException {
-		IBuildDefinition buildDefinition = getBuildDefinition(buildDefinitionId);
+	public IBuildResultHandle createBuildResult(String buildDefinitionId,
+			IWorkspaceHandle personalBuildWorkspace, String buildLabel,
+			IConsoleOutput listener, IProgressMonitor progress)
+			throws TeamRepositoryException, RTCConfigurationException {
+		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		IBuildDefinition buildDefinition = getBuildDefinition(buildDefinitionId, monitor.newChild(20));
 		if (buildDefinition == null) {
 			throw new RTCConfigurationException(Messages.BuildConnection_build_definition_not_found(buildDefinitionId));
 		}
@@ -116,7 +122,7 @@ public class BuildConnection {
 			}
 		}
 		
-		IBuildEngineHandle buildEngine = getBuildEngine(buildDefinition);
+		IBuildEngineHandle buildEngine = getBuildEngine(buildDefinition, monitor.newChild(20));
 		if (buildEngine == null) {
 			LOGGER.finer("There are no RTC build engines associated with the RTC build definition. The build definition must have a supported active build engine"); //$NON-NLS-1$
 			LOGGER.finer("Unable to create a build result for the build"); //$NON-NLS-1$
@@ -132,17 +138,17 @@ public class BuildConnection {
         params.setPersonalBuild(isPersonal);
         params.getPotentialHandlers().add(buildEngine);
         params.setStartBuild(true);
-        IBuildRequest buildRequest = getTeamBuildRequestClient().requestBuild(params, new NullProgressMonitor());
+        IBuildRequest buildRequest = getTeamBuildRequestClient().requestBuild(params, monitor.newChild(20));
         IBuildResultHandle buildResultHandle = buildRequest.getBuildResult();
 
         if (buildLabel != null) {
             IBuildResult buildResult = (IBuildResult) getTeamRepository().itemManager().fetchPartialItem(
                     buildResultHandle, IItemManager.REFRESH,
-                    Arrays.asList(IBuildResult.PROPERTIES_VIEW_ITEM), new NullProgressMonitor());
+                    Arrays.asList(IBuildResult.PROPERTIES_VIEW_ITEM), monitor.newChild(20));
 
             buildResult = (IBuildResult) buildResult.getWorkingCopy();
             buildResult.setLabel(buildLabel);
-            getTeamBuildClient().save(buildResult, new NullProgressMonitor());
+            getTeamBuildClient().save(buildResult, monitor.newChild(20));
         }
 
 		return buildResultHandle;
@@ -156,15 +162,17 @@ public class BuildConnection {
 	 * 0 = success, 1 = unstable, 2 = not success or unstable. We can't create constants
 	 * because the -rtc plugin doesn't expose anything other than the facade.
 	 * @param listener
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @throws TeamRepositoryException
 	 */
 	public void terminateBuild(String buildResultUUID, boolean aborted, int buildState,
-			IConsoleOutput listener) throws TeamRepositoryException {
+			IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
 		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
 
         IBuildResult buildResult = (IBuildResult) getTeamRepository().itemManager().fetchPartialItem(
-                buildResultHandle, IItemManager.REFRESH, PROPERTIES, null);
+                buildResultHandle, IItemManager.REFRESH, PROPERTIES, monitor.newChild(10));
 
         // Do nothing if the build result is already in a final state.
         if (buildResult.getState() == BuildState.CANCELED || buildResult.getState() == BuildState.INCOMPLETE
@@ -173,18 +181,18 @@ public class BuildConnection {
         }
 
         if (aborted) {
-        	getTeamBuildRequestClient().makeBuildIncomplete(buildResultHandle, IBuildItemHandle.PROPERTIES_REQUIRED, new NullProgressMonitor());
+        	getTeamBuildRequestClient().makeBuildIncomplete(buildResultHandle, IBuildItemHandle.PROPERTIES_REQUIRED, monitor.newChild(90));
         } else {
         	if (buildState == UNSTABLE && BuildStatus.WARNING.isMoreSevere(buildResult.getStatus())) {
             	buildResult = (IBuildResult) buildResult.getWorkingCopy();
         		buildResult.setStatus(BuildStatus.WARNING);
-            	getTeamBuildClient().save(buildResult, new NullProgressMonitor());
+            	getTeamBuildClient().save(buildResult, monitor.newChild(50));
         	} else if (buildState > UNSTABLE && BuildStatus.ERROR.isMoreSevere(buildResult.getStatus())) {
             	buildResult = (IBuildResult) buildResult.getWorkingCopy();
         		buildResult.setStatus(BuildStatus.ERROR);
-            	getTeamBuildClient().save(buildResult, new NullProgressMonitor());
+            	getTeamBuildClient().save(buildResult, monitor.newChild(50));
         	}
-        	getTeamBuildRequestClient().makeBuildComplete(buildResultHandle, false, IBuildItemHandle.PROPERTIES_REQUIRED, new NullProgressMonitor());
+        	getTeamBuildRequestClient().makeBuildComplete(buildResultHandle, false, IBuildItemHandle.PROPERTIES_REQUIRED, monitor.newChild(40));
         }
 	}
 
@@ -193,10 +201,12 @@ public class BuildConnection {
 	 * supplied can be recorded against.
 	 * 
 	 * @param buildDefinition The definition of the build that will be started
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @return Handle to a build engine that can run a build with the definition supplied
 	 * @throws TeamRepositoryException Thrown if anything goes wrong
 	 */
-    public IBuildEngineHandle getBuildEngine(IBuildDefinition buildDefinition) throws TeamRepositoryException {
+    public IBuildEngineHandle getBuildEngine(IBuildDefinition buildDefinition, IProgressMonitor progress) throws TeamRepositoryException {
+    	SubMonitor monitor = SubMonitor.convert(progress, 100);
 
         IBuildEngineQueryModel queryModel = IBuildEngineQueryModel.ROOT;
         IItemQuery query = IItemQuery.FACTORY.newInstance(queryModel);
@@ -204,7 +214,7 @@ public class BuildConnection {
                 queryModel.supportedBuildDefinitions().itemId()._eq(query.newUUIDArg())));
         query.setResultLimit(1);
 
-        IItemQueryPage page = getTeamBuildClient().queryItems(query, new Object[] { buildDefinition.getItemId() }, 1, new NullProgressMonitor());
+        IItemQueryPage page = getTeamBuildClient().queryItems(query, new Object[] { buildDefinition.getItemId() }, 1, monitor);
         if (page.getResultSize() != 0) {
         	return (IBuildEngineHandle) page.getItemHandles().get(0);
         }
@@ -215,22 +225,24 @@ public class BuildConnection {
 	 * Tests that the specified build definition is valid.
 	 * 
 	 * @param buildDefinitionId ID of the RTC build definition
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @throw Exception if an error occurs
      * @throws RTCValidationException
      *             If a build definition for the build definition id could not
      *             be found.
 	 * @LongOp
 	 */
-	public void testBuildDefinition(String buildDefinitionId) throws Exception {
+	public void testBuildDefinition(String buildDefinitionId, IProgressMonitor progress) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
 		// validate the build definition exists
-		IBuildDefinition buildDefinition = getBuildDefinition(buildDefinitionId);
+		IBuildDefinition buildDefinition = getBuildDefinition(buildDefinitionId, monitor.newChild(25));
         if (buildDefinition == null) {
             throw new RTCValidationException(Messages.BuildConnection_build_definition_not_found(buildDefinitionId));
         }
         
         // validate the build definition has a supporting build engine
-		IBuildEngineHandle buildEngineHandle = getBuildEngine(buildDefinition);
+		IBuildEngineHandle buildEngineHandle = getBuildEngine(buildDefinition, monitor.newChild(25));
 		if (buildEngineHandle == null) {
             throw new RTCValidationException(Messages.BuildConnection_build_definition_missing_build_engine());
 		}
@@ -244,7 +256,7 @@ public class BuildConnection {
         // validate the build definition has a hudson/jenkins build engine
 		IBuildEngine buildEngine = (IBuildEngine) getTeamRepository().itemManager().fetchPartialItem(
                 buildEngineHandle, IItemManager.REFRESH,
-                Arrays.asList(IBuildEngine.PROPERTY_CONFIGURATION_ELEMENTS), new NullProgressMonitor());
+                Arrays.asList(IBuildEngine.PROPERTY_CONFIGURATION_ELEMENTS), monitor.newChild(50));
 		IBuildConfigurationElement hudsonEngineBuildConfigurationElement = buildEngine.getConfigurationElement("com.ibm.rational.connector.hudson.engine"); //$NON-NLS-1$
 		if (hudsonEngineBuildConfigurationElement == null) {
             throw new RTCValidationException(Messages.BuildConnection_build_definition_missing_build_engine_hudson_config());
@@ -262,12 +274,13 @@ public class BuildConnection {
      * 
      * @param buildDefinitionId
      *            The id of the build definition to retrieve.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @return The build definition represented by the build definition id, or null
      * @throws TeamRepositoryException
      *             If an error occurred retrieving the build definition.
      */
-    public IBuildDefinition getBuildDefinition(String buildDefinitionId) throws TeamRepositoryException {
-        return getTeamBuildClient().getBuildDefinition(buildDefinitionId, new NullProgressMonitor());
+    public IBuildDefinition getBuildDefinition(String buildDefinitionId, IProgressMonitor progress) throws TeamRepositoryException {
+        return getTeamBuildClient().getBuildDefinition(buildDefinitionId, progress);
     }
 
     /**
@@ -312,15 +325,14 @@ public class BuildConnection {
      *            The workspace to add.
      * @param resultHandle Build result handle.
      * 			  If <code>null</code> no contribution will be added.
-     * @param monitor
-     *            The progress monitor. Or <code>null</code> if progress
-     *            monitoring is not desired.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @throws TeamRepositoryException
      * @throws IllegalArgumentException
      */
     public void addWorkspaceContribution(IWorkspace workspace, IBuildResultHandle resultHandle,
-    		IProgressMonitor monitor) throws IllegalArgumentException,
+    		IProgressMonitor progress) throws IllegalArgumentException,
             TeamRepositoryException {
+
     	// if no build result, we are done
     	if (resultHandle == null) {
     		return;
@@ -332,7 +344,7 @@ public class BuildConnection {
         contribution.setLabel(workspace.getName());
         contribution.setExtendedContribution(workspace);
 
-        getTeamBuildClient().addBuildResultContribution(resultHandle, contribution, monitor);
+        getTeamBuildClient().addBuildResultContribution(resultHandle, contribution, progress);
     }
 
     /**
@@ -342,14 +354,12 @@ public class BuildConnection {
      *            The snapshot to add.
      * @param resultHandle Build result handle.
      * 			  If <code>null</code> no contribution will be added.
-     * @param monitor
-     *            The progress monitor. Or <code>null</code> if progress
-     *            monitoring is not desired.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @throws TeamRepositoryException
      * @throws IllegalArgumentException
      */
     public void addSnapshotContribution(IBaselineSet snapshot, IBuildResultHandle resultHandle,
-    		IProgressMonitor monitor) throws IllegalArgumentException,
+    		IProgressMonitor progress) throws IllegalArgumentException,
             TeamRepositoryException {
     	// if no build result, we are done
     	if (resultHandle == null) {
@@ -362,7 +372,7 @@ public class BuildConnection {
         contribution.setLabel(Messages.BuildConnection_snapshot_label(snapshot.getName()));
         contribution.setExtendedContribution(snapshot);
 
-        getTeamBuildClient().addBuildResultContribution(resultHandle, contribution, monitor);
+        getTeamBuildClient().addBuildResultContribution(resultHandle, contribution, progress);
     }
 
     /**
@@ -387,9 +397,7 @@ public class BuildConnection {
      *            Optional id of a parent activity.
      * @param autoComplete
      *            Whether or not to automatically complete this activity.
-     * @param progressMonitor
-     *            The progress monitor to track progress on or <code>null</code>
-     *            if progress monitoring is not desired.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @return The unique id of the new activity.
      * @throws TeamBuildStateException
      *             If the build is not currently in progress.
@@ -403,14 +411,14 @@ public class BuildConnection {
      *             is <code>null</code>, or if <code>label</code> is empty.
      */
     public String startBuildActivity(IBuildResultHandle buildResultHandle, String label, String parentId,
-            boolean autoComplete, IProgressMonitor progressMonitor) throws TeamRepositoryException,
+            boolean autoComplete, IProgressMonitor progress) throws TeamRepositoryException,
             IllegalArgumentException {
     	// if no build result, we are done
     	if (buildResultHandle == null) {
     		return "";
     	}
 
-		return getTeamBuildClient().startBuildActivity(buildResultHandle, label, parentId, autoComplete, progressMonitor);
+		return getTeamBuildClient().startBuildActivity(buildResultHandle, label, parentId, autoComplete, progress);
 	}
 
     /**
@@ -422,9 +430,7 @@ public class BuildConnection {
      * 			  If <code>null</code> no activity will be completed.
      * @param id
      *            The id of the activity to complete.
-     * @param progressMonitor
-     *            The progress monitor to track progress on or <code>null</code>
-     *            if progress monitoring is not desired.
+ 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @throws TeamRepositoryException
      *             If an error occurs while accessing the repository.
      * @throws IllegalArgumentException
@@ -432,17 +438,29 @@ public class BuildConnection {
      *             <code>null</code> or if <code>id</code> is empty.
      */
 	public void completeBuildActivity(IBuildResultHandle buildResultHandle,
-			String activityId, IProgressMonitor progressMonitor) throws IllegalArgumentException, TeamRepositoryException {
+			String activityId, IProgressMonitor progress) throws IllegalArgumentException, TeamRepositoryException {
     	// if no build result, we are done
     	if (buildResultHandle == null) {
     		return;
     	}
 
-		getTeamBuildClient().completeBuildActivity(buildResultHandle, activityId, progressMonitor);
+		getTeamBuildClient().completeBuildActivity(buildResultHandle, activityId, progress);
 	}
 
+	/**
+	 * Add to the build result, links to H/J artifacts. In particular the project and the build.
+	 * @param buildResultUUID The uuid of the build result that the links are to be added to
+	 * @param rootUrl The root url of the H/J server
+	 * @param projectUrl The relative link to the H/J project
+	 * @param buildUrl The relative link to the H/J build
+	 * @param clientConsole The console to send  interesting messages to.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @throws TeamRepositoryException Thrown if anything goes wrong
+	 */
 	public void createBuildLinks(String buildResultUUID, String rootUrl,
-			String projectUrl, String buildUrl, IConsoleOutput clientConsole) throws TeamRepositoryException {
+			String projectUrl, String buildUrl, IConsoleOutput clientConsole,
+			IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		if (buildResultUUID == null) {
 			return;
 		}
@@ -459,12 +477,13 @@ public class BuildConnection {
 							IItemManager.REFRESH,
 							Collections
 									.singleton(IBuildResult.PROPERTY_BUILD_REQUESTS),
-							new NullProgressMonitor());
+							monitor.newChild(5));
             Collection<String> requestProperties = Arrays.asList(new String[] { IBuildRequest.PROPERTY_BUILD_ACTION,
                     IBuildRequest.PROPERTY_HANDLER });
+            monitor.setWorkRemaining(50 + 10 * result.getBuildRequests().size());
             for (IBuildRequestHandle buildRequestHandle : (List<IBuildRequestHandle>) result.getBuildRequests()) {
                 IBuildRequest buildRequest = (IBuildRequest) getTeamRepository().itemManager().fetchPartialItem(
-                        buildRequestHandle, IItemManager.REFRESH, requestProperties, new NullProgressMonitor());
+                        buildRequestHandle, IItemManager.REFRESH, requestProperties, monitor.newChild(5));
                 if (buildRequest.getBuildAction().getAction().equals(IBuildAction.REQUEST_BUILD)
                         && buildRequest.getHandler() != null) {
 					IBuildEngine buildEngine = (IBuildEngine) getTeamRepository()
@@ -474,7 +493,7 @@ public class BuildConnection {
 									IItemManager.REFRESH,
 									Collections
 											.singleton(IBuildEngine.PROPERTY_CONFIGURATION_ELEMENTS),
-									new NullProgressMonitor());
+									monitor.newChild(5));
                     rootUrl = buildEngine.getConfigurationPropertyValue(HJ_ENGINE_ELEMENT_ID, PROPERTY_HUDSON_URL, null);
                     break;
                 }
@@ -487,8 +506,8 @@ public class BuildConnection {
 			if (!rootUrl.endsWith(SLASH)) {
 				rootUrl = rootUrl + SLASH;
 			}
-			addLinkContribution(Messages.BuildConnection_hj_job(), rootUrl + projectUrl, resultHandle, new NullProgressMonitor());
-			addLinkContribution(Messages.BuildConnection_hj_build(), rootUrl + buildUrl, resultHandle, new NullProgressMonitor());
+			addLinkContribution(Messages.BuildConnection_hj_job(), rootUrl + projectUrl, resultHandle, monitor.newChild(25));
+			addLinkContribution(Messages.BuildConnection_hj_build(), rootUrl + buildUrl, resultHandle, monitor.newChild(25));
 		}
 	}
 

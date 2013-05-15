@@ -34,7 +34,7 @@ public class RTCTestingFacade extends RTCFacade {
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		Map<String, String> setup = testClient.setupComponentChanges(connectionDetails, workspaceName, componentAddedName,
-				componentDroppedName);
+				componentDroppedName, getProgressMonitor());
 		return setup;
 	}
 
@@ -43,7 +43,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		testClient.tearDown(connectionDetails, setupArtifacts);
+		testClient.tearDown(connectionDetails, setupArtifacts, getProgressMonitor());
 	}
 	
 	public Map<String, String> setupAcceptChanges(String serverURL, String userId, String password, File passwordFile, int timeout,
@@ -51,7 +51,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		Map<String, String> setup = testClient.setupAcceptChanges(connectionDetails, workspaceName, componentName);
+		Map<String, String> setup = testClient.setupAcceptChanges(connectionDetails, workspaceName, componentName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -60,7 +60,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		Map<String, String> setup = testClient.setupAcceptDiscardChanges(connectionDetails, workspaceName, componentName);
+		Map<String, String> setup = testClient.setupAcceptDiscardChanges(connectionDetails, workspaceName, componentName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -70,7 +70,7 @@ public class RTCTestingFacade extends RTCFacade {
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		Map<String, String> setup = testClient.setupTestBuildWorkspace(connectionDetails, singleWorkspaceName, 
-				multipleWorkspaceName);
+				multipleWorkspaceName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -80,7 +80,7 @@ public class RTCTestingFacade extends RTCFacade {
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		Map<String, String> setup = testClient.setupEmptyChangeSets(connectionDetails, workspaceName,
-				componentName);
+				componentName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -90,7 +90,7 @@ public class RTCTestingFacade extends RTCFacade {
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		Map<String, String> setup = testClient.setupNoopChanges(connectionDetails, workspaceName,
-				componentName);
+				componentName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -99,7 +99,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		Map<String, String> setup = testClient.setupComponentRootChange(connectionDetails, workspaceName, componentName);
+		Map<String, String> setup = testClient.setupComponentRootChange(connectionDetails, workspaceName, componentName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -109,7 +109,7 @@ public class RTCTestingFacade extends RTCFacade {
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		Map<String, String> setup = testClient.setupMultipleComponentChanges(connectionDetails, workspaceName,
-				componentName);
+				componentName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -119,7 +119,7 @@ public class RTCTestingFacade extends RTCFacade {
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		Map<String, String> setup = testClient.setupBuildResultContributions(connectionDetails, workspaceName,
-				componentName, buildDefinitionId);
+				componentName, buildDefinitionId, getProgressMonitor());
 		return setup;
 	}
 	
@@ -159,7 +159,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		Map<String, String> setup = testClient.setupXMLEncodingTestChangeSets(connectionDetails, workspaceName, componentName);
+		Map<String, String> setup = testClient.setupXMLEncodingTestChangeSets(connectionDetails, workspaceName, componentName, getProgressMonitor());
 		return setup;
 	}
 
@@ -178,7 +178,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		return testClient.testComponentLoading(connectionDetails, workspaceName, componentName, hjPath, buildPath);
+		return testClient.testComponentLoading(connectionDetails, workspaceName, componentName, hjPath, buildPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testNewLoadRules(String serverURL,
@@ -188,7 +188,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		return testClient.testNewLoadRules(connectionDetails, workspaceName, testName, hjPath, buildPath);
+		return testClient.testNewLoadRules(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testOldLoadRules(String serverURL,
@@ -197,7 +197,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		return testClient.testOldLoadRules(connectionDetails, workspaceName, testName, hjPath);
+		return testClient.testOldLoadRules(connectionDetails, workspaceName, testName, hjPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testPersonalBuild(String serverURL,
@@ -207,7 +207,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		return testClient.testPersonalBuild(connectionDetails, workspaceName, testName, hjPath, buildPath);
+		return testClient.testPersonalBuild(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testBadFetchLocation(String serverURL,
@@ -217,6 +217,6 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		String passwordToUse = testClient.determinePassword(password, passwordFile);
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
-		return testClient.testBadFetchLocation(connectionDetails, workspaceName, testName, hjPath, buildPath);
+		return testClient.testBadFetchLocation(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
 	}
 }
