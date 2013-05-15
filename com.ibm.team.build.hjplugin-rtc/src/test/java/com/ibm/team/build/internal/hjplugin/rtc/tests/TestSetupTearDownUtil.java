@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
@@ -59,10 +61,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 	
 	public Map<String, String> setupComponentChanges(ConnectionDetails connectionDetails, String workspaceName,
-			String componentAddedName, String componentDroppedName) throws Exception {
+			String componentAddedName, String componentDroppedName, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -80,10 +82,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 	
 	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String workspaceName,
-			String componentName) throws Exception {
+			String componentName, IProgressMonitor progress) throws Exception {
 				
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -268,10 +270,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public void tearDown(ConnectionDetails connectionDetails,
-			Map<String, String> setupArtifacts) throws Exception {
+			Map<String, String> setupArtifacts, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		// Can't delete components just the workspaces
 		SCMUtil.deleteWorkspace(repo, setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID));
@@ -285,10 +287,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> setupTestBuildWorkspace(ConnectionDetails connectionDetails, String singleWorkspaceName,
-			String multipleWorkspaceName) throws Exception {
+			String multipleWorkspaceName, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -306,10 +308,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	public Map<String, String> setupAcceptDiscardChanges(
 			ConnectionDetails connectionDetails, String workspaceName,
-			String componentName) throws Exception {
+			String componentName, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -359,10 +361,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> setupEmptyChangeSets(ConnectionDetails connectionDetails, String workspaceName,
-			String componentName) throws Exception {
+			String componentName, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -404,10 +406,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 	
 	public Map<String, String> setupNoopChanges(ConnectionDetails connectionDetails,
-			String workspaceName, String componentName) throws Exception {
+			String workspaceName, String componentName, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -513,10 +515,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	public Map<String, String> setupComponentRootChange(
 			ConnectionDetails connectionDetails, String workspaceName,
-			String componentName) throws Exception {
+			String componentName, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -563,10 +565,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> setupMultipleComponentChanges(ConnectionDetails connectionDetails,
-			String workspaceName, String componentPrefix) throws Exception {
+			String workspaceName, String componentPrefix, IProgressMonitor progress) throws Exception {
 		
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -647,10 +649,11 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public Map<String, String> setupBuildResultContributions(ConnectionDetails connectionDetails,
 									String workspaceName,
 									String componentName,
-									String buildDefinitionId) throws Exception {
+									String buildDefinitionId,
+									IProgressMonitor progress) throws Exception {
 
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -724,10 +727,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 	private static final String XML_ENCODED_CHARACTERS = "<'&\">";
 
 	public Map<String, String> setupXMLEncodingTestChangeSets(ConnectionDetails connectionDetails, String workspaceName,
-			String componentName) throws Exception {
+			String componentName, IProgressMonitor progress) throws Exception {
 				
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -784,7 +787,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 	
 	public Map<String, String> testComponentLoading(ConnectionDetails connectionDetails,
-			String workspaceName, String componentName, String hjPath, String buildPath) throws Exception {
+			String workspaceName, String componentName, String hjPath, String buildPath,
+			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupComponentLoading(workspaceName,
@@ -793,7 +797,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			buildConfigurationTests.testComponentLoading(workspaceName, componentName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
-				tearDown(connectionDetails, artifactIds);
+				tearDown(connectionDetails, artifactIds, progress);
 			} catch (Exception e2) {
 				// don't let cleanup exception bury the details of the original failure
 			}
@@ -803,7 +807,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> testNewLoadRules(ConnectionDetails connectionDetails,
-			String workspaceName, String testName, String hjPath, String buildPath) throws Exception {
+			String workspaceName, String testName, String hjPath, String buildPath, 
+			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupNewLoadRules(workspaceName,
@@ -812,7 +817,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			buildConfigurationTests.testNewLoadRules(workspaceName, testName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
-				tearDown(connectionDetails, artifactIds);
+				tearDown(connectionDetails, artifactIds, progress);
 			} catch (Exception e2) {
 				// don't let cleanup exception bury the details of the original failure
 			}
@@ -822,7 +827,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> testOldLoadRules(ConnectionDetails connectionDetails,
-			String workspaceName, String testName, String hjPath) throws Exception {
+			String workspaceName, String testName, String hjPath, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupOldLoadRules(workspaceName,
@@ -831,7 +836,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			buildConfigurationTests.testOldLoadRules(workspaceName, testName, hjPath, artifactIds);
 		} catch (Exception e) {
 			try {
-				tearDown(connectionDetails, artifactIds);
+				tearDown(connectionDetails, artifactIds, progress);
 			} catch (Exception e2) {
 				// don't let cleanup exception bury the details of the original failure
 			}
@@ -842,7 +847,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	public Map<String, String> testPersonalBuild(
 			ConnectionDetails connectionDetails, String workspaceName,
-			String testName, String hjPath, String buildPath) throws Exception {
+			String testName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupPersonalBuild(workspaceName,
@@ -851,7 +856,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			buildConfigurationTests.testPersonalBuild(workspaceName, testName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
-				tearDown(connectionDetails, artifactIds);
+				tearDown(connectionDetails, artifactIds, progress);
 			} catch (Exception e2) {
 				// don't let cleanup exception bury the details of the original failure
 			}
@@ -862,7 +867,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	public Map<String, String> testBadFetchLocation(
 			ConnectionDetails connectionDetails, String workspaceName,
-			String testName, String hjPath, String buildPath) throws Exception {
+			String testName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupBadFetchLocation(workspaceName,
@@ -871,7 +876,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			buildConfigurationTests.testBadFetchLocation(workspaceName, testName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
-				tearDown(connectionDetails, artifactIds);
+				tearDown(connectionDetails, artifactIds, progress);
 			} catch (Exception e2) {
 				// don't let cleanup exception bury the details of the original failure
 			}

@@ -17,7 +17,7 @@
     <?jelly escape-by-default='true'?>
     
     <f:block>
-    <table>
+    <table width="100%">
         <f:optionalBlock name="overrideGlobal" title="${%overrideGlobal.title(descriptor.globalUserId, descriptor.globalServerURI)}" field="overrideGlobal" checked="${instance.overrideGlobal}" inline="true" >
     
         <j:invokeStatic var="installations" className="com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation" method="allInstallations"/>
@@ -64,7 +64,7 @@
     </f:block>
         
 	    <f:block>
-	    <table>
+	    <table width="100%">
 	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildType == 'buildDefinition'}" inline="true" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
         
 			    <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >

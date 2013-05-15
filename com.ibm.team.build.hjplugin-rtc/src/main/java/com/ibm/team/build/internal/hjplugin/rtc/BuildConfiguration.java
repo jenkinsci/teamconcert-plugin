@@ -26,8 +26,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.common.model.IBuildConfigurationElement;
 import com.ibm.team.build.common.model.IBuildDefinitionInstance;
@@ -110,21 +111,25 @@ public class BuildConfiguration {
 	 * be calling {@link #initialize(IWorkspaceHandle, String, String)}
 	 * @param buildLabel The assigned build label
 	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @throws IOException If anything is wrong with the destination location
 	 * @throws RTCConfigurationException If validation fails
 	 * @throws TeamRepositoryException If anything goes wrong during the initialization
 	 */
-	public void initialize(IBuildResultHandle buildResultHandle, final IConsoleOutput listener) throws IOException, RTCConfigurationException, TeamRepositoryException {
+	public void initialize(IBuildResultHandle buildResultHandle, final IConsoleOutput listener,
+			IProgressMonitor progress) throws IOException, RTCConfigurationException, TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IItemManager itemManager = getTeamRepository().itemManager();
 
         IBuildResult result = (IBuildResult) itemManager.fetchCompleteItem(
-                buildResultHandle, IItemManager.REFRESH, new NullProgressMonitor());
+                buildResultHandle, IItemManager.REFRESH, monitor.newChild(5));
 
         if (result.getBuildRequests().isEmpty()) {
         	throw new IllegalStateException("No build request for the build result");
         }
         
-        IBuildRequest buildRequest = (IBuildRequest) itemManager.fetchCompleteItem((IBuildRequestHandle) result.getBuildRequests().iterator().next(), IItemManager.REFRESH, null);
+        IBuildRequest buildRequest = (IBuildRequest) itemManager.fetchCompleteItem((IBuildRequestHandle) result.getBuildRequests().iterator().next(),
+        		IItemManager.REFRESH, monitor.newChild(10));
         IBuildDefinitionInstance buildDefinitionInstance = buildRequest.getBuildDefinitionInstance();
         IBuildConfigurationElement element = buildDefinitionInstance.getConfigurationElement(
                 IJazzScmConfigurationElement.ELEMENT_ID);
@@ -153,7 +158,7 @@ public class BuildConfiguration {
         workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceUuid, null);
         
         // Collect Build Properties
-        IBuildEngine buildEngine = (IBuildEngine) itemManager.fetchCompleteItem(buildRequest.getHandler(), IItemManager.REFRESH, null);
+        IBuildEngine buildEngine = (IBuildEngine) itemManager.fetchCompleteItem(buildRequest.getHandler(), IItemManager.REFRESH, monitor.newChild(10));
 			
         // Add built-in properties.
         buildProperties.put("buildResultUUID", buildResultHandle.getItemId().getUuidValue()); //$NON-NLS-1$
@@ -164,7 +169,8 @@ public class BuildConfiguration {
         buildProperties.put("buildEngineHostName", getLocalHostNoException()); //$NON-NLS-1$
         
         try {
-            IContributor contributor = (IContributor) itemManager.fetchCompleteItem(buildRequest.getInitiatingContributor(), IItemManager.REFRESH, null);
+            IContributor contributor = (IContributor) itemManager.fetchCompleteItem(buildRequest.getInitiatingContributor(),
+            		IItemManager.REFRESH, monitor.newChild(10));
             buildProperties.put("buildRequesterUserId", contributor.getUserId()); //$NON-NLS-1$
         } catch (ItemNotFoundException itemNotFoundException) {
             // Will not add property since contributor not found
@@ -316,13 +322,15 @@ public class BuildConfiguration {
     /**
      * The load rules to be used during the load.
      * @param workspaceConnection The workspace containing the load rules
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @return Collection of load rules for the load. The return collection
      * is deliberately not typed because releases later than 3.0.1.5 use ILoadRule2
      * as opposed to ILoadRule. If there are no load rules, an empty collection is
      * returned. Never <code>null</code>
      * @throws TeamRepositoryException If anything goes wrong retrieving the load rules
      */
-    public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection) throws TeamRepositoryException {
+    public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection, IProgressMonitor progress) throws TeamRepositoryException {
+    	SubMonitor monitor = SubMonitor.convert(progress, 100);
         if (loadRuleUUIDs != null) {
         	// Determine if the new format of load rules is supported and if so, will it be able to find
         	// the schema to validate against.
@@ -349,10 +357,11 @@ public class BuildConfiguration {
             	Map<IComponentHandle, IFileItemHandle> ruleFiles = rules.getLoadRuleFiles();
             	
             	Collection loadRules = new ArrayList<Object>(ruleFiles.size());
+            	monitor.setWorkRemaining(20 * ruleFiles.size());
                 for (Map.Entry<IComponentHandle, IFileItemHandle> entry : ruleFiles.entrySet()) {
                     IComponentHandle componentHandle = entry.getKey();;
                     try {
-                        Object rule = NonValidatingLoadRuleFactory.getLoadRule(workspaceConnection, componentHandle, entry.getValue(), new NullProgressMonitor());
+                        Object rule = NonValidatingLoadRuleFactory.getLoadRule(workspaceConnection, componentHandle, entry.getValue(), monitor.newChild(10));
                         loadRules.add(rule);
                     } catch (TeamRepositoryException e1) {
                     	// Generalized to handle more than just the VersionablePermissionException
@@ -364,7 +373,7 @@ public class BuildConfiguration {
                         IContributor contributor = repo.loggedInContributor();
                         IComponent component = null;
                         try {
-                            component = (IComponent) repo.itemManager().fetchCompleteItem(componentHandle, IItemManager.DEFAULT, new NullProgressMonitor());
+                            component = (IComponent) repo.itemManager().fetchCompleteItem(componentHandle, IItemManager.DEFAULT, monitor.newChild(10));
                         } catch (TeamRepositoryException e2) {
                             // Just throw the original error.
                             throw e1;
@@ -380,7 +389,7 @@ public class BuildConfiguration {
                 return loadRules;
         	} else {
             	ComponentLoadRules rules = new ComponentLoadRules(loadRuleUUIDs); 
-                return rules.getLoadRules(workspaceConnection, new NullProgressMonitor());
+                return rules.getLoadRules(workspaceConnection, monitor.newChild(100));
             }
         }
         return Collections.EMPTY_LIST;

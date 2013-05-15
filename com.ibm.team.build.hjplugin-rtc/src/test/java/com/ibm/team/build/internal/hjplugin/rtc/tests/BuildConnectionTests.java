@@ -75,7 +75,7 @@ public class BuildConnectionTests {
 	}
 
 	public void verifyBuildResultContributions(Map<String, String> artifacts) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository();
 		ITeamBuildClient buildClient = (ITeamBuildClient) repo.getClientLibrary(ITeamBuildClient.class);
 		
@@ -196,7 +196,7 @@ public class BuildConnectionTests {
 	}
 
 	public void testCreateBuildResult(String testName) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository();
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
@@ -218,7 +218,7 @@ public class BuildConnectionTests {
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
 			
 			// test the straight forward build result creation
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener);
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 			if (failure[0] != null) {
@@ -226,7 +226,7 @@ public class BuildConnectionTests {
 			}
 
 			BuildConfiguration buildConfiguration = new BuildConfiguration(repo, "");
-			buildConfiguration.initialize(buildResultHandle, listener);
+			buildConfiguration.initialize(buildResultHandle, listener, null);
 			if (failure[0] != null) {
 				throw failure[0];
 			}
@@ -240,7 +240,7 @@ public class BuildConnectionTests {
 			BuildUtil.deleteBuildResult(repo, buildResultItemId);
 
 			// test the creation of a personal build
-			buildResultItemId = connection.createBuildResult(testName, personalWorkspace.getResolvedWorkspace().getName(), "my personal buildLabel", listener );
+			buildResultItemId = connection.createBuildResult(testName, personalWorkspace.getResolvedWorkspace().getName(), "my personal buildLabel", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 			if (failure[0] != null) {
@@ -248,7 +248,7 @@ public class BuildConnectionTests {
 			}
 			
 			buildConfiguration = new BuildConfiguration(repo, "");
-			buildConfiguration.initialize(buildResultHandle, listener);
+			buildConfiguration.initialize(buildResultHandle, listener, null);
 			if (failure[0] != null) {
 				throw failure[0];
 			}
@@ -267,7 +267,7 @@ public class BuildConnectionTests {
 	}
 
 	public void testCreateBuildResultFail(String testName) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository();
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
@@ -289,7 +289,7 @@ public class BuildConnectionTests {
 			
 			// build result creation should fail
 			try {
-				String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener);
+				String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
 				artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 				if (failure[0] != null) {
 					throw failure[0];
@@ -308,7 +308,7 @@ public class BuildConnectionTests {
 	}
 
 	public void testExternalLinks(String testName) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository();
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
@@ -328,14 +328,15 @@ public class BuildConnectionTests {
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
 			
 			// create a build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "external links test 1", listener);
+			String buildResultItemId = connection.createBuildResult(testName, null, "external links test 1", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
 			}
 
 			// Add external links
-			connection.getBuildConnection().createBuildLinks(buildResultItemId, "http://localHost:8080", "myJob", "myJob/2", listener);
+			connection.getBuildConnection().createBuildLinks(buildResultItemId, "http://localHost:8080", "myJob", "myJob/2",
+					listener, null);
 			if (failure[0] != null) {
 				throw failure[0];
 			}
@@ -358,14 +359,14 @@ public class BuildConnectionTests {
 			
 			// create another build result
 			BuildUtil.deleteBuildResult(repo, buildResultItemId);
-			buildResultItemId = connection.createBuildResult(testName, null, "external links test 2", listener);
+			buildResultItemId = connection.createBuildResult(testName, null, "external links test 2", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
 			}
 
 			// test creating links when we could not get the hudson url
-			connection.getBuildConnection().createBuildLinks(buildResultItemId, null, "anotherJob", "anotherJob/44", listener);
+			connection.getBuildConnection().createBuildLinks(buildResultItemId, null, "anotherJob", "anotherJob/44", listener, null);
 			if (failure[0] != null) {
 				throw failure[0];
 			}
@@ -404,7 +405,7 @@ public class BuildConnectionTests {
 		// Test start & (abandon build in test) & terminate build (cancelled)
 		// Test start & (abandon build in test) & terminate build (failed)
 		// Test start & (abandon build in test) & terminate build (unstable)
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository();
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
@@ -511,7 +512,7 @@ public class BuildConnectionTests {
 		final Exception[] failure = new Exception[] {null};
 		IConsoleOutput listener = getListener(failure);
 
-		String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener);
+		String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 		if (failure[0] != null) {
 			throw failure[0];
@@ -533,7 +534,7 @@ public class BuildConnectionTests {
 		IConsoleOutput listener = getListener(failure);
 
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
-		connection.terminateBuild(buildResultItemId, aborted, buildState, listener);
+		connection.terminateBuild(buildResultItemId, aborted, buildState, listener, null);
 		if (failure[0] != null) {
 			throw failure[0];
 		}
