@@ -66,7 +66,7 @@ public class BuildConfigurationTests {
 	public Map<String, String> setupComponentLoading(String workspaceName,
 			String testName, String hjPath, String buildPath) throws Exception {
 		
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -113,7 +113,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener );
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -131,7 +131,7 @@ public class BuildConfigurationTests {
 
 	public void testComponentLoading(String workspaceName,
 			String testName, String hjPath, String buildPath, Map<String, String> artifactIds) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
 		IConsoleOutput listener = getListener(failure);
@@ -141,7 +141,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener);
+		buildConfiguration.initialize(buildResultHandle, listener, null);
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -153,7 +153,8 @@ public class BuildConfigurationTests {
 		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
 		AssertUtil.assertTrue(buildConfiguration.includeComponents(), "Should be a list of components to include");
 		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "Should be creating a folder for the component");
-		AssertUtil.assertEquals(0, buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null)).size());
+		AssertUtil.assertEquals(0, buildConfiguration.getComponentLoadRules(
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponents().size());
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID), buildConfiguration.getComponents().iterator().next().getItemId().getUuidValue());
 		File expectedLoadDir = new File(hjPath);
@@ -194,7 +195,7 @@ public class BuildConfigurationTests {
 		// and other settings.
 		
 
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -251,7 +252,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener );
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -283,7 +284,7 @@ public class BuildConfigurationTests {
 
 	public void testNewLoadRules(String workspaceName, String testName,
 			String hjPath, String buildPath, Map<String, String> artifactIds) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
 		IConsoleOutput listener = getListener(failure);
@@ -293,7 +294,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener);
+		buildConfiguration.initialize(buildResultHandle, listener, null);
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -305,7 +306,8 @@ public class BuildConfigurationTests {
 		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
-		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null)).size());
+		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
@@ -327,7 +329,7 @@ public class BuildConfigurationTests {
 		// verify that the buildConfiguration returns the load rules
 		// and other settings.
 
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -383,7 +385,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener );
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -412,7 +414,7 @@ public class BuildConfigurationTests {
 
 	public void testOldLoadRules(String workspaceName, String testName,
 			String hjPath, Map<String, String> artifactIds) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
 		IConsoleOutput listener = getListener(failure);
@@ -422,7 +424,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener);
+		buildConfiguration.initialize(buildResultHandle, listener, null);
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -434,7 +436,8 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.acceptBeforeFetch(), "Should not be accepting before fetching");
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
-		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null)).size());
+		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
@@ -463,7 +466,7 @@ public class BuildConfigurationTests {
 		// verify the build property is changed
 		// verify property substitution done
 
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -558,7 +561,7 @@ public class BuildConfigurationTests {
 			String loadRuleProperty, IConsoleOutput listener) throws TeamRepositoryException, RTCConfigurationException {
 		ITeamRepository repo = connection.getTeamRepository();
 		BuildConnection buildConnection = new BuildConnection(repo);
-		IBuildDefinition buildDefinition = buildConnection.getBuildDefinition(buildDefinitionId);
+		IBuildDefinition buildDefinition = buildConnection.getBuildDefinition(buildDefinitionId, null);
 		if (buildDefinition == null) {
 			throw new RTCConfigurationException(Messages.BuildConnection_build_definition_not_found(buildDefinitionId));
 		}
@@ -589,7 +592,7 @@ public class BuildConfigurationTests {
 			AssertUtil.fail("Shoud of been able to override propertyC");
 		}
 
-		IBuildEngineHandle buildEngine = buildConnection.getBuildEngine(buildDefinition);
+		IBuildEngineHandle buildEngine = buildConnection.getBuildEngine(buildDefinition, null);
 		if (buildEngine == null) {
 			throw new RTCConfigurationException(Messages.BuildConnection_no_build_engine_for_defn(buildDefinitionId));
 		}
@@ -619,7 +622,7 @@ public class BuildConfigurationTests {
 
 	public void testPersonalBuild(String workspaceName, String testName,
 			String hjPath, String buildPath, Map<String, String> artifactIds) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		final Exception[] failure = new Exception[] {null};
 		final boolean[] propertiesLogged = new boolean[] {false};
@@ -642,7 +645,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener);
+		buildConfiguration.initialize(buildResultHandle, listener, null);
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -657,7 +660,8 @@ public class BuildConfigurationTests {
 		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
-		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null)).size());
+		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, "loadDir/here");
@@ -677,7 +681,7 @@ public class BuildConfigurationTests {
 
 	public Map<String, String> setupBadFetchLocation(String workspaceName,
 			String testName, String hjPath, String buildPath) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
@@ -712,7 +716,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener );
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -731,7 +735,7 @@ public class BuildConfigurationTests {
 	public void testBadFetchLocation(String workspaceName,
 			String testName, String hjPath, String buildPath,
 			Map<String, String> artifactIds) throws Exception {
-		connection.ensureLoggedIn();
+		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
 		IConsoleOutput listener = getListener(failure);
@@ -742,7 +746,7 @@ public class BuildConfigurationTests {
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
 		try {
-			buildConfiguration.initialize(buildResultHandle, listener);
+			buildConfiguration.initialize(buildResultHandle, listener, null);
 			if (failure[0] != null) {
 				throw failure[0];
 			}

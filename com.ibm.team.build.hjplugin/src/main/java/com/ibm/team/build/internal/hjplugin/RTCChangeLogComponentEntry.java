@@ -23,9 +23,6 @@ import org.kohsuke.stapler.export.ExportedBean;
 @ExportedBean(defaultVisibility=999)
 public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements Comparable<RTCChangeLogComponentEntry> {
 
-	private static final EditType ADD_COMPONENT = new EditType(EditType.ADD.getName(), Messages.RTCChangeLogComponentEntry_added_the_component());
-	private static final EditType DROP_COMPONENT = new EditType(EditType.DELETE.getName(), Messages.RTCChangeLogComponentEntry_deleted_the_component());
-	
 	private String componentItemId;
 	private String componentName;
 	private String action;
@@ -77,9 +74,9 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 	
 	public EditType getActionType() {
 		if (action.equalsIgnoreCase("Added")) { //$NON-NLS-1$
-			return ADD_COMPONENT;
+			return new EditType(EditType.ADD.getName(), Messages.RTCChangeLogComponentEntry_added_the_component());
 		} else if (action.equalsIgnoreCase("Dropped")) { //$NON-NLS-1$
-			return DROP_COMPONENT;
+			return new EditType(EditType.DELETE.getName(), Messages.RTCChangeLogComponentEntry_deleted_the_component());
 		}
 		return EditType.EDIT;
 	}
