@@ -13,6 +13,7 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -47,13 +48,13 @@ public class BuildClient extends AbstractBuildClient {
 	}
 
 	@Override
-	public String determinePassword(String password, File passwordFile)
+	public String determinePassword(String password, File passwordFile, Locale clientLocale)
 			throws Exception {
-		String passwordToUse = getProvidedPassword(password, passwordFile);
+		String passwordToUse = getProvidedPassword(password, passwordFile, clientLocale);
 		if (passwordToUse == null || passwordToUse.length() == 0) {
 			LOGGER.finer("No password determined because password determined is "  //$NON-NLS-1$
 					+ (passwordToUse == null ? "null" : "empty"));  //$NON-NLS-1$ //$NON-NLS-2$
-			throw new RTCConfigurationException(Messages.BuildClient_no_password());
+			throw new RTCConfigurationException(Messages.get(clientLocale).BuildClient_no_password());
 		}
 		return passwordToUse;
 	}
@@ -61,19 +62,19 @@ public class BuildClient extends AbstractBuildClient {
     /**
      * Get the password as provided by the password or passwordFile attributes.
      */
-	private String getProvidedPassword(String password, File passwordFile) throws Exception {
+	private String getProvidedPassword(String password, File passwordFile, Locale clientLocale) throws Exception {
         if (passwordFile != null) {
         	String decryptedPassword = null;
             try {
     			decryptedPassword = PasswordHelper.getPassword(passwordFile);
             } catch (Exception exception) {
-                throw new RTCConfigurationException(Messages.BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
+                throw new RTCConfigurationException(Messages.get(clientLocale).BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
             }
             
             // An empty password text file returns an empty password string instead of throwing an exception
             // See 255010: PasswordHelper.getPassword(passwordFile) returns empty string for invalid password file
 			if (decryptedPassword != null && decryptedPassword.length() == 0) {
-				throw new RTCConfigurationException(Messages.BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
+				throw new RTCConfigurationException(Messages.get(clientLocale).BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
 			} else {
 				return decryptedPassword;
 			}

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Locale;
 import java.util.Map;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
@@ -42,6 +43,7 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
 	private boolean isRemote;
 	private String contextStr;
 	private boolean debug;
+	private Locale clientLocale;
 
 	private static final long serialVersionUID = 1L;
 
@@ -63,12 +65,13 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
 	 * @param changeLog Output stream to hold the Change log results
 	 * @param isRemote Whether this will be executed on the Master or a slave
 	 * @param debug Whether to report debugging messages to the listener
+	 * @param clientLocale The locale of the requesting client
 	 */
 	public RTCCheckoutTask(String contextStr, String buildToolkit,
 			String serverURI, String userId, String password, int timeout,
 			String buildResultUUID, String buildWorkspace,
 			String baselineSetName, BuildListener listener,
-			RemoteOutputStream changeLog, boolean isRemote, boolean debug) {
+			RemoteOutputStream changeLog, boolean isRemote, boolean debug, Locale clientLocale) {
     	
 		this.contextStr = contextStr;
 		this.buildToolkit = buildToolkit;
@@ -83,6 +86,7 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
     	this.changeLog = changeLog;
     	this.isRemote = isRemote;
     	this.debug = debug;
+    	this.clientLocale = clientLocale;
 	}
 
 	public Map<String, String> invoke(File workspace, VirtualChannel channel) throws IOException, InterruptedException {
@@ -110,12 +114,13 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
 					String.class, // hjWorkspacePath,
 					OutputStream.class, // changeLog,
 					String.class, // baselineSetName,
-					Object.class, // listener)
+					Object.class, // listener
+					Locale.class // clientLocale
 			}, serverURI, userId, Secret.toString(password),
 					timeout, buildResultUUID, buildWorkspace,
 					workspace.getAbsolutePath(),
 					changeLog, baselineSetName,
-					listener);
+					listener, clientLocale);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -97,6 +98,7 @@ public class BuildConnection {
 	 * @param buildLabel The label to assign to the build
 	 * @param listener A log to report progress and failures to.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @return The build result to update with progress of the Jenkins build. May be <code>null</code>
 	 * if there is no build engine associated with the build definition
 	 * @throws TeamRepositoryException Thrown if problems are encountered
@@ -104,13 +106,13 @@ public class BuildConnection {
 	 */
 	public IBuildResultHandle createBuildResult(String buildDefinitionId,
 			IWorkspaceHandle personalBuildWorkspace, String buildLabel,
-			IConsoleOutput listener, IProgressMonitor progress)
+			IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale)
 			throws TeamRepositoryException, RTCConfigurationException {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IBuildDefinition buildDefinition = getBuildDefinition(buildDefinitionId, monitor.newChild(20));
 		if (buildDefinition == null) {
-			throw new RTCConfigurationException(Messages.BuildConnection_build_definition_not_found(buildDefinitionId));
+			throw new RTCConfigurationException(Messages.get(clientLocale).BuildConnection_build_definition_not_found(buildDefinitionId));
 		}
 		List<IBuildProperty> modifiedProperties = new ArrayList<IBuildProperty>(1);
 		boolean isPersonal = false;
@@ -128,7 +130,7 @@ public class BuildConnection {
 			LOGGER.finer("Unable to create a build result for the build"); //$NON-NLS-1$
 			// TODO? just use the build definition as is and don't publish the results to RTC?
 			// Right now we expect build result or workspace uuids on checkout
-			throw new RTCConfigurationException(Messages.BuildConnection_no_build_engine_for_defn(buildDefinitionId));
+			throw new RTCConfigurationException(Messages.get(clientLocale).BuildConnection_no_build_engine_for_defn(buildDefinitionId));
 		}
 
         IBuildRequestParams params = BuildItemFactory.createBuildRequestParams();
@@ -226,31 +228,32 @@ public class BuildConnection {
 	 * 
 	 * @param buildDefinitionId ID of the RTC build definition
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @throw Exception if an error occurs
      * @throws RTCValidationException
      *             If a build definition for the build definition id could not
      *             be found.
 	 * @LongOp
 	 */
-	public void testBuildDefinition(String buildDefinitionId, IProgressMonitor progress) throws Exception {
+	public void testBuildDefinition(String buildDefinitionId, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
 		// validate the build definition exists
 		IBuildDefinition buildDefinition = getBuildDefinition(buildDefinitionId, monitor.newChild(25));
         if (buildDefinition == null) {
-            throw new RTCValidationException(Messages.BuildConnection_build_definition_not_found(buildDefinitionId));
+            throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_not_found(buildDefinitionId));
         }
         
         // validate the build definition has a supporting build engine
 		IBuildEngineHandle buildEngineHandle = getBuildEngine(buildDefinition, monitor.newChild(25));
 		if (buildEngineHandle == null) {
-            throw new RTCValidationException(Messages.BuildConnection_build_definition_missing_build_engine());
+            throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_build_engine());
 		}
 		
 		// validate the build definition is a hudson/jenkins build definition
         IBuildConfigurationElement hudsonDefinitionBuildConfigurationElement = buildDefinition.getConfigurationElement("com.ibm.rational.connector.hudson"); //$NON-NLS-1$
         if (hudsonDefinitionBuildConfigurationElement == null) {
-            throw new RTCValidationException(Messages.BuildConnection_build_definition_missing_hudson_config());
+            throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_hudson_config());
         }
         
         // validate the build definition has a hudson/jenkins build engine
@@ -259,13 +262,13 @@ public class BuildConnection {
                 Arrays.asList(IBuildEngine.PROPERTY_CONFIGURATION_ELEMENTS), monitor.newChild(50));
 		IBuildConfigurationElement hudsonEngineBuildConfigurationElement = buildEngine.getConfigurationElement("com.ibm.rational.connector.hudson.engine"); //$NON-NLS-1$
 		if (hudsonEngineBuildConfigurationElement == null) {
-            throw new RTCValidationException(Messages.BuildConnection_build_definition_missing_build_engine_hudson_config());
+            throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_build_engine_hudson_config());
 		}
 		
 		// validate the build definition as a Jazz Source Control option
 		IBuildConfigurationElement jazzScmDefinitionConfigurationElement = buildDefinition.getConfigurationElement("com.ibm.team.build.jazzscm"); //$NON-NLS-1$
 		if (jazzScmDefinitionConfigurationElement == null) {
-			throw new RTCValidationException(Messages.BuildConnection_build_definition_missing_jazz_scm_config());
+			throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_jazz_scm_config());
 		}
 	}
 
@@ -369,7 +372,7 @@ public class BuildConnection {
         IBuildResultContribution contribution = BuildItemFactory.createBuildResultContribution();
         contribution.setExtendedContributionTypeId(ScmConstants.EXTENDED_DATA_TYPE_ID_BUILD_SNAPSHOT);
         contribution.setImpactsPrimaryResult(false);
-        contribution.setLabel(Messages.BuildConnection_snapshot_label(snapshot.getName()));
+        contribution.setLabel(Messages.getDefault().BuildConnection_snapshot_label(snapshot.getName()));
         contribution.setExtendedContribution(snapshot);
 
         getTeamBuildClient().addBuildResultContribution(resultHandle, contribution, progress);
@@ -501,13 +504,13 @@ public class BuildConnection {
 		}
 		
 		if (rootUrl == null) {
-			clientConsole.log(Messages.BuildConnection_missing_root_url());
+			clientConsole.log(Messages.getDefault().BuildConnection_missing_root_url());
 		} else {
 			if (!rootUrl.endsWith(SLASH)) {
 				rootUrl = rootUrl + SLASH;
 			}
-			addLinkContribution(Messages.BuildConnection_hj_job(), rootUrl + projectUrl, resultHandle, monitor.newChild(25));
-			addLinkContribution(Messages.BuildConnection_hj_build(), rootUrl + buildUrl, resultHandle, monitor.newChild(25));
+			addLinkContribution(Messages.getDefault().BuildConnection_hj_job(), rootUrl + projectUrl, resultHandle, monitor.newChild(25));
+			addLinkContribution(Messages.getDefault().BuildConnection_hj_build(), rootUrl + buildUrl, resultHandle, monitor.newChild(25));
 		}
 	}
 

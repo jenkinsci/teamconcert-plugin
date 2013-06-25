@@ -12,6 +12,7 @@
 package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.File;
+import java.util.Locale;
 
 /**
  * Interface to the Build and SCM client libraries.
@@ -72,8 +73,9 @@ public abstract class AbstractBuildClient {
 	 * @param password The password to use by default if there is no password file. Can be
 	 * <code>null</code> if the password file is supplied
 	 * @param passwordFile A file containing an obfuscated password. Can be <code>null</code>
+	 * @param clientLocale The locale of the requesting client
 	 * @return The password to use.
 	 */
-	public abstract String determinePassword(String password, File passwordFile) throws Exception;
+	public abstract String determinePassword(String password, File passwordFile, Locale clientLocale) throws Exception;
 
 }

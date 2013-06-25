@@ -44,6 +44,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,6 +52,7 @@ import java.util.logging.Logger;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.StringUtils;
+import org.jvnet.localizer.LocaleProvider;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -484,8 +486,9 @@ public class RTCScm extends SCM {
 						String.class, // userId
 						String.class, // password
 						File.class, // passwordFile
-						int.class}, // timeout
-						serverURI, userId, password, passwordFile, timeout);
+						int.class, // timeout
+						Locale.class}, // clientLocale
+						serverURI, userId, password, passwordFile, timeout, LocaleProvider.getLocale());
 				if (errorMessage != null && errorMessage.length() != 0) {
 	    			return FormValidation.error(errorMessage);
 				}
@@ -532,9 +535,10 @@ public class RTCScm extends SCM {
 								String.class, // password
 								File.class, // passwordFile
 								int.class, // timeout
-								String.class}, // buildWorkspace
+								String.class, // buildWorkspace
+								Locale.class}, // clientLocale
 						serverURI, userId, password, passwordFile, timeout,
-						buildWorkspace);
+						buildWorkspace, LocaleProvider.getLocale());
 				if (errorMessage != null && errorMessage.length() != 0) {
 	    			return FormValidation.error(errorMessage);
 				}
@@ -583,9 +587,10 @@ public class RTCScm extends SCM {
 								String.class, // password
 								File.class, // passwordFile
 								int.class, // timeout
-								String.class}, // buildDefinition
+								String.class, // buildDefinition
+								Locale.class}, // clientLocale
 						serverURI, userId, password, passwordFile, timeout,
-						buildDefinition);
+						buildDefinition, LocaleProvider.getLocale());
 				if (errorMessage != null && errorMessage.length() != 0) {
 	    			return FormValidation.error(errorMessage);
 				}
@@ -723,7 +728,8 @@ public class RTCScm extends SCM {
 			passwordToUse = (String) facade.invoke("determinePassword", new Class[] { //$NON-NLS-1$
 					String.class, // password,
 					File.class, // passwordFile,
-			}, getPassword(), getPasswordFileFile());
+					Locale.class // clientLocale
+			}, getPassword(), getPasswordFileFile(), LocaleProvider.getLocale());
 			
 			// If we don't have a build result but have a build definition, create the
 			// build result prior to going to the slave so that it can be in the slave's
@@ -739,9 +745,10 @@ public class RTCScm extends SCM {
 								int.class, // timeout,
 								String.class, // buildDefinition,
 								String.class, // buildLabel,
-								Object.class, // listener)
+								Object.class, // listener
+								Locale.class // clientLocale
 						}, jazzServerURI, jazzUserId, passwordToUse,
-						jazzTimeout, buildDefinition, label, listener);
+						jazzTimeout, buildDefinition, label, listener, LocaleProvider.getLocale());
 				createdBuildResult = true;
 			}
 
@@ -831,7 +838,7 @@ public class RTCScm extends SCM {
 				buildWorkspace,
 				label,
 				listener, changeLog,
-				workspacePath.isRemote(), debug);
+				workspacePath.isRemote(), debug, LocaleProvider.getLocale());
 		
 		Map<String, String> buildProperties = workspacePath.act(checkout);
 		
@@ -904,12 +911,13 @@ public class RTCScm extends SCM {
 							int.class, // timeout
 							String.class, // buildDefinition
 							String.class, // buildWorkspace
-							Object.class,}, // listener
+							Object.class, // listener
+							Locale.class}, // clientLocale
 					getServerURI(), getUserId(), getPassword(),
 					getPasswordFileFile(), getTimeout(), 
 					(useBuildDefinitionInBuild ? getBuildDefinition() : ""),
 					(useBuildDefinitionInBuild ? "" : getBuildWorkspace()),
-					listener);
+					listener, LocaleProvider.getLocale());
     		if (changesIncoming.equals(Boolean.TRUE)) {
     			listener.getLogger().println(Messages.RTCScm_changes_found());
     			return PollingResult.SIGNIFICANT;

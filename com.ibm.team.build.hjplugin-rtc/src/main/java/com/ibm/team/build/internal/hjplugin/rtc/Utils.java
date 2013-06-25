@@ -14,6 +14,7 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 import java.nio.channels.ClosedByInterruptException;
 
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.OperationCanceledException;
 
 import com.ibm.team.filesystem.client.FileSystemStatusException;
 import com.ibm.team.repository.common.TeamRepositoryException;
@@ -21,7 +22,7 @@ import com.ibm.team.repository.common.TeamRepositoryException;
 public class Utils {
 	private Utils() {}
 	
-	public static Exception checkForCancellation(TeamRepositoryException e) {
+	public static Exception checkForCancellation(Exception e) {
 		if (e instanceof FileSystemStatusException) {
 			if (((FileSystemStatusException) e).getStatus().matches(IStatus.CANCEL)) {
 				InterruptedException result = new InterruptedException(e.getMessage());
@@ -37,14 +38,15 @@ public class Utils {
 		return e;
 	}
 	
-	private static boolean isInterruptedException(TeamRepositoryException e) {
-		Throwable nested = e.getCause();
+	private static boolean isInterruptedException(Exception e) {
+		Throwable nested = e;
 		// We are only digging 20 deep because I am paranoid and its unlikely that an interrupt
 		// would be nested deeper than that.
 		for (int i=0; i<20; i++) {
 			if (nested == null) {
 				return false;
-			} else if ((nested instanceof InterruptedException) 
+			} else if ((nested instanceof OperationCanceledException)
+					|| (nested instanceof InterruptedException) 
 					|| (nested instanceof ClosedByInterruptException)) {
 				return true;
 			} else {

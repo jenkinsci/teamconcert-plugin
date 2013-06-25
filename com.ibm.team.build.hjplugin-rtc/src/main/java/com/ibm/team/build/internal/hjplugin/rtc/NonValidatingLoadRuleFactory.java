@@ -82,7 +82,7 @@ public class NonValidatingLoadRuleFactory {
                 return rule;
             }
         } catch (IOException e) {
-            throw new FileSystemException(Messages.NonValidatingLoadRuleFactory_load_rule_type_failure(e.getMessage()), e);
+            throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_load_rule_type_failure(e.getMessage()), e);
         } finally {
             try {
                 bufferedInput.close();
@@ -120,7 +120,7 @@ public class NonValidatingLoadRuleFactory {
             	schema = ILoadRuleFactory.class.getResource("/schema/LoadRule.xsd"); //$NON-NLS-1$
             }
             if (schema == null) {
-            	throw new FileSystemException(Messages.NonValidatingLoadRuleFactory_missing_schema());
+            	throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_missing_schema());
             }
             String schemaLocation = "http://com.ibm.team.scm " + schema.toString(); //$NON-NLS-1$
             parser.setProperty(SAX_PROPERTIES_SCHEMA_LOCATION, schemaLocation);        
@@ -144,17 +144,17 @@ public class NonValidatingLoadRuleFactory {
                 cause = spe;
             }
             if (spe.getSystemId() != null) {
-                throw new FileSystemException(Messages.NonValidatingLoadRuleFactory_parsing_failed_at_line(spe.getSystemId(), spe.getLineNumber()), cause);
+                throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_parsing_failed_at_line(spe.getSystemId(), spe.getLineNumber()), cause);
             } else {
-                throw new FileSystemException(Messages.NonValidatingLoadRuleFactory_parsing_failure(spe.getLocalizedMessage()), cause);
+                throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_parsing_failure(spe.getLocalizedMessage()), cause);
             }
         } catch (IOException e) {
-            throw new FileSystemException(Messages.NonValidatingLoadRuleFactory_read_failure(), e);
+            throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_read_failure(), e);
         } catch (SAXException e) {
             if (e.getException() instanceof TeamRepositoryException) {
                 throw (TeamRepositoryException) e.getException();
             } else {
-                throw new FileSystemException(Messages.NonValidatingLoadRuleFactory_parsing_failure(e.getLocalizedMessage()), e);
+                throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_parsing_failure(e.getLocalizedMessage()), e);
             }
         }
         
@@ -185,7 +185,7 @@ public class NonValidatingLoadRuleFactory {
             try {
                 reader = new InputStreamReader(stream, file.getContent().getCharacterEncoding());
             } catch (UnsupportedEncodingException e) {
-                throw new FileSystemException(Messages.NonValidatingLoadRuleFactory_bad_encoding(file.getName(), file.getContent().getCharacterEncoding()), e);
+                throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_bad_encoding(file.getName(), file.getContent().getCharacterEncoding()), e);
             }
         }
         
