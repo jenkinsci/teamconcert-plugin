@@ -12,6 +12,7 @@
 package com.ibm.team.build.internal.hjplugin.tests;
 
 import java.io.File;
+import java.util.Locale;
 import java.util.Map;
 
 import org.junit.Assert;
@@ -48,10 +49,11 @@ public class RTCFacadeIT extends HudsonTestCase {
 							String.class, // userId
 							String.class, // password
 							File.class, // passwordFile
-							int.class}, // timeout
+							int.class, // timeout
+							Locale.class}, // clientLocale
 					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 					Config.DEFAULT.getPassword(), null,
-					Config.DEFAULT.getTimeout());
+					Config.DEFAULT.getTimeout(), Locale.getDefault());
 			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
 		}
 	}
@@ -64,10 +66,11 @@ public class RTCFacadeIT extends HudsonTestCase {
 							String.class, // userId
 							String.class, // password
 							File.class, // passwordFile
-							int.class}, // timeout
+							int.class, // timeout
+							Locale.class}, // clientLocale
 					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 					"invalid password", null,
-					Config.DEFAULT.getTimeout());
+					Config.DEFAULT.getTimeout(), Locale.getDefault());
 			assertTrue("Successful testConnection with invalid password", errorMessage != null && errorMessage.length() != 0);
 		}
 	}
@@ -80,10 +83,11 @@ public class RTCFacadeIT extends HudsonTestCase {
 							String.class, // userId
 							String.class, // password
 							File.class, // passwordFile
-							int.class}, // timeout
+							int.class, // timeout
+							Locale.class}, // clientLocale
 					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 					null, new File(Config.DEFAULT.getPasswordFile()),
-					Config.DEFAULT.getTimeout());
+					Config.DEFAULT.getTimeout(), Locale.getDefault());
 			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
 		}
 	}
@@ -96,10 +100,11 @@ public class RTCFacadeIT extends HudsonTestCase {
 							String.class, // userId
 							String.class, // password
 							File.class, // passwordFile
-							int.class}, // timeout
+							int.class, // timeout
+							Locale.class}, // clientLocale
 					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 					null, new File("/invalidPasswordFile"),
-					Config.DEFAULT.getTimeout());
+					Config.DEFAULT.getTimeout(), Locale.getDefault());
 			assertTrue("Successful testConnection with invalid password file", errorMessage != null && errorMessage.length() != 0);
 		}
 	}
@@ -133,11 +138,12 @@ public class RTCFacadeIT extends HudsonTestCase {
 							String.class, // password
 							File.class, // passwordFile
 							int.class, // timeout
-							String.class}, // buildWorkspace
+							String.class, // buildWorkspace
+							Locale.class}, // clientLocale
 					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 					Config.DEFAULT.getPassword(), null,
 					Config.DEFAULT.getTimeout(),
-					"SinglyOccuringWS");
+					"SinglyOccuringWS", Locale.getDefault());
 				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
 
 				try {
@@ -148,11 +154,12 @@ public class RTCFacadeIT extends HudsonTestCase {
 									String.class, // password
 									File.class, // passwordFile
 									int.class, // timeout
-									String.class}, // buildWorkspace
+									String.class, // buildWorkspace
+									Locale.class}, // clientLocale
 							Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 							Config.DEFAULT.getPassword(), null,
 							Config.DEFAULT.getTimeout(),
-							"MultipleOccurrenceWS");
+							"MultipleOccurrenceWS", Locale.getDefault());
 					assertTrue("There should be more than 1 workspace with the name", errorMessage != null && errorMessage.contains("More than 1"));
 				} catch (Exception e) {
 					e.printStackTrace(System.out);
@@ -185,11 +192,12 @@ public class RTCFacadeIT extends HudsonTestCase {
 							String.class, // password
 							File.class, // passwordFile
 							int.class, // timeout
-							String.class}, // buildWorkspace
+							String.class, // buildWorkspace
+							Locale.class}, // clientLocale
 					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 					Config.DEFAULT.getPassword(), null,
 					Config.DEFAULT.getTimeout(),
-					"MissingWorkspace" + System.currentTimeMillis());
+					"MissingWorkspace" + System.currentTimeMillis(), Locale.getDefault());
 				assertTrue(errorMessage != null && errorMessage.contains("Unable to find"));
 			} catch (Exception e) {
 				e.printStackTrace(System.out);

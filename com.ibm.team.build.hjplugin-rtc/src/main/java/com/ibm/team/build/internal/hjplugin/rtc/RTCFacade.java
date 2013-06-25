@@ -16,6 +16,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -63,16 +64,16 @@ public class RTCFacade {
 	 * @param passwordFile The file containing an obfuscated password to use when logging into
 	 * 				the server. May be <code>null</code> in which case password should be supplied.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param clientLocale The locale of the requesting client
 	 * @return an error message to display, or null if no problem
 	 * @throws Exception
 	 */
-	public String testConnection(String serverURI, String userId, String password, File passwordFile, int timeout) throws Exception {
-		IProgressMonitor monitor = getProgressMonitor();
-
+	public String testConnection(String serverURI, String userId, String password, File passwordFile, int timeout, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient();
-			String passwordToUse = buildClient.determinePassword(password, passwordFile);
+			String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor);
@@ -81,7 +82,7 @@ public class RTCFacade {
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -101,25 +102,26 @@ public class RTCFacade {
 	 * 				the server. May be <code>null</code> in which case password should be supplied.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildWorkspace The name of the RTC build workspace
+	 * @param clientLocale The locale of the requesting client
 	 * @return an error message to display, or null if no problem
 	 * @throws Exception
 	 */
-	public String testBuildWorkspace(String serverURI, String userId, String password, File passwordFile, int timeout, String buildWorkspace) throws Exception {
+	public String testBuildWorkspace(String serverURI, String userId, String password, File passwordFile, int timeout, String buildWorkspace, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient(); 
-			String passwordToUse = buildClient.determinePassword(password, passwordFile);
+			String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testBuildWorkspace(buildWorkspace, monitor.newChild(50));
+			repoConnection.testBuildWorkspace(buildWorkspace, monitor.newChild(50), clientLocale);
 		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -139,25 +141,26 @@ public class RTCFacade {
 	 * 				the server. May be <code>null</code> in which case password should be supplied.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildDefinition The name of the RTC build definition
+	 * @param clientLocale The locale of the requesting client
 	 * @return an error message to display, or null if no problem
 	 * @throws Exception
 	 */
-	public String testBuildDefinition(String serverURI, String userId, String password, File passwordFile, int timeout, String buildDefinition) throws Exception {
+	public String testBuildDefinition(String serverURI, String userId, String password, File passwordFile, int timeout, String buildDefinition, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient(); 
-			String passwordToUse = buildClient.determinePassword(password, passwordFile);
+			String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testBuildDefinition(buildDefinition, monitor.newChild(50));
+			repoConnection.testBuildDefinition(buildDefinition, monitor.newChild(50), clientLocale);
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -185,24 +188,25 @@ public class RTCFacade {
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
 	 * @return Returns <code>true</code> if there are changes to the build workspace;
 	 * <code>false</code> otherwise
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
 	public boolean incomingChanges(String serverURI, String userId,
 			String password, File passwordFile, int timeout,
-			String buildDefinition, String buildWorkspace, Object listener)
+			String buildDefinition, String buildWorkspace, Object listener, Locale clientLocale)
 			throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
-		String passwordToUse = buildClient.determinePassword(password, passwordFile);
+		String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
-			return repoConnection.incomingChanges(buildDefinition, buildWorkspace, clientConsole, monitor);
+			return repoConnection.incomingChanges(buildDefinition, buildWorkspace, clientConsole, monitor, clientLocale);
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -215,12 +219,13 @@ public class RTCFacade {
 	 * 				in which case passwordFile should be supplied.
 	 * @param passwordFile The file containing an obfuscated password to use when logging into
 	 * 				the server. May be <code>null</code> in which case password should be supplied.
+	 * @param clientLocale The locale of the requesting client
 	 * @return The password determined for use
 	 * @throws Exception If no password can be determined
 	 */
-	public String determinePassword(String password, File passwordFile) throws Exception {
+	public String determinePassword(String password, File passwordFile, Locale clientLocale) throws Exception {
 		AbstractBuildClient buildClient = getBuildClient();
-		return buildClient.determinePassword(password, passwordFile);
+		return buildClient.determinePassword(password, passwordFile, clientLocale);
 	}
 	
 	/**
@@ -234,6 +239,7 @@ public class RTCFacade {
 	 * request and result for.
 	 * @param buildLabel The label to give to the RTC build
 	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param clientLocale The locale of the requesting client 
 	 * @return The item id of the build result created
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
@@ -243,7 +249,7 @@ public class RTCFacade {
 			int timeout,
 			String buildDefinition,
 			String buildLabel,
-			Object listener) throws Exception {
+			Object listener, Locale clientLocale) throws Exception {
 		
 		IProgressMonitor monitor = getProgressMonitor();
 		if (monitor.isCanceled()) {
@@ -254,9 +260,9 @@ public class RTCFacade {
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		try {
-			return repoConnection.createBuildResult(buildDefinition, null, buildLabel, clientConsole, monitor);
+			return repoConnection.createBuildResult(buildDefinition, null, buildLabel, clientConsole, monitor, clientLocale);
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -295,7 +301,7 @@ public class RTCFacade {
 		try {
 			repoConnection.createBuildLinks(buildResultUUID, rootUrl, projectUrl, buildUrl, clientConsole, monitor);
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -316,6 +322,7 @@ public class RTCFacade {
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
 	public void terminateBuild(String serverURI,
@@ -325,18 +332,18 @@ public class RTCFacade {
 			int timeout,
 			String buildResultUUID,
 			boolean aborted, int buildState,
-			Object listener) throws Exception {
+			Object listener, Locale clientLocale) throws Exception {
 		
 		SubMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
-		String passwordToUse = buildClient.determinePassword(password, passwordFile);
+		String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
 			repoConnection.terminateBuild(buildResultUUID, aborted, buildState, clientConsole, monitor);
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -362,13 +369,14 @@ public class RTCFacade {
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
 	 * @return <code>Map<String, String></code> of build properties
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
 	public Map<String, String> checkout(String serverURI, String userId, String password,
 			int timeout, String buildResultUUID, String buildWorkspace,
 			String hjWorkspacePath, OutputStream changeLog,
-			String baselineSetName, final Object listener) throws Exception {
+			String baselineSetName, final Object listener, Locale clientLocale) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -377,9 +385,9 @@ public class RTCFacade {
 		ChangeReport report = new ChangeReport(changeLog);
 		try	{
 			return repoConnection.checkout(buildResultUUID, buildWorkspace,
-					hjWorkspacePath, report, baselineSetName, clientConsole, monitor);
+					hjWorkspacePath, report, baselineSetName, clientConsole, monitor, clientLocale);
 		} catch (OperationCanceledException e) {
-			throw new InterruptedException(e.getMessage());
+			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
 			throw Utils.checkForCancellation(e);
 		}

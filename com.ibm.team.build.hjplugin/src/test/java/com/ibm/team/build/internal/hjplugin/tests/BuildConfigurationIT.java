@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.OutputStream;
+import java.util.Locale;
 import java.util.Map;
 
 import junit.framework.Assert;
@@ -105,10 +106,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
@@ -122,14 +125,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 	    		
 				String[] children = sandboxDir.list();
 				Assert.assertEquals(2, children.length); // changelog plus what we loaded
@@ -316,10 +320,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
@@ -341,14 +347,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 	    		
 				String[] children = loadDir.list();
 				Assert.assertEquals(5, children.length); // just what the load rule says to load (children of f) + metadata
@@ -446,10 +453,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				assertTrue(new File(sandboxDir, "abc").mkdirs());
 				assertTrue(new File(sandboxDir, "def").mkdirs());
@@ -467,14 +476,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 	    		
 				String[] children = sandboxDir.list();
 				Assert.assertEquals(6, children.length); // change log + 3 dirs made + metadata + file loaded
@@ -571,10 +581,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
@@ -596,14 +608,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						loadDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 	    		
 				String[] children = loadDir.list();
 				Assert.assertEquals(3, children.length); // just what the load rule says to load (children of f) + metadata

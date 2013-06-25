@@ -78,7 +78,7 @@ public class PropertyVariableHelper {
                     }
 
                     if (!newValue.equals(originalValue)) {
-                        substitutions.add(Messages.PropertyVariableHelper_substitution(
+                        substitutions.add(Messages.getDefault().PropertyVariableHelper_substitution(
                                 valueEntry.getKey(), originalValue, valueEntry.getKey(), newValue ));
                         substitutionsMade = true;
                         valueEntry.setValue(newValue);
@@ -129,7 +129,7 @@ public class PropertyVariableHelper {
                                     buildProperty.getValue());
 
                             if (!newValue.equals(originalValue)) {
-                                substitutions.add(Messages.PropertyVariableHelper_substitution_for_element(
+                                substitutions.add(Messages.getDefault().PropertyVariableHelper_substitution_for_element(
                                         element.getElementId(), configProperty.getName(), originalValue,
                                                 configProperty.getName(), newValue ));
                                 originalValue = newValue;
@@ -149,13 +149,13 @@ public class PropertyVariableHelper {
 
         StringBuffer message = new StringBuffer();
 
-        message.append(Messages.PropertyVariableHelper_cycle(propertyName, propertyValue));
+        message.append(Messages.getDefault().PropertyVariableHelper_cycle(propertyName, propertyValue));
 
         if (!substitutions.isEmpty()) {
             String newline = System.getProperty("line.separator"); //$NON-NLS-1$
             message.append(newline);
 
-            message.append(Messages.PropertyVariableHelper_cycle_description());
+            message.append(Messages.getDefault().PropertyVariableHelper_cycle_description());
 
             message.append(newline);
 

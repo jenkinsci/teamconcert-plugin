@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -109,15 +110,16 @@ public class BuildConfiguration {
 	 * @param buildResultHandle The build result that will reference the build request that contains the
 	 * configuration details. Never <code>null</code>. If there is no build result available, you should
 	 * be calling {@link #initialize(IWorkspaceHandle, String, String)}
-	 * @param buildLabel The assigned build label
+	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @throws IOException If anything is wrong with the destination location
 	 * @throws RTCConfigurationException If validation fails
 	 * @throws TeamRepositoryException If anything goes wrong during the initialization
 	 */
-	public void initialize(IBuildResultHandle buildResultHandle, final IConsoleOutput listener,
-			IProgressMonitor progress) throws IOException, RTCConfigurationException, TeamRepositoryException {
+	public void initialize(IBuildResultHandle buildResultHandle, String snapshotName, final IConsoleOutput listener,
+			IProgressMonitor progress, Locale clientLocale) throws IOException, RTCConfigurationException, TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IItemManager itemManager = getTeamRepository().itemManager();
 
@@ -135,7 +137,7 @@ public class BuildConfiguration {
                 IJazzScmConfigurationElement.ELEMENT_ID);
 
         if (element == null) {
-        	throw new RTCConfigurationException(Messages.BuildConfiguration_scm_not_configured(buildDefinitionInstance.getBuildDefinitionId()));
+        	throw new RTCConfigurationException(Messages.get(clientLocale).BuildConfiguration_scm_not_configured(buildDefinitionInstance.getBuildDefinitionId()));
         }
         
         String workspaceUuid = getWorkspaceUuid(buildDefinitionInstance);
@@ -152,8 +154,7 @@ public class BuildConfiguration {
             throw new IllegalStateException("Missing build workspace specification from the build definition"); //$NON-NLS-1$
         }
 
-        snapshotName = buildRequest.getBuildDefinitionInstance().getBuildDefinitionId() + "_" + //$NON-NLS-1$
-                result.getLabel();
+        this.snapshotName = buildRequest.getBuildDefinitionInstance().getBuildDefinitionId() + "_" + snapshotName; //$NON-NLS-1$
         
         workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceUuid, null);
         
@@ -203,7 +204,7 @@ public class BuildConfiguration {
         performPropertyVariableSubstitutions(workingCopy, buildProperties, listener);
 
         // include the hj prefix path in the fetch destination
-        String fetchDestination = getFetchDestination(buildProperties);
+        String fetchDestination = getFetchDestination(buildProperties, clientLocale);
         fetchDestinationFile = new File(fetchDestination);
         fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
         
@@ -211,7 +212,7 @@ public class BuildConfiguration {
         Path workingDirectoryPath = new Path(workingDirectory.getCanonicalPath()); 
 
         if (deleteNeeded && fetchDestinationPath.isPrefixOf(workingDirectoryPath)) {
-            throw new RTCConfigurationException(Messages.BuildConfiguration_deleting_working_directory(
+            throw new RTCConfigurationException(Messages.get(clientLocale).BuildConfiguration_deleting_working_directory(
                     fetchDestinationFile.getCanonicalPath()));
         }
 
@@ -294,7 +295,7 @@ public class BuildConfiguration {
         return null;
     }
 
-    private String getFetchDestination(Map<String, String> buildProperties) throws RTCConfigurationException {
+    private String getFetchDestination(Map<String, String> buildProperties, Locale clientLocale) throws RTCConfigurationException {
         String property = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION);
         if (property != null && property.length() > 0) {
             File destination = new File(hjFetchDestination, property);
@@ -302,7 +303,7 @@ public class BuildConfiguration {
 				String path = destination.getCanonicalPath();
 				return path;
 			} catch (IOException e) {
-				throw new RTCConfigurationException(Messages.BuildConfiguration_invalid_fetch_destination(destination.getPath(), e.getMessage()));
+				throw new RTCConfigurationException(Messages.get(clientLocale).BuildConfiguration_invalid_fetch_destination(destination.getPath(), e.getMessage()));
 			}
         } else {
         	// default to the Hudson/Jenkins destination
@@ -379,7 +380,7 @@ public class BuildConfiguration {
                             throw e1;
                         }
                         if (contributor != null && component != null) {
-                            throw new TeamRepositoryException(Messages.BuildConfiguration_load_rule_access_failed(
+                            throw new TeamRepositoryException(Messages.getDefault().BuildConfiguration_load_rule_access_failed(
                                     contributor.getUserId(), component.getName()), e1);
                         } else {
                             throw e1;
@@ -546,12 +547,12 @@ public class BuildConfiguration {
 
         updateRequestWithSubstitutedProperties(buildRequest, buildProperties);
 
-        printSubstitutedProperties(listener, substitutions, Messages.BuildConfiguration_substituted_build_variables());
+        printSubstitutedProperties(listener, substitutions, Messages.getDefault().BuildConfiguration_substituted_build_variables());
 
         substitutions = PropertyVariableHelper.substituteConfigurationElementPropertyVariables(
                 buildRequest.getBuildDefinitionInstance().getConfigurationElements(), buildProperties);
 
-        printSubstitutedProperties(listener, substitutions, Messages.BuildConfiguration_substituted_config_variables());
+        printSubstitutedProperties(listener, substitutions, Messages.getDefault().BuildConfiguration_substituted_config_variables());
     }
 
     /**

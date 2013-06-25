@@ -14,6 +14,7 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -124,14 +125,15 @@ public class RepositoryConnection {
 	 * Tests that the specified workspace is a valid build workspace.
 	 * 
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @throw Exception if an error occurs
 	 * @LongOp
 	 */
-	public void testBuildWorkspace(String workspaceName, IProgressMonitor progress) throws Exception {
+	public void testBuildWorkspace(String workspaceName, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(50));
 		try {
-			getWorkspace(workspaceName, monitor.newChild(50));
+			getWorkspace(workspaceName, monitor.newChild(50), clientLocale);
 		} catch (RTCConfigurationException e) {
 			throw new RTCValidationException(e.getMessage());
 		}
@@ -144,10 +146,11 @@ public class RepositoryConnection {
 	 * 
 	 * @param workspaceName The name of the workspace. Never <code>null</code>
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @return The workspace connection for the workspace. Never <code>null</code>
 	 * @throws Exception if an error occurs
 	 */
-	protected IWorkspaceHandle getWorkspace(String workspaceName, IProgressMonitor progress) throws Exception {
+	protected IWorkspaceHandle getWorkspace(String workspaceName, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(getTeamRepository());
@@ -157,10 +160,10 @@ public class RepositoryConnection {
 				.setKind(IWorkspaceSearchCriteria.WORKSPACES);
 		List<IWorkspaceHandle> workspaceHandles = workspaceManager.findWorkspaces(searchCriteria, 2, monitor);
 		if (workspaceHandles.size() > 1) {
-			throw new RTCConfigurationException(Messages.RepositoryConnection_name_not_unique(workspaceName));
+			throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_name_not_unique(workspaceName));
 		}
 		if (workspaceHandles.size() == 0) {
-			throw new RTCConfigurationException(Messages.RepositoryConnection_workspace_not_found(workspaceName));
+			throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_workspace_not_found(workspaceName));
 		}
 		return workspaceHandles.get(0);
 	}
@@ -170,16 +173,17 @@ public class RepositoryConnection {
 	 * 
 	 * @param buildDefinitionId ID of the RTC build definition
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @throw Exception if an error occurs
      * @throws RTCValidationException
      *             If a build definition for the build definition id could not
      *             be found.
 	 * @LongOp
 	 */
-	public void testBuildDefinition(String buildDefinitionId, IProgressMonitor progress) throws Exception {
+	public void testBuildDefinition(String buildDefinitionId, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(25));
-		getBuildConnection().testBuildDefinition(buildDefinitionId, monitor.newChild(75));
+		getBuildConnection().testBuildDefinition(buildDefinitionId, monitor.newChild(75), clientLocale);
 	}
 
 	/**
@@ -194,12 +198,13 @@ public class RepositoryConnection {
 	 * should be supplied
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @return <code>true</code> if there are changes for the build workspace
 	 * <code>false</code> otherwise
 	 * @throws Exception Thrown if anything goes wrong.
 	 */
 	public boolean incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener,
-			IProgressMonitor progress) throws Exception {
+			IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(10));
 		BuildWorkspaceDescriptor workspace;
@@ -207,7 +212,7 @@ public class RepositoryConnection {
 			BuildConnection buildConnection = getBuildConnection();
 			IBuildDefinition buildDefinition = buildConnection.getBuildDefinition(buildDefinitionId, monitor.newChild(10));
 			if (buildDefinition == null) {
-				throw new RTCConfigurationException(Messages.RepositoryConnection_build_definition_not_found(buildDefinitionId));
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_build_definition_not_found(buildDefinitionId));
 			}
 				
 			IBuildProperty property = buildDefinition.getProperty(
@@ -215,10 +220,10 @@ public class RepositoryConnection {
             if (property != null && property.getValue().length() > 0) {
                 workspace = new BuildWorkspaceDescriptor(getTeamRepository(), property.getValue(), null);
             } else {
-            	throw new RTCConfigurationException(Messages.RepositoryConnection_build_definition_no_workspace(buildDefinitionId));
+            	throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_build_definition_no_workspace(buildDefinitionId));
             }
 		} else {
-			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(10));
+			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(10), clientLocale);
 			workspace = new BuildWorkspaceDescriptor(fRepository, workspaceHandle.getItemId().getUuidValue(), buildWorkspaceName);
 		}
 
@@ -241,11 +246,12 @@ public class RepositoryConnection {
 	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @return <code>Map<String, String></code> of build properties
 	 * @throws Exception Thrown if anything goes wrong
 	 */
 	public Map<String, String> checkout(String buildResultUUID, String buildWorkspaceName, String hjFetchDestination, ChangeReport changeReport,
-			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress) throws Exception {
+			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
@@ -260,10 +266,10 @@ public class RepositoryConnection {
 		IBuildResultHandle buildResultHandle = null;
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
 			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-	        buildConfiguration.initialize(buildResultHandle, listener, monitor.newChild(1));
+	        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
 
 		} else {
-			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(1));
+			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(1), clientLocale);
 			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName);
 		}
 		
@@ -271,9 +277,9 @@ public class RepositoryConnection {
 
         workspace = buildConfiguration.getBuildWorkspaceDescriptor();
 
-        listener.log(Messages.RepositoryConnection_checkout_setup());
+        listener.log(Messages.getDefault().RepositoryConnection_checkout_setup());
         String parentActivityId = getBuildConnection().startBuildActivity(buildResultHandle,
-                Messages.RepositoryConnection_pre_build_activity(), null, false, monitor.newChild(1));
+                Messages.getDefault().RepositoryConnection_pre_build_activity(), null, false, monitor.newChild(1));
 
 		AcceptReport acceptReport = null;
         
@@ -286,11 +292,11 @@ public class RepositoryConnection {
         boolean synchronizeLoad = false;
 
         if (!buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch()) {
-            listener.log(Messages.RepositoryConnection_checkout_accept(
+            listener.log(Messages.getDefault().RepositoryConnection_checkout_accept(
             		workspaceConnection.getName()));
 
             getBuildConnection().startBuildActivity(buildResultHandle,
-                    Messages.RepositoryConnection_activity_accepting_changes(), parentActivityId, true,
+                    Messages.getDefault().RepositoryConnection_activity_accepting_changes(), parentActivityId, true,
                     monitor.newChild(1));
 
             if (monitor.isCanceled()) {
@@ -339,7 +345,7 @@ public class RepositoryConnection {
         ICorruptCopyFileAreaListener corruptSandboxListener = new ICorruptCopyFileAreaListener () {
             public void corrupt(ICorruptCopyFileAreaEvent event) {
                 if (event.isCorrupt() && event.getRoot().equals(fetchLocation)) {
-                    listener.log(Messages.RepositoryConnection_corrupt_metadata(
+                    listener.log(Messages.getDefault().RepositoryConnection_corrupt_metadata(
                     		fetchLocation.toOSString()));
                 }
             }
@@ -359,7 +365,7 @@ public class RepositoryConnection {
                 
                 if (sandbox.isCorrupted(monitor.newChild(1))) {
                     deleteNeeded = true;
-                    listener.log(Messages.RepositoryConnection_corrupt_metadata_found(
+                    listener.log(Messages.getDefault().RepositoryConnection_corrupt_metadata_found(
                             fetchDestinationFile.getCanonicalPath()));
                     LOGGER.finer("Corrupt metadata for sandbox " +  //$NON-NLS-1$
                             fetchDestinationFile.getCanonicalPath());
@@ -367,7 +373,7 @@ public class RepositoryConnection {
             }
 
             if (deleteNeeded) {
-                listener.log(Messages.RepositoryConnection_checkout_clean_sandbox(
+                listener.log(Messages.getDefault().RepositoryConnection_checkout_clean_sandbox(
                         fetchDestinationFile.getCanonicalPath()));
 
                 File toDelete = fetchDestinationFile;
@@ -377,7 +383,7 @@ public class RepositoryConnection {
                 boolean deleteSucceeded = delete(toDelete, listener, monitor.newChild(1));
 
                 if (!deleteSucceeded || fetchDestinationFile.exists()) {
-                    throw new TeamBuildException(Messages.RepositoryConnection_checkout_clean_failed(
+                    throw new TeamBuildException(Messages.getDefault().RepositoryConnection_checkout_clean_failed(
                             fetchDestinationFile.getCanonicalPath()));
                 }
             }
@@ -385,10 +391,10 @@ public class RepositoryConnection {
             // Add the listener just before the fetch stage
             ((SharingManager) FileSystemCore.getSharingManager()).addListener(corruptSandboxListener);
 
-            listener.log(Messages.RepositoryConnection_checkout_fetch_start(
+            listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_start(
                     fetchDestinationFile.getCanonicalPath()));
             
-            getBuildConnection().startBuildActivity(buildResultHandle, Messages.RepositoryConnection_activity_fetching(),
+            getBuildConnection().startBuildActivity(buildResultHandle, Messages.getDefault().RepositoryConnection_activity_fetching(),
                     parentActivityId, true, monitor.newChild(1));
 
             // TODO This affects all loads ever after (and with multi-threaded ...)
@@ -404,7 +410,7 @@ public class RepositoryConnection {
                     synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, monitor.newChild(1)),
                     buildConfiguration.createFoldersForComponents(), monitor.newChild(40));
 
-            listener.log(Messages.RepositoryConnection_checkout_fetch_complete());
+            listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_complete());
             getBuildConnection().completeBuildActivity(buildResultHandle, parentActivityId, monitor.newChild(1));
 
         } finally {
@@ -422,7 +428,7 @@ public class RepositoryConnection {
             	// thread interrupted for the next task to handle the cancel.
             	throw e;
             } catch (Exception e) {
-            	listener.log(Messages.RepositoryConnection_checkout_termination_error(e.getMessage()), e);
+            	listener.log(Messages.getDefault().RepositoryConnection_checkout_termination_error(e.getMessage()), e);
             }
         }
         
@@ -436,21 +442,23 @@ public class RepositoryConnection {
 	 * @param buildDefinition The name of the build definition that is behind the request
 	 * for the build.
 	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
 	 * @return The item id of the build result created
 	 * @throws Exception Thrown if anything goes wrong
 	 */
 	public String createBuildResult(String buildDefinition, String personalBuildWorkspaceName, String buildLabel,
-			IConsoleOutput listener, IProgressMonitor progress) throws Exception {
+			IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(25));
 		
 		IWorkspaceHandle personalBuildWorkspace = null;
 		if (personalBuildWorkspaceName != null && personalBuildWorkspaceName.length() > 0) {
-			personalBuildWorkspace = getWorkspace(personalBuildWorkspaceName, monitor.newChild(25));
+			personalBuildWorkspace = getWorkspace(personalBuildWorkspaceName, monitor.newChild(25), clientLocale);
 		}
 		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
 		IBuildResultHandle buildResult = buildConnection.createBuildResult(buildDefinition,
-				personalBuildWorkspace, buildLabel, listener, monitor.newChild(50));
+				personalBuildWorkspace, buildLabel, listener, monitor.newChild(50), clientLocale);
 		
 		return buildResult.getItemId().getUuidValue();
 	}
@@ -476,7 +484,7 @@ public class RepositoryConnection {
 				fBuildClient.removeRepositoryConnection(getConnectionDetails());
 				throw e;
 			} catch (TeamRepositoryException e) {
-				if ("com.ibm.team.repository.client.ServerStateCheckException".equals(e.getClass().getName())) {
+				if ("com.ibm.team.repository.client.ServerStateCheckException".equals(e.getClass().getName())) { //$NON-NLS-1$
 					// this exception is only in RTC releases that support Server rename.
 					// This is a simple check, doesn't handle subclasses, but during my search,
 					// I didn't find any.
@@ -496,7 +504,7 @@ public class RepositoryConnection {
     	LOGGER.finer("Deleting " + file.getAbsolutePath()); //$NON-NLS-1$
     	IPath path = new Path(file.getCanonicalPath());
     	if (path.segmentCount() == 0) {
-    		listener.log(Messages.RepositoryConnection_checkout_clean_root_disallowed(path.toOSString()));
+    		listener.log(Messages.getDefault().RepositoryConnection_checkout_clean_root_disallowed(path.toOSString()));
     		LOGGER.finer("Tried to delete root directory " + path.toOSString()); //$NON-NLS-1$
     		return false;
     	}
@@ -524,7 +532,7 @@ public class RepositoryConnection {
         if (file.isDirectory()) {
             File[] children = file.listFiles();
             if (children == null) {
-                listener.log(Messages.RepositoryConnection_checkout_clean_error(file.getCanonicalPath()));
+                listener.log(Messages.getDefault().RepositoryConnection_checkout_clean_error(file.getCanonicalPath()));
                 LOGGER.finer("Unexpected null children for " + file.getCanonicalPath()); //$NON-NLS-1$
             } else {
                 for (File child : children) {

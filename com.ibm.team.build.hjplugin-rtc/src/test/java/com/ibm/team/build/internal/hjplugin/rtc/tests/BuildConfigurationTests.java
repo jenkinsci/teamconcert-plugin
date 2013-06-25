@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.eclipse.core.runtime.AssertionFailedException;
@@ -55,6 +56,7 @@ import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 
+@SuppressWarnings({ "nls", "restriction" })
 public class BuildConfigurationTests {
 	private RepositoryConnection connection;
 
@@ -62,7 +64,6 @@ public class BuildConfigurationTests {
 		this.connection = repositoryConnection;
 	}
 
-	@SuppressWarnings("restriction")
 	public Map<String, String> setupComponentLoading(String workspaceName,
 			String testName, String hjPath, String buildPath) throws Exception {
 		
@@ -113,7 +114,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -141,7 +142,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener, null);
+		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -160,7 +161,7 @@ public class BuildConfigurationTests {
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertEquals(testName + "_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
 		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion should not be needed");
 	}
 
@@ -252,7 +253,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -294,7 +295,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener, null);
+		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -312,7 +313,7 @@ public class BuildConfigurationTests {
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertEquals(testName + "_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
 		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
 	}
 
@@ -385,7 +386,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -424,7 +425,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener, null);
+		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -441,7 +442,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertEquals(testName + "_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
 		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion is not needed");
 	}
 
@@ -563,7 +564,7 @@ public class BuildConfigurationTests {
 		BuildConnection buildConnection = new BuildConnection(repo);
 		IBuildDefinition buildDefinition = buildConnection.getBuildDefinition(buildDefinitionId, null);
 		if (buildDefinition == null) {
-			throw new RTCConfigurationException(Messages.BuildConnection_build_definition_not_found(buildDefinitionId));
+			throw new RTCConfigurationException(Messages.getDefault().BuildConnection_build_definition_not_found(buildDefinitionId));
 		}
 		List<IBuildProperty> modifiedProperties = new ArrayList<IBuildProperty>();
 		IBuildProperty originalProperty = buildDefinition.getProperty(IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID);
@@ -594,7 +595,7 @@ public class BuildConfigurationTests {
 
 		IBuildEngineHandle buildEngine = buildConnection.getBuildEngine(buildDefinition, null);
 		if (buildEngine == null) {
-			throw new RTCConfigurationException(Messages.BuildConnection_no_build_engine_for_defn(buildDefinitionId));
+			throw new RTCConfigurationException(Messages.getDefault().BuildConnection_no_build_engine_for_defn(buildDefinitionId));
 		}
 
         IBuildRequestParams params = BuildItemFactory.createBuildRequestParams();
@@ -645,7 +646,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, listener, null);
+		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -666,7 +667,7 @@ public class BuildConfigurationTests {
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, "loadDir/here");
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertEquals(testName + "_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
 		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
 		// myPropsFile = ${team.scm.fetchDestination}/com.ibm.team.build.releng/continuous-buildsystem.properties
 		// propertyA = loadDir
@@ -716,7 +717,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null);
+			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -746,7 +747,7 @@ public class BuildConfigurationTests {
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
 		try {
-			buildConfiguration.initialize(buildResultHandle, listener, null);
+			buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
 			if (failure[0] != null) {
 				throw failure[0];
 			}

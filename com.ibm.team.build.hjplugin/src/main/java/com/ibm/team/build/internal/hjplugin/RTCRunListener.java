@@ -20,6 +20,7 @@ import hudson.model.listeners.RunListener;
 import java.io.File;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,11 +76,12 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 										String.class, // buildResultUUID
 										boolean.class, // aborted,
 										int.class, // buildState,
-										Object.class,}, // listener
+										Object.class, // listener
+										Locale.class}, // clientLocale
 								scm.getServerURI(), scm.getUserId(), scm.getPassword(),
 								scm.getPasswordFileFile(), scm.getTimeout(), action.getBuildResultUUID(),
 								aborted, buildState,
-								listener);
+								listener, Locale.getDefault());
 					} else {
 						LOGGER.finer("Completed Build: " + build.getDisplayName() +
 								" Build Result UUID: " + action.getBuildResultUUID() +

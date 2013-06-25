@@ -20,10 +20,12 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.OutputStream;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 
 import org.junit.Assert;
 import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.localizer.LocaleProvider;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
@@ -128,14 +130,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -146,10 +149,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				testingFacade.invoke(
@@ -163,14 +168,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						(String) null, listener);
+						(String) null, listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -262,14 +268,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -279,10 +286,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				testingFacade.invoke(
@@ -296,14 +305,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -341,14 +351,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertFalse(changesIncoming.booleanValue());
 	    		
@@ -419,14 +430,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -436,10 +448,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				testingFacade.invoke(
@@ -453,14 +467,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -496,14 +511,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertFalse(changesIncoming.booleanValue());
 	    		
@@ -569,14 +585,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -586,10 +603,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				testingFacade.invoke(
@@ -603,14 +622,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -695,14 +715,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -712,10 +733,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				testingFacade.invoke(
@@ -729,14 +752,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -818,14 +842,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -835,10 +860,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				testingFacade.invoke(
@@ -852,14 +879,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -939,14 +967,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -956,10 +985,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// checkout the changes
 				testingFacade.invoke(
@@ -973,14 +1004,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot #42", listener);
+						"Snapshot #42", listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -1038,14 +1070,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertFalse(changesIncoming.booleanValue());
 	    		
@@ -1125,14 +1158,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -1142,10 +1176,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				String snapshotName = XML_ENCODED_CHARACTERS;
 				
@@ -1161,14 +1197,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						snapshotName, listener);
+						snapshotName, listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -1466,14 +1503,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout
 								String.class, // buildDefinition
 								String.class, // build workspace name
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						Config.DEFAULT.getPassword(),
 						passwordFileFile,
 						Config.DEFAULT.getTimeout(),
 						null,
-						workspaceName, listener);
+						workspaceName, listener, Locale.getDefault());
 
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
@@ -1483,10 +1521,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						"determinePassword", 
 						new Class[] {
 								String.class, // password
-								File.class // password file
+								File.class, // password file
+								Locale.class // clientLocale
 						},
 						Config.DEFAULT.getPassword(),
-						passwordFileFile);
+						passwordFileFile,
+						Locale.getDefault());
 
 				// create the build result
 				String buildResultItemId = (String) testingFacade.invoke(
@@ -1497,10 +1537,11 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								int.class, // timeout,
 								String.class, // buildDefinition,
 								String.class, // buildLabel,
-								Object.class, // listener)
+								Object.class, // listener
+								Locale.class // clientLocale
 						}, Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
 						password, Config.DEFAULT.getTimeout(),
-						buildDefinitionId, "TestBuildResultContributions", listener);
+						buildDefinitionId, "TestBuildResultContributions", listener, Locale.getDefault());
 				setupArtifacts.put("buildResultItemId", buildResultItemId);
 				
 				// checkout the changes
@@ -1515,14 +1556,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 								String.class, // hjWorkspacePath,
 								OutputStream.class, // changeLog,
 								String.class, // baselineSetName,
-								Object.class}, // listener
+								Object.class, // listener
+								Locale.class}, // clientLocale
 						Config.DEFAULT.getServerURI(),
 						Config.DEFAULT.getUserID(),
 						password,
 						Config.DEFAULT.getTimeout(),
 						buildResultItemId, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener);
+						"Snapshot", listener, Locale.getDefault());
 
 
 	    		// parse the change report and ensure the expected components are reported.

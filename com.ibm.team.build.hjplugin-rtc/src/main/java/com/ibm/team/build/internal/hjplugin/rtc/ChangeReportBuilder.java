@@ -69,10 +69,11 @@ public class ChangeReportBuilder {
 
     private static final Logger LOGGER = Logger.getLogger(ChangeReportBuilder.class.getName());
 	
-	private final String UNKNOWN_PARENT_FOLDER = Messages.ChangeReportBuilder_unknown_parent_folder();
-	private final String UNKNOWN_AUTHOR = Messages.ChangeReportBuilder_unknown_author();
-	private final String UNKNOWN_COMPONENT = Messages.ChangeReportBuilder_unknown_component();
-	private final String UNKNOWN_VERSIONABLE_NAME = Messages.ChangeReportBuilder_unknown_versionable();
+	// TODO These localized messages should not be added to the change log because they are not user data
+	private final String UNKNOWN_PARENT_FOLDER = Messages.getDefault().ChangeReportBuilder_unknown_parent_folder();
+	private final String UNKNOWN_AUTHOR = Messages.getDefault().ChangeReportBuilder_unknown_author();
+	private final String UNKNOWN_COMPONENT = Messages.getDefault().ChangeReportBuilder_unknown_component();
+	private final String UNKNOWN_VERSIONABLE_NAME = Messages.getDefault().ChangeReportBuilder_unknown_versionable();
 	private ITeamRepository fRepository;
 
 	public ChangeReportBuilder(ITeamRepository repository) {
@@ -147,8 +148,9 @@ public class ChangeReportBuilder {
 			int i = 0;
 			for (IChangeSet changeSet : changeSets) {
 				if (changeSet == null) {
+					// TODO This localized message should not be added to the change log because they are not user data
 					changeReport.changeSetsChange(new ChangeSetReport(i < numberOfAdds, changeSetHandles.get(i).getItemId().getUuidValue(),
-							null, Messages.ChangeReportBuilder_unable_to_get_change_set(), null, 0));
+							null, Messages.getDefault().ChangeReportBuilder_unable_to_get_change_set(), null, 0));
 				} else {
 					ChangeSetReport report = new ChangeSetReport(i < numberOfAdds, changeSet.getItemId().getUuidValue(), changeSet.getComponent().getItemId().getUuidValue(),
 							changeSet.getComment(), changeSet.getLastChangeDate(), (long) changeSet.changes().size());
@@ -188,13 +190,13 @@ public class ChangeReportBuilder {
 			fillWorkItems(changeSetHandles, changeSetReports, listener, monitor.newChild(25));
 			
 		} catch (TeamRepositoryException e) {
-			listener.log(Messages.ChangeReportBuilder_unable_to_expand_change_sets(e.getMessage()), e);
+			listener.log(Messages.getDefault().ChangeReportBuilder_unable_to_expand_change_sets(e.getMessage()), e);
 			LOGGER.log(Level.FINER, "Unable to resolve change sets " + e.getMessage(), e); //$NON-NLS-1$
 			// capture anyhow that change sets were accepted/discarded
 			int i = 0;
 			for (IChangeSetHandle changeSetHandle : changeSetHandles) {
 				changeReport.changeSetsChange(new ChangeSetReport(i < numberOfAdds, changeSetHandle.getItemId().getUuidValue(),
-						null, Messages.ChangeReportBuilder_unable_to_get_change_set2(), null, 0));
+						null, Messages.getDefault().ChangeReportBuilder_unable_to_get_change_set2(), null, 0));
 				i++;
 			}
 			if (Utils.isCancellation(e)) {
@@ -238,7 +240,7 @@ public class ChangeReportBuilder {
 				}
 			}
 		} catch (TeamRepositoryException e) {
-			listener.log(Messages.ChangeReportBuilder_unable_to_get_authors(e.getMessage()), e);
+			listener.log(Messages.getDefault().ChangeReportBuilder_unable_to_get_authors(e.getMessage()), e);
 			LOGGER.log(Level.FINER, "Unable to resolve contributors " + e.getMessage(), e); //$NON-NLS-1$
 			for (ChangeSetReport changeSetReport : changeSetReports) {
 				changeSetReport.setOwner(UNKNOWN_AUTHOR);	
@@ -274,20 +276,20 @@ public class ChangeReportBuilder {
 			for (IComponent component : components) {
 				if (component == null) {
 					changeReport.componentChange(new ComponentReport((i<numberOfAdds), componentHandles.get(i).getItemId().getUuidValue(),
-								Messages.ChangeReportBuilder_unable_to_get_component_name()));
+								Messages.getDefault().ChangeReportBuilder_unable_to_get_component_name()));
 				} else {
 					changeReport.componentChange(new ComponentReport((i<numberOfAdds), component.getItemId().getUuidValue(), component.getName()));
 				}
 				i++;
 			}
 		} catch (TeamRepositoryException e) {
-			listener.log(Messages.ChangeReportBuilder_unable_to_get_component(e.getMessage()), e);
+			listener.log(Messages.getDefault().ChangeReportBuilder_unable_to_get_component(e.getMessage()), e);
 			LOGGER.log(Level.FINER, "Unable to resolve components " + e.getMessage(), e); //$NON-NLS-1$
 			// capture anyhow that components were added/removed
 			int i = 0;
 			for (IComponentHandle componentHandle : componentHandles) {
 				changeReport.componentChange(new ComponentReport(i<numberOfAdds, componentHandle.getItemId().getUuidValue(),
-						Messages.ChangeReportBuilder_unable_to_get_component_name2()));
+						Messages.getDefault().ChangeReportBuilder_unable_to_get_component_name2()));
 				i++;
 			}
 			
@@ -437,7 +439,7 @@ public class ChangeReportBuilder {
 			}
 		} catch (TeamRepositoryException e) {
 			// The record was already created with the additional change count so no need to do anything else.
-			listener.log(Messages.ChangeReportBuilder_unable_to_get_versionable_names(e.getMessage()), e);
+			listener.log(Messages.getDefault().ChangeReportBuilder_unable_to_get_versionable_names(e.getMessage()), e);
 			LOGGER.log(Level.FINER, "Unable to resolve versionable names " + e.getMessage(), e); //$NON-NLS-1$
 			
 			if (Utils.isCancellation(e)) {
@@ -516,7 +518,7 @@ public class ChangeReportBuilder {
 				}
         	}
         } catch (TeamRepositoryException e) {
-        	listener.log(Messages.ChangeReportBuilder_unable_to_get_work_items(e.getMessage()), e);
+        	listener.log(Messages.getDefault().ChangeReportBuilder_unable_to_get_work_items(e.getMessage()), e);
         	LOGGER.log(Level.FINER, "Unable to resolve work items " + e.getMessage(), e); //$NON-NLS-1$
 
         	if (Utils.isCancellation(e)) {
