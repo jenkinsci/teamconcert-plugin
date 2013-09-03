@@ -30,6 +30,7 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
 
+@SuppressWarnings("nls")
 public class BuildConfigurationIT extends HudsonTestCase {
 	private static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
 	private static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
@@ -114,6 +115,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						Locale.getDefault());
 
 				// checkout the changes
+				@SuppressWarnings("unchecked")
 				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
 						"checkout",
 						new Class[] { String.class, // serverURL,
@@ -153,6 +155,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 	    		// verify the result
 	    		int changeCount = result.getComponentChangeCount() +
 	    				result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+	    		Assert.assertFalse(result.isPersonalBuild());
 
 				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID),
 						fetchLocation, false, true, "",
@@ -221,13 +224,98 @@ public class BuildConfigurationIT extends HudsonTestCase {
 		
 	}
 
-	public void testBadFetchLocation() throws Exception {
-		// load directory bad 
+	public void testGoodRelativeFetchLocation() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String testName = getTestName() + System.currentTimeMillis();
-			String fetchLocation = "C:\\This\\Should\\Be\\Relative";
+			String fetchLocation = "relative\\is\\ok";
+
+			@SuppressWarnings("unchecked")
+			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+					.invoke("testGoodFetchLocation",
+							new Class[] { String.class, // serverURL,
+									String.class, // userId,
+									String.class, // password,
+									File.class, // passwordFile,
+									int.class, // timeout,
+									String.class, // workspaceName,
+									String.class, // componentName,
+									String.class, // hjPath,
+									String.class}, // buildPath
+							Config.DEFAULT.getServerURI(),
+							Config.DEFAULT.getUserID(),
+							Config.DEFAULT.getPassword(), passwordFileFile,
+							Config.DEFAULT.getTimeout(), testName,
+							getTestName(),
+							sandboxDir.getPath(),
+							fetchLocation);
+			
+			// clean up
+			testingFacade.invoke(
+					"tearDown",
+					new Class[] { String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							File.class, // passwordFile,
+							int.class, // timeout,
+							Map.class}, // setupArtifacts
+					Config.DEFAULT.getServerURI(),
+					Config.DEFAULT.getUserID(),
+					Config.DEFAULT.getPassword(), passwordFileFile,
+					Config.DEFAULT.getTimeout(), setupArtifacts);
+		}
+	}
+
+	public void testGoodAbsoluteFetchLocationWin() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			File passwordFileFile = FileUtils.getPasswordFile();
+			
+			String testName = getTestName() + System.currentTimeMillis();
+			String fetchLocation = "C:\\absolute\\is\\ok\\too";
+
+			@SuppressWarnings("unchecked")
+			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+					.invoke("testGoodFetchLocation",
+							new Class[] { String.class, // serverURL,
+									String.class, // userId,
+									String.class, // password,
+									File.class, // passwordFile,
+									int.class, // timeout,
+									String.class, // workspaceName,
+									String.class, // componentName,
+									String.class, // hjPath,
+									String.class}, // buildPath
+							Config.DEFAULT.getServerURI(),
+							Config.DEFAULT.getUserID(),
+							Config.DEFAULT.getPassword(), passwordFileFile,
+							Config.DEFAULT.getTimeout(), testName,
+							getTestName(),
+							sandboxDir.getPath(),
+							fetchLocation);
+			
+			// clean up
+			testingFacade.invoke(
+					"tearDown",
+					new Class[] { String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							File.class, // passwordFile,
+							int.class, // timeout,
+							Map.class}, // setupArtifacts
+					Config.DEFAULT.getServerURI(),
+					Config.DEFAULT.getUserID(),
+					Config.DEFAULT.getPassword(), passwordFileFile,
+					Config.DEFAULT.getTimeout(), setupArtifacts);
+		}
+	}
+
+	public void testBadFetchLocationWin() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			File passwordFileFile = FileUtils.getPasswordFile();
+			
+			String testName = getTestName() + System.currentTimeMillis();
+			String fetchLocation = "invalid/questionmark?/character/is/not/ok";
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -336,6 +424,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				assertTrue(new File(loadDir, "hij").mkdirs());
 				
 				// checkout the changes
+				@SuppressWarnings("unchecked")
 				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
 						"checkout",
 						new Class[] { String.class, // serverURL,
@@ -370,6 +459,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
 	    		
 	    		// verify the result
+	    		Assert.assertTrue(result.isPersonalBuild());
 	    		int changeCount = result.getComponentChangeCount() +
 	    				result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
 	    		Assert.assertEquals(0, changeCount);
@@ -465,6 +555,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				assertTrue(new File(sandboxDir, "hij").mkdirs());
 				
 				// checkout the changes
+				@SuppressWarnings("unchecked")
 				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
 						"checkout",
 						new Class[] { String.class, // serverURL,
@@ -597,6 +688,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				assertTrue(new File(loadDir, "hij").mkdirs());
 				
 				// checkout the changes
+				@SuppressWarnings("unchecked")
 				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
 						"checkout",
 						new Class[] { String.class, // serverURL,

@@ -11,7 +11,6 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.Util;
 import hudson.scm.EditType;
 
 import java.io.File;
@@ -283,4 +282,18 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 			}
 		}
     }
+    
+    @Test
+	public void testPersonalBuild() throws Exception {
+		URL changeLogURL = getClass().getResource("PersonalBuild.xml");
+		File changeLogFile = new File(changeLogURL.toURI());
+		RTCChangeLogParser parser = new RTCChangeLogParser();
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		
+		Assert.assertFalse("Expected no change entries", result.iterator().hasNext());
+		Assert.assertTrue("Expected it to be an empty set", result.isEmptySet());
+		Assert.assertEquals(0, result.getAffectedComponents().size());
+		Assert.assertTrue("Should be a personal build", result.isPersonalBuild());
+	}
+
 }

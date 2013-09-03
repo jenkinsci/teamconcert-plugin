@@ -104,6 +104,9 @@ public class RTCCheckoutTask implements FileCallable<Map<String, String>> {
 
 		try {
     		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkit, debug ? listener.getLogger() : null);
+    		if (debug) {
+    			listener.getLogger().println("hjplugin-rtc.jar " + facade.getFacadeJarURL().toString());
+    		}
 			return (Map<String, String>) facade.invoke("checkout", new Class[] { //$NON-NLS-1$
 					String.class, // serverURI,
 					String.class, // userId,

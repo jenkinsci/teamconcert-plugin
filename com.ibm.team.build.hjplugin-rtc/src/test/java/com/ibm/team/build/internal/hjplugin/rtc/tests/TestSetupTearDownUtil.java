@@ -22,6 +22,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
+import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
@@ -786,6 +787,12 @@ public class TestSetupTearDownUtil extends BuildClient {
 		buildConnectionTests.testBuildTermination(testName);
 	}
 	
+	public String testBuildResultInfo(ConnectionDetails connectionDetails,
+			String testName, IBuildResultInfo buildResultInfo) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		return buildConnectionTests.testBuildResultInfo(testName, buildResultInfo);
+	}
 	public Map<String, String> testComponentLoading(ConnectionDetails connectionDetails,
 			String workspaceName, String componentName, String hjPath, String buildPath,
 			IProgressMonitor progress) throws Exception {
@@ -854,6 +861,26 @@ public class TestSetupTearDownUtil extends BuildClient {
 				testName, hjPath, buildPath);
 		try {
 			buildConfigurationTests.testPersonalBuild(workspaceName, testName, hjPath, buildPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> testGoodFetchLocation(
+			ConnectionDetails connectionDetails, String workspaceName,
+			String testName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = buildConfigurationTests.setupBadFetchLocation(workspaceName,
+				testName, hjPath, buildPath);
+		try {
+			buildConfigurationTests.testGoodFetchLocation(workspaceName, testName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
 				tearDown(connectionDetails, artifactIds, progress);

@@ -15,6 +15,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.client.ClientFactory;
@@ -68,6 +69,7 @@ public class BuildClient extends AbstractBuildClient {
             try {
     			decryptedPassword = PasswordHelper.getPassword(passwordFile);
             } catch (Exception exception) {
+            	LOGGER.log(Level.FINER, "Problem reading password file " + passwordFile.getAbsolutePath(), exception);
                 throw new RTCConfigurationException(Messages.get(clientLocale).BuildClient_bad_password_file(passwordFile.getAbsolutePath()));
             }
             

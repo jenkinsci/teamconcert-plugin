@@ -12,6 +12,7 @@
 -->
 
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <?jelly escape-by-default='true'?>
     <f:entry title="${%name.title}" field="name" >
         <f:textbox clazz="required" checkMessage="${%name.checkMessage}" />
     </f:entry>

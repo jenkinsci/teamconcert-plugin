@@ -19,7 +19,8 @@
   
   "it" is the RTCChangeLogSet instance
 -->
-
+    <?jelly escape-by-default='true'?>
+    
  <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
 
   <j:set var="snapshotlink" value="${browser.getBaselineSetLink(it)}"/>
@@ -35,7 +36,14 @@
 
   <j:choose>
     <j:when test="${it.emptySet}">
-      ${%changes.none}
+      <j:choose>
+        <j:when test="${it.isPersonalBuild()}">
+          ${%personal.build}
+        </j:when>
+        <j:otherwise>
+          ${%changes.none}
+        </j:otherwise>
+      </j:choose>
     </j:when>
     <j:otherwise>
       <j:set var="componentChangeCount" value="${it.getComponentChangeCount()}" />

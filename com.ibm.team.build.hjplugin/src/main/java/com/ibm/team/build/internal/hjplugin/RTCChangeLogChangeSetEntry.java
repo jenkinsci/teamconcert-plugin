@@ -171,7 +171,7 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 		}
 		
 		public String getMsg() {
-			return Util.escape( number + ": " + summary); //$NON-NLS-1$
+			return number + ": " + summary; //$NON-NLS-1$
 		}
     }
     

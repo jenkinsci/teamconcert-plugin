@@ -17,8 +17,10 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.net.URLConnection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,6 +34,7 @@ public class RTCFacadeFactory {
 
 	private static final int DEFAULT_CACHE_SIZE = 10;
 	private static final String CACHE_SIZE_PROPERTY = "com.ibm.team.build.classLoaderCacheSize"; //$NON-NLS-1$
+	private static final String DISABLE_RTC_FACADE_CLASS_LOADER_PROPERTY = "com.ibm.team.build.disableRTCFacadeClassLoader"; //$NON-NLS-1$
 
     private static transient LRUMap fgRTCFacadeCache;
     
@@ -82,7 +85,8 @@ public class RTCFacadeFactory {
 	 */
 	public static class RTCFacadeWrapper {
 		private Object facade;
-		private URLClassLoader newClassLoader;
+		private ClassLoader newClassLoader;
+		private URL hjplugin_rtcJar;
 		
 		public Object invoke(String methodName, Class[] argumentTypes, Object... arguments) throws Exception {
 			
@@ -92,18 +96,18 @@ public class RTCFacadeFactory {
 	    		return m.invoke(facade, arguments);
 			} catch (NoSuchMethodException e) {
 				LOGGER.finer(e.getMessage());
-				StringBuilder lookingFor = new StringBuilder("Looking for: ");
-				lookingFor.append(methodName).append("(");
+				StringBuilder lookingFor = new StringBuilder("Looking for: "); //$NON-NLS-1$
+				lookingFor.append(methodName).append("(");  //$NON-NLS-1$
 				boolean first = true;
 				for (Class argument : argumentTypes) {
 					if (!first) {
-						lookingFor.append(",");
+						lookingFor.append(","); //$NON-NLS-1$
 					} else {
 						first = false;
 					}
 					lookingFor.append(argument.getSimpleName());
 				}
-				lookingFor.append(")");
+				lookingFor.append(")"); //$NON-NLS-1$
 				LOGGER.finer(lookingFor.toString());
 				for (Method method : facade.getClass().getMethods()) {
 					LOGGER.finer(method.toString());
@@ -121,6 +125,13 @@ public class RTCFacadeFactory {
 			}
 		}
 
+		/**
+		 * @return The URL for the jar containing the facade.
+		 */
+		public URL getFacadeJarURL() {
+			return hjplugin_rtcJar;
+		}
+		
 		/**
 		 * Sets the current thread's context class loader to be ours.  This is needed to ensure that
 		 * the EMF package registry can find the previously registered packages.  
@@ -154,24 +165,47 @@ public class RTCFacadeFactory {
 		
 		RTCFacadeWrapper result = new RTCFacadeWrapper();
 		
-		URL[] jarURLs = getJarURLs(toolkitFile, debugLog);
+		URL[] toolkitURLs = getToolkitJarURLs(toolkitFile, debugLog);
 		
 		Class<?> originalClass = RTCFacadeFactory.class;
-		URLClassLoader originalClassLoader = (URLClassLoader) originalClass.getClassLoader();
+		ClassLoader originalClassLoader = originalClass.getClassLoader();
 		debug(debugLog, "Original class loader: " + originalClassLoader); //$NON-NLS-1$
-		
-		URL[] originalURLs = originalClassLoader.getURLs();
-		debug(debugLog, originalURLs.length + " Original class loader URLs:"); //$NON-NLS-1$
-		for (URL url : originalURLs) {
-			debug(debugLog, url.toString());
+
+		// Get the jar for the hjplugin-rtc jar.
+		URL[] combinedURLs;
+		result.hjplugin_rtcJar = getHjplugin_rtcJar(originalClassLoader, fullClassName, debugLog);
+		if (result.hjplugin_rtcJar != null) {
+			combinedURLs = new URL[toolkitURLs.length + 1];
+			combinedURLs[0] = result.hjplugin_rtcJar;
+			System.arraycopy(toolkitURLs, 0, combinedURLs, 1, toolkitURLs.length);
+		} else {
+			combinedURLs = toolkitURLs;
 		}
+		debug(debugLog, "System class loader " + ClassLoader.getSystemClassLoader());
 		
-		URL[] combinedURLs = new URL[jarURLs.length + originalURLs.length];
-		System.arraycopy(originalURLs, 0, combinedURLs, 0, originalURLs.length);
-		System.arraycopy(jarURLs, 0, combinedURLs, originalURLs.length, jarURLs.length);
-		result.newClassLoader = new URLClassLoader(combinedURLs, originalClassLoader.getParent());
+		// We want the parent class loader to exclude the class loader which would normally
+		// load classes from the hjplugin-rtc jar (because that class loader doesn't include
+		// the toolkit jars).
+		ClassLoader parentClassLoader = ClassLoader.getSystemClassLoader();
+		
+		// Normally the system class loader and the original class loader are different.
+		// However in the case of running the tests within our build, the system class loader
+		// is the original class loader with our single jar (and not its dependencies from the
+		// toolkit) which results in ClassNotFound for classes we depend on (i.e. IProgressMonitor).
+		// So use the parent in this case.
+		if (parentClassLoader == originalClassLoader) {
+			debug(debugLog, "System class loader and original are the same. Using parent " + originalClassLoader.getParent()); //$NON-NLS-1$
+			parentClassLoader = originalClassLoader.getParent();
+		}
+		if (Boolean.parseBoolean(System.getProperty(DISABLE_RTC_FACADE_CLASS_LOADER_PROPERTY, "false"))) {
+			debug(debugLog, "RTCFacadeClassLoader disabled, using URLClassLoader"); //$NON-NLS-1$
+			result.newClassLoader = new URLClassLoader(combinedURLs, parentClassLoader);
+		} else {
+			result.newClassLoader = new RTCFacadeClassLoader(combinedURLs, parentClassLoader);
+		}
 
 		debug(debugLog, "new classloader: " + result.newClassLoader); //$NON-NLS-1$
+		
 		Class<?> facadeClass = result.newClassLoader.loadClass(fullClassName);
 		debug(debugLog, "facadeClass: " + facadeClass); //$NON-NLS-1$
 		debug(debugLog, "facadeClass classloader: " + facadeClass.getClassLoader()); //$NON-NLS-1$
@@ -189,15 +223,38 @@ public class RTCFacadeFactory {
 		return result;	
 	}
 	
-	private static void debug(PrintStream debugLog, String msg) {
-		LOGGER.finer(msg);
-		if (debugLog != null) {
-			debugLog.println(msg);
+	private static URL getHjplugin_rtcJar(ClassLoader originalClassLoader,
+			String fullClassName, PrintStream debugLog) {
+		if (originalClassLoader instanceof URLClassLoader) {
+			URLClassLoader urlClassLoader = (URLClassLoader) originalClassLoader;
+			URL[] originalURLs = urlClassLoader.getURLs();
+			for (URL url : originalURLs) {
+				String file = url.getFile();
+				if (file.contains("com.ibm.team.build.hjplugin-rtc")) { //$NON-NLS-1$ //$NON-NLS-2$
+					debug(debugLog, "Found hjplugin-rtc jar " +  url.getFile()); //$NON-NLS-1$
+					return url;
+				}
+			}
+			debug(debugLog, "Did not find hjplugin-rtc jar from URLClassLoader"); //$NON-NLS-1$
 		}
+		String realClassName = fullClassName.replace('.', '/') + ".class"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		URL url = originalClassLoader.getResource(realClassName);
+		debug(debugLog, "Found " + realClassName + " in " + url.toString());  //$NON-NLS-1$ //$NON-NLS-2$
+		try {
+			URLConnection connection = url.openConnection();
+			if (connection instanceof JarURLConnection) {
+				JarURLConnection jarConnection = (JarURLConnection) connection;
+				debug(debugLog, "hjplugin-rtc jar from the connection " + jarConnection.getJarFileURL());
+				return jarConnection.getJarFileURL();
+			}
+		} catch (IOException e) {
+			debug(debugLog, "Unable to obtain URLConnection ", e); //$NON-NLS-1$ 
+		}
+		debug(debugLog, "Unable to find hjplugin-rtc.jar"); //$NON-NLS-1$ 
+		return null;
 	}
 
-
-	private static URL[] getJarURLs(File toolkitFile, PrintStream debugLog) throws IOException {
+	private static URL[] getToolkitJarURLs(File toolkitFile, PrintStream debugLog) throws IOException {
 		File[] files = toolkitFile.listFiles(new FileFilter() {
 			public boolean accept(File file) {
 				return file.getName().toLowerCase().endsWith(".jar") && !file.isDirectory(); //$NON-NLS-1$
@@ -215,6 +272,7 @@ public class RTCFacadeFactory {
 			for (File file : files) {
 				message.append(file.getName()).append(eol);
 			}
+			
 			debug(debugLog, message.toString());
 		}
 
@@ -225,4 +283,18 @@ public class RTCFacadeFactory {
 		return urls;
 	}
 
+	private static void debug(PrintStream debugLog, String msg) {
+		LOGGER.finer(msg);
+		if (debugLog != null) {
+			debugLog.println(msg);
+		}
+	}
+
+	private static void debug(PrintStream debugLog, String msg, Exception e) {
+		LOGGER.log(Level.FINER, msg, e);
+		if (debugLog != null) {
+			debugLog.println(msg);
+			e.printStackTrace(debugLog);
+		}
+	}
 }

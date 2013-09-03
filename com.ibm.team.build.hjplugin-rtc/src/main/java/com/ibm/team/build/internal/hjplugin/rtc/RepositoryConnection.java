@@ -114,10 +114,25 @@ public class RepositoryConnection {
 		try {
 			repo.login(monitor);
 		} catch (ServerVersionCheckException e) {
+			// This exception was Deprecated in 4.0.3. When we nolonger need
+			// to support 4.0.2 and earlier toolkit releases, this catch block
+			// can be deleted
+		    // We need to still handle the deprecated exception since earlier 
+		    // toolkit versions may still throw it
 			throw new RTCValidationException(e.getMessage());
 		} catch (AuthenticationException e) {
 			fBuildClient.removeRepositoryConnection(getConnectionDetails());
 			throw new RTCValidationException(e.getMessage());
+		} catch (TeamRepositoryException e) {
+			// This exception is only present in 4.0.3 libraries and later
+			// So refer by name to prevent class loading failures
+			// When we nolonger need to support 4.0.2 and earlier toolkits, the textual compare for ServerVersionCheckException
+			// can be turned into an actual catch block
+			if ("com.ibm.team.repository.common.ServerVersionCheckException".equals(e.getClass().getName())) {
+				throw new RTCValidationException(e.getMessage());
+			} else {
+				throw e;
+			}
 		}
 	}
 
@@ -334,6 +349,13 @@ public class RepositoryConnection {
             		listener, monitor.newChild(2));
             
             synchronizeLoad = true;
+        } else {
+        	
+            // build change report
+            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+            changeReportBuilder.populateChangeReport(changeReport,
+            		buildConfiguration.isPersonalBuild(),
+            		listener);
         }
 		changeReport.prepareChangeSetLog();
 
@@ -481,11 +503,24 @@ public class RepositoryConnection {
 				fBuildClient.removeRepositoryConnection(getConnectionDetails());
 				throw e;
 			} catch (ServerVersionCheckException e) {
+				// This exception was Deprecated in 4.0.3. When we nolonger need
+				// to support 4.0.2 and earlier toolkit releases, this catch
+				// block can be deleted
+	            // We need to still handle the deprecated exception since earlier 
+	            // toolkit versions may still throw it
 				fBuildClient.removeRepositoryConnection(getConnectionDetails());
 				throw e;
 			} catch (TeamRepositoryException e) {
-				if ("com.ibm.team.repository.client.ServerStateCheckException".equals(e.getClass().getName())) { //$NON-NLS-1$
-					// this exception is only in RTC releases that support Server rename.
+				if ("com.ibm.team.repository.common.ServerVersionCheckException".equals(e.getClass().getName()) //$//$NON-NLS-1$
+						|| "com.ibm.team.repository.client.ServerStateCheckException".equals(e.getClass().getName())) { //$NON-NLS-1$
+					// the ServerVersionCheckException is only in RTC 4.0.3 and later releases
+					// When we nolonger need to support 4.0.2 and earlier toolkits, the textual compare for ServerVersionCheckException
+					// can be turned into an actual catch block
+					
+					// the ServerStateCheckException is only in RTC releases that support Server rename (not 3.0.1.x).
+					// When we nolonger need to support 3.0.1.x toolkits, the textual compare for ServerStateCheckException
+					// can be turned into an actual catch block.
+					
 					// This is a simple check, doesn't handle subclasses, but during my search,
 					// I didn't find any.
 					fBuildClient.removeRepositoryConnection(getConnectionDetails());
@@ -551,6 +586,14 @@ public class RepositoryConnection {
 		
 		getBuildConnection().createBuildLinks(buildResultUUID, rootUrl, projectUrl,
 				buildUrl, clientConsole, monitor.newChild(50));
+	}
+
+	public void getBuildResultInfo(IBuildResultInfo buildResultInfo,
+			IConsoleOutput clientConsole, SubMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(50));
+		
+		getBuildConnection().getBuildResultInfo(buildResultInfo, clientConsole, monitor.newChild(50));
 	}
 
 }

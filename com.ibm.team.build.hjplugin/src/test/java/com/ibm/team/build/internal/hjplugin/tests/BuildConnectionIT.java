@@ -14,6 +14,8 @@ import java.io.File;
 
 import org.jvnet.hudson.test.HudsonTestCase;
 
+import com.ibm.team.build.internal.hjplugin.BuildResultInfo;
+import com.ibm.team.build.internal.hjplugin.RTCBuildCause;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
@@ -119,6 +121,38 @@ public class BuildConnectionIT extends HudsonTestCase {
 			Config.DEFAULT.getUserID(),
 			Config.DEFAULT.getPassword(), passwordFileFile,
 			Config.DEFAULT.getTimeout(), getTestName() + System.currentTimeMillis());
+		}
+	}
+	
+	public void testBuildResultInfo() throws Exception {
+		// test that the build info represents the cause of the build
+		if (Config.DEFAULT.isConfigured()) {
+			File passwordFileFile = FileUtils.getPasswordFile();
+			
+			// Let the test fill in the build result UUID.
+			String buildResultUUID = ""; 
+			BuildResultInfo buildResultInfo = new BuildResultInfo(buildResultUUID);
+			String loggedInContributorName = (String) testingFacade.invoke("testBuildResultInfo",
+					new Class[] { String.class, // serverURL,
+					String.class, // userId,
+					String.class, // password,
+					File.class, // passwordFile,
+					int.class, // timeout,
+					String.class, // testName
+					Object.class}, // buildResultInfo
+			Config.DEFAULT.getServerURI(),
+			Config.DEFAULT.getUserID(),
+			Config.DEFAULT.getPassword(), passwordFileFile,
+			Config.DEFAULT.getTimeout(), getTestName() + System.currentTimeMillis(),
+			buildResultInfo);
+			
+			assertTrue(buildResultInfo.isPersonalBuild());
+			assertFalse(buildResultInfo.isScheduled());
+			assertEquals(loggedInContributorName, buildResultInfo.getRequestor());
+			
+			RTCBuildCause buildCause = new RTCBuildCause(buildResultInfo);
+			assertTrue(buildCause.getShortDescription(), buildCause.getShortDescription().contains("ersonal"));
+			assertTrue(buildCause.getShortDescription(), buildCause.getShortDescription().contains(loggedInContributorName));
 		}
 	}
 	
