@@ -32,7 +32,6 @@ import com.ibm.team.build.common.model.IBuildRequestParams;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
-import com.ibm.team.build.internal.common.model.BuildFactory;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConfiguration;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
@@ -733,6 +732,25 @@ public class BuildConfigurationTests {
 		}
 	}
 
+	public void testGoodFetchLocation(String workspaceName,
+			String testName, String hjPath, String buildPath,
+			Map<String, String> artifactIds) throws Exception {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository(); 
+		Exception[] failure = new Exception[] {null};
+		IConsoleOutput listener = getListener(failure);
+		
+		// get the build result
+		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
+
+		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
+		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+		if (failure[0] != null) {
+			AssertUtil.fail("The relative fetch location should have been good: " + buildPath);
+		}
+	}
+
 	public void testBadFetchLocation(String workspaceName,
 			String testName, String hjPath, String buildPath,
 			Map<String, String> artifactIds) throws Exception {
@@ -751,7 +769,7 @@ public class BuildConfigurationTests {
 			if (failure[0] != null) {
 				throw failure[0];
 			}
-			AssertUtil.fail("The relative fetch location should of been bad: " + buildPath);
+			AssertUtil.fail("The relative fetch location should have been bad: " + buildPath);
 		} catch (RTCConfigurationException e) {
 			// good, the fetch location was bad
 		}

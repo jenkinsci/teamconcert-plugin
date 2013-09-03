@@ -97,6 +97,7 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	private String baselineSetItemId;
 	private String baselineSetName;
 	private String workspaceItemId;
+	private boolean isPersonalBuild;
 	private List<RTCChangeLogComponentEntry> componentChanges;
 	private Map<String, List<RTCChangeLogChangeSetEntry>> changesAccepted;
 	private Map<String, List<RTCChangeLogChangeSetEntry>> changesDiscarded;
@@ -170,6 +171,14 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		
 		ComponentDescriptor componentDescriptor = new ComponentDescriptor(entry.getComponentItemId(), entry.getComponentName());
 		affectedComponents.add(componentDescriptor);
+	}
+	
+	public void setIsPersonalBuild(boolean isPersonal) {
+		this.isPersonalBuild = isPersonal;
+	}
+	
+	public boolean isPersonalBuild() {
+		return isPersonalBuild;
 	}
 	
 	public void setBaselineSetItemId(String itemId) {

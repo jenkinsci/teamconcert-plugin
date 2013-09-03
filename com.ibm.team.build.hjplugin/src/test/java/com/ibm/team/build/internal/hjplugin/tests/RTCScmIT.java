@@ -30,6 +30,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
+import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
 
 @SuppressWarnings("nls")
@@ -44,7 +45,8 @@ public class RTCScmIT extends HudsonTestCase {
 	private static final String PASSWORD = "password";
 	private static final String PASSWORD_FILE = "passwordFile";
 	private static final String TIMEOUT = "timeout";
-	private static final String BUILD_WORKSPACE = "buildWorkspace";
+	private static final String BUILD_DEFINITION = "buildDefinition";
+	private static final String BUILD_TYPE = "buildType";
 
 	private static final String TEST_GLOBAL_BUILD_TOOLKIT = "C:\\buildtoolkit";
 	private static final String TEST_GLOBAL_SERVER_URI = "https://localhost:9443/ccm";
@@ -62,12 +64,14 @@ public class RTCScmIT extends HudsonTestCase {
 	private static final String TEST_BUILD_DEFINITION = "_Sf_R8EhyEeKuMu7IPRTOeQ";
 
 	private RTCScm createEmptyRTCScm() {
-		return new RTCScm(false, "", "", 0, "", Secret.fromString(""), "", "", "");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "");
+		return new RTCScm(false, "", "", 0, "", Secret.fromString(""), "", buildSource);
 	}
 
 	private RTCScm createTestOverrideGlobalRTCScm() {
+		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE);
 		return new RTCScm(true, "", TEST_SERVER_URI, Integer.parseInt(TEST_TIMEOUT), TEST_USER_ID, Secret.fromString(TEST_PASSWORD), TEST_PASSWORD_FILE,
-				TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE);
+				buildSource);
 	}
 
 	@Override
@@ -92,6 +96,8 @@ public class RTCScmIT extends HudsonTestCase {
 			Assert.assertEquals(TEST_USER_ID, scm.getUserId());
 			Assert.assertEquals(TEST_PASSWORD, scm.getPassword());
 			Assert.assertEquals(TEST_PASSWORD_FILE, scm.getPasswordFile());
+			Assert.assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildType());
+			Assert.assertEquals(TEST_BUILD_DEFINITION, scm.getBuildDefinition());
 			Assert.assertEquals(TEST_BUILD_WORKSPACE, scm.getBuildWorkspace());
 		}
 	}
@@ -207,7 +213,7 @@ public class RTCScmIT extends HudsonTestCase {
 			RTCScm newRtcScm = (RTCScm) project.getScm();
 	
 			assertEqualBeans(rtcScm, newRtcScm, OVERRIDE_GLOBAL + "," + SERVER_URI + "," + USER_ID + "," + PASSWORD + "," + PASSWORD_FILE + ","
-					+ BUILD_WORKSPACE);
+					+ BUILD_TYPE + "," + BUILD_DEFINITION);
 		}
 	}
 

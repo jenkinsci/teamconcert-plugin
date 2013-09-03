@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
+import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCFacade;
 
 
@@ -164,12 +165,21 @@ public class RTCTestingFacade extends RTCFacade {
 		return setup;
 	}
 
-	public void testBuildTermination(String serverURL, String userId, String password,	File passwordFile,
+	public void testBuildTermination(String serverURL, String userId, String password, File passwordFile,
 			int timeout, String testName) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		String passwordToUse = testClient.determinePassword(password, passwordFile, Locale.getDefault());
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		testClient.testBuildTermination(connectionDetails, testName);
+	}
+
+	public String testBuildResultInfo(String serverURL, String userId, String password, File passwordFile,
+			int timeout, String testName, Object buildResultInfoObject) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		String passwordToUse = testClient.determinePassword(password, passwordFile, Locale.getDefault());
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
+		IBuildResultInfo buildResultInfo = getBuildResultInfo(buildResultInfoObject);
+		return testClient.testBuildResultInfo(connectionDetails, testName, buildResultInfo);
 	}
 	
 	public Map<String, String> testComponentLoading(String serverURL,
@@ -209,6 +219,16 @@ public class RTCTestingFacade extends RTCFacade {
 		String passwordToUse = testClient.determinePassword(password, passwordFile, Locale.getDefault());
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
 		return testClient.testPersonalBuild(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
+	}
+	
+	public Map<String, String> testGoodFetchLocation(String serverURL,
+			String userId, String password, File passwordFile, int timeout,
+			String workspaceName, String testName, String hjPath,
+			String buildPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		String passwordToUse = testClient.determinePassword(password, passwordFile, Locale.getDefault());
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
+		return testClient.testGoodFetchLocation(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testBadFetchLocation(String serverURL,

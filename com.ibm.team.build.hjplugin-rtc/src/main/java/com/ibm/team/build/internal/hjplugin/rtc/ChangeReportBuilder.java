@@ -107,6 +107,17 @@ public class ChangeReportBuilder {
 		fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener, monitor.newChild(85));
 	}
 
+	/**
+	 * Populate the contents of an empty ChangeReport with the 
+	 * info related to the personal build
+	 * @param changeReport The change report to be expanded
+	 * @param isPersonalBuild Whether this is a personal build
+	 */
+	public void populateChangeReport(ChangeReport changeReport,
+			boolean isPersonalBuild, IConsoleOutput listener) {
+		changeReport.setIsPersonalBuild(isPersonalBuild);
+	}
+
 	private void fillSnapshot(ChangeReport changeReport,
 			AcceptReport acceptReport, IConsoleOutput listener,
 			IProgressMonitor progress) {

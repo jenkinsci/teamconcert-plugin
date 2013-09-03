@@ -20,6 +20,7 @@ import hudson.model.BuildListener;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.CauseAction;
 import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.remoting.Channel;
@@ -41,9 +42,6 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -86,13 +84,31 @@ public class RTCScm extends SCM {
 
 	private RTCRepositoryBrowser browser;
 	
+	/**
+	 * Structure that represents the radio button selection for build workspace/definition
+	 * choice in config.jelly (job configuration) 
+	 */
+	public static class BuildType {
+		public String type;
+		public String buildDefinition;
+		public String buildWorkspace;
+		
+		@DataBoundConstructor
+		public BuildType(String value, String buildDefinition, String buildWorkspace) {
+			this.type = value;
+			this.buildDefinition = buildDefinition;
+			this.buildWorkspace = buildWorkspace;
+		}
+		
+	}
+	
 	// Descriptor class - contains the global configuration settings
 	@Extension
 	public static class DescriptorImpl extends SCMDescriptor<RTCScm> {
 		
 		private static final String DEFAULT_USER_ID = "???"; //$NON-NLS-1$
 
-		private static final String DEFAULT_SERVER_URI = "https://localhost:9443/jazz"; //$NON-NLS-1$
+		private static final String DEFAULT_SERVER_URI = "https://localhost:9443/ccm"; //$NON-NLS-1$
 
 		private static final int DEFAULT_SERVER_TIMEOUT = 480;
 		
@@ -116,14 +132,6 @@ public class RTCScm extends SCM {
 		public SCM newInstance(StaplerRequest req, JSONObject formData)
 				throws FormException {
  			RTCScm scm = (RTCScm) super.newInstance(req, formData);
-
- 			// buildType is a radio button. Hudson gave errors on constructing a string from the req.
- 			scm.buildType = req.getParameter("buildType");
-
- 			// buildWorkspace, buildDefinition are fields within the radio buttons.
- 			// Hudson doesn't manage to populate these fields from the req. Jenkins does.
- 			scm.buildWorkspace = req.getParameter("buildWorkspace");
- 			scm.buildDefinition = req.getParameter("buildDefinition");
 			
  			scm.browser = new RTCRepositoryBrowser(scm.getServerURI());
 			return scm;
@@ -632,7 +640,7 @@ public class RTCScm extends SCM {
 	
 	@DataBoundConstructor
 	public RTCScm(boolean overrideGlobal, String buildTool, String serverURI, int timeout, String userId, Secret password, String passwordFile,
-			String buildDefinition, String buildWorkspace) {
+			BuildType buildType) {
 
 		this.overrideGlobal = overrideGlobal;
 		if (this.overrideGlobal) {
@@ -644,8 +652,9 @@ public class RTCScm extends SCM {
 			this.passwordFile = passwordFile;
 			
 		}
-		this.buildWorkspace = buildWorkspace;
-		this.buildDefinition = buildDefinition;
+		this.buildType = buildType.type;
+		this.buildWorkspace = buildType.buildWorkspace;
+		this.buildDefinition = buildType.buildDefinition;
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
 			LOGGER.finer("RTCScm constructed with " + //$NON-NLS-1$
@@ -750,6 +759,44 @@ public class RTCScm extends SCM {
 						}, jazzServerURI, jazzUserId, passwordToUse,
 						jazzTimeout, buildDefinition, label, listener, LocaleProvider.getLocale());
 				createdBuildResult = true;
+			} else if (buildResultUUID != null) {
+				
+				// Capture the reason for initiation in a cause for the build
+				try {
+					BuildResultInfo buildResultInfo = new BuildResultInfo(buildResultUUID);
+					facade.invoke("getBuildResultInfo", new Class[] { //$NON-NLS-1$
+							String.class, // serverURI,
+							String.class, // userId,
+							String.class, // passwordToUse,
+							int.class, // timeout,
+							Object.class, // buildResultInfoObject,
+							Object.class, // listener,
+							Locale.class}, // clientLocale)
+							getServerURI(), getUserId(), passwordToUse,
+							getTimeout(), buildResultInfo, listener, LocaleProvider.getLocale());
+					
+					RTCBuildCause rtcBuildCause = new RTCBuildCause(buildResultInfo);
+					CauseAction cause = build.getAction(CauseAction.class);
+					if (cause == null) {
+						cause = new CauseAction(rtcBuildCause);
+						build.addAction(cause);
+					} else {
+						cause.getCauses().add(rtcBuildCause);
+					}
+				} catch (Exception e) {
+					Throwable eToReport = e;
+					if (e instanceof InvocationTargetException) {
+						eToReport = e.getCause();
+					}
+		    		if (eToReport instanceof InterruptedException) {
+		        		LOGGER.log(Level.FINER, "build cause detection interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
+		    			throw (InterruptedException) eToReport;
+		    		}
+
+		    		// log (non-fatal) error and keep going with the build
+					listener.getLogger().println(Messages.RTCScm_build_cause_determination_failure(e.getMessage()));
+					LOGGER.log(Level.FINER, "Unable to determine the reason RTC initiated the build", e); //$NON-NLS-1$
+				}
 			}
 
 			// publish in the build result links to the project and the build
@@ -797,8 +844,20 @@ public class RTCScm extends SCM {
 				// add the build result information to the build through an action
 				buildResultAction = new RTCBuildResultAction(jazzServerURI, buildResultUUID, createdBuildResult);
 				build.addAction(buildResultAction);
+				
 			}
 
+			
+			if (workspacePath.isRemote()) {
+				// Slaves do a lazy remote class loader. The slave's class loader will request things as needed
+				// from the remote master. The class loader on the master is the one that knows about the hjplugin-rtc.jar
+				// but not any of the toolkit jars. So trying to send the class (& its references) is problematic.
+				// The hjplugin-rtc.jar won't be able to be found on the slave either from the regular class loader either
+				// (since its on the master). So what we do is send our hjplugin-rtc.jar over to the slave to "prepopulate"
+				// it in the class loader. This way we can create our special class loader referencing it and all the toolkit
+				// jars.
+				sendJarsToSlave(facade, workspacePath);
+			}
 
     	} catch (Exception e) {
     		Throwable eToReport = e;
@@ -825,10 +884,6 @@ public class RTCScm extends SCM {
 		OutputStream changeLogStream = new FileOutputStream(changeLogFile);
 		RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
 		
-		if (workspacePath.isRemote()) {
-			sendJarsToSlave(workspacePath);
-		}
-		
 		boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
 		RTCCheckoutTask checkout = new RTCCheckoutTask(
 				build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
@@ -849,24 +904,14 @@ public class RTCScm extends SCM {
 		return true;
 	}
 
-	private void sendJarsToSlave(FilePath workspacePath)
+	private void sendJarsToSlave(RTCFacadeWrapper facade, FilePath workspacePath)
 			throws MalformedURLException, IOException, InterruptedException {
 		VirtualChannel channel = workspacePath.getChannel();
-		if (channel instanceof Channel) {
+		if (channel instanceof Channel && facade.getFacadeJarURL() != null) {
 			// try to find our jars
-			List<URL> ourJars = new ArrayList<URL>(2);
 			Class<?> originalClass = RTCScm.class;
-			URLClassLoader originalClassLoader = (URLClassLoader) originalClass.getClassLoader();
-			URL[] originalURLs = originalClassLoader.getURLs();
-			for (URL url : originalURLs) {
-				String file = url.getFile();
-				if (file.contains("com.ibm.team.build.hjplugin-rtc") && file.endsWith(".jar")) { //$NON-NLS-1$ //$NON-NLS-2$
-					LOGGER.finer("Found our jar for prefetch " +  url.getFile()); //$NON-NLS-1$
-					ourJars.add(url);
-				}
-			}
-			LOGGER.finer("Found " + ourJars.size() + " jars for remote prefetch"); //$NON-NLS-1$ //$NON-NLS-2$
-			URL [] jars = ourJars.toArray(new URL[ourJars.size()]);
+			ClassLoader originalClassLoader = (ClassLoader) originalClass.getClassLoader();
+			URL [] jars = new URL[] {facade.getFacadeJarURL()};
 			boolean result = ((Channel) channel).preloadJar(originalClassLoader, jars);
 			LOGGER.finer("Prefetch result for sending jars is " + result);  //$NON-NLS-1$ //$NON-NLS-2$
 		}

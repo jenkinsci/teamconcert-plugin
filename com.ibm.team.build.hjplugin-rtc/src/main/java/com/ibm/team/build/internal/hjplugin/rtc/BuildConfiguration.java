@@ -73,7 +73,7 @@ public class BuildConfiguration {
 	private Collection<IComponentHandle> components = Collections.emptyList();
 	private boolean createFoldersForComponents = false;
 	private ITeamRepository teamRepository;
-	private String hjFetchDestination;
+	private String hjWorkspace;
 	private BuildWorkspaceDescriptor workspace;
 	private String snapshotName;
 	private Map<String, String> buildProperties = new HashMap<String, String>();
@@ -82,11 +82,11 @@ public class BuildConfiguration {
 	 * the get methods.
 	 * 
 	 * @param teamRepository The team repository that contains the build artifacts
-	 * @param hjFetchDestination The Hudson/Jenkins specified build location
+	 * @param hjWorkspace The Hudson/Jenkins specified build location
 	 */
-	public BuildConfiguration(ITeamRepository teamRepository, String hjFetchDestination) {
+	public BuildConfiguration(ITeamRepository teamRepository, String hjWorkspace) {
 		this.teamRepository = teamRepository;
-		this.hjFetchDestination = hjFetchDestination;
+		this.hjWorkspace = hjWorkspace;
 	}
 	
 	/**
@@ -99,7 +99,7 @@ public class BuildConfiguration {
 	public void initialize(IWorkspaceHandle workspaceHandle, String workspaceName, String snapshotName) throws IOException {
 		this.workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(), workspaceName);
 		this.snapshotName = snapshotName;
-		this.fetchDestinationFile = new File(hjFetchDestination);
+		this.fetchDestinationFile = new File(hjWorkspace);
 		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 		
 		LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
@@ -219,7 +219,7 @@ public class BuildConfiguration {
         if (LOGGER.isLoggable(Level.FINER)) {
 			StringBuilder message = new StringBuilder("Building ").append(result.getLabel()).append(eol); //$NON-NLS-1$
 			message.append("WorkspaceUUID ").append(workspaceUuid).append(eol); //$NON-NLS-1$
-			message.append("H/J fetch destination ").append(hjFetchDestination).append(eol); //$NON-NLS-1$
+			message.append("H/J workspace ").append(hjWorkspace).append(eol); //$NON-NLS-1$
 		    message.append("fetchDestinationPath ").append(fetchDestinationPath).append(eol); //$NON-NLS-1$
 		    message.append("deleteNeeded ").append(deleteNeeded).append(eol); //$NON-NLS-1$
 		    message.append("isPersonalBuild ").append(isPersonalBuild).append(eol); //$NON-NLS-1$
@@ -296,18 +296,21 @@ public class BuildConfiguration {
     }
 
     private String getFetchDestination(Map<String, String> buildProperties, Locale clientLocale) throws RTCConfigurationException {
-        String property = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION);
-        if (property != null && property.length() > 0) {
-            File destination = new File(hjFetchDestination, property);
+        String loadDirectory = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION);
+        if (loadDirectory != null && loadDirectory.length() > 0) {
+        	File loadDirectoryFile = new File(loadDirectory);
+        	if (!loadDirectoryFile.isAbsolute()) {
+        		loadDirectoryFile = new File(hjWorkspace, loadDirectory);
+        	}
 			try {
-				String path = destination.getCanonicalPath();
+				String path = loadDirectoryFile.getCanonicalPath();
 				return path;
 			} catch (IOException e) {
-				throw new RTCConfigurationException(Messages.get(clientLocale).BuildConfiguration_invalid_fetch_destination(destination.getPath(), e.getMessage()));
+				throw new RTCConfigurationException(Messages.get(clientLocale).BuildConfiguration_invalid_fetch_destination(loadDirectoryFile.getPath(), e.getMessage()));
 			}
         } else {
         	// default to the Hudson/Jenkins destination
-        	return hjFetchDestination;
+        	return hjWorkspace;
         }
     }
 

@@ -36,6 +36,7 @@ import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationE
 import com.ibm.team.build.internal.common.links.BuildLinkTypes;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConfiguration;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
+import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCConfigurationException;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
@@ -567,5 +568,74 @@ public class BuildConnectionTests {
 			}
 		};
 		return listener;
+	}
+	
+	public String testBuildResultInfo(String testName, final IBuildResultInfo buildResultInfo) throws Exception {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+
+		try {
+			final Exception[] failure = new Exception[] {null};
+			IConsoleOutput listener = getListener(failure);
+			
+			// create 2 workspaces, a build one and a personal build one
+			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+			IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, testName + "1");
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
+			IWorkspaceConnection personalWorkspace = SCMUtil.createWorkspace(workspaceManager, testName + "2");
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, personalWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
+			
+			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
+					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+
+			// test a personal build
+			final String buildResultItemId = connection.createBuildResult(testName, personalWorkspace.getResolvedWorkspace().getName(), "my personal buildLabel", listener, null, Locale.getDefault());
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
+			if (failure[0] != null) {
+				throw failure[0];
+			}
+			
+			// wrap the build result info so that we can supply the build result uuid
+			IBuildResultInfo buildResultInfoWrapper = new IBuildResultInfo() {
+				
+				@Override
+				public void setScheduled(boolean isScheduled) {
+					buildResultInfo.setScheduled(isScheduled);
+				}
+				
+				@Override
+				public void setRequestor(String requestor) {
+					buildResultInfo.setRequestor(requestor);
+				}
+				
+				@Override
+				public void setPersonalBuild(boolean isPersonalBuild) {
+					buildResultInfo.setPersonalBuild(isPersonalBuild);
+				}
+				
+				@Override
+				public String getBuildResultUUID() {
+					// Just calling to make sure it is actually callable (we are doing reflection to get
+					// the actual uuid)
+					buildResultInfo.getBuildResultUUID();
+					return buildResultItemId;
+				}
+			};
+			BuildConnection buildConnection = new BuildConnection(repo);
+			buildConnection.getBuildResultInfo(buildResultInfoWrapper, listener, new NullProgressMonitor());
+			
+			return repo.loggedInContributor().getName();
+		} finally {
+			
+			// cleanup artifacts created
+			SCMUtil.deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID));
+			SCMUtil.deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID));
+			BuildUtil.deleteBuildArtifacts(repo, artifactIds);
+		}
+
 	}
 }

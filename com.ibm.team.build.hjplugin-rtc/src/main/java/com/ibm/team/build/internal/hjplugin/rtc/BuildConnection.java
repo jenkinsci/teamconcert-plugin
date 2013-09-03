@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -46,8 +47,11 @@ import com.ibm.team.build.common.model.IBuildResultContribution;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.common.model.query.IBaseBuildEngineQueryModel.IBuildEngineQueryModel;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
+import com.ibm.team.build.internal.common.schedule.IBuildScheduleTaskProperties;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
+import com.ibm.team.repository.common.IContributor;
+import com.ibm.team.repository.common.IContributorHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 import com.ibm.team.repository.common.query.IItemQuery;
@@ -530,4 +534,61 @@ public class BuildConnection {
 
         getTeamBuildClient().addBuildResultContribution(resultHandle, contribution, monitor);
     }
+
+    /**
+     * Provides information contained in the build result/request to the caller
+     * Initially provides information about the cause of the build (scheduled, personal, etc.).
+     * 
+     * @param buildResultInfo The structure to be updated with the build result info.
+     * @param clientConsole The console to put messages
+     * @param progress Monitor to mark progress on
+     * @throws TeamRepositoryException Thrown if the information can not be retrieved
+     */
+	public void getBuildResultInfo(IBuildResultInfo buildResultInfo,
+			IConsoleOutput clientConsole, IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		IItemManager itemManager = getTeamRepository().itemManager();
+
+		IBuildResultHandle resultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultInfo.getBuildResultUUID()), null);
+		IBuildResult buildResult = (IBuildResult) itemManager.fetchCompleteItem(resultHandle, IItemManager.DEFAULT, monitor.newChild(25));
+        if (!buildResult.getBuildRequests().isEmpty()) {
+	        IBuildRequest buildRequest = (IBuildRequest) itemManager.fetchCompleteItem((IBuildRequestHandle) buildResult.getBuildRequests().iterator().next(),
+	        		IItemManager.REFRESH, monitor.newChild(10));
+	        boolean isScheduled = isScheduledRequest(buildRequest);
+	        buildResultInfo.setScheduled(isScheduled);
+	        
+	        if (!isScheduled) {
+	        	buildResultInfo.setPersonalBuild(buildResult.isPersonalBuild());
+	        	
+	        	IContributorHandle requestor = buildRequest.getInitiatingContributor();
+	        	if (requestor != null) {
+	        		IContributor contributor = (IContributor) itemManager.fetchCompleteItem(requestor, IItemManager.DEFAULT, monitor.newChild(25));
+	        		buildResultInfo.setRequestor(contributor.getName());
+	        	}
+	        }
+        }
+	}
+	
+    /**
+     * Determines if the build request is a scheduled request.
+     * 
+     * @param buildRequest
+     *            the request to determine if it's scheduled
+     * @return <code>true</code> if the build request is a scheduled request.
+     */
+    private boolean isScheduledRequest(IBuildRequest buildRequest) {
+        return containsProperty(buildRequest, IBuildScheduleTaskProperties.PROPERTY_SCHEDULED_BUILD, "true"); //$NON-NLS-1$
+    }
+
+    private boolean containsProperty(IBuildRequest request, String name, String value) {
+        Map properties = request.getBuildDefinitionProperties();
+        if (properties != null) {
+            String propertyValue = (String) properties.get(name);
+            if (propertyValue != null && propertyValue.equals(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

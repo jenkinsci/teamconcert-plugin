@@ -19,6 +19,14 @@
    Example: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
   </p>
   <p>
+   The path is to the Build Toolkit on the Master. If you have a distributed build setup (Slaves), you will
+   also need to specify where the Build Toolkit is on the Slave (assuming it's at a different path).
+   After saving, go to the Slave's configuration. In the Node properties section,
+   add Tool locations for each of the Build Toolkits to be used on the Slave.
+   See <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration"> Master/Slave Configuration</a>
+   for details.
+  </p>
+  <p>
    If you intend to load symbolic links there is some additional setup required. Access to
    native libraries is required in order to create symbolic links. For more details on the setup
    visit <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert Plugin</a>  

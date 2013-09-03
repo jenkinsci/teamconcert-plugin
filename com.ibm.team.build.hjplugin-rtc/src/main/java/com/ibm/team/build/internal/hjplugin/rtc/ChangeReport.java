@@ -219,6 +219,7 @@ public class ChangeReport {
     private List<ChangeSetReport> changeSets;
     private BaselineSetReport baselineSet;
     private String workspaceItemId;
+    private boolean isPersonalBuild;
 	private OutputStream changeLog;
 
     public ChangeReport(OutputStream changeLogFile) {
@@ -229,6 +230,10 @@ public class ChangeReport {
 
     public void setWorkspaceItemId(String workspaceItemId) {
     	this.workspaceItemId = workspaceItemId;
+    }
+
+    public void setIsPersonalBuild(boolean isPersonalBuild) {
+    	this.isPersonalBuild = isPersonalBuild;
     }
 
     public void componentChange(ComponentReport component) {
@@ -290,13 +295,16 @@ public class ChangeReport {
 					"<changelog baselineSetName=\"" + escapeXml(baselineSet.name) + //$NON-NLS-1$
 					"\" baselineSetItemId=\"" + baselineSet.itemId +  //$NON-NLS-1$
 					"\" workspaceItemId=\"" + workspaceItemId + //$NON-NLS-1$
+					"\" isPersonalBuild=\"" + isPersonalBuild + //$NON-NLS-1$
 					"\">"); //$NON-NLS-1$
 		} else if (workspaceItemId != null) {
 			writer.println(
 					"<changelog workspaceItemId=\"" + workspaceItemId + //$NON-NLS-1$
+					"\" isPersonalBuild=\"" + isPersonalBuild + //$NON-NLS-1$
 					"\">"); //$NON-NLS-1$
 		} else {
-			writer.println("<changelog>"); //$NON-NLS-1$
+			writer.println("<changelog isPersonalBuild=\"" + isPersonalBuild + //$NON-NLS-1$
+					"\">"); //$NON-NLS-1$
 		}
 	}
 

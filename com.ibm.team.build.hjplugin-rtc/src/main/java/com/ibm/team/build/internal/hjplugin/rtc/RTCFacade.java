@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Map;
@@ -349,6 +350,28 @@ public class RTCFacade {
 		}
 	}
 
+	public void getBuildResultInfo(String serverURI,
+			String userId,
+			String passwordToUse,
+			int timeout,
+			Object buildResultInfoObject,
+			Object listener, Locale clientLocale) throws Exception {
+		
+		SubMonitor monitor = getProgressMonitor();
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		IBuildResultInfo buildResultInfo = getBuildResultInfo(buildResultInfoObject);
+		try {
+			repoConnection.getBuildResultInfo(buildResultInfo, clientConsole, monitor);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+
+	}
 	/**
 	 * Accept changes into the build workspace and write a description of the changes into the ChangeLogFile.
 	 * Load the contents of the updated build workspace at hjWorkspacePath.
@@ -464,5 +487,98 @@ public class RTCFacade {
 			}
 		};
 		return logHandler;
+	}
+	
+	/**
+	 * The -rtc plugin is not to access any classes in the hjplugin project directly
+	 * This uses reflection to access the BuildResultInfo class.
+	 * @param buildResultInfo the class to be accessed in the -rtc project.
+	 * @return BuildResultInfo wrapper.
+	 */
+	protected IBuildResultInfo getBuildResultInfo(final Object buildResultInfo) {
+		if (buildResultInfo == null) {
+			return null;
+		}
+		
+		return new IBuildResultInfo() {
+
+			private Method getBuildResultUUIDMethod;
+			private Method setScheduledMethod;
+			private Method setRequestorMethod;
+			private Method setPersonalBuildMethod;
+			
+			@Override
+			public String getBuildResultUUID() {
+				try {
+					if (getBuildResultUUIDMethod == null) {
+						getBuildResultUUIDMethod = buildResultInfo.getClass().getMethod("getBuildResultUUID"); //$NON-NLS-1$
+					}
+					return (String) getBuildResultUUIDMethod.invoke(buildResultInfo);
+				} catch (IllegalAccessException e) {
+					LOGGER.log(Level.FINER, "Unable to call getBuildResultUUID method", e);
+				} catch (InvocationTargetException e) {
+					LOGGER.log(Level.FINER, "Unable to call getBuildResultUUID method", e);
+				} catch (SecurityException e) {
+					LOGGER.log(Level.FINER, "Unable to find getBuildResultUUID method", e);
+				} catch (NoSuchMethodException e) {
+					LOGGER.log(Level.FINER, "Unable to find getBuildResultUUID method", e);
+				}
+				return null;
+			}
+
+			@Override
+			public void setScheduled(boolean isScheduled) {
+				try {
+					if (setScheduledMethod == null) {
+						setScheduledMethod = buildResultInfo.getClass().getMethod("setScheduled", boolean.class); //$NON-NLS-1$
+					}
+					setScheduledMethod.invoke(buildResultInfo, isScheduled);
+				} catch (IllegalAccessException e) {
+					LOGGER.log(Level.FINER, "Unable to call setScheduledMethod method", e);
+				} catch (InvocationTargetException e) {
+					LOGGER.log(Level.FINER, "Unable to call setScheduledMethod method", e);
+				} catch (SecurityException e) {
+					LOGGER.log(Level.FINER, "Unable to find setScheduledMethod method", e);
+				} catch (NoSuchMethodException e) {
+					LOGGER.log(Level.FINER, "Unable to find setScheduledMethod method", e);
+				}
+			}
+			
+			@Override
+			public void setRequestor(String requestor) {
+				try {
+					if (setRequestorMethod == null) {
+						setRequestorMethod = buildResultInfo.getClass().getMethod("setRequestor", String.class); //$NON-NLS-1$
+					}
+					setRequestorMethod.invoke(buildResultInfo, requestor);
+				} catch (IllegalAccessException e) {
+					LOGGER.log(Level.FINER, "Unable to call setRequestorMethod method", e);
+				} catch (InvocationTargetException e) {
+					LOGGER.log(Level.FINER, "Unable to call setRequestorMethod method", e);
+				} catch (SecurityException e) {
+					LOGGER.log(Level.FINER, "Unable to find setRequestorMethod method", e);
+				} catch (NoSuchMethodException e) {
+					LOGGER.log(Level.FINER, "Unable to find setRequestorMethod method", e);
+				}
+			}
+			
+			@Override
+			public void setPersonalBuild(boolean isPersonalBuild) {
+				try {
+					if (setPersonalBuildMethod == null) {
+						setPersonalBuildMethod = buildResultInfo.getClass().getMethod("setPersonalBuild", boolean.class); //$NON-NLS-1$
+					}
+					setPersonalBuildMethod.invoke(buildResultInfo, isPersonalBuild);
+				} catch (IllegalAccessException e) {
+					LOGGER.log(Level.FINER, "Unable to call setPersonalBuildMethod method", e);
+				} catch (InvocationTargetException e) {
+					LOGGER.log(Level.FINER, "Unable to call setPersonalBuildMethod method", e);
+				} catch (SecurityException e) {
+					LOGGER.log(Level.FINER, "Unable to find setPersonalBuildMethod method", e);
+				} catch (NoSuchMethodException e) {
+					LOGGER.log(Level.FINER, "Unable to find setPersonalBuildMethod method", e);
+				}
+			}
+		};
 	}
 }
