@@ -19,6 +19,13 @@
 示例：C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
   </p>
   <p>
+   这是构建工具箱在主控机上的路径。如果您具有分布式构建设置 (Slaves)，那么您也将需要指定构建工具箱在 Slave 上的路径（假定是在不同的路径）。
+   保存后，转至 Slave 的配置。在“节点属性”部分中，添加要在
+   Slave 上使用的每个构建工具箱的“工具”位置。
+   请参阅 <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration"> 主/Slave 配置</a>
+   以获取详细信息。
+  </p>
+  <p>
    如果您打算装入符号链接，那么需要执行一些附加设置。需要对本机库的访问权才能创建符号链接。有关设置的更多详细信息，请访问
 <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert 插件</a>
 </div>

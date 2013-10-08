@@ -433,7 +433,12 @@ public class RepositoryConnection {
                     buildConfiguration.createFoldersForComponents(), monitor.newChild(40));
 
             listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_complete());
-            getBuildConnection().completeBuildActivity(buildResultHandle, parentActivityId, monitor.newChild(1));
+            
+            try {
+            	getBuildConnection().completeBuildActivity(buildResultHandle, parentActivityId, monitor.newChild(1));
+            } catch (TeamRepositoryException e) {
+            	listener.log(Messages.getDefault().RepositoryConnection_complete_checkout_activity_failed(e.getMessage()), e);
+            }
 
         } finally {
             /*

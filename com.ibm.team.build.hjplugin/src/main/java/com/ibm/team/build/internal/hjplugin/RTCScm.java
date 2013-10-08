@@ -842,7 +842,7 @@ public class RTCScm extends SCM {
 				}
 			
 				// add the build result information to the build through an action
-				buildResultAction = new RTCBuildResultAction(jazzServerURI, buildResultUUID, createdBuildResult);
+				buildResultAction = new RTCBuildResultAction(jazzServerURI, buildResultUUID, createdBuildResult, this);
 				build.addAction(buildResultAction);
 				
 			}

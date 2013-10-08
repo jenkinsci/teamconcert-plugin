@@ -16,8 +16,10 @@ import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.listeners.RunListener;
+import hudson.scm.SCM;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Locale;
@@ -41,18 +43,25 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 		
 		// if launched by Hudson/Jenkins terminate the build created in RTC
 		try {
-			if (build.getProject().getScm() instanceof RTCScm) {
-				RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
-				if (action != null) {
-					if (action.createdBuildResult()) {
+			RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
+			if (action != null) {
+				if (action.createdBuildResult()) {
 
-						RTCScm scm = (RTCScm) build.getProject().getScm();
+					SCM scmSystem = build.getProject().getScm();
 
+					RTCScm scm = null;
+					if (scmSystem instanceof RTCScm) {
+						scm = (RTCScm) scmSystem;
+					} else {
+						scm = action.getScm();
+					}
+					
+					if (scm != null) {
 						LOGGER.finer("Completed Build: " + build.getDisplayName() +
 								" Build Result UUID: " + action.getBuildResultUUID() +
 								" Server URI=\"" + scm.getServerURI() + "\"" +
 								" Build result=\"" + build.getResult() + "\"");
-
+	
 						boolean aborted = false;
 						Result buildResult = build.getResult();
 						int buildState = 0;
@@ -84,13 +93,19 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 								listener, Locale.getDefault());
 					} else {
 						LOGGER.finer("Completed Build: " + build.getDisplayName() +
-								" Build Result UUID: " + action.getBuildResultUUID() +
-								" initiated/managed by RTC");
+							" Build Result UUID: " + action.getBuildResultUUID() +
+							" Unable to manage lifecycle (no access to the H/J SCM configuration)");
+						PrintStream writer = listener.getLogger();
+						writer.println(Messages.RTCRunListener_build_result_not_completed(scmSystem.getClass().getName()));
+			    		writer.println(Messages.RTCRunListener_manually_abandon_build());
 					}
-					
 				} else {
-					LOGGER.finer("Completed Build: " + build.getDisplayName() + " No RTC build result associated.");
+					LOGGER.finer("Completed Build: " + build.getDisplayName() +
+							" Build Result UUID: " + action.getBuildResultUUID() +
+							" initiated/managed by RTC");
 				}
+			} else {
+				LOGGER.finer("Completed Build: " + build.getDisplayName() + " No RTC build result associated.");
 			}
     	} catch (InvocationTargetException e) {
     		Throwable eToReport = e.getCause();
@@ -98,6 +113,7 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
     			eToReport = e;
     		}
     		PrintWriter writer = listener.error(Messages.RTCRunListener_build_termination_failure(eToReport.getMessage()));
+    		writer.println(Messages.RTCRunListener_manually_abandon_build());
     		if (RTCScm.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
     		}
@@ -105,6 +121,7 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
     		
     	} catch (Exception e) {
     		PrintWriter writer = listener.fatalError(Messages.RTCRunListener_build_termination_failure2(e.getMessage()));
+    		writer.println(Messages.RTCRunListener_manually_abandon_build());
     		if (RTCScm.unexpectedFailure(e)) {
     			e.printStackTrace(writer);
     		}

@@ -209,6 +209,14 @@ public class Messages {
     }
 
     /**
+     * RTC Checkout : Failed to mark in the RTC build result that the checkout activity completed: {0}
+     * 
+     */
+    public String RepositoryConnection_complete_checkout_activity_failed(Object arg1) {
+        return MessageFormat.format(getString("RepositoryConnection_complete_checkout_activity_failed"), arg1);
+    }
+
+    /**
      * Unable to retrieve change set details
      * 
      */
