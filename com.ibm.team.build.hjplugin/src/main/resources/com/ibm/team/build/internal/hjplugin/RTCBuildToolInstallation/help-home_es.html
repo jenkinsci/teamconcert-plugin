@@ -20,6 +20,10 @@
    Ejemplo: C:\Archivos de programa (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
   </p>
   <p>
-   Si piensa cargar enlaces simbólicos, deberá realizar una configuración adicional. Para crear enlaces simbólicos es necesario tener acceso a las bibliotecas nativas.
-Puede obtener detalles adicionales sobre la configuración visitando <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Plugin de Team Concert</a>
+   La vía de acceso es al kit de herramientas de compilación en el maestro. Si tiene una configuración de configuración distribuida (esclavos), también deberá especificar dónde se encuentra el kit de herramientas de compilación en el esclavo (suponiendo que se encuentre en una vía de acceso distinta).
+   Después de guardar, vaya a la configuración del esclavo. En la sección Propiedades de nodo, añada la ubicación de la herramienta para cada uno de los kits de herramientas de compilación que se utilizarán en el esclavo.
+   Consulte <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Configuración de maestro/esclavo</a> para obtener más información.
+  </p>
+  <p>
+   Si piensa cargar enlaces simbólicos, deberá realizar una configuración adicional. Para crear enlaces simbólicos es necesario tener acceso a las bibliotecas nativas. Puede obtener detalles adicionales sobre la configuración visitando <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Plugin de Team Concert</a>  
 </div>

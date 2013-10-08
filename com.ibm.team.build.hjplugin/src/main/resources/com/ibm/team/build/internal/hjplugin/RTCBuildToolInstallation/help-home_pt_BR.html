@@ -19,7 +19,14 @@
    Exemplo: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
   </p>
   <p>
+   O caminho é para o Kit de Ferramentas de Compilação no Principal. Se você tiver uma configuração de compilação distribuída (Escravos),
+   também precisará especificar onde o Kit de Ferramentas de Compilação está no Escravo (assumindo que está em um caminho diferente).
+   Após o salvamento, acesse a configuração do Escravo. Na seção Propriedades do Nó, inclua os locais
+   da Ferramenta para cada um dos Kits de Ferramenta de Compilação a serem usados no Escravo.
+   Consulte <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Configuração Principal/Escrava</a> para obter detalhes.
+  </p>
+  <p>
    Se você pretende carregar links simbólicos, é necessário fazer uma configuração adicional. O acesso às bibliotecas nativas
    é necessário para a criação de links simbólicos. Para obter mais detalhes sobre a configuração, visite
-   <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert Plugin</a>
+   <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert Plugin</a>  
 </div>

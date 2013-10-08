@@ -1,3 +1,11 @@
+/*******************************************************************************
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2013. All Rights Reserved.
+ *
+ * Note to U.S. Government Users Restricted Rights:  
+ * Use, duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp. 
+ *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin;
 
 import org.kohsuke.stapler.export.Exported;

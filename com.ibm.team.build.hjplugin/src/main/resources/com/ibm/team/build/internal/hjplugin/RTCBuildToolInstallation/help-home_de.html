@@ -19,5 +19,12 @@
    Beispiel: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
   </p>
   <p>
+   Der Pfad zum Build-Toolkit auf dem Master. Bei einer verteilten Buildkonfiguration (Slaves) müssen Sie
+   außerdem angeben, wo sich das Build-Toolkit auf dem Slave befindet (falls es an anderer Pfad ist).
+   Wechseln Sie nach dem Speichern zur Konfiguration des Slave. Im Abschnitt mit den Knoteneigenschaften fügen Sie die
+   Tool-Positionen für alle Build-Toolkits hinzu, die auf dem Slave verwendet werden sollen.
+   Details dazu finden Sie unter <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Master-/Slave-Konfiguration</a>.
+  </p>
+  <p>
    Wenn Sie beabsichtigen, symbolische Links zu laden, müssen zusätzliche Konfigurationsschritte ausgeführt werden. Um symbolische Links zu erstellen, ist ein Zugriff auf native Bibliotheken erforderlich. Weitere Informationen zur Konfiguration finden Sie unter <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Team Concert Plugin</a>.
 </div>

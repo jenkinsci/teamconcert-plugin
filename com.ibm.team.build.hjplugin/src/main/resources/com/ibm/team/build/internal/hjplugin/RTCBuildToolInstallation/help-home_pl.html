@@ -19,7 +19,11 @@
    Przykład: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
   </p>
   <p>
-   Jeśli planowane jest załadowanie dowiązań symbolicznych, konieczne będzie wykonanie dodatkowych czynności konfiguracyjnych. 
-   Do utworzenia dowiązań symbolicznych wymagany jest dostęp do bibliotek własnych. Więcej informacji na temat konfiguracji
-   zawiera strona <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Wtyczka produktu Team Concert</a>.
+   Ścieżka do pakietu budowania w węźle głównym. Jeśli używana jest konfiguracja budowania rozproszonego (węzły podrzędne), konieczne będzie także określenie położenia pakietu budowania w węźle podrzędnym (zakładając, że jest to inna ścieżka).
+   Po zapisaniu przejdź do konfiguracji węzła podrzędnego. W sekcji Właściwości węzła dodaj położenia narzędzi dla każdego pakietu budowania używanego w węźle podrzędnym.
+   Szczegółowe informacje można znaleźć w sekcji <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Konfiguracja węzła głównego/podrzędnego</a>.
+  </p>
+  <p>
+   Jeśli planowane jest załadowanie dowiązań symbolicznych, konieczne będzie wykonanie dodatkowych czynności konfiguracyjnych. Do utworzenia dowiązań symbolicznych wymagany jest dostęp do bibliotek własnych. Więcej informacji na temat konfiguracji
+   zawiera strona <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Wtyczka produktu Team Concert</a>.  
 </div>
