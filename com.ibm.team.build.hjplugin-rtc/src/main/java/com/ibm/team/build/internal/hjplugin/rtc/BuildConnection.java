@@ -369,7 +369,7 @@ public class BuildConnection {
     		IProgressMonitor progress) throws IllegalArgumentException,
             TeamRepositoryException {
     	// if no build result, we are done
-    	if (resultHandle == null) {
+    	if (resultHandle == null || snapshot == null) {
     		return;
     	}
 
