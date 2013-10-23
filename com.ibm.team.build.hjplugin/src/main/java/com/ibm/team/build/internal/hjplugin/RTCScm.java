@@ -712,7 +712,7 @@ public class RTCScm extends SCM {
 			listener.getLogger().println(Messages.RTCScm_build_initiated_by());
 		}
 		
-		RTCBuildResultAction buildResultAction = null;
+		RTCBuildResultAction buildResultAction;
 		
 		try {
 			localBuildToolKit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
@@ -799,6 +799,11 @@ public class RTCScm extends SCM {
 				}
 			}
 
+			// add the build result information (if any) to the build through an action
+			// properties may later be added to this action
+			buildResultAction = new RTCBuildResultAction(jazzServerURI, buildResultUUID, createdBuildResult, this);
+			build.addAction(buildResultAction);
+
 			// publish in the build result links to the project and the build
 			if (buildResultUUID != null) {
 				String root = Hudson.getInstance().getRootUrl();
@@ -841,12 +846,7 @@ public class RTCScm extends SCM {
 					LOGGER.log(Level.FINER, "Unable to link Hudson/Jenkins build with the RTC build result", e); //$NON-NLS-1$
 				}
 			
-				// add the build result information to the build through an action
-				buildResultAction = new RTCBuildResultAction(jazzServerURI, buildResultUUID, createdBuildResult, this);
-				build.addAction(buildResultAction);
-				
 			}
-
 			
 			if (workspacePath.isRemote()) {
 				// Slaves do a lazy remote class loader. The slave's class loader will request things as needed
@@ -896,10 +896,7 @@ public class RTCScm extends SCM {
 				workspacePath.isRemote(), debug, LocaleProvider.getLocale());
 		
 		Map<String, String> buildProperties = workspacePath.act(checkout);
-		
-		if (buildResultAction != null) {
-			buildResultAction.addBuildProperties(buildProperties);
-		}
+		buildResultAction.addBuildProperties(buildProperties);
 
 		return true;
 	}

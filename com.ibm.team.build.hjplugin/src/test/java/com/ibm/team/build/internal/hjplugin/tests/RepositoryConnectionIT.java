@@ -25,7 +25,6 @@ import java.util.Map;
 
 import org.junit.Assert;
 import org.jvnet.hudson.test.HudsonTestCase;
-import org.jvnet.localizer.LocaleProvider;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
@@ -294,7 +293,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						Locale.getDefault());
 
 				// checkout the changes
-				testingFacade.invoke(
+				Map<String, String> properties = (Map<String, String>) testingFacade.invoke(
 						"checkout",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -322,6 +321,8 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
+	    		String snapShotItemId = properties.get("team_scm_snapshotUUID");
+	    		Assert.assertEquals(result.getBaselineSetItemId(), snapShotItemId);
 	    		Assert.assertEquals("Snapshot", result.getBaselineSetName());
 	    		Assert.assertEquals(0, result.getComponentChangeCount());
 	    		Assert.assertEquals(6, result.getChangeSetsDiscardedCount());

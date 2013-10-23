@@ -47,7 +47,8 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	
 	/**
 	 * @param serverURI The RTC server uri
-	 * @param buildResultUUID The UUID of the corresponding build result
+	 * @param buildResultUUID The UUID of the corresponding build result. <code>null</code>
+	 * if there is no build result
 	 * @param createdBuildResult Whether the build created the build result or not
 	 * @param scm The RTCSCM responsible for the SCM part of the build. This may be
 	 * different from the one supplied on the AbstractBuild if another SCM plugin
@@ -63,8 +64,10 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
         this.createdBuildResult = createdBuildResult;
         this.scm = scm;
         
-        this.buildProperties.put(BUILD_RESULT_UUID, buildResultUUID);
-        this.buildProperties.put(RTC_BUILD_RESULT_UUID, buildResultUUID);
+        if (buildResultUUID != null) {
+        	this.buildProperties.put(BUILD_RESULT_UUID, buildResultUUID);
+        	this.buildProperties.put(RTC_BUILD_RESULT_UUID, buildResultUUID);
+        }
 	}
 	
 	/**
@@ -83,12 +86,16 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	@Override
 	public String getIconFileName() {
 		// TODO Use a Jenkins one for now
-		return "star-gold.gif"; //$NON-NLS-1$
+		if (serverURI != null && buildResultUUID != null) {
+			return "star-gold.gif"; //$NON-NLS-1$
+		}
+		// show nothing in task list
+		return null; 
 	}
 
 	@Override
 	public String getDisplayName() {
-		if (serverURI != null) {
+		if (serverURI != null && buildResultUUID != null) {
 			return Messages.RTCBuildResultAction_display_name();
 		}
 		return null;
@@ -96,7 +103,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 
 	@Override
 	public String getUrlName() {
-		if (serverURI != null) {
+		if (serverURI != null && buildResultUUID != null) {
 			return serverURI + ITEM_OID + buildResultUUID;
 		}
 		return null;
