@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,7 +22,7 @@ public class ConnectionDetails {
 	/**
 	 * @param repositoryAddress URL of RTC server
 	 * @param userId The user id to use for login. Never <code>null</code>
-	 * @param password The password to use for login. Either password or password file should be supplied. Not both.
+	 * @param password The password to use for login.
 	 * @param timeout The timeout value for testing the connection.
 	 */
 	public ConnectionDetails(String repositoryAddress, String userId,

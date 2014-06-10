@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,6 +13,9 @@ package com.ibm.team.build.internal.hjplugin.tests;
 
 import java.text.MessageFormat;
 
+import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
+import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
+
 @SuppressWarnings("nls")
 public class Config {
 
@@ -20,6 +23,7 @@ public class Config {
 	public static final String TOOLKIT = "com.ibm.team.build.toolkit";
 	public static final String SERVER_URI = "com.ibm.team.build.serverURI";
 	public static final String USER_ID = "com.ibm.team.build.userId";
+	public static final String USER_ID_FOR_AUTHENTICATION_FAILURES = "com.ibm.team.build.userIdForAuthenticationFailures";
 	public static final String PASSWORD = "com.ibm.team.build.password";
 	public static final String PASSWORD_FILE = "com.ibm.team.build.passwordFile";
 	public static final String TIMEOUT = "com.ibm.team.build.timeout";
@@ -33,6 +37,7 @@ public class Config {
 	private String toolkit;
 	private String serverURI;
 	private String userId;
+	private String userIDForAuthenticationFailures;
 	private String password;
 	private String passwordFile;
 	private int timeout;
@@ -65,6 +70,12 @@ public class Config {
 			if (userId == null) {
 				throw new IllegalStateException(MessageFormat.format(
 						MISSING_PROPERTY, USER_ID));
+			}
+			
+			userIDForAuthenticationFailures = System.getProperty(USER_ID_FOR_AUTHENTICATION_FAILURES);
+			if (userIDForAuthenticationFailures == null) {
+				throw new IllegalStateException(MessageFormat.format(
+						MISSING_PROPERTY, USER_ID_FOR_AUTHENTICATION_FAILURES));
 			}
 
 			password = System.getProperty(PASSWORD);
@@ -119,6 +130,11 @@ public class Config {
 		return userId;
 	}
 
+	public String getUserIDForAuthenticationFailures() {
+		validateConfigured();
+		return userIDForAuthenticationFailures;
+	}
+
 	public String getPassword() {
 		validateConfigured();
 		return password;
@@ -139,4 +155,7 @@ public class Config {
 		return setUpOnly;
 	}
 
+	public RTCLoginInfo getLoginInfo() throws InvalidCredentialsException {
+		return new RTCLoginInfo(null, getToolkit(), getServerURI(), getUserID(), getPassword(), getPasswordFile(), null, getTimeout());
+	}
 }

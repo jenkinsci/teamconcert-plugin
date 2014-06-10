@@ -25,6 +25,7 @@ import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
+import com.ibm.team.build.internal.common.model.BuildFactory;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.process.common.IProcessArea;
 import com.ibm.team.repository.client.ITeamRepository;
@@ -54,6 +55,11 @@ public class BuildUtil {
 			}
 		}
 
+		IBuildConfigurationElement hudsonJenkinsElement = BuildItemFactory.createBuildConfigurationElement();
+		hudsonJenkinsElement.setName(id);
+		hudsonJenkinsElement.setElementId(BuildConnection.HJ_ELEMENT_ID);
+        buildDefinition.getConfigurationElements().add(hudsonJenkinsElement);
+        
 		ITeamBuildClient buildClient = getTeamBuildClient(repo);
 		return buildClient.save(buildDefinition, null);
 	}
@@ -120,7 +126,7 @@ public class BuildUtil {
 
 	public static void createBuildDefinition(ITeamRepository repo, String buildDefinitionId, boolean createBuildEngine,
 			Map<String, String> artifactIds, String... scmProperties) throws Exception {
-		IProcessArea processArea = new ProcessUtil().getProcessArea(repo, ProcessUtil.DEFAULT_PROCESS_AREA, true);
+		IProcessArea processArea = ProcessUtil.getDefaultProjectArea(repo);
 		IBuildDefinition buildDefinition = BuildUtil.createBuildDefinition(repo, buildDefinitionId, processArea, scmProperties);
 		if (createBuildEngine) {
 			IBuildEngine buildEnine = BuildUtil.createBuildEngine(repo, buildDefinitionId, processArea, buildDefinition, true);

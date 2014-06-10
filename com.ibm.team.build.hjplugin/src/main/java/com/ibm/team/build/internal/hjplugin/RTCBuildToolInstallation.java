@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -87,39 +87,68 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
         return (DescriptorImpl) Hudson.getInstance().getDescriptor(RTCBuildToolInstallation.class);
     }
 
-	public static FormValidation validateBuildToolkit(String path) {
+    /**
+     * Validate that the path supplied points to a directory that looks like
+     * a build toolkit (i.e. contains the BuildToolkitTasksDef.xml file)
+     * @param warnOnly Consider any problems found to be a warning as opposed to 
+     * an error.
+     * @param path Path to the toolkit to validate
+	 * @return The result of the validation (will be ok if valid)
+     */
+	public static FormValidation validateBuildToolkit(boolean warnOnly, String path) {
 		path = Util.fixEmptyAndTrim(path);
 		if (path == null) {
 			LOGGER.finer("BuildToolKit value not supplied"); //$NON-NLS-1$
-			return FormValidation.error(Messages.RTCBuildToolInstallation_missing_toolkit());
+			if (warnOnly) {
+				return FormValidation.warning(Messages.RTCBuildToolInstallation_missing_toolkit());
+			} else {
+				return FormValidation.error(Messages.RTCBuildToolInstallation_missing_toolkit());
+			}
 		}
 		File toolkitFile = new File(path);
-		return validateBuildToolkit(toolkitFile);
+		return validateBuildToolkit(warnOnly, toolkitFile);
 	}
 	
-	public static FormValidation validateBuildToolkit(File toolkitFile) {
+	/**
+	 * Validate that the File provided looks like the toolkit directory
+	 * i.e. contains the BuildToolkitTaskDefs.xml file
+     * @param warnOnly Consider any problems found to be a warning as opposed to 
+     * an error.
+	 * @param toolkitFile File that represents the toolkit path. Not <code>null</code>
+	 * @return The result of the validation (will be ok if valid)
+	 */
+	public static FormValidation validateBuildToolkit(boolean warnOnly, File toolkitFile) {
+		String message = null;
 		if (!toolkitFile.exists()) {
 			LOGGER.finer("BuildToolKit folder not found : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
-			return FormValidation.error(Messages.RTCBuildToolInstallation_toolkit_not_found());
+			message = Messages.RTCBuildToolInstallation_toolkit_not_found();
 		}
-		if (!toolkitFile.isDirectory()) {
+		if (message == null && !toolkitFile.isDirectory()) {
 			LOGGER.finer("BuildToolKit is not a folder : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
-			return FormValidation.error(Messages.RTCBuildToolInstallation_toolkit_not_directory());
+			message = Messages.RTCBuildToolInstallation_toolkit_not_directory();
 		}
-		File[] files = toolkitFile.listFiles(new FileFilter() {
-			public boolean accept(File file) {
-				return file.getName().equals(BUILD_TOOLKIT_TASK_DEFS_XML) && !file.isDirectory();
+		if (message == null) {
+			File[] files = toolkitFile.listFiles(new FileFilter() {
+				public boolean accept(File file) {
+					return file.getName().equals(BUILD_TOOLKIT_TASK_DEFS_XML) && !file.isDirectory();
+				}
+			});
+			if (files == null) {
+				LOGGER.finer("BuildToolKit contents can not be determined : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
+				message = Messages.RTCBuildToolInstallation_unable_to_read();
 			}
-		});
-		if (files == null) {
-			LOGGER.finer("BuildToolKit contents can not be determined : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
-			return FormValidation.error(Messages.RTCBuildToolInstallation_unable_to_read());
+			if (message == null && files.length == 0) {
+				LOGGER.finer("BuildToolKit folder doesn't look like a tool kit : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
+				message = Messages.RTCBuildToolInstallation_not_tookit_directory();
+			}
 		}
-		if (files.length == 0) {
-			LOGGER.finer("BuildToolKit folder doesn't look like a tool kit : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
-			return FormValidation.error(Messages.RTCBuildToolInstallation_not_tookit_directory());
+		if (message == null) {
+			return FormValidation.ok();
+		} else if (warnOnly) {
+			return FormValidation.warning(message);
+		} else {
+			return FormValidation.error(message);
 		}
-	    return FormValidation.ok();
 	}
 
     @Extension
@@ -161,7 +190,7 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
         public FormValidation doCheckHome(@QueryParameter File value)
             throws IOException, ServletException {
 
-            return validateBuildToolkit(value);
+            return validateBuildToolkit(false, value);
         }
         
     }

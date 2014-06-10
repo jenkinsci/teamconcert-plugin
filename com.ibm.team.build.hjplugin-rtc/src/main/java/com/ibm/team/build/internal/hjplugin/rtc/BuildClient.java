@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -44,14 +44,14 @@ public class BuildClient extends AbstractBuildClient {
 	
 	@Override
 	public ConnectionDetails getConnectionDetails(String repositoryAddress,
-			String userId, String password, int timeout) throws Exception {
+			String userId, String password, int timeout) {
 		return new ConnectionDetails(repositoryAddress, userId, password, timeout);
 	}
 
 	@Override
-	public String determinePassword(String password, File passwordFile, Locale clientLocale)
+	public String determinePassword(File passwordFile, Locale clientLocale)
 			throws Exception {
-		String passwordToUse = getProvidedPassword(password, passwordFile, clientLocale);
+		String passwordToUse = getPasswordFromFile(passwordFile, clientLocale);
 		if (passwordToUse == null || passwordToUse.length() == 0) {
 			LOGGER.finer("No password determined because password determined is "  //$NON-NLS-1$
 					+ (passwordToUse == null ? "null" : "empty"));  //$NON-NLS-1$ //$NON-NLS-2$
@@ -61,9 +61,9 @@ public class BuildClient extends AbstractBuildClient {
 	}
 
     /**
-     * Get the password as provided by the password or passwordFile attributes.
+     * Get the password as provided by the passwordFile
      */
-	private String getProvidedPassword(String password, File passwordFile, Locale clientLocale) throws Exception {
+	private String getPasswordFromFile(File passwordFile, Locale clientLocale) throws Exception {
         if (passwordFile != null) {
         	String decryptedPassword = null;
             try {
@@ -80,9 +80,8 @@ public class BuildClient extends AbstractBuildClient {
 			} else {
 				return decryptedPassword;
 			}
-        } else {
-            return password;
         }
+        return null;
 	}
 
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -337,7 +337,7 @@ public class Messages {
     }
     
     /**
-     * Build definition has no Jazz Source Control option
+     * Build definition does not have a Jazz Source Control option specified
      */
     public String BuildConnection_build_definition_missing_jazz_scm_config() {
     	return getString("BuildConnection_build_definition_missing_jazz_scm_config");
@@ -356,6 +356,7 @@ public class Messages {
     public String BuildConnection_no_build_engine_for_defn(Object arg1) {
     	return MessageFormat.format(getString("BuildConnection_no_build_engine_for_defn"),  arg1);
     }
+
     /**
      * Missing Hudson/Jenkins root url from configuation; unable to link Hudson/Jenkins build with the RTC build result
      */
@@ -374,6 +375,41 @@ public class Messages {
      */
     public String BuildConnection_hj_build() {
     	return getString("BuildConnection_hj_build");
+    }
+
+    /**
+     * Unable to mark build as terminated. Requester information is missing
+     */
+    public String BuildConnection_terminate_missing_build_requester() {
+    	return getString("BuildConnection_terminate_missing_build_requester");
+    }
+
+    /**
+     * Unable to mark RTC build result as started. Requester information is missing
+     */
+    public String BuildConnection_start_missing_build_requester() {
+    	return getString("BuildConnection_start_missing_build_requester");
+    }
+
+    /**
+     * "Unable to update build label on RTC build result to {0}"
+     */
+    public String BuildConnection_set_label_failed(Object arg1) {
+    	return MessageFormat.format(getString("BuildConnection_set_label_failed"), arg1);
+    }
+
+    /**
+     * Unable to identify who started the build : {0}
+     */
+    public String BuildConnection_unknown_contributor(Object arg1) {
+    	return MessageFormat.format(getString("BuildConnection_unknown_contributor"), arg1);
+    }
+
+    /**
+     * Unable to identify how the build was started in RTC : {0}
+     */
+    public String BuildConnection_unknown_start_reason(Object arg1) {
+    	return MessageFormat.format(getString("BuildConnection_unknown_start_reason"), arg1);
     }
 
     /**

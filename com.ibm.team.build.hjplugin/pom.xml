@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2013 IBM Corporation and others.
+    Copyright (c) 2013, 2014 IBM Corporation and others.
     All rights reserved. This program and the accompanying materials
     are made available under the terms of the Eclipse Public License v1.0
     which accompanies this distribution, and is available at
@@ -18,7 +18,7 @@
 	</parent>
 
 	<artifactId>teamconcert</artifactId>
-	<version>1.0.13-SNAPSHOT</version>
+	<version>1.1.0-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 
 	<name>Team Concert Plugin</name>
@@ -30,7 +30,7 @@
 			<name>Eclipse Public License v1.0</name>
 			<comments>
 				/*******************************************************************************
-				 * Copyright (c) 2013 IBM Corporation and others.
+				 * Copyright (c) 2013, 2014 IBM Corporation and others.
 				 * All rights reserved. This program and the accompanying materials
 				 * are made available under the terms of the Eclipse Public License v1.0
 				 * which accompanies this distribution, and is available at
@@ -49,7 +49,7 @@
 			<name>Nick Edgar</name>
 		</developer>
 		<developer>
-			<id>heatherf</id>
+			<id>hfraserdube</id>
 			<name>Heather Fraser-Dube</name>
 		</developer>
 		<developer>
@@ -115,6 +115,16 @@
 			<version>1.8.5</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins</groupId>
+			<artifactId>credentials</artifactId>
+			<version>1.10</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.3.3</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -132,15 +142,16 @@
 							<goal>verify</goal>
 						</goals>
 						<configuration>
+							<argLine>-XX:MaxPermSize=1024m -Xms2048m -Xmx3g -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError</argLine>
 							<systemPropertyVariables>
 								<com.ibm.team.build.configured>false</com.ibm.team.build.configured>
 								<com.ibm.team.build.toolkit>C:/Program Files (x86)/IBM/TeamConcertBuild/buildsystem/buildtoolkit</com.ibm.team.build.toolkit>
-								<com.ibm.team.build.serverURI>https://vottscowan.ottawa.ibm.com:9443/ccm</com.ibm.team.build.serverURI>
-								<com.ibm.team.build.userId>scowan</com.ibm.team.build.userId>
-								<com.ibm.team.build.password>scowan</com.ibm.team.build.password>
-								<com.ibm.team.build.passwordFile>C:/Users/scowan/.jenkins/scowan-password</com.ibm.team.build.passwordFile>
+								<com.ibm.team.build.serverURI>https://higgins.ottawa.ibm.com:9443/ccm</com.ibm.team.build.serverURI>
+								<com.ibm.team.build.userId>HJPluginTests</com.ibm.team.build.userId>
+								<com.ibm.team.build.password>HJPluginTests</com.ibm.team.build.password>
+								<com.ibm.team.build.userIdForAuthenticationFailures>HJPluginTestsFail</com.ibm.team.build.userIdForAuthenticationFailures>
+								<com.ibm.team.build.passwordFile>C:/Jenkins/HJPluginTests-password</com.ibm.team.build.passwordFile>
 								<com.ibm.team.build.timeout>480</com.ibm.team.build.timeout>
-								<com.ibm.team.build.buildWorkspace>compile-and-test Workspace3</com.ibm.team.build.buildWorkspace>
 							</systemPropertyVariables>
 						</configuration>
 					</execution>
