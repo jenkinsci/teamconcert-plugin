@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -31,8 +31,10 @@ import hudson.scm.PollingResult;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
 import hudson.scm.SCM;
+import hudson.security.ACL;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
+import hudson.util.ListBoxModel;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -42,26 +44,34 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import net.sf.json.JSONObject;
 
-import org.apache.commons.lang.StringUtils;
 import org.jvnet.localizer.LocaleProvider;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
+import com.ibm.team.build.internal.hjplugin.util.Helper;
+import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
+import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
 
 public class RTCScm extends SCM {
 
     private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
 
 	private static final String DEBUG_PROPERTY = "com.ibm.team.build.debug"; //$NON-NLS-1$
+	
+	private static final String DEPRECATED_CREDENTIAL_EDIT_ALLOWED = "com.ibm.team.build.credential.edit"; //$NON-NLS-1$
 
 	// persisted fields for SCM
     private boolean overrideGlobal;
@@ -73,6 +83,7 @@ public class RTCScm extends SCM {
 	private String userId;
 	private Secret password;
 	private String passwordFile;
+	private String credentialsId;
 
 	// Job configuration settings
 	public static final String BUILD_WORKSPACE_TYPE = "buildWorkspace"; //$NON-NLS-1$
@@ -82,7 +93,14 @@ public class RTCScm extends SCM {
 	private String buildWorkspace;
 	private String buildDefinition;
 
-	private RTCRepositoryBrowser browser;
+	// Don't persist the browser because it references the server url that can be changing in the
+	// global config.
+	@Deprecated 
+	private transient RTCRepositoryBrowser browser;
+
+	// Use rest or whatever services instead of the build toolkit.
+	// Available in RTC 5.0 or 4.0.6 + retro-fitted changes
+	private boolean avoidUsingToolkit;
 	
 	/**
 	 * Structure that represents the radio button selection for build workspace/definition
@@ -106,22 +124,27 @@ public class RTCScm extends SCM {
 	@Extension
 	public static class DescriptorImpl extends SCMDescriptor<RTCScm> {
 		
-		private static final String DEFAULT_USER_ID = "???"; //$NON-NLS-1$
-
 		private static final String DEFAULT_SERVER_URI = "https://localhost:9443/ccm"; //$NON-NLS-1$
 
 		private static final int DEFAULT_SERVER_TIMEOUT = 480;
+		
+		private static transient boolean deprecatedCredentialEditAllowed = Boolean.getBoolean(DEPRECATED_CREDENTIAL_EDIT_ALLOWED);
 		
 		// persisted fields
 
 		private String globalBuildTool;
 		private String globalServerURI;
 		private int globalTimeout;
-		
+		private String globalCredentialsId;
+
 		// explicit UserId & password or password file
 		private String globalUserId;
 		private Secret globalPassword;
 		private String globalPasswordFile;
+		
+		// Use rest or whatever services instead of the build toolkit.
+		// Available in RTC 5.0 or 4.0.6 + retro-fitted changes
+		private boolean globalAvoidUsingToolkit;
 		
 		public DescriptorImpl() {
 			super(RTCScm.class, RTCRepositoryBrowser.class);
@@ -133,7 +156,7 @@ public class RTCScm extends SCM {
 				throws FormException {
  			RTCScm scm = (RTCScm) super.newInstance(req, formData);
 			
- 			scm.browser = new RTCRepositoryBrowser(scm.getServerURI());
+ 			new RTCRepositoryBrowser(scm.getServerURI());
 			return scm;
 		}
 
@@ -145,10 +168,13 @@ public class RTCScm extends SCM {
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject json)
 				throws FormException {
+
 			globalBuildTool = Util.fixEmptyAndTrim(req.getParameter("buildTool")); //$NON-NLS-1$
 			globalServerURI = Util.fixEmptyAndTrim(req.getParameter("serverURI")); //$NON-NLS-1$
 			globalUserId = Util.fixEmptyAndTrim(req.getParameter("userId")); //$NON-NLS-1$
 			String timeout = req.getParameter("timeout"); //$NON-NLS-1$
+			globalAvoidUsingToolkit = json.containsKey("avoidUsingToolkit"); //$NON-NLS-1$
+			
 			try {
 				globalTimeout = timeout == null ? 0 : Integer.parseInt(timeout);
 			} catch (NumberFormatException e) {
@@ -157,15 +183,23 @@ public class RTCScm extends SCM {
 			String password = req.getParameter("password"); //$NON-NLS-1$
 			globalPassword = password == null || password.length() == 0 ? null : Secret.fromString(password);
 			globalPasswordFile = Util.fixEmptyAndTrim(req.getParameter("passwordFile")); //$NON-NLS-1$
-			
+			globalCredentialsId = Util.fixEmptyAndTrim(req.getParameter("_.credentialsId")); //$NON-NLS-1$
+			if (globalCredentialsId != null) {
+				// They are saving with credentials. Remove the vestiges of the old authentication method
+				globalPassword = null;
+				globalPasswordFile = null;
+				globalUserId = null;
+			}
+
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finer("configure : " + //$NON-NLS-1$
 						"\" globalServerURI=\"" + globalServerURI + //$NON-NLS-1$
 						"\" globalUserid=\"" + globalUserId + //$NON-NLS-1$
 						"\" globalTimeout=\"" + globalTimeout + //$NON-NLS-1$
-						"\" globalPassword " + (globalPassword == null ? "is not supplied" //$NON-NLS-1$ //$NON-NLS-2$ 
+						"\" globalPassword " + (globalPassword == null ? "is not supplied" //$NON-NLS-1$ //$NON-NLS-2$
 								: "(" + Secret.toString(globalPassword).length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$
-						" globalPasswordFile=\"" + globalPasswordFile + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+						" globalPasswordFile=\"" + globalPasswordFile + //$NON-NLS-1$ //$NON-NLS-2$
+						"\" globalCredentialsId=\"" + globalCredentialsId + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 
 			save();
@@ -174,6 +208,60 @@ public class RTCScm extends SCM {
 
 		public String getGlobalBuildTool() {
 			return globalBuildTool;
+		}
+
+		/**
+		 * Determine if they are using the deprecated authentication way
+		 * @return <code>true</code> if using user id & password or password file
+		 * <code>false</code> if using credentials or no password authentication setup.
+		 */
+		public boolean usingDeprecatedPassword() {
+			if (deprecatedCredentialEditAllowed()) {
+				return true;
+			}
+			String globalCredId = getGlobalCredentialsId();
+			String userIdToUse = getGlobalUserId();
+			String passwordToUse = getGlobalPassword();
+			String passwordFileToUse = getGlobalPasswordFile();
+			if (globalCredId == null || globalCredId.isEmpty()) {
+				// consider them to be using user id & old password way if supplied
+				// not using strict validation since we would still work if too much info supplied.
+				if (userIdToUse != null	&& !userIdToUse.isEmpty()
+						&& ((passwordToUse != null && !passwordToUse.isEmpty())
+							|| (passwordFileToUse != null && !passwordFileToUse.isEmpty()))) {
+					return true;
+				}
+			}
+			return false;
+		}
+		
+		/**
+		 * @return Whether the global password file should be shown in the UI
+		 */
+		public boolean showGlobalPasswordFile() {
+			String passwordFileToUse = getGlobalPasswordFile();
+			if (deprecatedCredentialEditAllowed() || (passwordFileToUse != null && !passwordFileToUse.isEmpty())) {
+				return true;
+			}
+			return false;
+		}
+		
+		/**
+		 * @return Whether the global password should be shown in the UI
+		 */
+		public boolean showGlobalPassword() {
+			String passwordToUse = getGlobalPassword();
+			if (deprecatedCredentialEditAllowed() || (passwordToUse != null && !passwordToUse.isEmpty())) {
+				return true;
+			}
+			return false;
+		}
+		public boolean deprecatedCredentialEditAllowed() {
+			return deprecatedCredentialEditAllowed;
+		}
+
+		public String getGlobalCredentialsId() {
+			return globalCredentialsId;
 		}
 
 		public String getGlobalPassword() {
@@ -198,9 +286,6 @@ public class RTCScm extends SCM {
 		}
 		
 		public String getGlobalUserId() {
-			if (globalUserId == null || globalUserId.length() == 0) {
-				return DEFAULT_USER_ID;
-			}
 			return globalUserId;
 		}
 		
@@ -211,14 +296,33 @@ public class RTCScm extends SCM {
     		return globalTimeout;
 	    }
 	    
-		public FormValidation doCheckBuildToolkit(@QueryParameter String value) {
-			return RTCBuildToolInstallation.validateBuildToolkit(value);
-		}
+	    public boolean getGlobalAvoidUsingToolkit() {
+	    	return globalAvoidUsingToolkit;
+	    }
 		
+	    /**
+	     * Get the path on the Master to the build toolkit for the given Build tool.
+	     * @param buildTool The id of the build tool
+		 * @param listener Listener to log any problems encountered.
+		 * @return Path to the Build Toolkit directory
+	     * @throws IOException
+	     * @throws InterruptedException
+	     */
 		public String getMasterBuildToolkit(String buildTool, TaskListener listener) throws IOException, InterruptedException {
 			return getBuildToolkit(buildTool, Hudson.getInstance(), listener);
 		}
 		
+		/**
+		 * For a given build tool on a given node, resolve what directory is expected to contains the build toolkit.
+		 * Jenkins provides tool installation abilities as well as a way of describing where a tool is located on 
+		 * as Slave. We will delegate the path resolution to Jenkins.
+		 * @param buildTool The build tool that we want the path for
+		 * @param node The node (Master or a particular slave) the build toolkit will used on. 
+		 * @param listener Listener to log any problems encountered.
+		 * @return Path to the Build Toolkit directory
+		 * @throws IOException
+		 * @throws InterruptedException
+		 */
 		private String getBuildToolkit(String buildTool, Node node, TaskListener listener) throws IOException, InterruptedException {
 	        RTCBuildToolInstallation[] installations = RTCBuildToolInstallation.allInstallations();
 	        for (RTCBuildToolInstallation buildToolIntallation : installations) {
@@ -228,275 +332,319 @@ public class RTCScm extends SCM {
 	        }
 			return null;
 		}
-		
-	    public FormValidation doCheckTimeout(@QueryParameter String timeout) {
-	    	timeout = Util.fixEmptyAndTrim(timeout);
-	        if (StringUtils.isEmpty(timeout)) {
-	        	LOGGER.finer("timeout value missing"); //$NON-NLS-1$
-	            return FormValidation.error(Messages.RTCScm_timeout_required());
-	        }
-	        return FormValidation.validatePositiveInteger(timeout);
+
+		/**
+		 * Provides a listbox of the defined build tools to pick from. Also includes
+		 * an entry to signify no toolkit is chosen.
+		 * @return The valid build tool options
+		 */
+		public ListBoxModel doFillBuildToolItems() {
+			ListBoxModel listBox = new ListBoxModel();
+			listBox.add(new ListBoxModel.Option(Messages.RTCScm_no_build_tool_name(), ""));
+			RTCBuildToolInstallation[] allTools = RTCBuildToolInstallation.allInstallations();
+			for (RTCBuildToolInstallation tool : allTools) {
+				ListBoxModel.Option option = new ListBoxModel.Option(tool.getName());
+				listBox.add(option);
+			}
+			return listBox;
 		}
-	    
-	    public FormValidation doCheckPassword(@QueryParameter("password") String password,
-				@QueryParameter("passwordFile") String passwordFile) {
-	    	password = Util.fixEmptyAndTrim(password);
-	    	passwordFile = Util.fixEmptyAndTrim(passwordFile);
-	    	
-	    	if (password != null && passwordFile != null) {
-	    		LOGGER.finer("Both password (" + password.length() + " characters) and password file are supplied : " + passwordFile); //$NON-NLS-1$ //$NON-NLS-2$
-	    		return FormValidation.error(Messages.RTCScm_supply_password_or_file());
-	    	} if (password == null && passwordFile == null) {
-	    		LOGGER.finer("Neither password or password file are supplied"); //$NON-NLS-1$
-	    		return FormValidation.error(Messages.RTCScm_password_or_file_required());
-	    	} if (passwordFile != null) {
-				File passwordFileFile = new File(passwordFile);
-				if (!passwordFileFile.exists()) {
-					LOGGER.finer("Password file does not exist " + passwordFileFile.getAbsolutePath()); //$NON-NLS-1$
-					return FormValidation.error(Messages.RTCScm_password_file_not_found(passwordFile));
-				}
-				if (passwordFileFile.isDirectory()) {
-					LOGGER.finer("Password file is a directory : " + passwordFileFile.getAbsolutePath()); //$NON-NLS-1$
-					return FormValidation.error(Messages.RTCScm_password_file_is_directory(passwordFile));
-				}
-	    	}
-	    	
-			return FormValidation.ok();
+
+		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath AbstractProject<?, ?> project, @QueryParameter String serverURI) {
+			return new StandardListBoxModel()
+			.withEmptySelection()
+			.withMatching(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
+					CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, project, ACL.SYSTEM, URIRequirementBuilder.fromUri(serverURI).build()));
+
+			// TODO look into us being able to support certificates
+//			return new StandardListBoxModel()
+//			.withEmptySelection()
+//			.withMatching(CredentialsMatchers.anyOf(
+//					CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
+//					CredentialsMatchers.instanceOf(StandardCertificateCredentials.class)),
+//					CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, project, ACL.SYSTEM, URIRequirementBuilder.fromUri(url).build()));
 		}
-	    
-	    public FormValidation doCheckPasswordFile(@QueryParameter("password") String password,
-	    		@QueryParameter("passwordFile") String passwordFile) {
-	    	return doCheckPassword(password, passwordFile);
-	    }
 
-	    public FormValidation doCheckJobConnection(
-	    		@QueryParameter("overrideGlobal") final String override,
-	    		@QueryParameter("buildTool") final String buildTool,
-	    		@QueryParameter("serverURI") final String serverURI,
-	    		@QueryParameter("userId") final String userId,
-	    		@QueryParameter("password") String password,
-	    		@QueryParameter("passwordFile") String passwordFile,
-	    		@QueryParameter("timeout") final String timeout) {
-	    	
-	    	password = Util.fixEmptyAndTrim(password);
-	    	passwordFile = Util.fixEmptyAndTrim(passwordFile);
-	    	
-	    	boolean overrideGlobalSettings = Boolean.parseBoolean(override);
-	    	if (overrideGlobalSettings) {
-		    	String buildToolkitPath;
-				try {
-					buildToolkitPath = getMasterBuildToolkit(buildTool, TaskListener.NULL);
-				} catch (Exception e) {
-					return FormValidation.error(e, Messages.RTCScm_no_build_toolkit(e.getMessage()));
-				}
-		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
-		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
-		    		return buildToolkitCheck;
-		    	}
+		/**
+		 * Called from the forms to validate the timeout value.
+		 * @param timeout The timeout value.
+		 * @return Whether the timeout is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doCheckTimeout(@QueryParameter String timeout) {
+			return RTCLoginInfo.validateTimeout(timeout);
+		}
 
-		    	// validate the timeout value
-	    		FormValidation timeoutCheck = doCheckTimeout(timeout);
-	    		if (!timeoutCheck.kind.equals(FormValidation.Kind.OK)) {
-	    			return timeoutCheck;
-	    		}
-	    		
-	    		// validate password specification
-	    		FormValidation passwordCheck = doCheckPassword(password, passwordFile);
-	    		if (!passwordCheck.kind.equals(FormValidation.Kind.OK)) {
-	    			return passwordCheck;
-	    		}
+		/**
+		 * Called from the forms to validate that the build tool is selected
+		 * and that the underlying build tool points to a valid build toolkit.
+		 * @param buildTool The name of the build tool to validate
+		 * @return Whether the build tool is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doCheckBuildTool(
+				@QueryParameter("buildTool") String buildTool) {
+			if (Util.fixEmptyAndTrim(buildTool) == null) {
+				return FormValidation.error(Messages.RTCScm_build_tool_needed_for_job());
+			}
 
-	    		return checkConnect(buildToolkitPath, serverURI, userId, Integer.parseInt(timeout), password,
-	    				passwordFile == null ? null : new File(passwordFile));
-
-	    	} else {
-		    	String buildToolkitPath;
-				try {
-					buildToolkitPath = getMasterBuildToolkit(getGlobalBuildTool(), TaskListener.NULL);
-				} catch (Exception e) {
-					return FormValidation.error(e, Messages.RTCScm_no_global_build_toolkit(e.getMessage()));
-				}
-		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
-		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
-		    		return buildToolkitCheck;
-		    	}
-	    		
-	    		String globalPasswordFile = getGlobalPasswordFile();
-	    		File passwordFileFile = globalPasswordFile == null ? null : new File(globalPasswordFile);
-	    		return checkConnect(buildToolkitPath, getGlobalServerURI(), getGlobalUserId(), getGlobalTimeout(), getGlobalPassword(), passwordFileFile);
-	    	}
-	    }
-
-	    public FormValidation doValidateBuildWorkspace(
-	    		@QueryParameter("overrideGlobal") final String override,
-	    		@QueryParameter("buildTool") final String buildTool,
-	    		@QueryParameter("serverURI") final String serverURI,
-	    		@QueryParameter("timeout") final String timeout,
-	    		@QueryParameter("userId") final String userId,
-	    		@QueryParameter("password") String password,
-	    		@QueryParameter("passwordFile") String passwordFile,
-	    		@QueryParameter("buildWorkspace") final String buildWorkspace) {
-
-	    	password = Util.fixEmptyAndTrim(password);
-	    	passwordFile = Util.fixEmptyAndTrim(passwordFile);
-
-	    	boolean overrideGlobalSettings = Boolean.parseBoolean(override);
-	    	if (overrideGlobalSettings) {
-		    	String buildToolkitPath;
-				try {
-					buildToolkitPath = getMasterBuildToolkit(buildTool, TaskListener.NULL);
-				} catch (Exception e) {
-					return FormValidation.error(e, Messages.RTCScm_no_build_toolkit2(e.getMessage()));
-				}
-		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
-		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
-		    		return buildToolkitCheck;
-		    	}
-
-		    	// validate the timeout value
-	    		FormValidation timeoutCheck = doCheckTimeout(timeout);
-	    		if (!timeoutCheck.kind.equals(FormValidation.Kind.OK)) {
-	    			return timeoutCheck;
-	    		}
-	    		
-	    		// validate password specification
-	    		FormValidation passwordCheck = doCheckPassword(password, passwordFile);
-	    		if (!passwordCheck.kind.equals(FormValidation.Kind.OK)) {
-	    			return passwordCheck;
-	    		}
-
-	    		return checkBuildWorkspace(buildToolkitPath, serverURI, Integer.parseInt(timeout), userId, password,
-	    				passwordFile == null ? null : new File(passwordFile), buildWorkspace);
-
-	    	} else {
-		    	String buildToolkitPath;
-				try {
-					buildToolkitPath = getMasterBuildToolkit(getGlobalBuildTool(), TaskListener.NULL);
-				} catch (Exception e) {
-					return FormValidation.error(e, Messages.RTCScm_no_global_build_toolkit2(e.getMessage()));
-				}
-		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
-		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
-		    		return buildToolkitCheck;
-		    	}
-
-		    	String passwordFileToUse = getGlobalPasswordFile();
-	    		return checkBuildWorkspace(buildToolkitPath, getGlobalServerURI(), getGlobalTimeout(), getGlobalUserId(), getGlobalPassword(),
-	    				passwordFileToUse == null ? null : new File(getGlobalPasswordFile()), buildWorkspace);
-	    	}
-	    }
-
-	    public FormValidation doValidateBuildDefinition(
-	    		@QueryParameter("overrideGlobal") final String override,
-	    		@QueryParameter("buildTool") final String buildTool,
-	    		@QueryParameter("serverURI") final String serverURI,
-	    		@QueryParameter("timeout") final String timeout,
-	    		@QueryParameter("userId") final String userId,
-	    		@QueryParameter("password") String password,
-	    		@QueryParameter("passwordFile") String passwordFile,
-	    		@QueryParameter("buildDefinition") final String buildDefinition) {
-
-	    	password = Util.fixEmptyAndTrim(password);
-	    	passwordFile = Util.fixEmptyAndTrim(passwordFile);
-
-	    	boolean overrideGlobalSettings = Boolean.parseBoolean(override);
-	    	if (overrideGlobalSettings) {
-		    	String buildToolkitPath;
-				try {
-					buildToolkitPath = getMasterBuildToolkit(buildTool, TaskListener.NULL);
-				} catch (Exception e) {
-					return FormValidation.error(e, Messages.RTCScm_no_build_toolkit2(e.getMessage()));
-				}
-		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
-		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
-		    		return buildToolkitCheck;
-		    	}
-
-		    	// validate the timeout value
-	    		FormValidation timeoutCheck = doCheckTimeout(timeout);
-	    		if (!timeoutCheck.kind.equals(FormValidation.Kind.OK)) {
-	    			return timeoutCheck;
-	    		}
-	    		
-	    		// validate password specification
-	    		FormValidation passwordCheck = doCheckPassword(password, passwordFile);
-	    		if (!passwordCheck.kind.equals(FormValidation.Kind.OK)) {
-	    			return passwordCheck;
-	    		}
-
-	    		return checkBuildDefinition(buildToolkitPath, serverURI, Integer.parseInt(timeout), userId, password,
-	    				passwordFile == null ? null : new File(passwordFile), buildDefinition);
-
-	    	} else {
-		    	String buildToolkitPath;
-				try {
-					buildToolkitPath = getMasterBuildToolkit(getGlobalBuildTool(), TaskListener.NULL);
-				} catch (Exception e) {
-					return FormValidation.error(e, Messages.RTCScm_no_global_build_toolkit2(e.getMessage()));
-				}
-		    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
-		    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
-		    		return buildToolkitCheck;
-		    	}
-
-		    	String passwordFileToUse = getGlobalPasswordFile();
-	    		return checkBuildDefinition(buildToolkitPath, getGlobalServerURI(), getGlobalTimeout(), getGlobalUserId(), getGlobalPassword(),
-	    				passwordFileToUse == null ? null : new File(getGlobalPasswordFile()), buildDefinition);
-	    	}
-	    }
-
-	    public FormValidation doCheckGlobalConnection(
-	    		@QueryParameter("buildTool") final String buildTool,
-	    		@QueryParameter("serverURI") final String serverURI,
-	    		@QueryParameter("userId") final String userId,
-	    		@QueryParameter("password") String password,
-	    		@QueryParameter("passwordFile") String passwordFile,
-	    		@QueryParameter("timeout") final String timeout) {
-	    	
-	    	password = Util.fixEmptyAndTrim(password);
-	    	passwordFile = Util.fixEmptyAndTrim(passwordFile);
-	    	
-	    	// validate the build toolkit
-	    	String buildToolkitPath;
+			// validate the build toolkit path
+			String buildToolkitPath;
 			try {
 				buildToolkitPath = getMasterBuildToolkit(buildTool, TaskListener.NULL);
 			} catch (Exception e) {
-				return FormValidation.error(e, Messages.RTCScm_no_global_build_toolkit3(e.getMessage()));
+				return FormValidation.error(e, Messages.RTCScm_no_build_toolkit(e.getMessage()));
 			}
-	    	FormValidation buildToolkitCheck = doCheckBuildToolkit(buildToolkitPath);
-	    	if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
-	    		return buildToolkitCheck;
+			FormValidation buildToolkitCheck = RTCBuildToolInstallation.validateBuildToolkit(false, buildToolkitPath);
+
+			if (!buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
+				return buildToolkitCheck;
+			}
+			return FormValidation.ok();
+		}
+
+		public FormValidation doCheckCredentialsId(
+				@QueryParameter("credentialsId") String credentialsId,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile) {
+			return RTCLoginInfo.validateCredentials(credentialsId, userId,
+					passwordFile, password);
+		}
+		
+		public FormValidation doCheckUserId(
+				@QueryParameter("credentialsId") String credentialsId,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile) {
+			return RTCLoginInfo.validateUserId(credentialsId, userId,
+					passwordFile, password);
+		}
+
+		public FormValidation doCheckPassword(
+				@QueryParameter("credentialsId") String credentialsId,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile) {
+			return RTCLoginInfo.validatePassword(credentialsId, userId,
+					passwordFile, password);
+		}
+
+		public FormValidation doCheckPasswordFile(
+				@QueryParameter("credentialsId") String credentialsId,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile) {
+			return RTCLoginInfo.validatePasswordFile(credentialsId, userId,
+					passwordFile, password);
+		}
+
+		/**
+		 * For the default global configuration check that the connection works (with whatever
+		 * access preferred). Main idea is check server, user credentials are valid for logging in.
+		 * @param buildTool The build tool selected to be used in builds
+		 * @param serverURI The RTC server uri
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file
+		 * 				if the credentials id was not supplied.
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
+		 * 				a password if the credentials id was not supplied.
+		 * @param credId Credential id that will identify the user id and password to use
+		 * @param timeout The timeout period for the connection
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection.
+	     * @return The result of the validation (will be ok if valid)
+		 */
+		public FormValidation doCheckGlobalConnection(
+				@QueryParameter("buildTool") final String buildTool,
+				@QueryParameter("serverURI") final String serverURI,
+				@QueryParameter("userId") final String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile,
+				@QueryParameter("credentialsId") String credId,
+				@QueryParameter("timeout") final String timeout,
+				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit) {
+
+			boolean avoidUsingToolkit = Boolean.parseBoolean(Util.fixNull(avoidUsingBuildToolkit));
+			ValidationResult result = validateConnectInfo(true, buildTool, serverURI, userId, password, passwordFile, credId, timeout, avoidUsingToolkit);
+
+			// validate the connection
+			if (result.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return result.validationResult;
+			} else {
+				FormValidation connectCheck = checkConnect(result.buildToolkitPath, avoidUsingToolkit, result.loginInfo);
+				return Helper.mergeValidationResults(result.validationResult, connectCheck);
+			}
+		}
+
+		/**
+		 * For the job configuration check that the connection works (with whatever
+		 * access preferred). Use either the information supplied or the previously stored
+		 * global information dependin on whether to override the global information.
+		 * Main idea is check server, user credentials are valid for logging in.
+		 * @param override Whether to use the global settings or not
+		 * @param buildTool The build tool selected to be used in builds
+		 * @param serverURI The RTC server uri
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file
+		 * 				if the credentials id was not supplied.
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
+		 * 				a password if the credentials id was not supplied.
+		 * @param credId Credential id that will identify the user id and password to use
+		 * @param timeout The timeout period for the connection
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection.
+	     * @return The result of the validation (will be ok if valid)
+		 */
+		public FormValidation doCheckJobConnection(
+				@AncestorInPath AbstractProject<?, ?> project,
+				@QueryParameter("overrideGlobal") final String override,
+				@QueryParameter("buildTool") String buildTool,
+				@QueryParameter("serverURI") String serverURI,
+				@QueryParameter("credentialsId") String credId,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile,
+				@QueryParameter("timeout") String timeout,
+				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit) {
+			
+			boolean overrideGlobal = Boolean.parseBoolean(Util.fixNull(override));
+			boolean avoidUsingToolkit;
+			if (!overrideGlobal) {
+				// use the global settings instead of the ones supplied
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				userId = getGlobalUserId();
+				password = getGlobalPassword();
+				passwordFile = getGlobalPasswordFile();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(Util.fixNull(avoidUsingBuildToolkit));
+			}
+
+			ValidationResult result = validateConnectInfo(!overrideGlobal, buildTool, serverURI, userId, password, passwordFile, credId, timeout, avoidUsingToolkit);
+
+			// validate the connection
+			if (result.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return result.validationResult;
+			} else {
+				FormValidation connectCheck = checkConnect(result.buildToolkitPath, avoidUsingToolkit, result.loginInfo);
+				return Helper.mergeValidationResults(result.validationResult, connectCheck);
+			}
+		}
+
+		/**
+		 * Check that we can connect to the RTC server. If avoiding the toolkit, we
+		 * will not validate it since it will not be used. 
+		 * @param checkingGlobalSettings Whether the settings are global or job. Affects
+		 * the error message given.
+		 * @param buildTool The build tool configured. Only used if avoidUsingBuildToolkit is off
+		 * @param serverURI The RTC server to connect to
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file
+		 * 				if the credentials id was not supplied.
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
+		 * 				a password if the credentials id was not supplied.
+		 * @param credId Credential id that will identify the user id and password to use
+		 * @param timeout The timeout period for the connection
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection.
+	     * @return The result of the validation (will be ok if valid)
+		 */
+		private ValidationResult validateConnectInfo(
+				final boolean checkingGlobalSettings,
+				final String buildTool,
+				final String serverURI,
+				final String userId,
+				final String password,
+				String passwordFile,
+				String credId,
+				final String timeout,
+				final boolean avoidUsingToolkit) {
+			passwordFile = Util.fixEmptyAndTrim(passwordFile);
+			credId = Util.fixEmptyAndTrim(credId);
+
+			ValidationResult result = new ValidationResult();
+
+			// in the global case the build tool doesn't need to really be supplied. It could be supplied
+			// by the Job. However, if they want to check the connection, they would need to have avoid using toolkit
+			// enabled and not use a password file.
+			boolean warnOnly = avoidUsingToolkit && (credId != null || passwordFile == null);
+			
+
+			// we need the build tool to validate
+			if (Util.fixEmptyAndTrim(buildTool) == null) {
+				String errorMessage;
+				if (warnOnly) {
+					if (checkingGlobalSettings) {
+						errorMessage = Messages.RTCScm_global_build_tool_needed_for_job();
+					} else {
+						errorMessage = Messages.RTCScm_build_tool_needed_for_job();
+					}
+					result.validationResult = FormValidation.warning(errorMessage);
+				} else {
+					if (checkingGlobalSettings) {
+						errorMessage = Messages.RTCScm_missing_global_build_tool();
+					} else {
+						errorMessage = Messages.RTCScm_missing_build_tool();
+					}
+					result.validationResult = FormValidation.error(errorMessage);
+					return result;
+				}
+			} else {
+
+				// validate the build toolkit path
+				try {
+					result.buildToolkitPath = getMasterBuildToolkit(buildTool, TaskListener.NULL);
+				} catch (Exception e) {
+					String errorMessage;
+					if (checkingGlobalSettings) {
+						errorMessage = Messages.RTCScm_no_global_build_toolkit3(e.getMessage());
+					} else {
+						errorMessage = Messages.RTCScm_no_build_toolkit(e.getMessage());
+					}
+					if (warnOnly) {
+						result.validationResult = FormValidation.warning(errorMessage);
+					} else {
+						result.validationResult = FormValidation.error(errorMessage);
+					}
+					return result;
+				}
+			
+				result.validationResult = RTCBuildToolInstallation.validateBuildToolkit(warnOnly, result.buildToolkitPath);
+				if (result.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+					return result;
+				}
+			}
+			
+			// validate the authentication information
+	    	FormValidation basicValidate = RTCLoginInfo.basicValidate(credId, userId, passwordFile, password, timeout);
+	    	if (basicValidate.kind.equals(FormValidation.Kind.ERROR)) {
+	    		result.validationResult = Helper.mergeValidationResults(result.validationResult, basicValidate);
+	    		return result;
 	    	}
-	    	
-	    	// validate the timeout value
-    		FormValidation timeoutCheck = doCheckTimeout(timeout);
-    		if (!timeoutCheck.kind.equals(FormValidation.Kind.OK)) {
-    			return timeoutCheck;
-    		}
-    		
-    		// validate password specification
-    		FormValidation passwordCheck = doCheckPassword(password, passwordFile);
-    		if (!passwordCheck.kind.equals(FormValidation.Kind.OK)) {
-    			return passwordCheck;
-    		}
-    		
-    		// validate the connection
-			return checkConnect(buildToolkitPath, serverURI, userId, Integer.parseInt(timeout), password,
-					passwordFile == null ? null : new File(passwordFile));
-	    }
-	    
-		private FormValidation checkConnect(String buildToolkitPath, String serverURI, String userId, int timeout, String password, File passwordFile) {
+			
+			try {
+				result.loginInfo = new RTCLoginInfo(null, result.buildToolkitPath,
+						serverURI, userId, password, passwordFile, credId,
+						Integer.parseInt(timeout));
+			} catch (InvalidCredentialsException e) {
+				result.validationResult = FormValidation.error(e, e.getMessage());
+			}
+			return result;
+		}
+		
+		/**
+		 * Check the connection to the RTC server. This will validate that we can connect to the server with the
+		 * credentials defined. Connection may be through the toolkit or Rest services. This means a version
+		 * compatibility check is also done.
+		 * @param buildToolkitPath Path to the build toolkit
+		 * @param avoidUsingTookit Whether to try to avoid using the build toolkit
+		 * @param loginInfo The credentials for logging into the server.
+		 * @return Whether the connection is valid or not. Never <code>null</code>
+		 */
+		private FormValidation checkConnect(String buildToolkitPath, boolean avoidUsingTookit, RTCLoginInfo loginInfo) {
 
 	    	try {
-	    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
-				String errorMessage = (String) facade.invoke("testConnection", new Class[] { //$NON-NLS-1$
-						String.class, // serverURI
-						String.class, // userId
-						String.class, // password
-						File.class, // passwordFile
-						int.class, // timeout
-						Locale.class}, // clientLocale
-						serverURI, userId, password, passwordFile, timeout, LocaleProvider.getLocale());
+				String errorMessage = RTCFacadeFacade.testConnection(buildToolkitPath,
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), avoidUsingTookit);
 				if (errorMessage != null && errorMessage.length() != 0) {
 	    			return FormValidation.error(errorMessage);
 				}
@@ -508,11 +656,9 @@ public class RTCScm extends SCM {
 	    		if (LOGGER.isLoggable(Level.FINER)) {
 	    	    	LOGGER.finer("checkConnect attempted with " +  //$NON-NLS-1$
 	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
-	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
-	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
-	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
-	    	    			"\" timeout=\"" + timeout + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 	    			LOGGER.log(Level.FINER, "checkConnect invocation failure " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
 	    		}
 	    		return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
@@ -520,11 +666,9 @@ public class RTCScm extends SCM {
 	    		if (LOGGER.isLoggable(Level.FINER)) {
 	    	    	LOGGER.finer("checkConnect attempted with " +  //$NON-NLS-1$
 	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
-	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
-	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
-	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
-	    	    			"\" timeout=\"" + timeout + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 	    			LOGGER.log(Level.FINER, "checkConnect failed " + e.getMessage(), e); //$NON-NLS-1$
 	    		}
 	    		return FormValidation.error(e, Messages.RTCScm_failed_to_connect(e.getMessage()));
@@ -533,20 +677,142 @@ public class RTCScm extends SCM {
 	    	return FormValidation.ok(Messages.RTCScm_connect_success());
 	    }
 
-		private FormValidation checkBuildWorkspace(String buildToolkitPath, String serverURI, int timeout, String userId, String password, File passwordFile, String buildWorkspace) {
+		/**
+		 * Validate the Build workspace is valid. Called by the forms.
+		 * @param project The Job that is going to be run
+		 * @param override Whether to override the global connection settings
+		 * @param buildTool The build tool selected to be used in builds (Job setting)
+		 * @param serverURI The RTC server uri (Job setting)
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file
+		 * 				if the credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
+		 * 				a password if the credentials id was not supplied. (Job setting)
+		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection. (Job setting)
+		 * @param buildWorkspace The build workspace to validate
+		 * @return Whether the build workspace is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doValidateBuildWorkspace(
+				@AncestorInPath AbstractProject<?, ?> project,
+				@QueryParameter("overrideGlobal") final String override,
+				@QueryParameter("buildTool") String buildTool,
+				@QueryParameter("serverURI") String serverURI,
+				@QueryParameter("timeout") String timeout,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile,
+				@QueryParameter("credentialsId") String credId,
+				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit,
+				@QueryParameter("buildWorkspace") String buildWorkspace) {
+
+			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+			boolean avoidUsingToolkit;
+			if (!overrideGlobalSettings) {
+				// use the global settings instead of the ones supplied
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				userId = getGlobalUserId();
+				password = getGlobalPassword();
+				passwordFile = getGlobalPasswordFile();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+			}
+			// validate the info for connecting to the server (including toolkit & auth info).
+			ValidationResult connectInfoCheck = validateConnectInfo(
+					!overrideGlobalSettings, buildTool, serverURI, userId,
+					password, passwordFile, credId, timeout, avoidUsingToolkit);
+			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return connectInfoCheck.validationResult;
+			} else {
+				// connection info is good now validate the build workspace
+				FormValidation buildWorkspaceCheck = checkBuildWorkspace(
+						connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
+						connectInfoCheck.loginInfo, buildWorkspace);
+				return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildWorkspaceCheck);
+			}
+		}
+
+		/**
+		 * Validate the Build definition is valid. Called by the forms.
+		 * @param project The Job that is going to be run
+		 * @param override Whether to override the global connection settings
+		 * @param buildTool The build tool selected to be used in builds (Job setting)
+		 * @param serverURI The RTC server uri (Job setting)
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file
+		 * 				if the credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
+		 * 				a password if the credentials id was not supplied. (Job setting)
+		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection. (Job setting)
+		 * @param buildDefinition The build definition to validate
+		 * @return Whether the build definition is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doValidateBuildDefinition(
+				@AncestorInPath AbstractProject<?, ?> project,
+				@QueryParameter("overrideGlobal") final String override,
+				@QueryParameter("buildTool") String buildTool,
+				@QueryParameter("serverURI") String serverURI,
+				@QueryParameter("timeout") String timeout,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile,
+				@QueryParameter("credentialsId") String credId,
+				@QueryParameter("avoidUsingToolkit") final String avoidUsingBuildToolkit,
+				@QueryParameter("buildDefinition") final String buildDefinition) {
+
+	    	boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+			boolean avoidUsingToolkit;
+			if (!overrideGlobalSettings) {
+				// use the global settings instead of the ones supplied
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				userId = getGlobalUserId();
+				password = getGlobalPassword();
+				passwordFile = getGlobalPasswordFile();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+			}
+			// validate the info for connecting to the server (including toolkit & auth info).
+			ValidationResult connectInfoCheck = validateConnectInfo(
+					!overrideGlobalSettings, buildTool, serverURI, userId,
+					password, passwordFile, credId, timeout, avoidUsingToolkit);
+			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return connectInfoCheck.validationResult;
+			} else {
+				// connection info is good now validate the build definition
+				FormValidation buildDefinitionCheck = checkBuildDefinition(
+						connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
+						connectInfoCheck.loginInfo, buildDefinition);
+				return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildDefinitionCheck);
+			}
+		}
+
+		/** 
+		 * Validate that the build workspace exists and there is just one.
+		 * This is done in the next "layer" below using either the toolkit
+		 * or the rest service.
+		 * @param buildToolkitPath Path to the build toolkit
+		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
+		 * @param loginInfo The login credentials 
+		 * @param buildWorkspace The name of the workspace to validate
+		 * @return The result of the validation. Never <code>null</code>
+		 */
+		private FormValidation checkBuildWorkspace(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo, String buildWorkspace) {
 
 			try {
-	    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
-	    		String errorMessage = (String) facade.invoke("testBuildWorkspace", //$NON-NLS-1$
-						new Class[] { String.class, // serverURI
-								String.class, // userId
-								String.class, // password
-								File.class, // passwordFile
-								int.class, // timeout
-								String.class, // buildWorkspace
-								Locale.class}, // clientLocale
-						serverURI, userId, password, passwordFile, timeout,
-						buildWorkspace, LocaleProvider.getLocale());
+	    		String errorMessage = RTCFacadeFacade.testBuildWorkspace(buildToolkitPath,
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						avoidUsingToolkit, buildWorkspace);
 				if (errorMessage != null && errorMessage.length() != 0) {
 	    			return FormValidation.error(errorMessage);
 				}
@@ -559,11 +825,9 @@ public class RTCScm extends SCM {
 	    	    	LOGGER.finer("checkBuildWorkspace attempted with " +  //$NON-NLS-1$
 	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
 	    	    	        "\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
-	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
-	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
-	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
-	    	    			"\" timeout=\"" + timeout + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 	    			LOGGER.log(Level.FINER, "checkBuildWorkspace invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
 	    		}
 	    		return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
@@ -572,11 +836,9 @@ public class RTCScm extends SCM {
 	    	    	LOGGER.finer("checkBuildWorkspace attempted with " +  //$NON-NLS-1$
 	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
 	    	    	        "\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
-	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
-	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
-	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
-	    	    			"\" timeout=\"" + timeout + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 	    			LOGGER.log(Level.FINER, "checkBuildWorkspace failed " + e.getMessage(), e); //$NON-NLS-1$
 	    		}
 	    		return FormValidation.error(e, e.getMessage());
@@ -585,20 +847,21 @@ public class RTCScm extends SCM {
 	    	return FormValidation.ok(Messages.RTCScm_build_workspace_success());
 	    }
 
-		private FormValidation checkBuildDefinition(String buildToolkitPath, String serverURI, int timeout, String userId, String password, File passwordFile, String buildDefinition) {
+		/**
+		 * Validate the build definition is a H/J definition and usable
+		 * @param buildToolkitPath Path to the build toolkit
+		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
+		 * @param loginInfo The login credentials 
+		 * @param buildDefinition The id of the build definition to validate
+		 * @return The result of the validation. Never <code>null</code>
+		 */
+		private FormValidation checkBuildDefinition(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo, String buildDefinition) {
 
 			try {
-	    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
-	    		String errorMessage = (String) facade.invoke("testBuildDefinition", //$NON-NLS-1$
-						new Class[] { String.class, // serverURI
-								String.class, // userId
-								String.class, // password
-								File.class, // passwordFile
-								int.class, // timeout
-								String.class, // buildDefinition
-								Locale.class}, // clientLocale
-						serverURI, userId, password, passwordFile, timeout,
-						buildDefinition, LocaleProvider.getLocale());
+				String errorMessage = RTCFacadeFacade.testBuildDefinition(buildToolkitPath, loginInfo.getServerUri(),
+						loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						avoidUsingToolkit,
+						buildDefinition);
 				if (errorMessage != null && errorMessage.length() != 0) {
 	    			return FormValidation.error(errorMessage);
 				}
@@ -610,11 +873,9 @@ public class RTCScm extends SCM {
 	    		if (LOGGER.isLoggable(Level.FINER)) {
 	    	    	LOGGER.finer("checkBuildDefinition attempted with " +  //$NON-NLS-1$
 	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
-	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
-	    	    			"\" timeout=\"" + timeout +  //$NON-NLS-1$
-	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
-	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() +  //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
 	    	    	        "\" buildDefinition=\"" + buildDefinition +"\""); //$NON-NLS-1$ //$NON-NLS-2$
 	    			LOGGER.log(Level.FINER, "checkBuildDefinition invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
 	    		}
@@ -623,11 +884,9 @@ public class RTCScm extends SCM {
 	    		if (LOGGER.isLoggable(Level.FINER)) {
 	    	    	LOGGER.finer("checkBuildDefinition attempted with " +  //$NON-NLS-1$
 	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
-	    	    			"\" serverURI=\"" + serverURI + //$NON-NLS-1$
-	    	    			"\" timeout=\"" + timeout + //$NON-NLS-1$
-	    	    			"\" userId=\"" + userId + //$NON-NLS-1$
-	    	    			"\" password " + (password == null ? "is not supplied" : "(" + password.length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-	    	    			" passwordFile=\"" + (passwordFile == null ? "" : passwordFile.getAbsolutePath()) + //$NON-NLS-1$ //$NON-NLS-2$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() +  //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
 	    	    	        "\" buildDefinition=\"" + buildDefinition + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 	    			LOGGER.log(Level.FINER, "checkBuildDefinition failed " + e.getMessage(), e); //$NON-NLS-1$
 	    		}
@@ -640,17 +899,21 @@ public class RTCScm extends SCM {
 	
 	@DataBoundConstructor
 	public RTCScm(boolean overrideGlobal, String buildTool, String serverURI, int timeout, String userId, Secret password, String passwordFile,
-			BuildType buildType) {
+			String credentialsId, BuildType buildType, boolean avoidUsingToolkit) {
 
+		
 		this.overrideGlobal = overrideGlobal;
 		if (this.overrideGlobal) {
 			this.buildTool = buildTool;
 			this.serverURI = serverURI;
 			this.timeout = timeout;
-			this.userId = userId;
-			this.password = password;
-			this.passwordFile = passwordFile;
-			
+			this.credentialsId = credentialsId;
+			if (this.credentialsId == null || credentialsId.isEmpty()) {
+				this.userId = userId;
+				this.password = password;
+				this.passwordFile = passwordFile;
+			}
+			this.avoidUsingToolkit = avoidUsingToolkit;
 		}
 		this.buildType = buildType.type;
 		this.buildWorkspace = buildType.buildWorkspace;
@@ -665,6 +928,7 @@ public class RTCScm extends SCM {
 					"\" userId=\"" + this.userId + //$NON-NLS-1$
 					"\" password " + (this.password == null ? "is not supplied" : "(" + Secret.toString(this.password).length() +" characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 					" passwordFile=\"" + this.passwordFile + //$NON-NLS-1$
+					"\" credentialsId=\"" + this.credentialsId + //$NON-NLS-1$
 					"\" buildType=\"" + this.buildType + //$NON-NLS-1$
 					"\" buildWorkspace=\"" + this.buildWorkspace + //$NON-NLS-1$
 					"\" buildDefinition=\"" + this.buildDefinition + "\""); //$NON-NLS-1$ //$NON-NLS-2$
@@ -692,19 +956,15 @@ public class RTCScm extends SCM {
 		
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
 
-		File passwordFileFile = getPasswordFileFile();
 		String label = getLabel(build);
-		String localBuildToolKit;
-		String nodeBuildToolKit;
-		String passwordToUse = null;
-		String jazzServerURI = getServerURI();
-		String jazzUserId = getUserId();
-		int jazzTimeout = getTimeout();
+		String localBuildToolkit;
+		String nodeBuildToolkit;
 		String buildWorkspace = getBuildWorkspace();
 		String buildDefinition = getBuildDefinition();
 		String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
 		String buildType = getBuildType();
 		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
+
 
 		// Log in build result where the build was initiated from RTC
 		// Because if initiated from RTC we will ignore build workspace if its a buildWorkspaceType
@@ -715,138 +975,25 @@ public class RTCScm extends SCM {
 		RTCBuildResultAction buildResultAction;
 		
 		try {
-			localBuildToolKit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
-			nodeBuildToolKit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
+			localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
+			nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
+			RTCLoginInfo loginInfo = getLoginInfo(build.getProject(), localBuildToolkit);
 			
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 						" Load directory=\"" + workspacePath.getRemote() + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" Build tool=\"" + getBuildTool() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Local Build toolkit=\"" + localBuildToolKit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Node Build toolkit=\"" + nodeBuildToolKit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Server URI=\"" + jazzServerURI + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Userid=\"" + jazzUserId + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Authenticating with " + (passwordFileFile == null ? " configured password " : passwordFileFile.getAbsolutePath()) +  //$NON-NLS-1$ //$NON-NLS-2$
+						" Local Build toolkit=\"" + localBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Node Build toolkit=\"" + nodeBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Server URI=\"" + loginInfo.getServerUri() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Userid=\"" + loginInfo.getUserId() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Build definition=\"" + buildDefinition + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Build workspace=\"" + buildWorkspace + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" useBuildDefinitionInBuild=\"" + useBuildDefinitionInBuild + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 			}
-			
-    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(localBuildToolKit, null);
-			passwordToUse = (String) facade.invoke("determinePassword", new Class[] { //$NON-NLS-1$
-					String.class, // password,
-					File.class, // passwordFile,
-					Locale.class // clientLocale
-			}, getPassword(), getPasswordFileFile(), LocaleProvider.getLocale());
-			
-			// If we don't have a build result but have a build definition, create the
-			// build result prior to going to the slave so that it can be in the slave's
-			// environment. Also we don't depend on slave giving it back and that helps
-			// with terminating the build result during failure cases.
-			boolean createdBuildResult = false;
-			if (buildResultUUID == null && useBuildDefinitionInBuild) {
-				buildResultUUID = (String) facade.invoke(
-						"createBuildResult", new Class[] { //$NON-NLS-1$
-								String.class, // serverURI,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildDefinition,
-								String.class, // buildLabel,
-								Object.class, // listener
-								Locale.class // clientLocale
-						}, jazzServerURI, jazzUserId, passwordToUse,
-						jazzTimeout, buildDefinition, label, listener, LocaleProvider.getLocale());
-				createdBuildResult = true;
-			} else if (buildResultUUID != null) {
-				
-				// Capture the reason for initiation in a cause for the build
-				try {
-					BuildResultInfo buildResultInfo = new BuildResultInfo(buildResultUUID);
-					facade.invoke("getBuildResultInfo", new Class[] { //$NON-NLS-1$
-							String.class, // serverURI,
-							String.class, // userId,
-							String.class, // passwordToUse,
-							int.class, // timeout,
-							Object.class, // buildResultInfoObject,
-							Object.class, // listener,
-							Locale.class}, // clientLocale)
-							getServerURI(), getUserId(), passwordToUse,
-							getTimeout(), buildResultInfo, listener, LocaleProvider.getLocale());
-					
-					RTCBuildCause rtcBuildCause = new RTCBuildCause(buildResultInfo);
-					CauseAction cause = build.getAction(CauseAction.class);
-					if (cause == null) {
-						cause = new CauseAction(rtcBuildCause);
-						build.addAction(cause);
-					} else {
-						cause.getCauses().add(rtcBuildCause);
-					}
-				} catch (Exception e) {
-					Throwable eToReport = e;
-					if (e instanceof InvocationTargetException) {
-						eToReport = e.getCause();
-					}
-		    		if (eToReport instanceof InterruptedException) {
-		        		LOGGER.log(Level.FINER, "build cause detection interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
-		    			throw (InterruptedException) eToReport;
-		    		}
 
-		    		// log (non-fatal) error and keep going with the build
-					listener.getLogger().println(Messages.RTCScm_build_cause_determination_failure(e.getMessage()));
-					LOGGER.log(Level.FINER, "Unable to determine the reason RTC initiated the build", e); //$NON-NLS-1$
-				}
-			}
-
-			// add the build result information (if any) to the build through an action
-			// properties may later be added to this action
-			buildResultAction = new RTCBuildResultAction(jazzServerURI, buildResultUUID, createdBuildResult, this);
-			build.addAction(buildResultAction);
-
-			// publish in the build result links to the project and the build
-			if (buildResultUUID != null) {
-				String root = Hudson.getInstance().getRootUrl();
-				if (root != null) {
-					root = Util.encode(root);
-				}
-				String projectUrl = build.getProject().getUrl();
-				if (projectUrl != null) {
-					projectUrl = Util.encode(projectUrl);
-				}
-				String buildUrl = build.getUrl();
-				if (buildUrl != null) {
-					buildUrl = Util.encode(buildUrl);
-				}
-				try {
-					facade.invoke(
-							"createBuildLinks", new Class[] { //$NON-NLS-1$
-							String.class, // serverURI,
-									String.class, // userId,
-									String.class, // password,
-									int.class, // timeout,
-									String.class, // buildResultUUID
-									String.class, // rootUrl
-									String.class, // projectUrl
-									String.class, // buildUrl
-									Object.class, // listener)
-							}, jazzServerURI, jazzUserId, passwordToUse,
-							jazzTimeout, buildResultUUID, root, projectUrl,
-							buildUrl, listener);
-				} catch (Exception e) {
-					Throwable eToReport = e;
-					if (e instanceof InvocationTargetException) {
-						eToReport = e.getCause();
-					}
-		    		if (eToReport instanceof InterruptedException) {
-		        		LOGGER.log(Level.FINER, "build link creation interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
-		    			throw (InterruptedException) eToReport;
-		    		}
-					listener.getLogger().println(Messages.RTCScm_link_creation_failure(e.getMessage()));
-					LOGGER.log(Level.FINER, "Unable to link Hudson/Jenkins build with the RTC build result", e); //$NON-NLS-1$
-				}
-			
-			}
+			boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
 			
 			if (workspacePath.isRemote()) {
 				// Slaves do a lazy remote class loader. The slave's class loader will request things as needed
@@ -856,8 +1003,81 @@ public class RTCScm extends SCM {
 				// (since its on the master). So what we do is send our hjplugin-rtc.jar over to the slave to "prepopulate"
 				// it in the class loader. This way we can create our special class loader referencing it and all the toolkit
 				// jars.
-				sendJarsToSlave(facade, workspacePath);
+				sendJarsToSlave(workspacePath);
 			}
+
+			RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
+					nodeBuildToolkit,
+					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+					useBuildDefinitionInBuild, buildDefinition, buildResultUUID,
+					label, listener, workspacePath.isRemote(), debug, LocaleProvider.getLocale());
+			
+			BuildResultInfo buildResultInfo = buildResultSetupTask.localInvocation();
+			if (buildResultInfo == null) {
+				buildResultInfo = workspacePath.act(buildResultSetupTask);
+			}
+
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+						" initial buildResultUUID=\"" + buildResultUUID + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
+						" current buildResultUUID=\"" + buildResultInfo.getBuildResultUUID() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" scheduled=\"" + buildResultInfo.isScheduled() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" personal build=\"" + buildResultInfo.isPersonalBuild() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" requested by=\"" + (buildResultInfo.getRequestor() == null ? "" : buildResultInfo.getRequestor()) + "\"" + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+						" own build life cycle=\"" + buildResultInfo.ownLifeCycle() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+			}
+
+			if (buildResultUUID != null) {
+				// if build started by RTC, record the cause of the build
+				RTCBuildCause rtcBuildCause = new RTCBuildCause(buildResultInfo);
+				CauseAction cause = build.getAction(CauseAction.class);
+				if (cause == null) {
+					cause = new CauseAction(rtcBuildCause);
+					build.addAction(cause);
+				} else {
+					cause.getCauses().add(rtcBuildCause);
+				}
+			}
+			
+			// now that the build has been setup, start working with the actual build result
+			// independent of whether RTC or the plugin created it
+			buildResultUUID = buildResultInfo.getBuildResultUUID();
+			
+			// add the build result information (if any) to the build through an action
+			// properties may later be added to this action
+			buildResultAction = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
+			build.addAction(buildResultAction);
+
+			OutputStream changeLogStream = new FileOutputStream(changeLogFile);
+			RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
+			
+			RTCCheckoutTask checkout = new RTCCheckoutTask(
+					build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
+					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
+					buildWorkspace,
+					label,
+					listener, changeLog,
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale());
+
+			// publish in the build result links to the project and the build
+			if (buildResultUUID != null) {
+				String rootUrl = Hudson.getInstance().getRootUrl();
+				if (rootUrl != null) {
+					rootUrl = Util.encode(rootUrl);
+				}
+				String projectUrl = build.getProject().getUrl();
+				if (projectUrl != null) {
+					projectUrl = Util.encode(projectUrl);
+				}
+				String buildUrl = build.getUrl();
+				if (buildUrl != null) {
+					buildUrl = Util.encode(buildUrl);
+				}
+				checkout.setLinkURLs(rootUrl,  projectUrl, buildUrl);
+			}
+			
+			Map<String, String> buildProperties = workspacePath.act(checkout);
+			buildResultAction.addBuildProperties(buildProperties);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;
@@ -874,41 +1094,25 @@ public class RTCScm extends SCM {
     		if (RTCScm.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
     		}
-    		LOGGER.log(Level.FINER, "determinePassword/create build result failure " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
+    		LOGGER.log(Level.FINER, "Create build result failure " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
 
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure4(e.getMessage()));
     	}
 
-		
-		OutputStream changeLogStream = new FileOutputStream(changeLogFile);
-		RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
-		
-		boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
-		RTCCheckoutTask checkout = new RTCCheckoutTask(
-				build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
-				nodeBuildToolKit,
-				jazzServerURI, jazzUserId, passwordToUse,
-				jazzTimeout, buildResultUUID,
-				buildWorkspace,
-				label,
-				listener, changeLog,
-				workspacePath.isRemote(), debug, LocaleProvider.getLocale());
-		
-		Map<String, String> buildProperties = workspacePath.act(checkout);
-		buildResultAction.addBuildProperties(buildProperties);
 
 		return true;
 	}
 
-	private void sendJarsToSlave(RTCFacadeWrapper facade, FilePath workspacePath)
+	private void sendJarsToSlave(FilePath workspacePath)
 			throws MalformedURLException, IOException, InterruptedException {
 		VirtualChannel channel = workspacePath.getChannel();
-		if (channel instanceof Channel && facade.getFacadeJarURL() != null) {
-			// try to find our jars
+		URL facadeJarURL = RTCFacadeFactory.getFacadeJarURL(null);
+		if (channel instanceof Channel && facadeJarURL != null) {
+			// try to find our jar
 			Class<?> originalClass = RTCScm.class;
 			ClassLoader originalClassLoader = (ClassLoader) originalClass.getClassLoader();
-			URL [] jars = new URL[] {facade.getFacadeJarURL()};
+			URL [] jars = new URL[] {facadeJarURL};
 			boolean result = ((Channel) channel).preloadJar(originalClassLoader, jars);
 			LOGGER.finer("Prefetch result for sending jars is " + result);  //$NON-NLS-1$ //$NON-NLS-2$
 		}
@@ -918,7 +1122,7 @@ public class RTCScm extends SCM {
 		// TODO if we have a build definition & build result id we should probably
 		// follow a similar algorithm to RTC?
 		// In the simple plugin case, generate the name from the project and the build
-		return build.getProject().getName() + " " + build.getDisplayName(); //$NON-NLS-1$
+		return Messages.RTCScm_build_label(build.getNumber());
 	}
 
 	@Override
@@ -942,24 +1146,17 @@ public class RTCScm extends SCM {
 
 		// check to see if there are incoming changes
     	try {
+    		String masterToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
+    		RTCLoginInfo loginInfo = getLoginInfo(project, masterToolkit);
     		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(getBuildType());
-    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(getDescriptor().getMasterBuildToolkit(getBuildTool(), listener), null);
-			Boolean changesIncoming = (Boolean) facade.invoke(
-					"incomingChanges", //$NON-NLS-1$
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							File.class, // passwordFile
-							int.class, // timeout
-							String.class, // buildDefinition
-							String.class, // buildWorkspace
-							Object.class, // listener
-							Locale.class}, // clientLocale
-					getServerURI(), getUserId(), getPassword(),
-					getPasswordFileFile(), getTimeout(), 
-					(useBuildDefinitionInBuild ? getBuildDefinition() : ""),
-					(useBuildDefinitionInBuild ? "" : getBuildWorkspace()),
-					listener, LocaleProvider.getLocale());
+    		
+    		Boolean changesIncoming = RTCFacadeFacade.incomingChanges(masterToolkit,
+    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+					loginInfo.getTimeout(), getAvoidUsingToolkit(), useBuildDefinitionInBuild,
+					getBuildDefinition(),
+					getBuildWorkspace(),
+					listener);
+
     		if (changesIncoming.equals(Boolean.TRUE)) {
     			listener.getLogger().println(Messages.RTCScm_changes_found());
     			return PollingResult.SIGNIFICANT;
@@ -995,7 +1192,10 @@ public class RTCScm extends SCM {
 		// a badly configured build. In that case, we just want to report the error
 		// but not the whole stack trace.
 		String name = e.getClass().getSimpleName();
-		return !("RTCConfigurationException".equals(name) || e instanceof InterruptedException);
+		return !("RTCConfigurationException".equals(name)
+				|| "AuthenticationException".equals(name)
+				|| e instanceof InterruptedException 
+				|| e instanceof InvalidCredentialsException ); //$NON-NLS-1$
 	}
 
 	@Override
@@ -1005,11 +1205,15 @@ public class RTCScm extends SCM {
 
 	@Override
 	public RTCRepositoryBrowser getBrowser() {
-		return browser;
+		return new RTCRepositoryBrowser(getServerURI());
 	}
 
 	public boolean getOverrideGlobal() {
 		return overrideGlobal;
+	}
+	
+	public RTCLoginInfo getLoginInfo(AbstractProject project, String toolkit) throws InvalidCredentialsException {
+		return new RTCLoginInfo(project, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
 	}
 	
 	public String getBuildTool() {
@@ -1017,6 +1221,13 @@ public class RTCScm extends SCM {
 			return getDescriptor().getGlobalBuildTool();
 		}
 		return buildTool;
+	}
+
+	public boolean getAvoidUsingToolkit() {
+		if (!overrideGlobal) {
+			return getDescriptor().getGlobalAvoidUsingToolkit();
+		}
+		return avoidUsingToolkit;
 	}
 
 	public String getServerURI() {
@@ -1031,6 +1242,13 @@ public class RTCScm extends SCM {
 			return getDescriptor().getGlobalTimeout();
 		}
 		return timeout;
+	}
+
+	public String getCredentialsId() {
+		if (!overrideGlobal) {
+			return getDescriptor().getGlobalCredentialsId();
+		}
+		return credentialsId;
 	}
 
 	public String getUserId() {
@@ -1065,6 +1283,50 @@ public class RTCScm extends SCM {
 			return new File(file);
 		}
 		return null;
+	}
+
+	/**
+	 * Determine if they are using the deprecated authentication in any way
+	 * Takes into account whether they are overriding the global configuration or not.
+	 * @return <code>true</code> if using user id & password or password file
+	 * <code>false</code> if using credentials or no password authentication setup.
+	 */
+	public boolean usingDeprecatedPassword() {
+		if (getDescriptor().deprecatedCredentialEditAllowed()) {
+			return true;
+		}
+		String credentials = getCredentialsId();
+		if (overrideGlobal && (credentials == null || credentials.isEmpty())) {
+			// consider them to be using user id & old password way if supplied
+			// not using strict validation since we would still work if too much info supplied.
+			if (userId != null	&& !userId.isEmpty()
+					&& ((password != null && password.getPlainText() != null && !password.getPlainText().isEmpty())
+						|| (passwordFile != null && !passwordFile.isEmpty()))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Show the deprecated password file in the UI if editting allowed or its available for use
+	 * @return <code>true</code> to show it <code>false</code> otherwise
+	 */
+	public boolean showPasswordFile() {
+		if (getDescriptor().deprecatedCredentialEditAllowed() 
+				|| (overrideGlobal && passwordFile != null && !passwordFile.isEmpty())) {
+			return true;
+		}
+		return false;
+
+	}
+
+	public boolean showPassword() {
+		if (getDescriptor().deprecatedCredentialEditAllowed() 
+				|| (overrideGlobal && password != null && password.getPlainText() != null && !password.getPlainText().isEmpty())) {
+			return true;
+		}
+		return false;
 	}
 
 	public String getBuildType() {

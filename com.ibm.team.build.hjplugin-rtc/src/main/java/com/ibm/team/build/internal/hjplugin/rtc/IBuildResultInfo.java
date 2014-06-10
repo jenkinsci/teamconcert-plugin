@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -18,6 +18,14 @@ public interface IBuildResultInfo {
 	 */
 	public String getBuildResultUUID();
 
+	/**
+	 * Sets whether the lifecycle of the build result is owned
+	 * by the Jenkins plugin
+	 * @param ownLifeCycle <code>true</code>if we started the build
+	 * <code>false</code> if already started (someone else owns life cycle)
+	 */
+	public void setOwnLifeCycle(boolean ownLifeCycle);
+	
 	/**
 	 * Set whether the build is a personal build
 	 * @param isPersonalBuild <code>true</code> if a personal build

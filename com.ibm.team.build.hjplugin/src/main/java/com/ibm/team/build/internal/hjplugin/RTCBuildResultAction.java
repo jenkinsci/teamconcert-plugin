@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -41,6 +41,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 
 	private final String buildResultUUID;
 	private final String serverURI;
+	// meaning has changed but the name remains the same for serialization
 	private final boolean createdBuildResult;
 	private final Map<String, String> buildProperties = new HashMap<String, String>();
 	private final transient RTCScm scm;
@@ -49,19 +50,19 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 * @param serverURI The RTC server uri
 	 * @param buildResultUUID The UUID of the corresponding build result. <code>null</code>
 	 * if there is no build result
-	 * @param createdBuildResult Whether the build created the build result or not
+	 * @param createdBuildResult Whether the build owns the RTC build's lifecycle or not.
 	 * @param scm The RTCSCM responsible for the SCM part of the build. This may be
 	 * different from the one supplied on the AbstractBuild if another SCM plugin
 	 * incorporates our SCM provider (i.e. MultiSCM). 
 	 */
-	RTCBuildResultAction(String serverURI, String buildResultUUID, boolean createdBuildResult, RTCScm scm) {
+	RTCBuildResultAction(String serverURI, String buildResultUUID, boolean ownsRTCBuildResultLifecycle, RTCScm scm) {
 		this.buildResultUUID = buildResultUUID;
         String uri = Util.fixEmpty(serverURI);
         if (uri != null && !uri.endsWith(SLASH)) {
         	uri = uri + SLASH;
         }
         this.serverURI = uri;
-        this.createdBuildResult = createdBuildResult;
+        this.createdBuildResult = ownsRTCBuildResultLifecycle;
         this.scm = scm;
         
         if (buildResultUUID != null) {
@@ -110,12 +111,14 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	}
 	
 	/**
-	 * @return <code>true</code> if the build was inititiated in Hudson/Jenkins
+	 * @return <code>true</code> if the build's lifecylce is owned by the plugin.
+	 * This could be because it was inititiated in Hudson/Jenkins
 	 * and the plugin created a build result in RTC (and this build is responsible
-	 * for the lifecycle). <code>false</code> if the build result
-	 * was not created by this build.
+	 * for the lifecycle). Or if the RTC server's hudson integration simply created
+	 * the build result but did not start the build.
+	 * <code>false</code> if the build result lifecycle is not owned by this build.
 	 */
-	public boolean createdBuildResult() {
+	public boolean ownsBuildResultLifecycle() {
 		return createdBuildResult;
 	}
 	

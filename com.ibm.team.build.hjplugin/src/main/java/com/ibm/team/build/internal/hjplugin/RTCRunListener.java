@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,21 +12,18 @@
 package com.ibm.team.build.internal.hjplugin;
 
 import hudson.Extension;
-import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.listeners.RunListener;
 import hudson.scm.SCM;
 
-import java.io.File;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
 
 @Extension
@@ -45,7 +42,7 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 		try {
 			RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
 			if (action != null) {
-				if (action.createdBuildResult()) {
+				if (action.ownsBuildResultLifecycle()) {
 
 					SCM scmSystem = build.getProject().getScm();
 
@@ -57,55 +54,36 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 					}
 					
 					if (scm != null) {
-						LOGGER.finer("Completed Build: " + build.getDisplayName() +
-								" Build Result UUID: " + action.getBuildResultUUID() +
-								" Server URI=\"" + scm.getServerURI() + "\"" +
-								" Build result=\"" + build.getResult() + "\"");
+						LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
+								" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$
+								" Server URI=\"" + scm.getServerURI() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+								" Build result=\"" + build.getResult() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 	
-						boolean aborted = false;
-						Result buildResult = build.getResult();
-						int buildState = 0;
-						if (buildResult.equals(Result.ABORTED)) {
-							aborted = true;
-						} else if (buildResult.equals(Result.UNSTABLE)) {
-							buildState = 1;
-						} else if (!buildResult.equals(Result.SUCCESS)) {
-							buildState = 2;
-						}
-						
 						String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
-			    		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(masterBuildToolkit, null);
-						facade.invoke(
-								"terminateBuild", //$NON-NLS-1$
-								new Class[] { String.class, // serverURI
-										String.class, // userId
-										String.class, // password
-										File.class, // passwordFile
-										int.class, // timeout
-										String.class, // buildResultUUID
-										boolean.class, // aborted,
-										int.class, // buildState,
-										Object.class, // listener
-										Locale.class}, // clientLocale
-								scm.getServerURI(), scm.getUserId(), scm.getPassword(),
-								scm.getPasswordFileFile(), scm.getTimeout(), action.getBuildResultUUID(),
-								aborted, buildState,
-								listener, Locale.getDefault());
+						RTCLoginInfo loginInfo = scm.getLoginInfo(build.getProject(), masterBuildToolkit);
+			    		RTCFacadeFacade.terminateBuild(masterBuildToolkit,
+								loginInfo.getServerUri(),
+								loginInfo.getUserId(), loginInfo.getPassword(),
+								loginInfo.getTimeout(),
+								scm.getAvoidUsingToolkit(),
+								action.getBuildResultUUID(),
+								build.getResult(),
+								listener);
 					} else {
-						LOGGER.finer("Completed Build: " + build.getDisplayName() +
-							" Build Result UUID: " + action.getBuildResultUUID() +
-							" Unable to manage lifecycle (no access to the H/J SCM configuration)");
+						LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
+							" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$
+							" Unable to manage lifecycle (no access to the H/J SCM configuration)"); //$NON-NLS-1$
 						PrintStream writer = listener.getLogger();
 						writer.println(Messages.RTCRunListener_build_result_not_completed(scmSystem.getClass().getName()));
 			    		writer.println(Messages.RTCRunListener_manually_abandon_build());
 					}
 				} else {
-					LOGGER.finer("Completed Build: " + build.getDisplayName() +
-							" Build Result UUID: " + action.getBuildResultUUID() +
-							" initiated/managed by RTC");
+					LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
+							" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$
+							" initiated/managed by RTC"); //$NON-NLS-1$
 				}
 			} else {
-				LOGGER.finer("Completed Build: " + build.getDisplayName() + " No RTC build result associated.");
+				LOGGER.finer("Completed Build: " + build.getDisplayName() + " No RTC build result associated."); //$NON-NLS-1$ //$NON-NLS-2$
 			}
     	} catch (InvocationTargetException e) {
     		Throwable eToReport = e.getCause();
@@ -129,5 +107,11 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 
     	}
 		super.onCompleted(build, listener);
+	}
+
+	@Override
+	public void onDeleted(AbstractBuild r) {
+		// TODO com.ibm.team.build.client.ITeamBuildBaseClient.delete(IBuildResultHandle, IProgressMonitor)
+		super.onDeleted(r);
 	}
 }

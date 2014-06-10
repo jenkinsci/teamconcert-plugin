@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -490,14 +490,35 @@ public class RepositoryConnection {
 		return buildResult.getItemId().getUuidValue();
 	}
 
+	/**
+	 * Mark a build result as started, if it is not already started
+	 * @param buildResultInfo A structure in which to record if we own the build and 
+	 * info about how it was started (who and is it personal).
+	 * @param buildLabel The label to give to the RTC build
+	 * @param listener Listener to provide log info to.
+	 * @param progress Monitor to listen for cancellation on.
+	 * @param clientLocale The client's locale for error/log messages
+	 * @throws Exception Thrown if anything goes wrong.
+	 */
+	public void startBuild(IBuildResultInfo buildResultInfo, String buildLabel,
+			IConsoleOutput listener, IProgressMonitor progress,
+			Locale clientLocale) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(25));
+		
+		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
+		buildConnection.startBuild(buildResultInfo, buildLabel,
+				listener, monitor.newChild(75), clientLocale);
+	}
+
 	public void terminateBuild(String buildResultUUID,  boolean aborted, int buildState,
-			IConsoleOutput listener, IProgressMonitor progress) throws Exception {
+			IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(5));
 
 		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
 		buildConnection.terminateBuild(buildResultUUID, aborted, buildState, listener,
-				monitor.newChild(95));
+				monitor.newChild(95), clientLocale);
 	}
 
 	public void ensureLoggedIn(IProgressMonitor progress) throws TeamRepositoryException {
@@ -592,13 +613,4 @@ public class RepositoryConnection {
 		getBuildConnection().createBuildLinks(buildResultUUID, rootUrl, projectUrl,
 				buildUrl, clientConsole, monitor.newChild(50));
 	}
-
-	public void getBuildResultInfo(IBuildResultInfo buildResultInfo,
-			IConsoleOutput clientConsole, SubMonitor progress) throws TeamRepositoryException {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		ensureLoggedIn(monitor.newChild(50));
-		
-		getBuildConnection().getBuildResultInfo(buildResultInfo, clientConsole, monitor.newChild(50));
-	}
-
 }

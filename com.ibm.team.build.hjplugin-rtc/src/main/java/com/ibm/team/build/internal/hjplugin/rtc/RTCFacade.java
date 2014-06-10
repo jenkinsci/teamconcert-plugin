@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -54,28 +54,21 @@ public class RTCFacade {
 	}
 	
 	/**
-	 * Logs into the repository to test the connection. Essentially excercises the configuration parameters supplied.
-	 * This is expected to be called on the Master. If the decision changes and we are to pass the request
-	 * out to a slave, then {@link #determinePassword(String, File)} should be used to determine the
-	 * password first.
+	 * Logs into the repository to test the connection. Essentially exercises the configuration parameters supplied.
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server. May be <code>null</code>
-	 * 				in which case passwordFile should be supplied.
-	 * @param passwordFile The file containing an obfuscated password to use when logging into
-	 * 				the server. May be <code>null</code> in which case password should be supplied.
+	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param clientLocale The locale of the requesting client
 	 * @return an error message to display, or null if no problem
 	 * @throws Exception
 	 */
-	public String testConnection(String serverURI, String userId, String password, File passwordFile, int timeout, Locale clientLocale) throws Exception {
+	public String testConnection(String serverURI, String userId, String password, int timeout, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient();
-			String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
-			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor);
 		} catch (RTCConfigurationException e) {
@@ -92,28 +85,21 @@ public class RTCFacade {
 	
 	/**
 	 * Logs into the repository to test the connection and validates the RTC build workspace is valid for use.
-	 * This is expected to be called on the Master. If the decision changes and we are to pass the request
-	 * out to a slave, then {@link #determinePassword(String, File)} should be used to determine the
-	 * password first.
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server. May be <code>null</code>
-	 * 				in which case passwordFile should be supplied.
-	 * @param passwordFile The file containing an obfuscated password to use when logging into
-	 * 				the server. May be <code>null</code> in which case password should be supplied.
+	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildWorkspace The name of the RTC build workspace
 	 * @param clientLocale The locale of the requesting client
 	 * @return an error message to display, or null if no problem
 	 * @throws Exception
 	 */
-	public String testBuildWorkspace(String serverURI, String userId, String password, File passwordFile, int timeout, String buildWorkspace, Locale clientLocale) throws Exception {
+	public String testBuildWorkspace(String serverURI, String userId, String password, int timeout, String buildWorkspace, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient(); 
-			String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
-			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
 			repoConnection.testBuildWorkspace(buildWorkspace, monitor.newChild(50), clientLocale);
@@ -131,28 +117,22 @@ public class RTCFacade {
 	
 	/**
 	 * Logs into the repository to test the connection and validates the RTC build definition is valid for use.
-	 * This is expected to be called on the Master. If the decision changes and we are to pass the request
-	 * out to a slave, then {@link #determinePassword(String, File)} should be used to determine the
 	 * password first.
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server. May be <code>null</code>
-	 * 				in which case passwordFile should be supplied.
-	 * @param passwordFile The file containing an obfuscated password to use when logging into
-	 * 				the server. May be <code>null</code> in which case password should be supplied.
+	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildDefinition The name of the RTC build definition
 	 * @param clientLocale The locale of the requesting client
 	 * @return an error message to display, or null if no problem
 	 * @throws Exception
 	 */
-	public String testBuildDefinition(String serverURI, String userId, String password, File passwordFile, int timeout, String buildDefinition, Locale clientLocale) throws Exception {
+	public String testBuildDefinition(String serverURI, String userId, String password, int timeout, String buildDefinition, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
 			AbstractBuildClient buildClient = getBuildClient(); 
-			String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
-			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
 			repoConnection.testBuildDefinition(buildDefinition, monitor.newChild(50), clientLocale);
@@ -170,15 +150,9 @@ public class RTCFacade {
 
 	/**
 	 * Checks to see if there are incoming changes for the RTC build workspace (meaning a build is needed).
-	 * This is expected to be called on the Master. If the decision changes and we are to pass the request
-	 * out to a slave, then {@link #determinePassword(String, File)} should be used to determine the
-	 * password first.
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server. May be <code>null</code>
-	 * 				in which case passwordFile should be supplied.
-	 * @param passwordFile The file containing an obfuscated password to use when logging into
-	 * 				the server. May be <code>null</code> in which case password should be supplied.
+	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildDefinition The name (id) of the build definition that describes the build workspace.
 	 * May be <code>null</code> if a buildWorkspace is supplied. Only one of buildWorkspace/buildDefinition
@@ -195,13 +169,12 @@ public class RTCFacade {
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
 	public boolean incomingChanges(String serverURI, String userId,
-			String password, File passwordFile, int timeout,
+			String password, int timeout,
 			String buildDefinition, String buildWorkspace, Object listener, Locale clientLocale)
 			throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
-		String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
-		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
@@ -214,19 +187,16 @@ public class RTCFacade {
 	}
 
 	/**
-	 * Determines the password to use when connecting to the repository. The password file
-	 * has precedence if both are supplied.
-	 * @param password The password to use when logging into the server. May be <code>null</code>
-	 * 				in which case passwordFile should be supplied.
+	 * Determines the password to use when connecting to the repository from the file.
 	 * @param passwordFile The file containing an obfuscated password to use when logging into
 	 * 				the server. May be <code>null</code> in which case password should be supplied.
 	 * @param clientLocale The locale of the requesting client
-	 * @return The password determined for use
+	 * @return The password from the file
 	 * @throws Exception If no password can be determined
 	 */
-	public String determinePassword(String password, File passwordFile, Locale clientLocale) throws Exception {
+	public String determinePassword(File passwordFile, Locale clientLocale) throws Exception {
 		AbstractBuildClient buildClient = getBuildClient();
-		return buildClient.determinePassword(password, passwordFile, clientLocale);
+		return buildClient.determinePassword(passwordFile, clientLocale);
 	}
 	
 	/**
@@ -309,13 +279,47 @@ public class RTCFacade {
 	}
 
 	/**
+	 * Start an RTC build requested in RTC but not started by the RTC Hudson Integration 
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultInfoObject An object in which to place info about the requestor of the build.
+	 * @param buildLabel The label to give to the RTC build
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * This is defined as an Object due to class loader issues. It is expected to implement
+	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
+	 * @throws Exception If any non-recoverable error occurs.
+	 * <code>false</code> if unable to start the build (already started, no requestor, etc).
+	 */
+	public void startBuild(String serverURI,
+			String userId,
+			String password,
+			int timeout,
+			Object buildResultInfoObject,
+			String buildLabel,
+			Object listener, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor();
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		IBuildResultInfo buildResultInfo = getBuildResultInfo(buildResultInfoObject);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			repoConnection.startBuild(buildResultInfo, buildLabel, clientConsole, monitor, clientLocale);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+
+	/**
 	 * Terminate an RTC build previously started by the H/J build 
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server. May be <code>null</code>
-	 * 				in which case passwordFile should be supplied.
-	 * @param passwordFile The file containing an obfuscated password to use when logging into
-	 * 				the server. May be <code>null</code> in which case password should be supplied.
+	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildResultUUID The UUID for the build result to be ended.
 	 * @param aborted Whether the Jenkins build was aborted
@@ -329,7 +333,6 @@ public class RTCFacade {
 	public void terminateBuild(String serverURI,
 			String userId,
 			String password,
-			File passwordFile,
 			int timeout,
 			String buildResultUUID,
 			boolean aborted, int buildState,
@@ -337,12 +340,11 @@ public class RTCFacade {
 		
 		SubMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
-		String passwordToUse = buildClient.determinePassword(password, passwordFile, clientLocale);
-		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
-			repoConnection.terminateBuild(buildResultUUID, aborted, buildState, clientConsole, monitor);
+			repoConnection.terminateBuild(buildResultUUID, aborted, buildState, clientConsole, monitor, clientLocale);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -350,28 +352,6 @@ public class RTCFacade {
 		}
 	}
 
-	public void getBuildResultInfo(String serverURI,
-			String userId,
-			String passwordToUse,
-			int timeout,
-			Object buildResultInfoObject,
-			Object listener, Locale clientLocale) throws Exception {
-		
-		SubMonitor monitor = getProgressMonitor();
-		AbstractBuildClient buildClient = getBuildClient();
-		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, passwordToUse, timeout);
-		IConsoleOutput clientConsole = getConsoleOutput(listener);
-		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
-		IBuildResultInfo buildResultInfo = getBuildResultInfo(buildResultInfoObject);
-		try {
-			repoConnection.getBuildResultInfo(buildResultInfo, clientConsole, monitor);
-		} catch (OperationCanceledException e) {
-			throw Utils.checkForCancellation(e);
-		} catch (TeamRepositoryException e) {
-			throw Utils.checkForCancellation(e);
-		}
-
-	}
 	/**
 	 * Accept changes into the build workspace and write a description of the changes into the ChangeLogFile.
 	 * Load the contents of the updated build workspace at hjWorkspacePath.
@@ -506,6 +486,7 @@ public class RTCFacade {
 			private Method setScheduledMethod;
 			private Method setRequestorMethod;
 			private Method setPersonalBuildMethod;
+			private Method setOwnLifeCycleMethod;
 			
 			@Override
 			public String getBuildResultUUID() {
@@ -577,6 +558,24 @@ public class RTCFacade {
 					LOGGER.log(Level.FINER, "Unable to find setPersonalBuildMethod method", e);
 				} catch (NoSuchMethodException e) {
 					LOGGER.log(Level.FINER, "Unable to find setPersonalBuildMethod method", e);
+				}
+			}
+
+			@Override
+			public void setOwnLifeCycle(boolean ownLifeCycle) {
+				try {
+					if (setOwnLifeCycleMethod == null) {
+						setOwnLifeCycleMethod = buildResultInfo.getClass().getMethod("setOwnLifeCycle", boolean.class); //$NON-NLS-1$
+					}
+					setOwnLifeCycleMethod.invoke(buildResultInfo, ownLifeCycle);
+				} catch (IllegalAccessException e) {
+					LOGGER.log(Level.FINER, "Unable to call setOwnLifeCycleMethod method", e);
+				} catch (InvocationTargetException e) {
+					LOGGER.log(Level.FINER, "Unable to call setOwnLifeCycleMethod method", e);
+				} catch (SecurityException e) {
+					LOGGER.log(Level.FINER, "Unable to find setOwnLifeCycleMethod method", e);
+				} catch (NoSuchMethodException e) {
+					LOGGER.log(Level.FINER, "Unable to find setOwnLifeCycleMethod method", e);
 				}
 			}
 		};

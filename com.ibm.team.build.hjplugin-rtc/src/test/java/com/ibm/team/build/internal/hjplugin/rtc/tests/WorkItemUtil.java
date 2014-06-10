@@ -33,21 +33,30 @@ public class WorkItemUtil {
 	public static List<IWorkItemHandle> findSomeWorkItems(ITeamRepository repository, int count) throws TeamRepositoryException {
 		List<IWorkItemHandle> result = new ArrayList<IWorkItemHandle>(count);
 		IWorkItemClient workItemClient = (IWorkItemClient) repository.getClientLibrary(IWorkItemClient.class);
-		List<Integer> ids = new ArrayList(100);
-		for (int i = 0; i < 100; i++) {
-			ids.add(i);
-		}
-
-		List<IWorkItemHandle> workItemsFound = workItemClient.findWorkItemsById(ids, null);
-		for (IWorkItemHandle workItemFound : workItemsFound) {
-			if (workItemFound != null) {
-				result.add(workItemFound);
-				if (result.size() == count) {
-					break;
+		
+		// This is a complete hack. We can't query for the work items associated with the project area because
+		// queries require libraries not included in the toolkit. So instead look up by id. Unfortunately depending
+		// on the test system we are running against, the work items that are accessible by this user may not be at
+		// the start numerically. So define the ranges to be work item ranges that are likely to contain workitems to
+		// test against.
+		int[][] ranges = new int[][] {new int[] {0, 100}, new int[] {6099, 6110}};
+		
+		for (int j = 0; j < ranges.length; j++) {
+			List<Integer> ids = new ArrayList<Integer>(100);
+			for (int i = ranges[j][0]; i < ranges[j][1]; i++) {
+				ids.add(i);
+			}
+	
+			List<IWorkItemHandle> workItemsFound = workItemClient.findWorkItemsById(ids, null);
+			for (IWorkItemHandle workItemFound : workItemsFound) {
+				if (workItemFound != null) {
+					result.add(workItemFound);
+					if (result.size() == count) {
+						return result;
+					}
 				}
 			}
-		}
-		
+		}		
 		return result;
 	}
 

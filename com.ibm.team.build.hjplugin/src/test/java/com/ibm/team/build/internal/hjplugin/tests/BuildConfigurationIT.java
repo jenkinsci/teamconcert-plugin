@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,12 +22,14 @@ import java.util.Map;
 
 import junit.framework.Assert;
 
+import org.apache.commons.lang.SystemUtils;
 import org.jvnet.hudson.test.HudsonTestCase;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
 
 @SuppressWarnings("nls")
@@ -73,10 +75,10 @@ public class BuildConfigurationIT extends HudsonTestCase {
 		// setup build request & verify BuildConfiguration
 		// checkout & verify contents on disk
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = FileUtils.getPasswordFile();
 			
 			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "path\\relative";
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -84,16 +86,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
-									File.class, // passwordFile,
 									int.class, // timeout,
 									String.class, // workspaceName,
 									String.class, // componentName,
 									String.class, // hjPath,
 									String.class}, // buildPath
-							Config.DEFAULT.getServerURI(),
-							Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), passwordFileFile,
-							Config.DEFAULT.getTimeout(), testName,
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), testName,
 							getTestName(),
 							sandboxDir.getPath(),
 							fetchLocation);
@@ -103,17 +104,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
-				String password = (String) testingFacade.invoke(
-						"determinePassword", 
-						new Class[] {
-								String.class, // password
-								File.class, // password file
-								Locale.class // clientLocale
-						},
-						Config.DEFAULT.getPassword(),
-						passwordFileFile,
-						Locale.getDefault());
-
+				
 				// checkout the changes
 				@SuppressWarnings("unchecked")
 				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
@@ -129,10 +120,10 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // baselineSetName,
 								Object.class, // listener
 								Locale.class}, // clientLocale
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						password,
-						Config.DEFAULT.getTimeout(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
@@ -171,13 +162,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
-								File.class, // passwordFile,
 								int.class, // timeout,
 								Map.class}, // setupArtifacts
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						Config.DEFAULT.getPassword(), passwordFileFile,
-						Config.DEFAULT.getTimeout(), setupArtifacts);
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
 	}
@@ -226,7 +216,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 
 	public void testGoodRelativeFetchLocation() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = FileUtils.getPasswordFile();
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "relative\\is\\ok";
@@ -237,16 +227,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
-									File.class, // passwordFile,
 									int.class, // timeout,
 									String.class, // workspaceName,
 									String.class, // componentName,
 									String.class, // hjPath,
 									String.class}, // buildPath
-							Config.DEFAULT.getServerURI(),
-							Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), passwordFileFile,
-							Config.DEFAULT.getTimeout(), testName,
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), testName,
 							getTestName(),
 							sandboxDir.getPath(),
 							fetchLocation);
@@ -257,19 +246,19 @@ public class BuildConfigurationIT extends HudsonTestCase {
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
-							File.class, // passwordFile,
 							int.class, // timeout,
 							Map.class}, // setupArtifacts
-					Config.DEFAULT.getServerURI(),
-					Config.DEFAULT.getUserID(),
-					Config.DEFAULT.getPassword(), passwordFileFile,
-					Config.DEFAULT.getTimeout(), setupArtifacts);
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(),
+					setupArtifacts);
 		}
 	}
 
 	public void testGoodAbsoluteFetchLocationWin() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = FileUtils.getPasswordFile();
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "C:\\absolute\\is\\ok\\too";
@@ -280,16 +269,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
-									File.class, // passwordFile,
 									int.class, // timeout,
 									String.class, // workspaceName,
 									String.class, // componentName,
 									String.class, // hjPath,
 									String.class}, // buildPath
-							Config.DEFAULT.getServerURI(),
-							Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), passwordFileFile,
-							Config.DEFAULT.getTimeout(), testName,
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), testName,
 							getTestName(),
 							sandboxDir.getPath(),
 							fetchLocation);
@@ -300,19 +288,18 @@ public class BuildConfigurationIT extends HudsonTestCase {
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
-							File.class, // passwordFile,
 							int.class, // timeout,
 							Map.class}, // setupArtifacts
-					Config.DEFAULT.getServerURI(),
-					Config.DEFAULT.getUserID(),
-					Config.DEFAULT.getPassword(), passwordFileFile,
-					Config.DEFAULT.getTimeout(), setupArtifacts);
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(), setupArtifacts);
 		}
 	}
 
 	public void testBadFetchLocationWin() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = FileUtils.getPasswordFile();
+		if (Config.DEFAULT.isConfigured() && SystemUtils.IS_OS_WINDOWS) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "invalid/questionmark?/character/is/not/ok";
@@ -323,16 +310,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
-									File.class, // passwordFile,
 									int.class, // timeout,
 									String.class, // workspaceName,
 									String.class, // componentName,
 									String.class, // hjPath,
 									String.class}, // buildPath
-							Config.DEFAULT.getServerURI(),
-							Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), passwordFileFile,
-							Config.DEFAULT.getTimeout(), testName,
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), testName,
 							getTestName(),
 							sandboxDir.getPath(),
 							fetchLocation);
@@ -343,13 +329,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
-							File.class, // passwordFile,
 							int.class, // timeout,
 							Map.class}, // setupArtifacts
-					Config.DEFAULT.getServerURI(),
-					Config.DEFAULT.getUserID(),
-					Config.DEFAULT.getPassword(), passwordFileFile,
-					Config.DEFAULT.getTimeout(), setupArtifacts);
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(), setupArtifacts);
 		}
 	}
 
@@ -375,7 +360,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 		// checkout based on the request
 		// make sure the personal build workspace was loaded and the load rule used
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = FileUtils.getPasswordFile();
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			String testName = getTestName() + System.currentTimeMillis();
 
@@ -385,16 +370,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
-									File.class, // passwordFile,
 									int.class, // timeout,
 									String.class, // workspaceName,
 									String.class, // componentName,
 									String.class, // hjPath,
 									String.class}, // buildPath
-							Config.DEFAULT.getServerURI(),
-							Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), passwordFileFile,
-							Config.DEFAULT.getTimeout(), testName,
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), testName,
 							getTestName(),
 							sandboxDir.getPath(),
 							"${propertyA}/here");
@@ -404,16 +388,6 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
-				String password = (String) testingFacade.invoke(
-						"determinePassword", 
-						new Class[] {
-								String.class, // password
-								File.class, // password file
-								Locale.class // clientLocale
-						},
-						Config.DEFAULT.getPassword(),
-						passwordFileFile,
-						Locale.getDefault());
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
@@ -438,10 +412,10 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // baselineSetName,
 								Object.class, // listener
 								Locale.class}, // clientLocale
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						password,
-						Config.DEFAULT.getTimeout(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
@@ -484,13 +458,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
-								File.class, // passwordFile,
 								int.class, // timeout,
 								Map.class}, // setupArtifacts
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						Config.DEFAULT.getPassword(), passwordFileFile,
-						Config.DEFAULT.getTimeout(), setupArtifacts);
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
 	}
@@ -512,7 +485,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 		// verify extra stuff from sandbox directory not deleted
 		// verify no changes accepted
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = FileUtils.getPasswordFile();
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			String testName = getTestName() + System.currentTimeMillis();
 
@@ -522,15 +495,14 @@ public class BuildConfigurationIT extends HudsonTestCase {
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
-									File.class, // passwordFile,
 									int.class, // timeout,
 									String.class, // workspaceName,
 									String.class, // componentName,
 									String.class}, // hjPath,
-							Config.DEFAULT.getServerURI(),
-							Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), passwordFileFile,
-							Config.DEFAULT.getTimeout(), testName,
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), testName,
 							getTestName(),
 							sandboxDir.getPath());
 			
@@ -539,17 +511,6 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
-				String password = (String) testingFacade.invoke(
-						"determinePassword", 
-						new Class[] {
-								String.class, // password
-								File.class, // password file
-								Locale.class // clientLocale
-						},
-						Config.DEFAULT.getPassword(),
-						passwordFileFile,
-						Locale.getDefault());
-
 				assertTrue(new File(sandboxDir, "abc").mkdirs());
 				assertTrue(new File(sandboxDir, "def").mkdirs());
 				assertTrue(new File(sandboxDir, "hij").mkdirs());
@@ -569,10 +530,10 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // baselineSetName,
 								Object.class, // listener
 								Locale.class}, // clientLocale
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						password,
-						Config.DEFAULT.getTimeout(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
@@ -610,13 +571,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
-								File.class, // passwordFile,
 								int.class, // timeout,
 								Map.class}, // setupArtifacts
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						Config.DEFAULT.getPassword(), passwordFileFile,
-						Config.DEFAULT.getTimeout(), setupArtifacts);
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
 	}
@@ -638,7 +598,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 		// verify extra stuff deleted from sandbox directory
 		// verify changes accepted
 		if (Config.DEFAULT.isConfigured()) {
-			File passwordFileFile = FileUtils.getPasswordFile();
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = ".";
@@ -649,16 +609,15 @@ public class BuildConfigurationIT extends HudsonTestCase {
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
-									File.class, // passwordFile,
 									int.class, // timeout,
 									String.class, // workspaceName,
 									String.class, // componentName,
 									String.class, // hjPath,
 									String.class}, // buildPath
-							Config.DEFAULT.getServerURI(),
-							Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), passwordFileFile,
-							Config.DEFAULT.getTimeout(), testName,
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), testName,
 							getTestName(),
 							sandboxDir.getPath(),
 							fetchLocation);
@@ -668,16 +627,6 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
-				String password = (String) testingFacade.invoke(
-						"determinePassword", 
-						new Class[] {
-								String.class, // password
-								File.class, // password file
-								Locale.class // clientLocale
-						},
-						Config.DEFAULT.getPassword(),
-						passwordFileFile,
-						Locale.getDefault());
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
@@ -702,10 +651,10 @@ public class BuildConfigurationIT extends HudsonTestCase {
 								String.class, // baselineSetName,
 								Object.class, // listener
 								Locale.class}, // clientLocale
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						password,
-						Config.DEFAULT.getTimeout(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
 						loadDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
@@ -738,13 +687,12 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
-								File.class, // passwordFile,
 								int.class, // timeout,
 								Map.class}, // setupArtifacts
-						Config.DEFAULT.getServerURI(),
-						Config.DEFAULT.getUserID(),
-						Config.DEFAULT.getPassword(), passwordFileFile,
-						Config.DEFAULT.getTimeout(), setupArtifacts);
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
 	}
