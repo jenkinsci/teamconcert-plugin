@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
 @ExportedBean(defaultVisibility=999)
@@ -110,7 +109,7 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	public RTCChangeLogSet(AbstractBuild<?, ?> build) {
 		super(build);
 		this.componentChanges = new ArrayList<RTCChangeLogComponentEntry>(0);
-		this.affectedComponents = new TreeSet();
+		this.affectedComponents = new TreeSet<ComponentDescriptor>();
 		this.changesAccepted = new HashMap<String, List<RTCChangeLogChangeSetEntry>>();
 		this.changesDiscarded = new HashMap<String, List<RTCChangeLogChangeSetEntry>>();
 		this.changesAcceptedCount = 0;
@@ -120,6 +119,11 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	public Iterator<RTCChangeLogSetEntry> iterator() {
 		List<RTCChangeLogSetEntry> changes = getAllChanges();
 		return changes.iterator();
+	}
+
+	@Override
+	public String getKind() {
+		return "RTC";
 	}
 
 	@Override
@@ -222,7 +226,7 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	public List<RTCChangeLogChangeSetEntry> getChangeSetsAccepted(String componentItemId) {
 		List<RTCChangeLogChangeSetEntry> result = changesAccepted.get(componentItemId);
 		if (result == null) {
-			return Collections.EMPTY_LIST;
+			return Collections.emptyList();
 		}
 		return result;
 	}
@@ -230,7 +234,7 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	public List<RTCChangeLogChangeSetEntry> getChangeSetsDiscarded(String componentItemId) {
 		List<RTCChangeLogChangeSetEntry> result = changesDiscarded.get(componentItemId);
 		if (result == null) {
-			return Collections.EMPTY_LIST;
+			return Collections.emptyList();
 		}
 		return result;
 	}

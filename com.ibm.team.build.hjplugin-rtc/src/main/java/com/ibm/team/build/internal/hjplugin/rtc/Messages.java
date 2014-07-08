@@ -307,6 +307,13 @@ public class Messages {
 	public String RepositoryConnection_activity_fetching() {
 		return getString("RepositoryConnection.activity_fetching");
 	}
+	
+	/**
+	 * Build workspace {0} has {1} components that are not visible.
+	 */
+	public String RepositoryConnection_hidden_components(Object arg1, Object arg2) {
+		return MessageFormat.format(getString("RepositoryConnection_hidden_components"), arg1, arg2);
+	}
 
     /**
      * Unable to find a build definition with name "{0}"

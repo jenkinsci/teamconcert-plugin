@@ -304,6 +304,13 @@ public class RepositoryConnection {
         // Ensure we hang onto this between the accept and the load steps so that if 
         // we are synchronizing, we use the same cached sync times.
         IWorkspaceConnection workspaceConnection = workspace.getConnection(fRepositoryManager, false, monitor.newChild(1));
+        
+        // Warn if the build user id can't see all the components in the build workspace
+        if (!workspaceConnection.getUnreadableComponents().isEmpty()) {
+            listener.log(Messages.getDefault().RepositoryConnection_hidden_components(
+                    workspaceConnection.getName(), workspaceConnection.getUnreadableComponents().size()));
+        }
+
         boolean synchronizeLoad = false;
 
         if (!buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch()) {
