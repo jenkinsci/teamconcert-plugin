@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,22 +17,38 @@
   
   This is shown when clicking on the changes of a build for a project.
   
-  "it" is the RTCChangeLogSet instance
+  "it" should be the RTCChangeLogSet instance
 -->
     <?jelly escape-by-default='true'?>
+
+    <j:set var="rtcChangeLog" value="${it}"/>
+
+  	<!-- if "it" is not a RTCChangeLogSet its likely the Multi-SCM plugin running us, 
+   		 try to find our instance from child change entry  -->
+
+    <j:set var="expectedClass" value="com.ibm.team.build.internal.hjplugin.RTCChangeLogSet"/>
+    <j:if test="${rtcChangeLog.getClass().getName()!=expectedClass}">
+    	<j:set var="iterator" value="${it.iterator()}"/>
+    	<j:if test="${iterator.hasNext()}" >
+    		<j:set var="parent" value="${iterator.next().getParent()}"/>
+			<j:if test="${parent.getClass().getName()==expectedClass}">
+				<j:set var="rtcChangeLog" value="${parent}"/>
+	    	</j:if>
+    	</j:if>
+    </j:if>
+
+    <j:set var="browser" value="${rtcChangeLog.build.parent.scm.effectiveBrowser}"/>
     
-    <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
-  
 	<j:choose>
-		<j:when test="${it.isPersonalBuild()}">
+		<j:when test="${rtcChangeLog.isPersonalBuild()}">
 			<h2>${%personal.build}</h2>
 		</j:when>
 		<j:otherwise>
 
 			<h2>${%changes.summary}</h2>
 	
-			<j:set var="snapshotlink" value="${browser.getBaselineSetLink(it)}"/>
-			<j:set var="snapshotName" value="${it.getBaselineSetName()}"/>
+			<j:set var="snapshotlink" value="${browser.getBaselineSetLink(rtcChangeLog)}"/>
+			<j:set var="snapshotName" value="${rtcChangeLog.getBaselineSetName()}"/>
 			<j:if test="${snapshotlink!=null}">
 				<j:if test="${snapshotName==null}">
 					<j:set var="snapshotName" value="${browser.descriptor.displayName}"/>
@@ -42,14 +58,14 @@
 			</j:if>
 
 			<j:choose>
-				<j:when test="${it.emptySet}">
+				<j:when test="${rtcChangeLog.emptySet}">
 					${%changes.none}
 				</j:when>
 				<j:otherwise>
-					<j:set var="componentChangeCount" value="${it.getComponentChangeCount()}" />
+					<j:set var="componentChangeCount" value="${rtcChangeLog.getComponentChangeCount()}" />
 					<j:if test="${componentChangeCount!=0}">
 						${componentChangeCount} ${%changes.component}
-						<j:forEach var="cc" items="${it.componentChanges}" varStatus="loop">
+						<j:forEach var="cc" items="${rtcChangeLog.componentChanges}" varStatus="loop">
 							<div class="component-message" style="width: 650px; margin-left: 14px;">
 								<table>
 									<tr>
@@ -61,8 +77,8 @@
 						</j:forEach>
 					</j:if>
 			
-					<j:set var="acceptedCount" value="${it.getChangeSetsAcceptedCount()}" />
-					<j:set var="discardedCount" value="${it.getChangeSetsDiscardedCount()}" />
+					<j:set var="acceptedCount" value="${rtcChangeLog.getChangeSetsAcceptedCount()}" />
+					<j:set var="discardedCount" value="${rtcChangeLog.getChangeSetsDiscardedCount()}" />
 					<b>${acceptedCount} ${%changeSets.accepted}</b>
 					<br/>
 					<j:if test="${discardedCount!=0}">
@@ -71,15 +87,15 @@
 					</j:if>
 					<br/>
 		
-					<j:if test="${!it.getAffectedComponents().isEmpty()}">
+					<j:if test="${!rtcChangeLog.getAffectedComponents().isEmpty()}">
 			
-						<j:forEach var="ac" items="${it.getAffectedComponents()}" varStatus="cmp">
+						<j:forEach var="ac" items="${rtcChangeLog.getAffectedComponents()}" varStatus="cmp">
 							<b>${ac.getName()}</b>
 							<br/>
 					
-							<j:if test="${!it.getChangeSetsAccepted(ac.getItemId()).isEmpty()}">
+							<j:if test="${!rtcChangeLog.getChangeSetsAccepted(ac.getItemId()).isEmpty()}">
 								<ul>
-									<j:forEach var="cs" items="${it.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
+									<j:forEach var="cs" items="${rtcChangeLog.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
 										<li>
 											<j:set var="labeled" value="false"/>
 											<j:set var="wi" value="${cs.getWorkItem()}"/>
@@ -112,11 +128,11 @@
 							</j:if>
 			
 							<j:if test="${discardedCount!=0}">
-								<j:if test="${!it.getChangeSetsDiscarded(ac.getItemId()).isEmpty()}" >
+								<j:if test="${!rtcChangeLog.getChangeSetsDiscarded(ac.getItemId()).isEmpty()}" >
 									<j:text>&#160;&#160;${%discarded}</j:text>
 
 									<ul>
-										<j:forEach var="cs" items="${it.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
+										<j:forEach var="cs" items="${rtcChangeLog.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
 											<li>
 												<j:set var="labeled" value="false"/>
 												<j:set var="wi" value="${cs.getWorkItem()}"/>
@@ -153,9 +169,9 @@
 
 					<table class="pane" style="border:none">
 						<col width="16"/>
-						<j:forEach var="ac" items="${it.getAffectedComponents()}" varStatus="cmp">
+						<j:forEach var="ac" items="${rtcChangeLog.getAffectedComponents()}" varStatus="cmp">
 				
-							<j:forEach var="cs" items="${it.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
+							<j:forEach var="cs" items="${rtcChangeLog.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
 								<tr class="pane">
 									<td colspan="3" class="changeset">
 										<a name="component${cmp.index}accepted${loop.index}"></a>
@@ -221,7 +237,7 @@
 								</j:choose>
 							</j:forEach>
 				
-							<j:forEach var="cs" items="${it.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
+							<j:forEach var="cs" items="${rtcChangeLog.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
 								<tr class="pane">
 									<td colspan="3" class="changeset">
 										<a name="component${cmp.index}discarded${loop.index}"></a>

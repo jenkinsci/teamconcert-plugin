@@ -19,7 +19,7 @@
     <f:section title="Rational Team Concert (RTC)">
     
         <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool">
-            <f:select name="buildTool" />
+            <f:select name="buildTool" default="${descriptor.globalBuildTool}"/>
         </f:entry>
         
         <f:optionalBlock name="avoidUsingToolkit" title="${%avoidUsingToolkit.title}" field="avoidUsingToolkit" checked="${descriptor.globalAvoidUsingToolkit}" />
