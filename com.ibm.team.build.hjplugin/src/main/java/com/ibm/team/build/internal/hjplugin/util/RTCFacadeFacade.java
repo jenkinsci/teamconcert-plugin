@@ -69,6 +69,27 @@ public class RTCFacadeFacade {
 	private static final String JSON_PROP_ELEMENT_ID = "elementId"; //$NON-NLS-1$
 	private static final String JSON_PROP_CONFIGURATION_ELEMENTS = "configurationElements"; //$NON-NLS-1$
 
+	/**
+	 * Checks to see if there are incoming changes for the RTC build workspace (meaning a build is needed).
+	 * Use either the rest service to ask the server or use the facade based on the configuration info
+	 * (avoid the toolkit and we have a build definition configured).
+	 * 
+	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildDefinition The name (id) of the build definition that describes the build workspace.
+	 * May be <code>null</code> if a buildWorkspace is supplied. Only one of buildWorkspace/buildDefinition
+	 * should be supplied.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
+	 * buildDefinition is supplied. Only one of buildWorkspace/buildDefinition
+	 * should be supplied.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @return Returns <code>true</code> if there are changes to the build workspace;
+	 * <code>false</code> otherwise
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
 	public static Boolean incomingChanges(String buildToolkitPath, String serverURI, 
 			String userId, String password,
 			int timeout, boolean avoidUsingToolkit, boolean useBuildDefinition, String buildDefinitionId,
@@ -115,11 +136,23 @@ public class RTCFacadeFacade {
 		}
 	}
 
+	/**
+	 * Logs into the repository to test the connection. Essentially exercises the configuration parameters supplied.
+	 * Either the rest service or the build toolkit will be used to test the connection.
+	 * 
+	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @return an error message to display, or null if no problem
+	 * @throws Exception
+	 */
 	public static String testConnection(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
 			boolean avoidUsingToolkit)
 			throws Exception {
-		
 		
 		// Attempt to use Rest api if this is for a build definition
 		if (avoidUsingToolkit) {
@@ -188,6 +221,21 @@ public class RTCFacadeFacade {
 		return errorMessage;
 	}
 
+	/**
+	 * Logs into the repository to test the connection and validates the RTC build definition is valid for use.
+	 * password first.
+	 * The rest service or the build toolkit will be used
+	 * 
+	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildDefinition The name of the RTC build definition
+	 * @return an error message to display, or null if no problem
+	 * @throws Exception
+	 */
 	public static String testBuildDefinition(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
 			boolean avoidUsingToolkit, String buildDefinitionId)
@@ -289,7 +337,17 @@ public class RTCFacadeFacade {
 
 	/**
 	 * validate the name of the workspace is a valid workspace for build purposes
-	 * @return Message describing what is wrong in the validation
+	 * Use either the rest service or the build toolkit
+	 * 
+ 	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildWorkspace The name of the RTC build workspace
+	 * @return an error message to display, or null if no problem
+	 * @throws Exception
 	 */
 	public static String testBuildWorkspace(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
@@ -362,6 +420,22 @@ public class RTCFacadeFacade {
 		}
 	}
 	
+	/**
+	 * Terminate an RTC build previously started by the H/J build.
+	 * Either the rest service or the buld toolkit will be used
+	 *  
+ 	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The UUID for the build result to be ended.
+	 * @param buildResult The state of the Jenkins build (success, failure or unstable)
+	 * @param aborted Whether the Jenkins build was aborted
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
 	public static void terminateBuild(String masterBuildToolkit, String serverURI, String userId, 
 			String password, int timeout, boolean avoidUsingToolkit, String buildResultUUID,
 			Result buildResult, TaskListener listener) throws Exception {
@@ -485,6 +559,50 @@ public class RTCFacadeFacade {
 					buildResultUUID,
 					aborted, buildState,
 					listener, Locale.getDefault());
+		}
+	}
+
+	/**
+	 * Delete an RTC build previously created by running a H/J build (whether initiated from
+	 * RTC or H/J).
+	 * Either the rest service or the build toolkit will be used
+	 *  
+ 	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The UUID for the build result to be ended.
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
+	public static void deleteBuild(String buildToolkitPath,
+			String serverURI, String userId, String password, int timeout,
+			boolean avoidUsingToolkit, String buildResultUUID) throws Exception {
+		// post to create; put to update
+		if (avoidUsingToolkit) {
+			String uri = RTCBuildConstants.URI_RESULT + buildResultUUID;
+			HttpUtils.performDelete(serverURI, uri, userId, password, timeout, null, TaskListener.NULL);
+			
+		} else {
+			// use the toolkit
+	
+			RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
+			facade.invoke(
+					"deleteBuildResult", //$NON-NLS-1$
+					new Class[] { String.class, // serverURI
+							String.class, // userId
+							String.class, // password
+							int.class, // timeout
+							String.class, // buildResultUUID
+							Object.class, // listener
+							Locale.class}, // clientLocale
+					serverURI,
+					userId, password,
+					timeout,
+					buildResultUUID,
+					TaskListener.NULL,
+					Locale.getDefault());
 		}
 	}
 }

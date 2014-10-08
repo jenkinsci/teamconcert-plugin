@@ -55,7 +55,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 * different from the one supplied on the AbstractBuild if another SCM plugin
 	 * incorporates our SCM provider (i.e. MultiSCM). 
 	 */
-	RTCBuildResultAction(String serverURI, String buildResultUUID, boolean ownsRTCBuildResultLifecycle, RTCScm scm) {
+	public RTCBuildResultAction(String serverURI, String buildResultUUID, boolean ownsRTCBuildResultLifecycle, RTCScm scm) {
 		this.buildResultUUID = buildResultUUID;
         String uri = Util.fixEmpty(serverURI);
         if (uri != null && !uri.endsWith(SLASH)) {
@@ -66,7 +66,6 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
         this.scm = scm;
         
         if (buildResultUUID != null) {
-        	this.buildProperties.put(BUILD_RESULT_UUID, buildResultUUID);
         	this.buildProperties.put(RTC_BUILD_RESULT_UUID, buildResultUUID);
         }
 	}
@@ -74,7 +73,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	/**
 	 * @return The build result UUID for the RTC build result
 	 */
-	String getBuildResultUUID() {
+	public String getBuildResultUUID() {
 		return buildResultUUID;
 	}
 
@@ -131,6 +130,13 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 		for (Map.Entry<String, String> entry : buildProperties.entrySet()) {
 			this.buildProperties.put(entry.getKey(), entry.getValue());
 		}
+	}
+	
+	/**
+	 * @return return the server uri
+	 */
+	public String getServerURI() {
+		return serverURI;
 	}
 	
 	/**

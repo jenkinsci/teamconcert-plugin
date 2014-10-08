@@ -60,6 +60,7 @@ import com.ibm.team.links.common.factory.IReferenceFactory;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 import com.ibm.team.repository.common.util.NLS;
@@ -600,10 +601,28 @@ public class BuildConnectionTests {
 				IItemManager.REFRESH, TERMINATE_PROPERTIES, null);
 		AssertUtil.assertEquals(expectedState, buildResult.getState().name());
 		AssertUtil.assertEquals(expectedStatus, buildResult.getStatus().name());
-		
-		BuildUtil.deleteBuildResult(repo, buildResultItemId);
-		artifactIds.remove(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+	}
 
+	/**
+	 * Verify that the build result really has been deleted
+	 * @param artifactIds The artifacts now in play
+	 * @throws TeamRepositoryException Thrown if anything goes wrong
+	 */
+	public void verifyBuildResultDeleted(Map<String, String> artifactIds)
+			throws TeamRepositoryException {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+
+		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+		IBuildResultHandle buildResultHandle;
+		buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
+		try {
+			repo.itemManager().fetchPartialItem(buildResultHandle, 
+				IItemManager.REFRESH, TERMINATE_PROPERTIES, null);
+			AssertUtil.fail("Build result found for " + buildResultItemId);
+		} catch (ItemNotFoundException e) {
+			// good
+		}
 	}
 
 	private static void setBuildStatus(ITeamRepository repo, String buildResultItemId,

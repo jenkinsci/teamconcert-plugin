@@ -52,6 +52,7 @@ import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IContributor;
 import com.ibm.team.repository.common.IContributorHandle;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.StaleDataException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
@@ -724,5 +725,24 @@ public class BuildConnection {
         }
         return (IBuildRequestHandle) requests.get(0);
     }
+
+    /**
+     * Delete the build result
+     * @param buildResultUUID UUID of the build result to delete.
+     * @param clientConsole The console to put messages
+     * @param progress Monitor to mark progress on
+     * @param clientLocale The locale of the caller
+     * @throws TeamRepositoryException
+     */
+	public void deleteBuildResult(String buildResultUUID,
+			IConsoleOutput clientConsole, IProgressMonitor progress,
+			Locale clientLocale) throws TeamRepositoryException {
+		IBuildResultHandle resultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+		try {
+			getTeamBuildClient().delete(resultHandle, progress);
+		} catch (ItemNotFoundException e) {
+			// its ok if it has already been deleted.
+		}
+	}
 
 }

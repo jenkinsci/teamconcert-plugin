@@ -69,7 +69,7 @@
 							</j:when>
 							<j:otherwise>
 								<j:if test="${!b.changeSet.getComponentChanges().isEmpty()}">
-									<b>${b.changeSet.getComponentChangeCount()} ${%changes.component}</b>
+									<b>${%changes.component(b.changeSet.getComponentChangeCount())}</b>
 									<j:forEach var="cc" items="${b.changeSet.componentChanges}" varStatus="loop">
 										<div class="component-message" style="width: 650px; margin-left: 14px;">
 											<table>
@@ -84,10 +84,10 @@
 				      
 								<j:set var="acceptedCount" value="${b.changeSet.getChangeSetsAcceptedCount()}" />
 								<j:set var="discardedCount" value="${b.changeSet.getChangeSetsDiscardedCount()}" />
-								<b>${acceptedCount} ${%changeSets.accepted}</b>
+								<b>${%changeSets.accepted(acceptedCount)}</b>
 								<br/>
 								<j:if test="${discardedCount!=0}">
-									<b>${discardedCount} ${%changeSets.discarded}</b>
+									<b>${%changeSets.discarded(discardedCount)}</b>
 									<br/>
 								</j:if>
 								<br/>

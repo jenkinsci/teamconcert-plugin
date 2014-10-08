@@ -55,6 +55,8 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -65,6 +67,7 @@ import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
 
+@ExportedBean(defaultVisibility=999)
 public class RTCScm extends SCM {
 
     private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
@@ -1329,6 +1332,7 @@ public class RTCScm extends SCM {
 		return false;
 	}
 
+    @Exported
 	public String getBuildType() {
 
 		// migrate existing jobs with only build workspace defined to build workspace type
@@ -1342,7 +1346,14 @@ public class RTCScm extends SCM {
 		return buildWorkspace;
 	}
 	
+    @Exported
 	public String getBuildDefinition() {
 		return buildDefinition;
+	}
+	
+	@Override
+	@Exported
+	public String getType() {
+		return super.getType();
 	}
 }

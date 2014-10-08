@@ -53,7 +53,8 @@
 				<j:if test="${snapshotName==null}">
 					<j:set var="snapshotName" value="${browser.descriptor.displayName}"/>
 				</j:if>
-				${%snapshot.label} : <a href="${snapshotlink}">${snapshotName}</a>
+				<b>${%snapshot.label} :&#160;</b>
+				<a href="${snapshotlink}">${snapshotName}</a>
 				<br/>
 			</j:if>
 
@@ -64,7 +65,7 @@
 				<j:otherwise>
 					<j:set var="componentChangeCount" value="${rtcChangeLog.getComponentChangeCount()}" />
 					<j:if test="${componentChangeCount!=0}">
-						${componentChangeCount} ${%changes.component}
+						<b>${%changes.component(componentChangeCount)}</b>
 						<j:forEach var="cc" items="${rtcChangeLog.componentChanges}" varStatus="loop">
 							<div class="component-message" style="width: 650px; margin-left: 14px;">
 								<table>
@@ -79,10 +80,10 @@
 			
 					<j:set var="acceptedCount" value="${rtcChangeLog.getChangeSetsAcceptedCount()}" />
 					<j:set var="discardedCount" value="${rtcChangeLog.getChangeSetsDiscardedCount()}" />
-					<b>${acceptedCount} ${%changeSets.accepted}</b>
+					<b>${%changeSets.accepted(acceptedCount)}</b>
 					<br/>
 					<j:if test="${discardedCount!=0}">
-						<b>${discardedCount} ${%changeSets.discarded}</b>
+						<b>${%changeSets.discarded(discardedCount)}</b>
 						<br/>
 					</j:if>
 					<br/>

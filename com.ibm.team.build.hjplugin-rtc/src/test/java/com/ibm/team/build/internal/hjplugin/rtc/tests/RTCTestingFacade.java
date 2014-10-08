@@ -187,6 +187,13 @@ public class RTCTestingFacade extends RTCFacade {
 		testClient.verifyBuildTermination(connectionDetails, expectedState, expectedStatus, artifactIds);
 	}
 
+	public void verifyBuildResultDeleted(String serverURL, String userId, String password,
+			int timeout, Map<String, String> artifactIds) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		testClient.verifyBuildResultDeleted(connectionDetails, artifactIds);
+	}
+
 	public void testBuildStart(String serverURL, String userId, String password,
 			int timeout, String testName) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
