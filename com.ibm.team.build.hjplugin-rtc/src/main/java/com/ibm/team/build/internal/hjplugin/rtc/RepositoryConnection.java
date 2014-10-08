@@ -620,4 +620,20 @@ public class RepositoryConnection {
 		getBuildConnection().createBuildLinks(buildResultUUID, rootUrl, projectUrl,
 				buildUrl, clientConsole, monitor.newChild(50));
 	}
+
+	/**
+	 * Delete build result
+	 * @param buildResultUUID The UUID of the build result to delete
+	 * @param progress Monitor to handle cancellation
+	 * @param clientLocale Locale of the calling client
+	 * @throws TeamRepositoryException Thrown if anything goes wrong
+	 */
+	public void deleteBuildResult(String buildResultUUID, IConsoleOutput clientConsole,
+			IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(5));
+
+		getBuildConnection().deleteBuildResult(buildResultUUID, clientConsole,
+				monitor.newChild(95), clientLocale);
+	}
 }

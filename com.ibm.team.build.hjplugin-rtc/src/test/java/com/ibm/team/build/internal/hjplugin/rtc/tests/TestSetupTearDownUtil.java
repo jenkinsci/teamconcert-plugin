@@ -850,6 +850,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 		buildConnectionTests.verifyBuildTermination(expectedState, expectedStatus, artifactIds);
 	}
 	
+	public void verifyBuildResultDeleted(ConnectionDetails connectionDetails,
+			Map<String, String> artifactIds) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.verifyBuildResultDeleted(artifactIds);
+	}
+	
 	public String testBuildResultInfo(ConnectionDetails connectionDetails,
 			String testName, IBuildResultInfo buildResultInfo) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);

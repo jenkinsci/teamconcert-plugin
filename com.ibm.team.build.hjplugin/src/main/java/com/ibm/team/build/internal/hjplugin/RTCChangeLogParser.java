@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -25,10 +25,13 @@ import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.xml.sax.SAXException;
 
 public class RTCChangeLogParser extends ChangeLogParser {
+    private static final Logger LOGGER = Logger.getLogger(RTCChangeLogParser.class.getName());
 
 	@Override
 	public ChangeLogSet<? extends Entry> parse(AbstractBuild build,
@@ -41,9 +44,10 @@ public class RTCChangeLogParser extends ChangeLogParser {
 	
 	public ChangeLogSet<? extends Entry> parse(AbstractBuild build,
 			Reader changelogReader) throws IOException, SAXException {
+
 		try {
 			RTCChangeLogSet result = new RTCChangeLogSet(build);
-			Digester2 digester = new Digester2();
+			Digester2 digester = getDigester();
 			digester.push(result);
 	
 			digester.addSetProperties("changelog"); //$NON-NLS-1$
@@ -108,6 +112,51 @@ public class RTCChangeLogParser extends ChangeLogParser {
 
 		} finally {
 			changelogReader.close();
+		}
+	}
+	
+	private Digester2 getDigester() {
+		Digester2 digester;
+		try {
+			digester = new Digester2();
+			return digester;
+		} catch (Error e) {
+			LOGGER.log(Level.FINER, "Failed to get Digest2 error: " + e.getMessage(), e);
+			dumpClassLoader("getDigester()");
+			// Switch out the context class loader because in some configurations, the 
+			// LogFactory class used by Log used by the Digester can't be loaded.
+			ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+			try {
+				Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+				digester = new Digester2();
+				return digester;
+			} finally {
+				Thread.currentThread().setContextClassLoader(classLoader);
+			}
+		}
+	}
+
+	private void dumpClassLoader(String string) {
+		String message = string + "\n";
+		String indent = "  ";
+		ClassLoader classLoader = this.getClass().getClassLoader();
+		message += indent + "ClassLoader: " + classLoader.getClass().getName() + "\n";
+		message += appendClassLoaderParents(classLoader.getParent(), indent);
+		ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+		message += indent + "ContextClassLoader: " + contextClassLoader.getClass().getName() + "\n";
+		message += appendClassLoaderParents(contextClassLoader.getParent(), indent);
+		LOGGER.log(Level.FINER, message);
+	}
+
+	private static String appendClassLoaderParents(ClassLoader parent,
+			String indent) {
+		if (parent == null) {
+			return "\n";
+		} else {
+			indent += "  ";
+			String result = indent + parent.getClass().getName() + "\n";
+			result += appendClassLoaderParents(parent.getParent(), indent);
+			return result;
 		}
 	}
 }

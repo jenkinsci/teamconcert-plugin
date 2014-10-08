@@ -112,7 +112,7 @@ public class BuildConnectionIT extends HudsonTestCase {
 	}
 
 	/**
-	 * Test terminating build results when in the build is in a variety of states
+	 * Test terminating (and deleting) build results when in the build is in a variety of states
 	 * 
 	 * Test  terminate build (status ok)
 	 * Test  terminate build (cancelled)
@@ -154,6 +154,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// start & terminate build (status ok) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -161,6 +164,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 
 				// start & terminate build (cancelled) using toolkit
@@ -169,6 +175,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// start & terminate build (cancelled) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -176,6 +185,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 
 				// start & terminate build (failed) using toolkit
@@ -184,6 +196,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.FAILURE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// start & terminate build (failed) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -191,6 +206,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.FAILURE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// start & terminate build (unstable) using toolkit
@@ -199,6 +217,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.UNSTABLE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.WARNING.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// start & terminate build (unstable) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -206,6 +227,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.UNSTABLE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.WARNING.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// Test start & (set status of build in test to warning) & terminate build (status ok) using toolkit
@@ -214,6 +238,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.WARNING.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & (set status of build in test to warning) & terminate build (status ok) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.WARNING.name(), setupArtifacts);
@@ -221,6 +248,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.WARNING.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// Test start & (set status of build in test to error) & terminate build (status unstable) using toolkit
@@ -229,6 +259,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.UNSTABLE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & (set status of build in test to error) & terminate build (status unstable) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.ERROR.name(), setupArtifacts);
@@ -236,6 +269,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.UNSTABLE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// Test start & (set status of build in test to error) & terminate build (abandon) using toolkit
@@ -244,6 +280,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & (set status of build in test to error) & terminate build (abandon) using toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.ERROR.name(), setupArtifacts);
@@ -251,6 +290,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// Test start & (abandon build in test) & terminate build (status ok) using toolkit
@@ -259,6 +301,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & (abandon build in test) & terminate build (status ok) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, true, RTCBuildStatus.ERROR.name(), setupArtifacts);
@@ -266,6 +311,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 
 				// Test start & (abandon build in test) & terminate build (cancelled) using toolkit
@@ -274,6 +322,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & (abandon build in test) & terminate build (cancelled) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, true, RTCBuildStatus.ERROR.name(), setupArtifacts);
@@ -281,6 +332,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.ERROR.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// Test start & (abandon build in test) & terminate build (failed) using toolkit
@@ -289,6 +343,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & (abandon build in test) & terminate build (cancelled) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, true, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -296,6 +353,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// Test start & (abandon build in test) & terminate build (unstable) using toolkit
@@ -304,6 +364,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.UNSTABLE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & (abandon build in test) & terminate build (unstable) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, true, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -311,6 +374,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.UNSTABLE, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.INCOMPLETE.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				
 				// Test start & leave pending & terminate build (status ok) using toolkit
@@ -319,6 +385,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & leave pending & terminate build (status ok) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, false, false, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -326,6 +395,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.SUCCESS, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.COMPLETED.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 
 				// Test start & leave pending & terminate build (cancelled) using toolkit
@@ -334,6 +406,9 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.CANCELED.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 				// Test start & leave pending & terminate build (cancelled) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, false, false, RTCBuildStatus.OK.name(), setupArtifacts);
@@ -341,6 +416,104 @@ public class BuildConnectionIT extends HudsonTestCase {
 				RTCFacadeFacade.terminateBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID, Result.ABORTED, listener);
 				verifyBuildTermination(loginInfo, RTCBuildState.CANCELED.name(), RTCBuildStatus.OK.name(), setupArtifacts);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+
+			} finally {
+				// clean up
+				testingFacade.invoke(
+						"tearDown",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								Map.class}, // setupArtifacts
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts);
+			}
+		}
+	}
+
+	/**
+	 * Test the deletion of build results with and without a build toolkit
+	 * test deleting an in progress build
+	 * test deleting an abandoned build
+	 * test deleting a pending build
+	 * test deleting a build already deleted
+	 * @throws Exception
+	 */
+	public void testBuildDeletion() throws Exception {
+		// test deletion of build result
+		if (Config.DEFAULT.isConfigured()) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+			
+			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
+					"testBuildTerminationSetup",
+				new Class[] { String.class, // serverURL,
+					String.class, // userId,
+					String.class, // password,
+					int.class, // timeout,
+					String.class}, // testName
+				loginInfo.getServerUri(),
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+			
+			try {
+				// start & delete in progress build (status ok) using toolkit
+				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
+				String buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+
+				// start & delete in progress build (status ok) avoiding toolkit
+				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
+				buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+
+				
+				// Test start & (abandon build in test) & delete build using toolkit
+				setupBuildTerminationTest(loginInfo, true, true, RTCBuildStatus.ERROR.name(), setupArtifacts);
+				buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+				// try deleting the already deleted build
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+
+				// Test start & (abandon build in test) & delete build avoiding toolkit
+				setupBuildTerminationTest(loginInfo, true, true, RTCBuildStatus.ERROR.name(), setupArtifacts);
+				buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+				// try deleting the already deleted build
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+
+				
+				// Test start & leave pending & delete build using toolkit
+				setupBuildTerminationTest(loginInfo, false, false, RTCBuildStatus.OK.name(), setupArtifacts);
+				buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), false, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
+
+				// Test start & leave pending & delete build avoiding toolkit
+				setupBuildTerminationTest(loginInfo, false, false, RTCBuildStatus.OK.name(), setupArtifacts);
+				buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
+				RTCFacadeFacade.deleteBuild(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), true, buildResultUUID);
+				verifyBuildResultDeleted(loginInfo, setupArtifacts);
 
 			} finally {
 				// clean up
@@ -405,6 +578,22 @@ public class BuildConnectionIT extends HudsonTestCase {
 			setupArtifacts);
 	}
 	
+	private void verifyBuildResultDeleted(RTCLoginInfo loginInfo,
+			Map<String, String> setupArtifacts) throws Exception {
+		testingFacade.invoke(
+				"verifyBuildResultDeleted",
+			new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				Map.class}, //  artifactIds
+			loginInfo.getServerUri(),
+			loginInfo.getUserId(),
+			loginInfo.getPassword(),
+			loginInfo.getTimeout(),
+			setupArtifacts);
+	}
+
 	public void testBuildStart() throws Exception {
 		// test termination of build 
 		if (Config.DEFAULT.isConfigured()) {

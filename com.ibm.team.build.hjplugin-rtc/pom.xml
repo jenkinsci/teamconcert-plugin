@@ -20,7 +20,7 @@
 
 	<properties>
 		<tycho-version>0.19.0</tycho-version>
-		<rtc-client-p2repo-url>${env.RTC_Client_p2Repo}</rtc-client-p2repo-url>
+		<rtc-client-p2repo-url>file:///C:/RTC-Client-P2Repo_5.0.0.0-RTC-I20140509-1417</rtc-client-p2repo-url>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.build.outputEncoding>UTF-8</project.build.outputEncoding>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

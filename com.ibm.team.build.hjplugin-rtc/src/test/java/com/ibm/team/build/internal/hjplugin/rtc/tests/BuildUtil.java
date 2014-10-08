@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -29,6 +29,7 @@ import com.ibm.team.build.internal.common.model.BuildFactory;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.process.common.IProcessArea;
 import com.ibm.team.repository.client.ITeamRepository;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 
@@ -156,7 +157,11 @@ public class BuildUtil {
 			ITeamBuildClient buildClient = getTeamBuildClient(repo);
 			UUID buildResultUuid = UUID.valueOf(buildResultItemId);
 			IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(buildResultUuid, null);
-			buildClient.delete(buildResultHandle, null);
+			try {
+				buildClient.delete(buildResultHandle, null);
+			} catch (ItemNotFoundException e) {
+				// already deleted - that's ok
+			}
 		}
 	}
 

@@ -396,6 +396,40 @@ public class RTCFacade {
 		}
 	}
 
+	/**
+	 * delete the build result identified
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The UUID of the build result to delete
+	 * @param clientLocale The locale of the requesting client
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * This is defined as an Object due to class loader issues. It is expected to implement
+	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
+	 */
+	public void deleteBuildResult(String serverURI,
+							String userId,
+							String password,
+							int timeout,
+							String buildResultUUID,
+							final Object listener,
+							Locale clientLocale) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		AbstractBuildClient buildClient = getBuildClient(); 
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try	{
+			repoConnection.deleteBuildResult(buildResultUUID, clientConsole, monitor, clientLocale);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+		
+	}
 
 	protected SubMonitor getProgressMonitor() {
 		IProgressMonitor progress = new NullProgressMonitor() {

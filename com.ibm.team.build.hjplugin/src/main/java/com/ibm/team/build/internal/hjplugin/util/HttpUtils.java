@@ -57,6 +57,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
@@ -105,6 +106,7 @@ public class HttpUtils {
 	private static final String BASIC_AUTHREQUIRED_HEADER = "WWW-Authenticate"; //$NON-NLS-1$
     private static Pattern JAUTH_PATTERN = Pattern.compile("^[Jj][Aa][Uu][Tt][Hh]\\s+.*"); //$NON-NLS-1$
     private static Pattern BASIC_PATTERN = Pattern.compile("^[Bb][Aa][Ss][Ii][Cc]\\s+.*"); //$NON-NLS-1$
+    private static final String LOCATION = "Location"; //$NON-NLS-1$
 	
 	private static CloseableHttpClient HTTP_CLIENT = null;
 
@@ -172,13 +174,12 @@ public class HttpUtils {
 		LOGGER.finer("GET: " + request.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse response = httpClient.execute(request, httpContext);
 		try {
-			// based on the response do any authentication. If authentication is performed
-			// that means this response doesn't contain the result and the request needs to
-			// be re-issued.
-			boolean authenticationPerformed = authenticateIfRequired(response,
+			// based on the response do any authentication. If authentication requires
+			// the request to be performed again (i.e. Basic auth) re-issue request
+			response = authenticateIfRequired(response,
 					httpClient, httpContext, serverURI, userId, password,
 					timeout, listener);
-			if (authenticationPerformed) {
+			if (response == null) {
 				// retry get
 				request = getGET(fullURI, timeout);
 				response = httpClient.execute(request, httpContext);
@@ -258,14 +259,14 @@ public class HttpUtils {
 		LOGGER.finer("PUT: " + put.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse response = httpClient.execute(put, httpContext);
 		try {
-			// based on the response do any authentication. If authentication is performed
-			// that means the put was not successful and the request needs to be re-issued.
-			boolean authenticationPerformed = authenticateIfRequired(response,
+			// based on the response do any authentication. If authentication requires
+			// the request to be performed again (i.e. Basic auth) re-issue request
+			response = authenticateIfRequired(response,
 					httpClient, httpContext, serverURI, userId, password,
 					timeout, listener);
 
-			// retry put request if we had to do authentication
-			if (authenticationPerformed) {
+			// retry put request if we have to do authentication
+			if (response == null) {
 				put = getPUT(fullURI, timeout);
 				put.setEntity(entity);
 				response = httpClient.execute(put, httpContext);
@@ -295,6 +296,129 @@ public class HttpUtils {
 	}
 
 	/**
+	 * Perform DELETE request against an RTC server.
+	 * @param serverURI The RTC server
+	 * @param uri The relative URI for the DELETE. It is expected that it is already encoded if necessary.
+	 * @param userId The userId to authenticate as
+	 * @param password The password to authenticate with
+	 * @param timeout The timeout period for the connection (in seconds)
+	 * @param httpContext The context from the login if cycle is being managed by the caller
+	 * Otherwise <code>null</code> and this call will handle the login.
+	 * @param listener The listener to report errors to.
+	 * May be <code>null</code> if there is no listener.
+	 * @return The HttpContext for the request. May be reused in subsequent requests
+	 * for the same user
+	 * @throws IOException Thrown if things go wrong
+	 * @throws InvalidCredentialsException
+	 * @throws GeneralSecurityException 
+	 */
+	public static HttpClientContext performDelete(String serverURI, String uri, String userId,
+			String password, int timeout, HttpClientContext httpContext, TaskListener listener)
+			throws IOException, InvalidCredentialsException,
+			GeneralSecurityException {
+
+		CloseableHttpClient httpClient = getClient();
+		String fullURI = getFullURI(serverURI, uri);
+		
+		HttpDelete delete = getDELETE(fullURI, timeout);
+		if (httpContext == null) {
+			httpContext = createHttpContext();
+		}
+		
+		LOGGER.finer("DELETE: " + delete.getURI()); //$NON-NLS-1$
+		CloseableHttpResponse response = httpClient.execute(delete, httpContext);
+		try {
+			int statusCode = response.getStatusLine().getStatusCode();
+			Header locationHeader = response.getFirstHeader(LOCATION);
+			boolean redirectsFollowed = false;
+			int paranoia = 100;
+			while (statusCode == 302 && locationHeader != null && paranoia > 0) {
+				redirectsFollowed = true;
+				// follow the redirects. Eventually we will get to a point where we can authenticate
+				closeResponse(response);
+				String redirectURI = locationHeader.getValue();
+				HttpGet request = getGET(redirectURI, timeout);
+				LOGGER.finer("DELETE following redirect before auth: " + request.getURI()); //$NON-NLS-1$
+				response = httpClient.execute(request, httpContext);
+				statusCode = response.getStatusLine().getStatusCode();
+				locationHeader = response.getFirstHeader(LOCATION);
+				paranoia--;
+			}
+
+			// based on the response do any authentication. If authentication requires
+			// the request to be performed again (i.e. Basic auth) re-issue request
+			response = authenticateIfRequired(response,
+					httpClient, httpContext, serverURI, userId, password,
+					timeout, listener);
+
+			if (response != null) {
+				checkDeleteResponse(response, fullURI, serverURI, userId, listener);
+			}
+			
+			// retry delete request if we have to do authentication or we followed a redirect to a Get
+			if (redirectsFollowed || response == null) {
+				// Do the actual delete
+				paranoia = 100;
+				do {
+					// follow the redirects. Eventually we will get to a point where we can authenticate
+					closeResponse(response);
+					HttpDelete request = getDELETE(fullURI, timeout);
+					LOGGER.finer("DELETE following redirect after auth: " + request.getURI()); //$NON-NLS-1$
+					response = httpClient.execute(request, httpContext);
+					statusCode = response.getStatusLine().getStatusCode();
+					locationHeader = response.getFirstHeader(LOCATION);
+					if (locationHeader != null) {
+						fullURI = locationHeader.getValue();
+					}
+					paranoia--;
+				} while (statusCode == 302 && locationHeader != null && paranoia > 0);
+				checkDeleteResponse(response, fullURI, serverURI, userId, listener);
+			}
+
+			return httpContext;
+		} finally {
+			closeResponse(response);
+		}
+	}
+
+	/**
+	 * Check the response for a delete (or it could be a get if we were following
+	 * redirects & posted the form). Idea is to see if its an auth failure or
+	 * something really serious (not found isn't serious, just means already deleted).
+	 * @param response The response
+	 * @param fullURI The full uri that was used for the request.
+	 * @param serverURI The RTC Server portion of the uri
+	 * @param userId The user id on behalf of whom the request was made
+	 * @param listener A listener to notify of issues.
+	 * @throws InvalidCredentialsException Thrown if the authentication failed.
+	 * @throws IOException Thrown if a serious error occurred.
+	 */
+	private static void checkDeleteResponse(CloseableHttpResponse response,
+			String fullURI, String serverURI, String userId,
+			TaskListener listener) throws InvalidCredentialsException,
+			IOException {
+		int statusCode;
+		statusCode = response.getStatusLine().getStatusCode();
+		if (statusCode == 401) {
+			// the user is unauthenticated
+			throw new InvalidCredentialsException(Messages.HttpUtils_authentication_failed(userId, serverURI));
+
+		} else if (statusCode == 404) {
+			// this is ok, build result already deleted
+
+		} else {
+			int responseClass = statusCode / 100;
+			if (responseClass != 2) {
+				if (listener != null) {
+					listener.fatalError(Messages.HttpUtils_DELETE_failed(fullURI, statusCode));
+				}
+
+				throw logError(fullURI, response, Messages.HttpUtils_DELETE_failed(fullURI, statusCode));
+			}
+		}
+	}
+
+	/**
 	 * Only used to test connection.
 	 * @param serverURI The RTC server
 	 * @param userId The userId to authenticate as
@@ -320,10 +444,10 @@ public class HttpUtils {
 		LOGGER.finer("GET: " + request.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse response = httpClient.execute(request, httpContext);
 		try {
-			boolean authenticationPerformed = authenticateIfRequired(response,
+			response = authenticateIfRequired(response,
 					httpClient, httpContext, serverURI, userId, password,
 					timeout, null);
-			if (authenticationPerformed) {
+			if (response == null) {
 				// retry get - if doing form based auth, not required
 				// but if its basic auth then we do need to re-issue since basic just updates the context
 				request = getGET(serverURI, timeout);
@@ -509,8 +633,21 @@ public class HttpUtils {
 		put.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
 		put.addHeader("Content-type", TEXT_JSON); //$NON-NLS-1$
 		put.setConfig(getRequestConfig(timeout));
-		
 		return put;
+	}
+	
+	/**
+	 * Obtain a DELETE request to execute
+	 * @param fullURI The full uri
+	 * @param timeout The time out period in seconds
+	 * @return a DELETE http request
+	 */
+	private static HttpDelete getDELETE(String fullURI, int timeout) {
+		HttpDelete delete = new HttpDelete(fullURI);
+		delete.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
+		delete.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
+		delete.setConfig(getRequestConfig(timeout));
+		return delete;
 	}
 
 	/**
@@ -521,6 +658,8 @@ public class HttpUtils {
 	 */
 	private static HttpPost getPOST(String fullURI, int timeout) {
 		HttpPost post = new HttpPost(fullURI);
+		post.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
+		post.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
 		post.setConfig(getRequestConfig(timeout));
 		return post;
 	}
@@ -567,37 +706,38 @@ public class HttpUtils {
 	 * Perform any authentication required (Form or Basic) if the previous request did not
 	 * succeed.
 	 * @param response The response from the previous request. It will be consumed if
-	 * we are going to do authentication.
+	 * we are going to do authentication (i.e. not returned by this call).
 	 * @param httpClient The httpClient to use for authentication
 	 * @param httpContext The current context for use in request. Required.
-	 * @param serverURI The full URI for the server
+	 * It may be updated with authentication info if necessary.
+	 * @param serverURI The URI for the server
 	 * @param userId The user that is performing the request
 	 * @param password The user's password
 	 * @param timeout The timeout for the password
 	 * @param listener The listener should any messages need to be logged. May be
 	 * <code>null</code>
-	 * @return <code>true</code> if authentication was required. Request should be re-tried.
-	 * <code>false</code> if authentication was not required. The response still contains the
-	 * result.
+	 * @return The response from the form based auth, or the original request if no auth is required
+	 * <code>null</code> if the request needs to be repeated (now that the context has been updated).
 	 * @throws InvalidCredentialsException Thrown if the user's userid or password are invalid.
 	 * @throws IOException Thrown if anything else goes wrong.
+	 * @throws GeneralSecurityException 
 	 */
-	private static boolean authenticateIfRequired(
+	private static CloseableHttpResponse authenticateIfRequired(
 			CloseableHttpResponse response, CloseableHttpClient httpClient,
 			HttpClientContext httpContext, String serverURI, String userId,
-			String password, int timeout, TaskListener listener) throws InvalidCredentialsException, IOException {
+			String password, int timeout, TaskListener listener) throws InvalidCredentialsException, IOException, GeneralSecurityException {
 	
 		// decide what kind of Auth is required if any
 		int statusCode = response.getStatusLine().getStatusCode();
 		Header formHeader = response.getFirstHeader(FORM_AUTHREQUIRED_HEADER);
 		Header basicHeader = response.getFirstHeader(BASIC_AUTHREQUIRED_HEADER);
-		if (statusCode == 200 && formHeader!=null && FORM_AUTHREQUIRED_HEADER_VALUE.equals(formHeader.getValue())) {
+		if (formHeader!=null && FORM_AUTHREQUIRED_HEADER_VALUE.equals(formHeader.getValue())) {
 			closeResponse(response);
 			
 			// login using Form based auth
-			handleFormBasedChallenge(httpClient, httpContext, serverURI, userId, password, timeout, listener);
-			return true;
-		} else if (statusCode == 401 && basicHeader != null  ) {
+			return handleFormBasedChallenge(httpClient, httpContext, serverURI, userId, password, timeout, listener);
+		}
+		if (statusCode == 401 && basicHeader != null) {
 	        if (JAUTH_PATTERN.matcher(basicHeader.getValue()).matches()) {
 	        	throw new UnsupportedOperationException();
 	
@@ -606,11 +746,10 @@ public class HttpUtils {
 				
 				// setup the context to use Basic auth
 				handleBasicAuthChallenge(httpContext, serverURI, userId, password, listener);
-				return true;
+				return null;
 	        }
-	
 		}
-		return false;
+		return response;
 	}
 
 	/**
@@ -627,13 +766,13 @@ public class HttpUtils {
 	 * @throws IOException Thrown if things go wrong
 	 * @throws InvalidCredentialsException if authentication fails
 	 */
-	private static void handleFormBasedChallenge(CloseableHttpClient httpClient, HttpClientContext httpContext, String serverURI,
+	private static CloseableHttpResponse handleFormBasedChallenge(CloseableHttpClient httpClient, HttpClientContext httpContext, String serverURI,
 			String userId, String password, int timeout, TaskListener listener)
 			throws IOException,
 			InvalidCredentialsException {
 
 		// The server requires an authentication: Create the login form
-		String fullURI = getFullURI(serverURI, "/j_security_check");
+		String fullURI = getFullURI(serverURI, "j_security_check");
 		List<NameValuePair> nvps = new ArrayList<NameValuePair>();
 		nvps.add(new BasicNameValuePair("j_username", userId)); //$NON-NLS-1$
 		nvps.add(new BasicNameValuePair("j_password", password)); //$NON-NLS-1$
@@ -644,23 +783,15 @@ public class HttpUtils {
 		// The client submits the login form
 		LOGGER.finer("POST: " + formPost.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse formResponse = httpClient.execute(formPost, httpContext);
-		try {
-			
-			int statusCode = formResponse.getStatusLine().getStatusCode();
-			Header header = formResponse.getFirstHeader(FORM_AUTHREQUIRED_HEADER);
-			if (statusCode/100 == 2 && (header!=null) && (AUTHFAILED_HEADER_VALUE.equals(header.getValue()))) {
-				// The login failed
-				throw new InvalidCredentialsException(Messages.HttpUtils_authentication_failed(userId, serverURI));
-			} else if (statusCode/100 != 2) {
-				if (listener != null) {
-					listener.fatalError(Messages.HttpUtils_LOGIN_failed(userId, fullURI, statusCode));
-				}
-
-				throw logError(fullURI, formResponse, Messages.HttpUtils_LOGIN_failed(userId, fullURI, statusCode));
-			}
-		} finally {
+		int statusCode = formResponse.getStatusLine().getStatusCode();
+		Header header = formResponse.getFirstHeader(FORM_AUTHREQUIRED_HEADER);
+		
+		// check to see if the authentication was successful
+		if (statusCode/100 == 2 && (header!=null) && (AUTHFAILED_HEADER_VALUE.equals(header.getValue()))) {
 			closeResponse(formResponse);
-		}
+			throw new InvalidCredentialsException(Messages.HttpUtils_authentication_failed(userId, serverURI));
+		} 
+		return formResponse;
 	}
 
 	/**
@@ -701,11 +832,13 @@ public class HttpUtils {
 	}
 
 	private static void closeResponse(CloseableHttpResponse formResponse) {
-		try {
-			formResponse.close();
-		} catch (IOException e) {
-			// we don't care we are logged in or are throwing an exception for a different problem
-			LOGGER.log(Level.FINER, "Failed to close response", e);
+		if (formResponse != null) {
+			try {
+				formResponse.close();
+			} catch (IOException e) {
+				// we don't care we are logged in or are throwing an exception for a different problem
+				LOGGER.log(Level.FINER, "Failed to close response", e);
+			}
 		}
 	}
 

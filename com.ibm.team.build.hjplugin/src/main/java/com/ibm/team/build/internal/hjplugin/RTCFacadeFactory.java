@@ -224,11 +224,12 @@ public class RTCFacadeFactory {
 		
 		// using the new class loader get the facade instance
 		// then revert immediately back to the original class loader
+		ClassLoader originalContextClassLoader = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(result.newClassLoader);
 		try {
 			result.facade = facadeClass.newInstance();
 		} finally {
-			Thread.currentThread().setContextClassLoader(originalClassLoader);
+			Thread.currentThread().setContextClassLoader(originalContextClassLoader);
 		}
 		
 		debug(debugLog, "facade: " + result.facade); //$NON-NLS-1$
