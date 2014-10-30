@@ -78,6 +78,7 @@ public class RTCScm extends SCM {
 
 	// persisted fields for SCM
     private boolean overrideGlobal;
+    private boolean keepBuildResultOpen;
     
     // Global setting that have been overridden by the job (if overrideGlobal is true)
     private String buildTool;
@@ -901,11 +902,13 @@ public class RTCScm extends SCM {
 	}
 	
 	@DataBoundConstructor
-	public RTCScm(boolean overrideGlobal, String buildTool, String serverURI, int timeout, String userId, Secret password, String passwordFile,
+    public RTCScm(boolean overrideGlobal, boolean keepBuildResultOpen, String buildTool, String serverURI,
+	    int timeout, String userId, Secret password, String passwordFile,
 			String credentialsId, BuildType buildType, boolean avoidUsingToolkit) {
 
 		
 		this.overrideGlobal = overrideGlobal;
+	this.keepBuildResultOpen = keepBuildResultOpen;
 		if (this.overrideGlobal) {
 			this.buildTool = buildTool;
 			this.serverURI = serverURI;
@@ -924,12 +927,26 @@ public class RTCScm extends SCM {
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
 			LOGGER.finer("RTCScm constructed with " + //$NON-NLS-1$
-					" overrideGlobal=\"" + this.overrideGlobal + //$NON-NLS-1$
-					"\" buildTool=\"" + this.buildTool + //$NON-NLS-1$
-					"\" serverURI=\"" + this.serverURI + //$NON-NLS-1$
-					"\" timeout=\"" + this.timeout + //$NON-NLS-1$
-					"\" userId=\"" + this.userId + //$NON-NLS-1$
-					"\" password " + (this.password == null ? "is not supplied" : "(" + Secret.toString(this.password).length() +" characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+		    " overrideGlobal=\""
+		    + this.overrideGlobal
+		    + //$NON-NLS-1$
+		    "\" keepBuildResultOpen=\""
+		    + this.keepBuildResultOpen
+		    + //$NON-NLS-1$
+		    "\" buildTool=\""
+		    + this.buildTool
+		    + //$NON-NLS-1$
+		    "\" serverURI=\""
+		    + this.serverURI
+		    + //$NON-NLS-1$
+		    "\" timeout=\""
+		    + this.timeout
+		    + //$NON-NLS-1$
+		    "\" userId=\""
+		    + this.userId
+		    + //$NON-NLS-1$
+		    "\" password "
+		    + (this.password == null ? "is not supplied" : "(" + Secret.toString(this.password).length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 					" passwordFile=\"" + this.passwordFile + //$NON-NLS-1$
 					"\" credentialsId=\"" + this.credentialsId + //$NON-NLS-1$
 					"\" buildType=\"" + this.buildType + //$NON-NLS-1$
@@ -1214,7 +1231,9 @@ public class RTCScm extends SCM {
 	public boolean getOverrideGlobal() {
 		return overrideGlobal;
 	}
-	
+    public boolean getKeepBuildResultOpen() {
+	return keepBuildResultOpen;
+    }
 	public RTCLoginInfo getLoginInfo(AbstractProject project, String toolkit) throws InvalidCredentialsException {
 		return new RTCLoginInfo(project, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
 	}

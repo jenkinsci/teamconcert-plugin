@@ -10,7 +10,6 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin;
 
-import hudson.model.BuildListener;
 import hudson.model.TaskListener;
 
 import java.io.Serializable;

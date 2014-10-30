@@ -68,6 +68,7 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 						}
 						
 						if (scm != null) {
+			    if (!scm.getKeepBuildResultOpen()) {
 							LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
 									" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$
 									" Server URI=\"" + scm.getServerURI() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
@@ -81,8 +82,13 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 									loginInfo.getTimeout(),
 									scm.getAvoidUsingToolkit(),
 									action.getBuildResultUUID(),
-									build.getResult(),
-									listener);
+					build.getResult(), listener);
+			    } else {
+				LOGGER.finer("Current Build: " + build.getDisplayName() + //$NON-NLS-1$
+					" Build Result UUID: "
+					+ action.getBuildResultUUID() + //$NON-NLS-1$
+					" Build Result set to be kept open (ensure to close it afterwards - i.e. Ant Task)"); //$NON-NLS-1$
+			    }
 						} else {
 							LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
 								" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$
