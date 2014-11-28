@@ -83,7 +83,6 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 		}
 	}
 
-	@Override
 	public String getIconFileName() {
 		// TODO Use a Jenkins one for now
 		if (serverURI != null && buildResultUUID != null) {
@@ -93,7 +92,6 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 		return null; 
 	}
 
-	@Override
 	public String getDisplayName() {
 		if (serverURI != null && buildResultUUID != null) {
 			return Messages.RTCBuildResultAction_display_name();
@@ -101,7 +99,6 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 		return null;
 	}
 
-	@Override
 	public String getUrlName() {
 		if (serverURI != null && buildResultUUID != null) {
 			return serverURI + ITEM_OID + buildResultUUID;
