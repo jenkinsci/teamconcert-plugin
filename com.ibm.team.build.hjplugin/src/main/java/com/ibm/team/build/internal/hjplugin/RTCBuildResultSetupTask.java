@@ -99,7 +99,6 @@ public class RTCBuildResultSetupTask extends RTCTask implements FileCallable<Bui
     	this.clientLocale = clientLocale;
 	}
 
-	@Override
 	public BuildResultInfo invoke(File f, VirtualChannel channel) throws IOException,
 			InterruptedException {
 

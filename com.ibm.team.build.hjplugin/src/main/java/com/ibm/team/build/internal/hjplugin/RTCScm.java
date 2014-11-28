@@ -908,7 +908,7 @@ public class RTCScm extends SCM {
 
 		
 		this.overrideGlobal = overrideGlobal;
-	this.keepBuildResultOpen = keepBuildResultOpen;
+		this.keepBuildResultOpen = keepBuildResultOpen;
 		if (this.overrideGlobal) {
 			this.buildTool = buildTool;
 			this.serverURI = serverURI;
