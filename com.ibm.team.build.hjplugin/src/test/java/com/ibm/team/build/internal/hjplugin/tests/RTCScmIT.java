@@ -72,12 +72,12 @@ public class RTCScmIT extends HudsonTestCase {
 
 	private RTCScm createEmptyRTCScm() {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "");
-		return new RTCScm(false, "", "", 0, "", Secret.fromString(""), "", "", buildSource, false);
+		return new RTCScm(false, false, "", "", 0, "", Secret.fromString(""), "", "", buildSource, false);
 	}
 
 	private RTCScm createTestOverrideGlobalRTCScm(boolean useCreds) {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE);
-		return new RTCScm(true, "", TEST_SERVER_URI, Integer.parseInt(TEST_TIMEOUT), TEST_USER_ID, Secret.fromString(TEST_PASSWORD), TEST_PASSWORD_FILE,
+		return new RTCScm(true, false, "", TEST_SERVER_URI, Integer.parseInt(TEST_TIMEOUT), TEST_USER_ID, Secret.fromString(TEST_PASSWORD), TEST_PASSWORD_FILE,
 				useCreds ? TEST_CRED_ID : null, buildSource, false);
 	}
 

@@ -111,7 +111,7 @@ public class RTCBuildResultHelperIT extends HudsonTestCase {
 		tool.getDescriptor().setInstallations(tool);
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		BuildType buildType = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "SomeBuildDefinition", null);
-		RTCScm scm = new RTCScm(true, "config_toolkit", loginInfo.getServerUri(),
+		RTCScm scm = new RTCScm(true, false, "config_toolkit", loginInfo.getServerUri(),
 				loginInfo.getTimeout(), loginInfo.getUserId(),
 				Secret.fromString(loginInfo.getPassword()), "", "", buildType , false);
 		return scm;
