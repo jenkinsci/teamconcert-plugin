@@ -1231,9 +1231,11 @@ public class RTCScm extends SCM {
 	public boolean getOverrideGlobal() {
 		return overrideGlobal;
 	}
-    public boolean getKeepBuildResultOpen() {
-	return keepBuildResultOpen;
-    }
+
+	public boolean getKeepBuildResultOpen() {
+		return keepBuildResultOpen;
+	}
+	
 	public RTCLoginInfo getLoginInfo(AbstractProject project, String toolkit) throws InvalidCredentialsException {
 		return new RTCLoginInfo(project, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
 	}
