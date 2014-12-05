@@ -60,6 +60,7 @@ import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 @ExportedBean(defaultVisibility=999)
 public class RTCScm extends SCM {
@@ -945,6 +946,18 @@ public class RTCScm extends SCM {
 		// So for now we don't return a special revision state
 		return SCMRevisionState.NONE;
 	}
+
+    @Override
+    public SCMRevisionState calcRevisionsFromBuild(@Nonnull Run<?, ?> build,
+                                                   @Nullable FilePath workspace,
+                                                   @Nullable Launcher launcher,
+                                                   @Nonnull TaskListener listener)
+            throws IOException, InterruptedException {
+
+        return SCMRevisionState.NONE;
+    }
+
+
 
     @Override
     public void checkout(@Nonnull Run<?, ?> build, @Nonnull Launcher launcher,

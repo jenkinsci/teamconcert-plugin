@@ -12,6 +12,7 @@
 package com.ibm.team.build.internal.hjplugin;
 
 import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.scm.ChangeLogSet;
 
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import hudson.scm.RepositoryBrowser;
 import org.kohsuke.stapler.export.ExportedBean;
 
 @ExportedBean(defaultVisibility=999)
@@ -105,7 +107,17 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	private TreeSet<ComponentDescriptor> affectedComponents;
 	private transient boolean componentChangesSorted;
 	private transient List<RTCChangeLogSetEntry> allChanges;
-	
+
+    public RTCChangeLogSet(Run<?, ?> build, RepositoryBrowser<?> browser) {
+        super(build, browser);
+        this.componentChanges = new ArrayList<RTCChangeLogComponentEntry>(0);
+        this.affectedComponents = new TreeSet<ComponentDescriptor>();
+        this.changesAccepted = new HashMap<String, List<RTCChangeLogChangeSetEntry>>();
+        this.changesDiscarded = new HashMap<String, List<RTCChangeLogChangeSetEntry>>();
+        this.changesAcceptedCount = 0;
+        this.changesDiscardedCount = 0;
+    }
+
 	public RTCChangeLogSet(AbstractBuild<?, ?> build) {
 		super(build);
 		this.componentChanges = new ArrayList<RTCChangeLogComponentEntry>(0);
