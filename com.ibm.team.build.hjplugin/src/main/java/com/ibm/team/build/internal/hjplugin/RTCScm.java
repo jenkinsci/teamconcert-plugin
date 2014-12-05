@@ -947,6 +947,9 @@ public class RTCScm extends SCM {
 		return SCMRevisionState.NONE;
 	}
 
+    /**
+     * This needs to be overridden for the workflow plugin.
+     */
     @Override
     public SCMRevisionState calcRevisionsFromBuild(@Nonnull Run<?, ?> build,
                                                    @Nullable FilePath workspace,
@@ -957,20 +960,32 @@ public class RTCScm extends SCM {
         return SCMRevisionState.NONE;
     }
 
-
-
     @Override
     public void checkout(@Nonnull Run<?, ?> build, @Nonnull Launcher launcher,
                          @Nonnull FilePath workspace, @Nonnull TaskListener listener,
                          @CheckForNull File changelogFile, @CheckForNull SCMRevisionState baseline)
             throws IOException, InterruptedException {
 
+        checkoutInternal(build, workspace, listener, changelogFile);
+    }
+
+    @Override
+	public boolean checkout(AbstractBuild<?, ?> build, Launcher launcher,
+			FilePath workspacePath, BuildListener listener, File changeLogFile) throws IOException,
+			InterruptedException {
+
+        return checkoutInternal(build, workspacePath, listener, changeLogFile);
+	}
+
+    private boolean checkoutInternal(Run<?, ?> build, FilePath workspace, TaskListener listener,
+                               File changelogFile) throws IOException, InterruptedException {
+
         listener.getLogger().println(Messages.RTCScm_checkout_started());
 
         String label = build.getId();
-        String nodeBuildToolkit;
         String buildWorkspace = getBuildWorkspace();
         String buildDefinition = getBuildDefinition();
+
         String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
         String buildType = getBuildType();
         boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
@@ -982,88 +997,36 @@ public class RTCScm extends SCM {
             listener.getLogger().println(Messages.RTCScm_build_initiated_by());
         }
 
+        String nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(),
+                workspaceToNode(workspace), listener);
+
         try {
-            nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(),
-                    workspaceToNode(workspace), listener);
+        RTCLoginInfo loginInfo = getRtcLoginInfo(build, workspace, listener, label, nodeBuildToolkit, buildWorkspace, buildDefinition, useBuildDefinitionInBuild);
 
-            RTCLoginInfo loginInfo = getRtcLoginInfo(build, workspace, listener, label, nodeBuildToolkit, buildWorkspace, buildDefinition, useBuildDefinitionInBuild);
+        boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
 
-            boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
+        BuildResultInfo buildResultInfo = getBuildResultInfo(build, workspace, listener, label, nodeBuildToolkit, buildDefinition, buildResultUUID, useBuildDefinitionInBuild, loginInfo, debug);
 
-            BuildResultInfo buildResultInfo = getBuildResultInfo(build, workspace, listener, label, nodeBuildToolkit, buildDefinition, buildResultUUID, useBuildDefinitionInBuild, loginInfo, debug);
+        // now that the build has been setup, start working with the actual build result
+        // independent of whether RTC or the plugin created it
+        buildResultUUID = buildResultInfo.getBuildResultUUID();
 
-            // now that the build has been setup, start working with the actual build result
-            // independent of whether RTC or the plugin created it
-            buildResultUUID = buildResultInfo.getBuildResultUUID();
+        // add the build result information (if any) to the build through an action
+        // properties may later be added to this action
+        RTCBuildResultAction buildResultAction = new RTCBuildResultAction(loginInfo
+                .getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
+        build.addAction(buildResultAction);
 
-            // add the build result information (if any) to the build through an action
-            // properties may later be added to this action
-            RTCBuildResultAction buildResultAction = new RTCBuildResultAction(loginInfo
-                    .getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
-            build.addAction(buildResultAction);
+        RTCCheckoutTask checkout = buildCheckoutTask(build, workspace, listener, changelogFile, label, nodeBuildToolkit, buildWorkspace, buildResultUUID, loginInfo, debug);
 
-            RTCCheckoutTask checkout = buildCheckoutTask(build, workspace, listener, changelogFile, label, nodeBuildToolkit, buildWorkspace, buildResultUUID, loginInfo, debug);
-
-            Map<String, String> buildProperties = workspace.act(checkout);
-            buildResultAction.addBuildProperties(buildProperties);
-
+        Map<String, String> buildProperties = workspace.act(checkout);
+        buildResultAction.addBuildProperties(buildProperties);
         } catch (Exception e) {
             handleCheckoutException(listener, e);
         }
+
+        return true;
     }
-
-    @Override
-	public boolean checkout(AbstractBuild<?, ?> build, Launcher launcher,
-			FilePath workspacePath, BuildListener listener, File changeLogFile) throws IOException,
-			InterruptedException {
-		
-		listener.getLogger().println(Messages.RTCScm_checkout_started());
-
-		String label = getLabel(build);
-		String nodeBuildToolkit;
-		String buildWorkspace = getBuildWorkspace();
-		String buildDefinition = getBuildDefinition();
-		String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
-		String buildType = getBuildType();
-		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
-
-
-		// Log in build result where the build was initiated from RTC
-		// Because if initiated from RTC we will ignore build workspace if its a buildWorkspaceType
-		if (buildResultUUID != null) {
-			listener.getLogger().println(Messages.RTCScm_build_initiated_by());
-		}
-		
-		try {
-            nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
-
-            RTCLoginInfo loginInfo = getRtcLoginInfo(build, workspacePath, listener, label, nodeBuildToolkit, buildWorkspace, buildDefinition, useBuildDefinitionInBuild);
-
-			boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
-
-            BuildResultInfo buildResultInfo = getBuildResultInfo(build, workspacePath, listener, label, nodeBuildToolkit, buildDefinition, buildResultUUID, useBuildDefinitionInBuild, loginInfo, debug);
-			
-			// now that the build has been setup, start working with the actual build result
-			// independent of whether RTC or the plugin created it
-			buildResultUUID = buildResultInfo.getBuildResultUUID();
-			
-			// add the build result information (if any) to the build through an action
-			// properties may later be added to this action
-            RTCBuildResultAction buildResultAction = new RTCBuildResultAction(loginInfo
-                    .getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
-			build.addAction(buildResultAction);
-
-            RTCCheckoutTask checkout = buildCheckoutTask(build, workspacePath, listener, changeLogFile, label, nodeBuildToolkit, buildWorkspace, buildResultUUID, loginInfo, debug);
-			
-			Map<String, String> buildProperties = workspacePath.act(checkout);
-			buildResultAction.addBuildProperties(buildProperties);
-
-    	} catch (Exception e) {
-            handleCheckoutException(listener, e);
-    	}
-
-		return true;
-	}
 
     private BuildResultInfo getBuildResultInfo(Run<?, ?> build, FilePath workspacePath,
                                                TaskListener listener, String label,

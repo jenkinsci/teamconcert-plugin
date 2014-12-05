@@ -50,8 +50,6 @@ public class RTCChangeLogParser extends ChangeLogParser {
         RTCChangeLogSet result = new RTCChangeLogSet(build, browser);
         Digester2 digester = getPopulatedDigester(result);
 
-
-        // Do the actual parsing
         digester.parse(changelogFile);
         return result;
 
@@ -63,8 +61,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 		try {
 			RTCChangeLogSet result = new RTCChangeLogSet(build);
             Digester2 digester = getPopulatedDigester(result);
-	
-	
+
 			// Do the actual parsing
 			digester.parse(changelogReader);
 			return result;
