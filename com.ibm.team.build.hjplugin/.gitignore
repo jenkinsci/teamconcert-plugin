@@ -9,3 +9,5 @@
 /.jazzIgnore
 /.project
 /build.properties
+.*
+*.iml

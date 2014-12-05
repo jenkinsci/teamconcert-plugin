@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import org.jenkinsci.remoting.RoleChecker;
 
 public class RTCCheckoutTask extends RTCTask implements FileCallable<Map<String, String>> {
     private static final Logger LOGGER = Logger.getLogger(RTCCheckoutTask.class.getName());
@@ -64,8 +65,6 @@ public class RTCCheckoutTask extends RTCTask implements FileCallable<Map<String,
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
-	 * @param buildDefinition The name (id) of the build definition to use. May be <code>null</code>
-	 * if buildWorkspace is supplied instead.
 	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code>
 	 * if buildDefinition is supplied instead.
 	 * @param buildResultUUID The build result to relate build results with.
@@ -204,4 +203,9 @@ public class RTCCheckoutTask extends RTCTask implements FileCallable<Map<String,
 	protected Logger getLogger() {
 		return LOGGER;
 	}
+
+    @Override
+    public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+
+    }
 }

@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import org.jenkinsci.remoting.RoleChecker;
 
 /**
  * Creates the build result or marks build result as started. Returns information
@@ -208,4 +209,8 @@ public class RTCBuildResultSetupTask extends RTCTask implements FileCallable<Bui
 		return LOGGER;
 	}
 
+    @Override
+    public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+
+    }
 }

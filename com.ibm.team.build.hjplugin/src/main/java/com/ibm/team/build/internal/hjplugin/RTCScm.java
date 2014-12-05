@@ -16,13 +16,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.BuildListener;
-import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.CauseAction;
-import hudson.model.Hudson;
-import hudson.model.Node;
+import hudson.model.*;
 import hudson.remoting.Channel;
 import hudson.remoting.RemoteOutputStream;
 import hudson.remoting.VirtualChannel;
@@ -36,11 +30,7 @@ import hudson.util.FormValidation;
 import hudson.util.Secret;
 import hudson.util.ListBoxModel;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -48,6 +38,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
 import org.jvnet.localizer.LocaleProvider;
@@ -66,6 +57,9 @@ import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 @ExportedBean(defaultVisibility=999)
 public class RTCScm extends SCM {
@@ -547,7 +541,7 @@ public class RTCScm extends SCM {
 		 * 				a password if the credentials id was not supplied.
 		 * @param credId Credential id that will identify the user id and password to use
 		 * @param timeout The timeout period for the connection
-		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection.
+		 * @param avoidUsingToolkit Whether to use REST api instead of the build toolkit when testing the connection.
 	     * @return The result of the validation (will be ok if valid)
 		 */
 		private ValidationResult validateConnectInfo(
@@ -952,15 +946,67 @@ public class RTCScm extends SCM {
 		return SCMRevisionState.NONE;
 	}
 
-	@Override
-	public boolean checkout(AbstractBuild<?, ?> build, Launcher arg1,
+    @Override
+    public void checkout(@Nonnull Run<?, ?> build, @Nonnull Launcher launcher,
+                         @Nonnull FilePath workspace, @Nonnull TaskListener listener,
+                         @CheckForNull File changelogFile, @CheckForNull SCMRevisionState baseline)
+            throws IOException, InterruptedException {
+
+        listener.getLogger().println(Messages.RTCScm_checkout_started());
+
+        String label = build.getId();
+        String nodeBuildToolkit;
+        String buildWorkspace = getBuildWorkspace();
+        String buildDefinition = getBuildDefinition();
+        String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
+        String buildType = getBuildType();
+        boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
+
+
+        // Log in build result where the build was initiated from RTC
+        // Because if initiated from RTC we will ignore build workspace if its a buildWorkspaceType
+        if (buildResultUUID != null) {
+            listener.getLogger().println(Messages.RTCScm_build_initiated_by());
+        }
+
+        try {
+            nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(),
+                    workspaceToNode(workspace), listener);
+
+            RTCLoginInfo loginInfo = getRtcLoginInfo(build, workspace, listener, label, nodeBuildToolkit, buildWorkspace, buildDefinition, useBuildDefinitionInBuild);
+
+            boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
+
+            BuildResultInfo buildResultInfo = getBuildResultInfo(build, workspace, listener, label, nodeBuildToolkit, buildDefinition, buildResultUUID, useBuildDefinitionInBuild, loginInfo, debug);
+
+            // now that the build has been setup, start working with the actual build result
+            // independent of whether RTC or the plugin created it
+            buildResultUUID = buildResultInfo.getBuildResultUUID();
+
+            // add the build result information (if any) to the build through an action
+            // properties may later be added to this action
+            RTCBuildResultAction buildResultAction = new RTCBuildResultAction(loginInfo
+                    .getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
+            build.addAction(buildResultAction);
+
+            RTCCheckoutTask checkout = buildCheckoutTask(build, workspace, listener, changelogFile, label, nodeBuildToolkit, buildWorkspace, buildResultUUID, loginInfo, debug);
+
+            Map<String, String> buildProperties = workspace.act(checkout);
+            buildResultAction.addBuildProperties(buildProperties);
+
+        } catch (Exception e) {
+            handleCheckoutException(listener, e);
+        }
+    }
+
+    @Override
+	public boolean checkout(AbstractBuild<?, ?> build, Launcher launcher,
 			FilePath workspacePath, BuildListener listener, File changeLogFile) throws IOException,
 			InterruptedException {
 		
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
 
 		String label = getLabel(build);
-		String localBuildToolkit;
 		String nodeBuildToolkit;
 		String buildWorkspace = getBuildWorkspace();
 		String buildDefinition = getBuildDefinition();
@@ -975,72 +1021,14 @@ public class RTCScm extends SCM {
 			listener.getLogger().println(Messages.RTCScm_build_initiated_by());
 		}
 		
-		RTCBuildResultAction buildResultAction;
-		
 		try {
-			localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
-			nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
-			RTCLoginInfo loginInfo = getLoginInfo(build.getProject(), localBuildToolkit);
-			
-			if (LOGGER.isLoggable(Level.FINER)) {
-				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-						" Load directory=\"" + workspacePath.getRemote() + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
-						" Build tool=\"" + getBuildTool() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Local Build toolkit=\"" + localBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Node Build toolkit=\"" + nodeBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Server URI=\"" + loginInfo.getServerUri() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Userid=\"" + loginInfo.getUserId() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Build definition=\"" + buildDefinition + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Build workspace=\"" + buildWorkspace + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" useBuildDefinitionInBuild=\"" + useBuildDefinitionInBuild + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-			}
+            nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
+
+            RTCLoginInfo loginInfo = getRtcLoginInfo(build, workspacePath, listener, label, nodeBuildToolkit, buildWorkspace, buildDefinition, useBuildDefinitionInBuild);
 
 			boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
-			
-			if (workspacePath.isRemote()) {
-				// Slaves do a lazy remote class loader. The slave's class loader will request things as needed
-				// from the remote master. The class loader on the master is the one that knows about the hjplugin-rtc.jar
-				// but not any of the toolkit jars. So trying to send the class (& its references) is problematic.
-				// The hjplugin-rtc.jar won't be able to be found on the slave either from the regular class loader either
-				// (since its on the master). So what we do is send our hjplugin-rtc.jar over to the slave to "prepopulate"
-				// it in the class loader. This way we can create our special class loader referencing it and all the toolkit
-				// jars.
-				sendJarsToSlave(workspacePath);
-			}
 
-			RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
-					nodeBuildToolkit,
-					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
-					useBuildDefinitionInBuild, buildDefinition, buildResultUUID,
-					label, listener, workspacePath.isRemote(), debug, LocaleProvider.getLocale());
-			
-			BuildResultInfo buildResultInfo = buildResultSetupTask.localInvocation();
-			if (buildResultInfo == null) {
-				buildResultInfo = workspacePath.act(buildResultSetupTask);
-			}
-
-			if (LOGGER.isLoggable(Level.FINER)) {
-				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-						" initial buildResultUUID=\"" + buildResultUUID + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
-						" current buildResultUUID=\"" + buildResultInfo.getBuildResultUUID() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" scheduled=\"" + buildResultInfo.isScheduled() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" personal build=\"" + buildResultInfo.isPersonalBuild() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" requested by=\"" + (buildResultInfo.getRequestor() == null ? "" : buildResultInfo.getRequestor()) + "\"" + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-						" own build life cycle=\"" + buildResultInfo.ownLifeCycle() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-			}
-
-			if (buildResultUUID != null) {
-				// if build started by RTC, record the cause of the build
-				RTCBuildCause rtcBuildCause = new RTCBuildCause(buildResultInfo);
-				CauseAction cause = build.getAction(CauseAction.class);
-				if (cause == null) {
-					cause = new CauseAction(rtcBuildCause);
-					build.addAction(cause);
-				} else {
-					cause.getCauses().add(rtcBuildCause);
-				}
-			}
+            BuildResultInfo buildResultInfo = getBuildResultInfo(build, workspacePath, listener, label, nodeBuildToolkit, buildDefinition, buildResultUUID, useBuildDefinitionInBuild, loginInfo, debug);
 			
 			// now that the build has been setup, start working with the actual build result
 			// independent of whether RTC or the plugin created it
@@ -1048,66 +1036,210 @@ public class RTCScm extends SCM {
 			
 			// add the build result information (if any) to the build through an action
 			// properties may later be added to this action
-			buildResultAction = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
+            RTCBuildResultAction buildResultAction = new RTCBuildResultAction(loginInfo
+                    .getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
 			build.addAction(buildResultAction);
 
-			OutputStream changeLogStream = new FileOutputStream(changeLogFile);
-			RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
-			
-			RTCCheckoutTask checkout = new RTCCheckoutTask(
-					build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
-					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
-					buildWorkspace,
-					label,
-					listener, changeLog,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale());
-
-			// publish in the build result links to the project and the build
-			if (buildResultUUID != null) {
-				String rootUrl = Hudson.getInstance().getRootUrl();
-				if (rootUrl != null) {
-					rootUrl = Util.encode(rootUrl);
-				}
-				String projectUrl = build.getProject().getUrl();
-				if (projectUrl != null) {
-					projectUrl = Util.encode(projectUrl);
-				}
-				String buildUrl = build.getUrl();
-				if (buildUrl != null) {
-					buildUrl = Util.encode(buildUrl);
-				}
-				checkout.setLinkURLs(rootUrl,  projectUrl, buildUrl);
-			}
+            RTCCheckoutTask checkout = buildCheckoutTask(build, workspacePath, listener, changeLogFile, label, nodeBuildToolkit, buildWorkspace, buildResultUUID, loginInfo, debug);
 			
 			Map<String, String> buildProperties = workspacePath.act(checkout);
 			buildResultAction.addBuildProperties(buildProperties);
 
     	} catch (Exception e) {
-    		Throwable eToReport = e;
-    		if (eToReport instanceof InvocationTargetException) {
-    			if (e.getCause() != null) {
-    				eToReport = e.getCause();
-    			}
-    		}
-    		if (eToReport instanceof InterruptedException) {
-        		LOGGER.log(Level.FINER, "build interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
-    			throw (InterruptedException) eToReport;
-    		}
-    		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(eToReport.getMessage()));
-    		if (RTCScm.unexpectedFailure(eToReport)) {
-    			eToReport.printStackTrace(writer);
-    		}
-    		LOGGER.log(Level.FINER, "Create build result failure " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
-
-    		// if we can't check out then we can't build it
-    		throw new AbortException(Messages.RTCScm_checkout_failure4(e.getMessage()));
+            handleCheckoutException(listener, e);
     	}
-
 
 		return true;
 	}
 
-	private void sendJarsToSlave(FilePath workspacePath)
+    private BuildResultInfo getBuildResultInfo(Run<?, ?> build, FilePath workspacePath,
+                                               TaskListener listener, String label,
+                                               String nodeBuildToolkit, String buildDefinition, String buildResultUUID, boolean useBuildDefinitionInBuild, RTCLoginInfo loginInfo, boolean debug) throws IOException, InterruptedException {
+        if (workspacePath.isRemote()) {
+            // Slaves do a lazy remote class loader. The slave's class loader will request things as needed
+            // from the remote master. The class loader on the master is the one that knows about the hjplugin-rtc.jar
+            // but not any of the toolkit jars. So trying to send the class (& its references) is problematic.
+            // The hjplugin-rtc.jar won't be able to be found on the slave either from the regular class loader either
+            // (since its on the master). So what we do is send our hjplugin-rtc.jar over to the slave to "prepopulate"
+            // it in the class loader. This way we can create our special class loader referencing it and all the toolkit
+            // jars.
+            sendJarsToSlave(workspacePath);
+        }
+
+        RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(build.getFullDisplayName(),
+        //$NON-NLS-1$ //$NON-NLS-2$
+                nodeBuildToolkit,
+                loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+                useBuildDefinitionInBuild, buildDefinition, buildResultUUID,
+                label, listener, workspacePath.isRemote(), debug, LocaleProvider.getLocale());
+
+        BuildResultInfo buildResultInfo = buildResultSetupTask.localInvocation();
+        if (buildResultInfo == null) {
+            buildResultInfo = workspacePath.act(buildResultSetupTask);
+        }
+
+        if (LOGGER.isLoggable(Level.FINER)) {
+            LOGGER.finer("checkout : " + build.getFullDisplayName() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    " initial buildResultUUID=\"" + buildResultUUID + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
+                    " current buildResultUUID=\"" + buildResultInfo.getBuildResultUUID() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " scheduled=\"" + buildResultInfo.isScheduled() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " personal build=\"" + buildResultInfo.isPersonalBuild() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " requested by=\"" + (buildResultInfo.getRequestor() == null ? "" : buildResultInfo.getRequestor()) + "\"" + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    " own build life cycle=\"" + buildResultInfo.ownLifeCycle() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+
+        if (buildResultUUID != null) {
+            // if build started by RTC, record the cause of the build
+            RTCBuildCause rtcBuildCause = new RTCBuildCause(buildResultInfo);
+            CauseAction cause = build.getAction(CauseAction.class);
+            if (cause == null) {
+                cause = new CauseAction(rtcBuildCause);
+                build.addAction(cause);
+            } else {
+                cause.getCauses().add(rtcBuildCause);
+            }
+        }
+        return buildResultInfo;
+    }
+
+    private RTCLoginInfo getRtcLoginInfo(Run<?, ?> build, FilePath workspacePath,
+                                         TaskListener listener, String label,
+                                         String nodeBuildToolkit, String buildWorkspace, String buildDefinition, boolean useBuildDefinitionInBuild) throws IOException, InterruptedException, InvalidCredentialsException {
+        String localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(),
+                listener);
+        RTCLoginInfo loginInfo = getLoginInfo(localBuildToolkit);
+
+        if (LOGGER.isLoggable(Level.FINER)) {
+            LOGGER.finer("checkout : " + build.getFullDisplayName() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    " Load directory=\"" + workspacePath.getRemote() + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
+                    " Build tool=\"" + getBuildTool() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Local Build toolkit=\"" + localBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Node Build toolkit=\"" + nodeBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Server URI=\"" + loginInfo.getServerUri() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Userid=\"" + loginInfo.getUserId() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Build definition=\"" + buildDefinition + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Build workspace=\"" + buildWorkspace + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " useBuildDefinitionInBuild=\"" + useBuildDefinitionInBuild + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        return loginInfo;
+    }
+
+    private RTCLoginInfo getRtcLoginInfo(AbstractBuild<?, ?> build, FilePath workspacePath, BuildListener listener, String label, String nodeBuildToolkit, String buildWorkspace, String buildDefinition, boolean useBuildDefinitionInBuild) throws IOException, InterruptedException, InvalidCredentialsException {
+        String localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(),
+                listener);
+        RTCLoginInfo loginInfo = getLoginInfo(build.getProject(), localBuildToolkit);
+
+        if (LOGGER.isLoggable(Level.FINER)) {
+            LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                    " Load directory=\"" + workspacePath.getRemote() + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
+                    " Build tool=\"" + getBuildTool() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Local Build toolkit=\"" + localBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Node Build toolkit=\"" + nodeBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Server URI=\"" + loginInfo.getServerUri() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Userid=\"" + loginInfo.getUserId() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Build definition=\"" + buildDefinition + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Build workspace=\"" + buildWorkspace + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " useBuildDefinitionInBuild=\"" + useBuildDefinitionInBuild + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+                    " Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        return loginInfo;
+    }
+
+    private RTCCheckoutTask buildCheckoutTask(Run<?, ?> build, FilePath workspacePath,
+                                              TaskListener listener, File changeLogFile,
+                                              String label, String nodeBuildToolkit,
+                                              String buildWorkspace, String buildResultUUID,
+                                              RTCLoginInfo loginInfo, boolean debug)
+            throws FileNotFoundException {
+
+        OutputStream changeLogStream = new FileOutputStream(changeLogFile);
+        RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
+
+        RTCCheckoutTask checkout = new RTCCheckoutTask(
+                build.getFullDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
+                nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
+                buildWorkspace,
+                label,
+                listener, changeLog,
+                workspacePath.isRemote(), debug, LocaleProvider.getLocale());
+
+        // publish in the build result links to the project and the build
+        if (buildResultUUID != null) {
+            String rootUrl = Jenkins.getInstance().getRootUrl();
+            if (rootUrl != null) {
+                rootUrl = Util.encode(rootUrl);
+            }
+            String buildUrl = build.getUrl();
+            if (buildUrl != null) {
+                buildUrl = Util.encode(buildUrl);
+            }
+            checkout.setLinkURLs(rootUrl, null, buildUrl);
+        }
+        return checkout;
+    }
+
+    private RTCCheckoutTask buildCheckoutTask(AbstractBuild<?, ?> build, FilePath workspacePath,
+                                              TaskListener listener, File changeLogFile,
+                                              String label, String nodeBuildToolkit,
+                                              String buildWorkspace, String buildResultUUID,
+                                              RTCLoginInfo loginInfo, boolean debug)
+            throws FileNotFoundException {
+
+        OutputStream changeLogStream = new FileOutputStream(changeLogFile);
+        RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
+
+        RTCCheckoutTask checkout = new RTCCheckoutTask(
+                build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
+                nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
+                buildWorkspace,
+                label,
+                listener, changeLog,
+                workspacePath.isRemote(), debug, LocaleProvider.getLocale());
+
+        // publish in the build result links to the project and the build
+        if (buildResultUUID != null) {
+            String rootUrl = Jenkins.getInstance().getRootUrl();
+            if (rootUrl != null) {
+                rootUrl = Util.encode(rootUrl);
+            }
+            String projectUrl = build.getProject().getUrl();
+            if (projectUrl != null) {
+                projectUrl = Util.encode(projectUrl);
+            }
+            String buildUrl = build.getUrl();
+            if (buildUrl != null) {
+                buildUrl = Util.encode(buildUrl);
+            }
+            checkout.setLinkURLs(rootUrl,  projectUrl, buildUrl);
+        }
+        return checkout;
+    }
+
+    private void handleCheckoutException(TaskListener listener, Exception e)
+            throws InterruptedException, AbortException {
+
+        Throwable eToReport = e;
+        if (eToReport instanceof InvocationTargetException) {
+            if (e.getCause() != null) {
+                eToReport = e.getCause();
+            }
+        }
+        if (eToReport instanceof InterruptedException) {
+            LOGGER.log(Level.FINER, "build interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
+            throw (InterruptedException) eToReport;
+        }
+        PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(eToReport.getMessage()));
+        if (RTCScm.unexpectedFailure(eToReport)) {
+            eToReport.printStackTrace(writer);
+        }
+        LOGGER.log(Level.FINER, "Create build result failure " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
+
+        // if we can't check out then we can't build it
+        throw new AbortException(Messages.RTCScm_checkout_failure4(e.getMessage()));
+    }
+
+    private void sendJarsToSlave(FilePath workspacePath)
 			throws MalformedURLException, IOException, InterruptedException {
 		VirtualChannel channel = workspacePath.getChannel();
 		URL facadeJarURL = RTCFacadeFactory.getFacadeJarURL(null);
@@ -1218,6 +1350,11 @@ public class RTCScm extends SCM {
 	public RTCLoginInfo getLoginInfo(AbstractProject project, String toolkit) throws InvalidCredentialsException {
 		return new RTCLoginInfo(project, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
 	}
+
+    public RTCLoginInfo getLoginInfo(String toolkit) throws InvalidCredentialsException {
+        return new RTCLoginInfo(null, toolkit, getServerURI(), getUserId(), getPassword(),
+                getPasswordFile(), getCredentialsId(), getTimeout());
+    }
 	
 	public String getBuildTool() {
 		if (!overrideGlobal) {
@@ -1356,4 +1493,22 @@ public class RTCScm extends SCM {
 	public String getType() {
 		return super.getType();
 	}
+
+    /**
+     * From GitSCM
+     */
+    private static Node workspaceToNode(FilePath workspace) { // TODO https://trello.com/c/doFFMdUm/46-filepath-getcomputer
+        Jenkins j = Jenkins.getInstance();
+        if (workspace != null && workspace.isRemote()) {
+            for (Computer c : j.getComputers()) {
+                if (c.getChannel() == workspace.getChannel()) {
+                    Node n = c.getNode();
+                    if (n != null) {
+                        return n;
+                    }
+                }
+            }
+        }
+        return j;
+    }
 }

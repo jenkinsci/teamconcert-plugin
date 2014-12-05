@@ -187,8 +187,7 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
         /**
          * Checks if the path to the build toolkit is valid
          */
-        public FormValidation doCheckHome(@QueryParameter File value)
-            throws IOException, ServletException {
+        public FormValidation doCheckHome(@QueryParameter File value) {
 
             return validateBuildToolkit(false, value);
         }
