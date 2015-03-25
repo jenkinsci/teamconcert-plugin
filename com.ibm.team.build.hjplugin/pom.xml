@@ -17,6 +17,7 @@
 		<version>1.480.3</version>
 	</parent>
 
+	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>teamconcert</artifactId>
 	<version>1.1.9.1-SNAPSHOT</version>
 	<packaging>hpi</packaging>
@@ -55,6 +56,10 @@
 		<developer>
 			<id>scowan</id>
 			<name>Scott Cowan</name>
+		</developer>
+		<developer>
+		    <id>clkkishore</id>
+		    <name>Krishna Kishore</name>
 		</developer>
 	</developers>
 
