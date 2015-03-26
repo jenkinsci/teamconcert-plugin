@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -1166,6 +1166,16 @@ public class RTCScm extends SCM {
 
 		// check to see if there are incoming changes
     	try {
+    		
+    		//if the build is in queue then their are changes, avoid a recheck and resetting the Quiet period
+    		if(project != null && project.isInQueue()) {
+    			if (LOGGER.isLoggable(Level.FINER)) {
+    				LOGGER.finer("The build request for the project " + project.getName() + //$NON-NLS-1$ //$NON-NLS-2$
+    						" is already in queue, return polling result as NO_CHANGES to avoid resetting the quiet time"); //$NON-NLS-1$
+    			}
+    			return PollingResult.NO_CHANGES; 
+    		}
+
     		String masterToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
     		RTCLoginInfo loginInfo = getLoginInfo(project, masterToolkit);
     		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(getBuildType());

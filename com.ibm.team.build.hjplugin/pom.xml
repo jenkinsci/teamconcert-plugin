@@ -17,8 +17,9 @@
 		<version>1.480.3</version>
 	</parent>
 
+	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>teamconcert</artifactId>
-	<version>1.1.9.1-SNAPSHOT</version>
+	<version>1.1.9.2-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 
 	<name>Team Concert Plugin</name>
@@ -55,6 +56,10 @@
 		<developer>
 			<id>scowan</id>
 			<name>Scott Cowan</name>
+		</developer>
+		<developer>
+		    <id>clkkishore</id>
+		    <name>Krishna Kishore</name>
 		</developer>
 	</developers>
 
@@ -158,6 +163,18 @@
 					</execution>
 				</executions>
 			</plugin>
+	        <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.1</version>
+                <dependencies>
+                   <dependency>
+                      <groupId>org.apache.maven.scm</groupId>
+                      <artifactId>maven-scm-provider-gitexe</artifactId>
+                      <version>1.9.2</version>
+                   </dependency>
+                </dependencies>
+            </plugin>
 		</plugins>
 	</build>
 </project>
