@@ -36,7 +36,7 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
  * to this task since an exception (of any kind) in that will prevent lifecycle
  * info from being linked to the build.
  */
-public class RTCBuildResultSetupTask extends RTCTask implements FileCallable<BuildResultInfo> {
+public class RTCBuildResultSetupTask extends RTCTask<BuildResultInfo> implements FileCallable<BuildResultInfo> {
 
     private static final Logger LOGGER = Logger.getLogger(RTCBuildResultSetupTask.class.getName());
 

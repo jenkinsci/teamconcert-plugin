@@ -29,7 +29,7 @@ import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 
-public class RTCCheckoutTask extends RTCTask implements FileCallable<Map<String, String>> {
+public class RTCCheckoutTask extends RTCTask<Map<String, String>> implements FileCallable<Map<String, String>> {
     private static final Logger LOGGER = Logger.getLogger(RTCCheckoutTask.class.getName());
 
 	private String buildToolkit;

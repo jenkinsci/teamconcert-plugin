@@ -141,7 +141,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		int changeCount = result.getComponentChangeCount() +
@@ -430,7 +430,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertTrue(result.isPersonalBuild());
@@ -548,7 +548,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		int changeCount = result.getComponentChangeCount() +
@@ -666,7 +666,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		int changeCount = result.getComponentChangeCount() +
