@@ -13,28 +13,31 @@ package com.ibm.team.build.internal.hjplugin;
 
 import hudson.model.Run;
 import hudson.scm.ChangeLogParser;
-import hudson.scm.ChangeLogSet;
 import hudson.scm.RepositoryBrowser;
+import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.util.Digester2;
 
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.xml.sax.SAXException;
 
+import com.google.common.base.Charsets;
+
 public class RTCChangeLogParser extends ChangeLogParser {
     private static final Logger LOGGER = Logger.getLogger(RTCChangeLogParser.class.getName());
-	
+
 	@Override
 	public ChangeLogSet<? extends Entry> parse(Run build,
 			RepositoryBrowser<?> browser, File changeLogFile)
 			throws IOException, SAXException {
-		FileReader changeLogReader = new FileReader(changeLogFile);
+		Reader changeLogReader = new InputStreamReader(new FileInputStream(changeLogFile), Charsets.UTF_8);
 		try {
 			return parse(build, browser, changeLogReader);
 		} finally {
