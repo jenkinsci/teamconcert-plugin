@@ -12,7 +12,6 @@ package com.ibm.team.build.internal.hjplugin;
 
 import hudson.model.TaskListener;
 
-import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,7 +20,7 @@ import jenkins.MasterToSlaveFileCallable;
 /**
  * Base class for tasks running on slaves. Handles common work like debug logging
  */
-public abstract class RTCTask<T> extends MasterToSlaveFileCallable<T> implements Serializable {
+public abstract class RTCTask<T> extends MasterToSlaveFileCallable<T> {
 
 	private static final long serialVersionUID = 1L;
 	
