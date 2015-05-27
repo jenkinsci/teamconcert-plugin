@@ -956,7 +956,7 @@ public class RTCScm extends SCM {
 		// So for now we don't return a special revision state
 		return SCMRevisionState.NONE;
 	}
-	
+
 	@Override
 	public void checkout(Run<?, ?> build, Launcher launcher,
 			FilePath workspacePath, TaskListener listener, File changeLogFile,
@@ -982,7 +982,7 @@ public class RTCScm extends SCM {
 		RTCBuildResultAction buildResultAction;
 		
 		try {
-			Node node = workspaceToNode(workspacePath);
+			Node node = workspacePath.toComputer().getNode();
 			Job<?, ?> job = build.getParent();
 
 			localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
@@ -1379,19 +1379,4 @@ public class RTCScm extends SCM {
 		return super.getType();
 	}
 
-	// lifted from hudson.plugins.git.GitSCM
-    private static Node workspaceToNode(FilePath workspace) {
-        Jenkins j = Jenkins.getInstance();
-        if (workspace != null && workspace.isRemote()) {
-            for (Computer c : j.getComputers()) {
-                if (c.getChannel() == workspace.getChannel()) {
-                    Node n = c.getNode();
-                    if (n != null) {
-                        return n;
-                    }
-                }
-            }
-        }
-        return j;
-    }
 }
