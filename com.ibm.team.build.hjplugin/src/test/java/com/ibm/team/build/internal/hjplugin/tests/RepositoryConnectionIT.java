@@ -173,7 +173,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNull(result.getBaselineSetItemId());
@@ -291,7 +291,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -442,7 +442,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -592,7 +592,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -843,7 +843,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -953,7 +953,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1060,7 +1060,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1165,7 +1165,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1325,7 +1325,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1668,7 +1668,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());

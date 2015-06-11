@@ -12,6 +12,7 @@ package com.ibm.team.build.internal.hjplugin;
 
 import hudson.Util;
 import hudson.model.AbstractProject;
+import hudson.model.Job;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
 
@@ -42,7 +43,7 @@ public class RTCLoginInfo {
 	/**
 	 * Figure out the info needed to log into RTC based on a variety of ways to authenticate
 	 * It is expected that supplied values have been validated to some degree
-	 * @param project The project to be built (hence credentials needed for) may be
+	 * @param job The project to be built (hence credentials needed for) may be
 	 * <code>null</code> when dealing with the global case
 	 * @param buildToolkitPath The path of the build toolkit. Could be <code>null</code>
 	 * if not using a password file
@@ -58,7 +59,7 @@ public class RTCLoginInfo {
 	 * @param timeout The time out to use (in seconds). Required
 	 * @throws Exception When something goes wrong determining the credentials.
 	 */
-	public RTCLoginInfo(AbstractProject<?, ?> project, String buildToolkitPath,
+	public RTCLoginInfo(Job<?, ?> job, String buildToolkitPath,
 			String serverUri, String userId, String password,
 			String passwordFile, String credentialsId, int timeout) throws InvalidCredentialsException {
 		credentialsId = Util.fixEmptyAndTrim(credentialsId);
@@ -72,10 +73,10 @@ public class RTCLoginInfo {
 				LOGGER.finer("Looking up credentials for " +  //$NON-NLS-1$
 						"credentialId=\"" + credentialsId + //$NON-NLS-1$
 						"\" serverURI=\"" + serverUri +  //$NON-NLS-1$
-						"\" project=" + (project == null ? "null" : "\"" + project.getName() + "\"")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ $NON-NLS-2$ $NON-NLS-3$ $NON-NLS-4$ 
+						"\" project=" + (job == null ? "null" : "\"" + job.getName() + "\"")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ $NON-NLS-2$ $NON-NLS-3$ $NON-NLS-4$ 
 			}
 
-			List<StandardUsernamePasswordCredentials> allMatchingCredentials = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, project, ACL.SYSTEM,
+			List<StandardUsernamePasswordCredentials> allMatchingCredentials = CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, job, ACL.SYSTEM,
 							URIRequirementBuilder.fromUri(serverUri).build());
 			StandardUsernamePasswordCredentials credentials = CredentialsMatchers.firstOrNull(allMatchingCredentials, 
 							CredentialsMatchers.withId(credentialsId));

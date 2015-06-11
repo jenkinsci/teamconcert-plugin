@@ -16,12 +16,14 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.BuildListener;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.CauseAction;
+import hudson.model.Computer;
 import hudson.model.Hudson;
+import hudson.model.Job;
 import hudson.model.Node;
 import hudson.remoting.Channel;
 import hudson.remoting.RemoteOutputStream;
@@ -41,6 +43,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -48,6 +51,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
 import org.jvnet.localizer.LocaleProvider;
@@ -109,7 +113,8 @@ public class RTCScm extends SCM {
 	 * Structure that represents the radio button selection for build workspace/definition
 	 * choice in config.jelly (job configuration) 
 	 */
-	public static class BuildType {
+	public static class BuildType implements Serializable {
+		private static final long serialVersionUID = 1L;
 		public String type;
 		public String buildDefinition;
 		public String buildWorkspace;
@@ -953,10 +958,9 @@ public class RTCScm extends SCM {
 	}
 
 	@Override
-	public boolean checkout(AbstractBuild<?, ?> build, Launcher arg1,
-			FilePath workspacePath, BuildListener listener, File changeLogFile) throws IOException,
-			InterruptedException {
-		
+	public void checkout(Run<?, ?> build, Launcher launcher,
+			FilePath workspacePath, TaskListener listener, File changeLogFile,
+			SCMRevisionState baseline) throws IOException, InterruptedException {
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
 
 		String label = getLabel(build);
@@ -978,12 +982,15 @@ public class RTCScm extends SCM {
 		RTCBuildResultAction buildResultAction;
 		
 		try {
+			Node node = workspacePath.toComputer().getNode();
+			Job<?, ?> job = build.getParent();
+
 			localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
-			nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
-			RTCLoginInfo loginInfo = getLoginInfo(build.getProject(), localBuildToolkit);
+			nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
+			RTCLoginInfo loginInfo = getLoginInfo(job, localBuildToolkit);
 			
 			if (LOGGER.isLoggable(Level.FINER)) {
-				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				LOGGER.finer("checkout : " + job.getName() + " " + build.getDisplayName() + " " + node.getNodeName() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 						" Load directory=\"" + workspacePath.getRemote() + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" Build tool=\"" + getBuildTool() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Local Build toolkit=\"" + localBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
@@ -1009,7 +1016,7 @@ public class RTCScm extends SCM {
 				sendJarsToSlave(workspacePath);
 			}
 
-			RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
+			RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(job.getName() + " " + build.getDisplayName() + " " + node.getNodeName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit,
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
 					useBuildDefinitionInBuild, buildDefinition, buildResultUUID,
@@ -1021,7 +1028,7 @@ public class RTCScm extends SCM {
 			}
 
 			if (LOGGER.isLoggable(Level.FINER)) {
-				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				LOGGER.finer("checkout : " + job.getName() + " " + build.getDisplayName() + " " + node.getNodeName() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 						" initial buildResultUUID=\"" + buildResultUUID + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" current buildResultUUID=\"" + buildResultInfo.getBuildResultUUID() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" scheduled=\"" + buildResultInfo.isScheduled() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
@@ -1055,7 +1062,7 @@ public class RTCScm extends SCM {
 			RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
 			
 			RTCCheckoutTask checkout = new RTCCheckoutTask(
-					build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
+					job.getName() + " " + build.getDisplayName() + " " + node.getNodeName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
 					buildWorkspace,
 					label,
@@ -1068,7 +1075,7 @@ public class RTCScm extends SCM {
 				if (rootUrl != null) {
 					rootUrl = Util.encode(rootUrl);
 				}
-				String projectUrl = build.getProject().getUrl();
+				String projectUrl = job.getUrl();
 				if (projectUrl != null) {
 					projectUrl = Util.encode(projectUrl);
 				}
@@ -1103,8 +1110,13 @@ public class RTCScm extends SCM {
     		throw new AbortException(Messages.RTCScm_checkout_failure4(e.getMessage()));
     	}
 
-
-		return true;
+	}
+	
+	@Override
+	public SCMRevisionState calcRevisionsFromBuild(Run<?, ?> build,
+			FilePath workspace, Launcher launcher, TaskListener listener)
+			throws IOException, InterruptedException {
+		return SCMRevisionState.NONE;
 	}
 
 	private void sendJarsToSlave(FilePath workspacePath)
@@ -1121,7 +1133,7 @@ public class RTCScm extends SCM {
 		}
 	}
 
-	private String getLabel(AbstractBuild<?, ?> build) {
+	private String getLabel(Run<?, ?> build) {
 		// TODO if we have a build definition & build result id we should probably
 		// follow a similar algorithm to RTC?
 		// In the simple plugin case, generate the name from the project and the build
@@ -1225,8 +1237,8 @@ public class RTCScm extends SCM {
 		return overrideGlobal;
 	}
 	
-	public RTCLoginInfo getLoginInfo(AbstractProject project, String toolkit) throws InvalidCredentialsException {
-		return new RTCLoginInfo(project, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
+	public RTCLoginInfo getLoginInfo(Job<?, ?> job, String toolkit) throws InvalidCredentialsException {
+		return new RTCLoginInfo(job, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
 	}
 	
 	public String getBuildTool() {
@@ -1366,4 +1378,5 @@ public class RTCScm extends SCM {
 	public String getType() {
 		return super.getType();
 	}
+
 }

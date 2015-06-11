@@ -122,7 +122,7 @@ public class RTCRepositoryBrowserIT  extends HudsonTestCase {
 	 *  a component change and a baseline set.
 	 */
 	private RTCChangeLogSet setupChangeLogSet() {
-		RTCChangeLogSet changeLogSet = new RTCChangeLogSet(null);
+		RTCChangeLogSet changeLogSet = new RTCChangeLogSet(null, null);
 		changeLogSet.setBaselineSetItemId(BASELINE_SET_ITEMID);
 		
 		RTCChangeLogChangeSetEntry.WorkItemDesc workItem = new WorkItemDesc();

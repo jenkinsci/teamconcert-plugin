@@ -98,7 +98,7 @@ public class RTCChangeLogParserTest extends TestCase {
 				"</changelog>");
 		
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLog);
 		
 		// use the iterator to collect all the items
 		// compare against the other methods that return the categorized items
@@ -192,10 +192,10 @@ public class RTCChangeLogParserTest extends TestCase {
 			} else if (changeSetItemId.equals("_H7VJsUuOEeK5tewUzhIIVw")) {
 				Assert.assertEquals("Change count for " + changeSetItemId, 0, changeSetEntry.getAffectedVersionables().size());
 				String path = changeSetEntry.getAffectedPaths().iterator().next();
-				Assert.assertTrue(path, path.contains("2034") || path.contains("2,034"));
+				Assert.assertTrue(path, path.contains("2034") || path.contains("2,034") || path.contains("2.034"));
 				Assert.assertTrue("Doesn't report back too many changes", changeSetEntry.isTooManyChanges());
 				Assert.assertTrue(changeSetEntry.getTooManyChangesMsg(),
-						changeSetEntry.getTooManyChangesMsg().contains("2034") || path.contains("2,034"));
+						changeSetEntry.getTooManyChangesMsg().contains("2034") || path.contains("2,034") || path.contains("2.034"));
 				Assert.assertNull("Primary work item", changeSetEntry.getWorkItem());
 				Assert.assertEquals("Work item count " + changeSetItemId, 0, changeSetEntry.getAdditionalWorkItems().size());
 				WorkItemDesc workItem = changeSetEntry.getWorkItem();
@@ -219,7 +219,7 @@ public class RTCChangeLogParserTest extends TestCase {
 		URL changeLogURL = getClass().getResource("MissingComponentName.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertEquals(1, result.getAffectedComponents().size());
 		Assert.assertEquals(3, result.getChangeSetsAcceptedCount());
@@ -235,7 +235,7 @@ public class RTCChangeLogParserTest extends TestCase {
 		URL changeLogURL = getClass().getResource("DuplicateComponentName.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertEquals(2, result.getAffectedComponents().size());
 		Assert.assertEquals(2, result.getChangeSetsAcceptedCount());
@@ -256,7 +256,7 @@ public class RTCChangeLogParserTest extends TestCase {
 				"</changelog>");
 		
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLog);
 		Assert.assertFalse("Expected no change entries", result.iterator().hasNext());
 		Assert.assertTrue("Expected it to be an empty set", result.isEmptySet());
 		Assert.assertEquals(0, result.getAffectedComponents().size());
@@ -267,7 +267,7 @@ public class RTCChangeLogParserTest extends TestCase {
 		URL changeLogURL = getClass().getResource("Defect261133.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertEquals("ハローワールド #6", result.getBaselineSetName());
 		Assert.assertEquals(1, result.getAffectedComponents().size());
@@ -290,7 +290,7 @@ public class RTCChangeLogParserTest extends TestCase {
 		URL changeLogURL = getClass().getResource("PersonalBuild.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertFalse("Expected no change entries", result.iterator().hasNext());
 		Assert.assertTrue("Expected it to be an empty set", result.isEmptySet());

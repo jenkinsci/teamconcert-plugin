@@ -12,7 +12,6 @@
 package com.ibm.team.build.internal.hjplugin;
 
 import hudson.AbortException;
-import hudson.FilePath.FileCallable;
 import hudson.model.TaskListener;
 import hudson.remoting.RemoteOutputStream;
 import hudson.remoting.VirtualChannel;
@@ -29,7 +28,7 @@ import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 
-public class RTCCheckoutTask extends RTCTask implements FileCallable<Map<String, String>> {
+public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     private static final Logger LOGGER = Logger.getLogger(RTCCheckoutTask.class.getName());
 
 	private String buildToolkit;
