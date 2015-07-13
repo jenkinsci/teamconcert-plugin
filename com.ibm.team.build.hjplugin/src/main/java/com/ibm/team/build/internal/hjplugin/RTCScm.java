@@ -969,7 +969,7 @@ public class RTCScm extends SCM {
 				label = TokenMacro.expandAll(build, listener, getSnapshotTemplateName());
 			}
 		} catch (MacroEvaluationException macroEvalException) {
-			label=getLabel(build);
+			
 			LOGGER.log(Level.FINER, "There are errors in Snapshot Template Name:"+getSnapshotTemplateName()+". Using the default Snapshot Name...", macroEvalException); //$NON-NLS-1$
 		}
 		String localBuildToolkit;
