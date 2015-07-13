@@ -154,7 +154,7 @@ public class BuildConfiguration {
             throw new IllegalStateException("Missing build workspace specification from the build definition"); //$NON-NLS-1$
         }
 
-        this.snapshotName = buildRequest.getBuildDefinitionInstance().getBuildDefinitionId() + "_" + snapshotName; //$NON-NLS-1$
+        this.snapshotName = snapshotName; //$NON-NLS-1$
         
         workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceUuid, null);
         

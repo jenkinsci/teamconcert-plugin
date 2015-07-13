@@ -50,6 +50,8 @@ import java.util.logging.Logger;
 
 import net.sf.json.JSONObject;
 
+import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
+import org.jenkinsci.plugins.tokenmacro.TokenMacro;
 import org.jvnet.localizer.LocaleProvider;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -95,6 +97,7 @@ public class RTCScm extends SCM {
 	private String buildType;
 	private String buildWorkspace;
 	private String buildDefinition;
+	private String snapshotTemplateName;
 
 	// Don't persist the browser because it references the server url that can be changing in the
 	// global config.
@@ -113,12 +116,13 @@ public class RTCScm extends SCM {
 		public String type;
 		public String buildDefinition;
 		public String buildWorkspace;
-		
+		public String snapshotTemplateName;
 		@DataBoundConstructor
-		public BuildType(String value, String buildDefinition, String buildWorkspace) {
+		public BuildType(String value, String buildDefinition, String buildWorkspace,String snapshotTemplateName) {
 			this.type = value;
 			this.buildDefinition = buildDefinition;
 			this.buildWorkspace = buildWorkspace;
+			this.snapshotTemplateName=snapshotTemplateName;
 		}
 		
 	}
@@ -921,7 +925,7 @@ public class RTCScm extends SCM {
 		this.buildType = buildType.type;
 		this.buildWorkspace = buildType.buildWorkspace;
 		this.buildDefinition = buildType.buildDefinition;
-		
+		this.snapshotTemplateName=buildType.snapshotTemplateName;
 		if (LOGGER.isLoggable(Level.FINER)) {
 			LOGGER.finer("RTCScm constructed with " + //$NON-NLS-1$
 					" overrideGlobal=\"" + this.overrideGlobal + //$NON-NLS-1$
@@ -959,7 +963,15 @@ public class RTCScm extends SCM {
 		
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
 
-		String label = getLabel(build);
+		String label=getLabel(build);
+		try {
+			if(getSnapshotTemplateName()!=null && !getSnapshotTemplateName().isEmpty()){
+				label = TokenMacro.expandAll(build, listener, getSnapshotTemplateName());
+			}
+		} catch (MacroEvaluationException macroEvalException) {
+			label=getLabel(build);
+			LOGGER.log(Level.FINER, "There are errors in Snapshot Template Name:"+getSnapshotTemplateName()+". Using the default Snapshot Name...", macroEvalException); //$NON-NLS-1$
+		}
 		String localBuildToolkit;
 		String nodeBuildToolkit;
 		String buildWorkspace = getBuildWorkspace();
@@ -1014,7 +1026,6 @@ public class RTCScm extends SCM {
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
 					useBuildDefinitionInBuild, buildDefinition, buildResultUUID,
 					label, listener, workspacePath.isRemote(), debug, LocaleProvider.getLocale());
-			
 			BuildResultInfo buildResultInfo = buildResultSetupTask.localInvocation();
 			if (buildResultInfo == null) {
 				buildResultInfo = workspacePath.act(buildResultSetupTask);
@@ -1125,6 +1136,10 @@ public class RTCScm extends SCM {
 		// TODO if we have a build definition & build result id we should probably
 		// follow a similar algorithm to RTC?
 		// In the simple plugin case, generate the name from the project and the build
+		
+		if(getBuildType().compareTo(BUILD_DEFINITION_TYPE)==0){
+			return getBuildDefinition()+"_"+Messages.RTCScm_build_label(build.getNumber());
+		}
 		return Messages.RTCScm_build_label(build.getNumber());
 	}
 
@@ -1359,6 +1374,11 @@ public class RTCScm extends SCM {
     @Exported
 	public String getBuildDefinition() {
 		return buildDefinition;
+	}
+    
+    @Exported
+	public String getSnapshotTemplateName() {
+		return snapshotTemplateName;
 	}
 	
 	@Override

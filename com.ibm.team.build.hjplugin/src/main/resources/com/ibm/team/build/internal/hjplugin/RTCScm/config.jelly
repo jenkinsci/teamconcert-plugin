@@ -114,6 +114,10 @@
 			        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
 			    </f:entry>
 			    
+			    <f:entry title="${%snapshot.templateName}"  field="snapshotTemplateName" >
+			        <f:textbox name="snapshotTemplateName"  value="${instance.snapshotTemplateName}" />
+			    </f:entry>
+			    
 			    <f:validateButton title="${%validateBuildDefinition.title}" progress="${%validateBuildDefinition.progress}" 
 			        method="validateBuildDefinition" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
 
@@ -125,6 +129,9 @@
 			        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />
 			    </f:entry>
 
+				<f:entry title="${%snapshot.templateName}"  field="snapshotTemplateName" >
+			        <f:textbox name="snapshotTemplateName"  value="${instance.snapshotTemplateName}" />
+			    </f:entry>
 			    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
 			        method="validateBuildWorkspace" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
 

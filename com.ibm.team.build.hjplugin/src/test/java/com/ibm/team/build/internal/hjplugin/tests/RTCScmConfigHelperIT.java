@@ -117,17 +117,17 @@ public class RTCScmConfigHelperIT extends HudsonTestCase {
 	}
 
 	private RTCScm createUninitializedRTCScm() {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "", "");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "", "",null);
 		return new RTCScm(true, "", null, 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 
 	private RTCScm createWorkspaceRTCScm() {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace",null);
 		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 
 	private RTCScm createBuildDefnRTCScm() {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "AnotherBuildDefinition", "");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "AnotherBuildDefinition", "",null);
 		return new RTCScm(true, "", DEFN_SERVER_URI, 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 }
