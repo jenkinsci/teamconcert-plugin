@@ -46,20 +46,12 @@
 
 	<developers>
 		<developer>
-			<id>nedgar</id>
-			<name>Nick Edgar</name>
-		</developer>
-		<developer>
-			<id>hfraserdube</id>
-			<name>Heather Fraser-Dube</name>
-		</developer>
-		<developer>
-			<id>scowan</id>
-			<name>Scott Cowan</name>
-		</developer>
-		<developer>
 		    <id>clkkishore</id>
 		    <name>Krishna Kishore</name>
+		</developer>
+		<developer>
+		    <id>lvaikunt</id>
+		    <name>Narasimhan Vaikuntam</name>
 		</developer>
 	</developers>
 
