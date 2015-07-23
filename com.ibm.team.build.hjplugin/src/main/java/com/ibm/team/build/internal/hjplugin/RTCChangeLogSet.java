@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,7 +11,8 @@
 
 package com.ibm.team.build.internal.hjplugin;
 
-import hudson.model.AbstractBuild;
+import hudson.model.Run;
+import hudson.scm.RepositoryBrowser;
 import hudson.scm.ChangeLogSet;
 
 import java.util.ArrayList;
@@ -106,8 +107,8 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	private transient boolean componentChangesSorted;
 	private transient List<RTCChangeLogSetEntry> allChanges;
 	
-	public RTCChangeLogSet(AbstractBuild<?, ?> build) {
-		super(build);
+	public RTCChangeLogSet(Run<?, ?> build, RepositoryBrowser<?> browser) {
+		super(build, browser);
 		this.componentChanges = new ArrayList<RTCChangeLogComponentEntry>(0);
 		this.affectedComponents = new TreeSet<ComponentDescriptor>();
 		this.changesAccepted = new HashMap<String, List<RTCChangeLogChangeSetEntry>>();

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,6 +14,7 @@ package com.ibm.team.build.internal.hjplugin;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.model.listeners.RunListener;
 import hudson.scm.SCM;
 
@@ -32,37 +33,41 @@ import com.ibm.team.build.internal.hjplugin.util.RTCScmConfigHelper;
 
 @SuppressWarnings("rawtypes")
 @Extension
-public class RTCRunListener extends RunListener<AbstractBuild> {
+public class RTCRunListener extends RunListener<Run> {
 
 	private static final Logger LOGGER = Logger.getLogger(RTCRunListener.class.getName());
 
 	public RTCRunListener() {
-		super(AbstractBuild.class);
+		super(Run.class);
 	}
 
 	@Override
-	public void onCompleted(AbstractBuild build, TaskListener listener) {
-		
+	public void onCompleted(Run build, TaskListener listener) {
+		LOGGER.finer("onCompleted : Start");
 		// if launched by Hudson/Jenkins terminate the build created in RTC
 		try {
 			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
 			for (RTCBuildResultAction action : actions) {
 				try {
 					if (action.ownsBuildResultLifecycle()) {
-	
-						SCM scmSystem = build.getProject().getScm();
-	
+						SCM scmSystem = null;
+						if (build instanceof AbstractBuild) {
+							LOGGER.finer("build is an AbstractBuild");
+							scmSystem = ((AbstractBuild)build).getProject().getScm();
+						}
+						
 						RTCScm scm = null;
 						if (scmSystem instanceof RTCScm) {
 							scm = (RTCScm) scmSystem;
 						} else {
 							// we are assuming that the action is from when the build was started and that
 							// transient SCM is still available.
+							LOGGER.finer("Getting scm from action");
 							scm = action.getScm();
-							if (scm == null) {
+							if (scm == null && build instanceof AbstractBuild) {
 								// perhaps the action has be re-constituted from the serialized format.
 								// see if we can pull it out of the multi-SCM plugin.
-								Set<RTCScm> rtcScms = RTCScmConfigHelper.getCurrentConfigs(build.getProject());
+								Set<RTCScm> rtcScms = RTCScmConfigHelper.getCurrentConfigs(((AbstractBuild)build).getProject());
 								scm = RTCScmConfigHelper.findRTCScm(rtcScms, action);
 							}
 						}
@@ -74,7 +79,7 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 									" Build result=\"" + build.getResult() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 		
 							String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
-							RTCLoginInfo loginInfo = scm.getLoginInfo(build.getProject(), masterBuildToolkit);
+							RTCLoginInfo loginInfo = scm.getLoginInfo(build.getParent(), masterBuildToolkit);
 				    		RTCFacadeFacade.terminateBuild(masterBuildToolkit,
 									loginInfo.getServerUri(),
 									loginInfo.getUserId(), loginInfo.getPassword(),
@@ -127,15 +132,15 @@ public class RTCRunListener extends RunListener<AbstractBuild> {
 	}
 
 	@Override
-	public void onDeleted(AbstractBuild r) {
+	public void onDeleted(Run r) {
 		// delete the build results associated with the build if any
 		try {
 			List<RTCBuildResultAction> buildResultActions = r.getActions(RTCBuildResultAction.class);
-			if (!buildResultActions.isEmpty()) {
+			if (!buildResultActions.isEmpty() && r instanceof AbstractBuild) {
 				// get the RTCScms configured if any (could be >1 if Multi SCM plugin involved.
 				// (job may of changed so that it nolonger has RTCScm as the SCM provider)
-				Set<RTCScm> rtcScmConfigs = RTCScmConfigHelper.getCurrentConfigs(r.getProject());
-				RTCBuildResultHelper.deleteRTCBuildResults(buildResultActions, r.getProject(), rtcScmConfigs);
+				Set<RTCScm> rtcScmConfigs = RTCScmConfigHelper.getCurrentConfigs(((AbstractBuild)r).getProject());
+				RTCBuildResultHelper.deleteRTCBuildResults(buildResultActions, ((AbstractBuild)r).getProject(), rtcScmConfigs);
 			}
 		} finally {
 			super.onDeleted(r);

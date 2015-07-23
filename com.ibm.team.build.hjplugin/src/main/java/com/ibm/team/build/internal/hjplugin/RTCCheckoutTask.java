@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,6 @@
 package com.ibm.team.build.internal.hjplugin;
 
 import hudson.AbortException;
-import hudson.FilePath.FileCallable;
 import hudson.model.TaskListener;
 import hudson.remoting.RemoteOutputStream;
 import hudson.remoting.VirtualChannel;
@@ -29,7 +28,7 @@ import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 
-public class RTCCheckoutTask extends RTCTask implements FileCallable<Map<String, String>> {
+public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     private static final Logger LOGGER = Logger.getLogger(RTCCheckoutTask.class.getName());
 
 	private String buildToolkit;
@@ -71,7 +70,7 @@ public class RTCCheckoutTask extends RTCTask implements FileCallable<Map<String,
 	 * @param buildResultUUID The build result to relate build results with.
 	 * @param baselineSetName The name to give the baselineSet created
 	 * @param listener A listener that will be notified of the progress and errors encountered.
-	 * @param changeLog Output stream to hold the Change log results
+	 * @param changeLog Output stream to hold the Change log results. May be <code>null</code>.
 	 * @param isRemote Whether this will be executed on the Master or a slave
 	 * @param debug Whether to report debugging messages to the listener
 	 * @param clientLocale The locale of the requesting client

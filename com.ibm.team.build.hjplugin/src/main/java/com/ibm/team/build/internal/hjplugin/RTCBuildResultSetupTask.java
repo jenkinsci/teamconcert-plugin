@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,6 @@
 package com.ibm.team.build.internal.hjplugin;
 
 import hudson.AbortException;
-import hudson.FilePath.FileCallable;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.util.Secret;
@@ -36,7 +35,7 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
  * to this task since an exception (of any kind) in that will prevent lifecycle
  * info from being linked to the build.
  */
-public class RTCBuildResultSetupTask extends RTCTask implements FileCallable<BuildResultInfo> {
+public class RTCBuildResultSetupTask extends RTCTask<BuildResultInfo> {
 
     private static final Logger LOGGER = Logger.getLogger(RTCBuildResultSetupTask.class.getName());
 
@@ -207,5 +206,5 @@ public class RTCBuildResultSetupTask extends RTCTask implements FileCallable<Bui
 	protected Logger getLogger() {
 		return LOGGER;
 	}
-
+	
 }

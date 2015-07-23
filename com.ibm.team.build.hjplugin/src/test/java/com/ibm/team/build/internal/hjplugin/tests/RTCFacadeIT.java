@@ -303,4 +303,17 @@ public class RTCFacadeIT extends HudsonTestCase {
 			}
 		}
 	}
+	
+	/**
+	 * Execute tests comparing incoming changes, for quite period implementation
+	 * @throws Exception
+	 */
+	public void testCompareIncomingChanges() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			System.out.println("&&&&&& Calling testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
+			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			testingFacade.invoke("testCompareIncomingChanges", null, null);
+			System.out.println("&&&&&& Called testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
+		}
+	}
 }

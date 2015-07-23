@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,7 +11,7 @@
 package com.ibm.team.build.internal.hjplugin;
 
 import hudson.Util;
-import hudson.model.AbstractProject;
+import hudson.model.Job;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
 
@@ -58,7 +58,7 @@ public class RTCLoginInfo {
 	 * @param timeout The time out to use (in seconds). Required
 	 * @throws Exception When something goes wrong determining the credentials.
 	 */
-	public RTCLoginInfo(AbstractProject<?, ?> project, String buildToolkitPath,
+	public RTCLoginInfo(Job<?,?> project, String buildToolkitPath,
 			String serverUri, String userId, String password,
 			String passwordFile, String credentialsId, int timeout) throws InvalidCredentialsException {
 		credentialsId = Util.fixEmptyAndTrim(credentialsId);

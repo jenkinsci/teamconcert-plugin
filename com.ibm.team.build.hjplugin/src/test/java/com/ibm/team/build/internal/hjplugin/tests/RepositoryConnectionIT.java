@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -119,32 +119,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
-						false,
+						false, 
 						null,
 						workspaceName, listener);
-
-				Assert.assertTrue(changesIncoming.booleanValue());
 				
-				changesIncoming = RTCFacadeFacade.incomingChanges(
-						Config.DEFAULT.getToolkit(),
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(),
-						true, // avoiding toolkit (but still uses toolkit because we don't have a workspace UUID)
-						false,
-						null,
-						workspaceName, listener);
-
-				Assert.assertTrue(changesIncoming.booleanValue());
-				
+				Assert.assertTrue(changesIncoming > 0);
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
@@ -173,7 +158,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNull(result.getBaselineSetItemId());
@@ -249,18 +234,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
-						false,
+						false, 
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -291,7 +275,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -317,18 +301,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				validateComponentRootChangeSet(result.getChangeSetsDiscarded(componentItemId).get(5), setupArtifacts, componentItemId, componentName, "cs8");
 
 				// There should not be incoming changes any more
-	    		changesIncoming = RTCFacadeFacade.incomingChanges(
-	    				Config.DEFAULT.getToolkit(),
+				changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
-						false,
+						false, 
 						null,
 						workspaceName, listener);
 
-				Assert.assertFalse(changesIncoming.booleanValue());
+				Assert.assertFalse(changesIncoming > 0);
 	    		
 			} finally {
 				// clean up
@@ -387,33 +370,18 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
-	    				Config.DEFAULT.getToolkit(),
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
-						false,
+						false, 
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 
-				// requesting to avoid toolkit should still go through toolkit because its a workspace
-				changesIncoming = RTCFacadeFacade.incomingChanges(
-	    				Config.DEFAULT.getToolkit(),
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(),
-						true, // not avoiding toolkit
-						false,
-						null,
-						workspaceName, listener);
-
-				Assert.assertTrue(changesIncoming.booleanValue());
-				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
@@ -442,7 +410,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -464,18 +432,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		Assert.assertEquals(setupArtifacts.get("workspaceItemId"), result.getWorkspaceItemId());
 
 	    		// ensure that there are no incoming changes are detected
-				changesIncoming = RTCFacadeFacade.incomingChanges(
-	    				Config.DEFAULT.getToolkit(),
+				changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
-						false,
+						false, 
 						null,
 						workspaceName, listener);
 
-				Assert.assertFalse(changesIncoming.booleanValue());
+				Assert.assertFalse(changesIncoming > 0);
 	    		
 			} finally {
 				// clean up
@@ -538,30 +505,27 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Boolean changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						true, // using rest (avoiding toolkit)
-						true,
 						testName,
 						null, listener);
 				Assert.assertTrue(changesIncoming.booleanValue());
 
-				changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncomingBtk = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						true,
 						testName,
 						null, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncomingBtk > 0);
 				
 				String buildResultUUID = setupArtifacts.get("buildResultItemId");
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
@@ -592,7 +556,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -614,27 +578,24 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		Assert.assertEquals(setupArtifacts.get("workspaceItemId"), result.getWorkspaceItemId());
 
 	    		// ensure that there are no incoming changes are detected
-				changesIncoming = RTCFacadeFacade.incomingChanges(
+				changesIncomingBtk = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						true,
 						testName,
 						null, listener);
 
-				Assert.assertFalse(changesIncoming.booleanValue());
+				Assert.assertFalse(changesIncomingBtk > 0);
 				
-				changesIncoming = RTCFacadeFacade.incomingChanges(
+				changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						true, // using rest (avoiding toolkit)
-						true,
 						testName,
 						null, listener);
 				
@@ -695,27 +656,23 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Boolean changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						true, // using rest (avoiding toolkit)
-						true,
 						testName,
 						null, listener);
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
 				try {
-					changesIncoming = RTCFacadeFacade.incomingChanges(
+					changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 		    				Config.DEFAULT.getToolkit(),
 							loginInfo.getServerUri(),
 							Config.DEFAULT.getUserIDForAuthenticationFailures(),
 							"BAD_PASSWORD", //$NON-NLS-1$
 							loginInfo.getTimeout(),
-							true, // use Rest
-							true,
 							testName,
 							null, listener);
 					fail("Invalid credentials ignored");
@@ -735,14 +692,12 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				Assert.assertNull(message);
 				
 				try {
-					changesIncoming = RTCFacadeFacade.incomingChanges(
+					changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 		    				Config.DEFAULT.getToolkit(),
 							loginInfo.getServerUri(),
 							Config.DEFAULT.getUserIDForAuthenticationFailures(),
 							"BAD_PASSWORD", //$NON-NLS-1$
 							loginInfo.getTimeout(),
-							true, // use Rest
-							true,
 							testName,
 							null, listener);
 					fail("Invalid credentials ignored");
@@ -802,18 +757,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						false,
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -843,7 +797,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -912,18 +866,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						false,
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -953,7 +906,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1019,18 +972,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						false,
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -1060,7 +1012,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1124,18 +1076,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						false,
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -1165,7 +1116,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1209,18 +1160,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		Assert.assertEquals("add", componentEntry.getActionType().getName());
 
 	    		// ensure that there are no incoming changes are detected
-				changesIncoming = RTCFacadeFacade.incomingChanges(
+				changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						false,
 						null,
 						workspaceName, listener);
 
-				Assert.assertFalse(changesIncoming.booleanValue());
+				Assert.assertFalse(changesIncoming > 0);
 	    		
 			} finally {
 				// clean up
@@ -1283,18 +1233,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						false,
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -1325,7 +1274,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
@@ -1607,18 +1556,17 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Boolean changesIncoming = RTCFacadeFacade.incomingChanges(
+				Integer changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						false, // not avoiding toolkit
 						false,
 						null,
 						workspaceName, listener);
 
-				Assert.assertTrue(changesIncoming.booleanValue());
+				Assert.assertTrue(changesIncoming > 0);
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -1668,7 +1616,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertNotNull(result.getBaselineSetItemId());
