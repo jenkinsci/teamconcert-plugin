@@ -71,7 +71,7 @@ public class RTCFacadeFacade {
 
 	/**
 	 * Checks to see if there are incoming changes for the RTC build workspace (meaning a build is needed).
-	 * Use either the rest service to ask the server or use the facade based on the configuration info
+	 * Use the rest service to ask the server
 	 * (avoid the toolkit and we have a build definition configured).
 	 * 
 	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
@@ -90,52 +90,73 @@ public class RTCFacadeFacade {
 	 * <code>false</code> otherwise
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
-	public static Boolean incomingChanges(String buildToolkitPath, String serverURI, 
+	public static Boolean incomingChangesUsingBuildDefinitionWithREST(String buildToolkitPath, String serverURI, 
 			String userId, String password,
-			int timeout, boolean avoidUsingToolkit, boolean useBuildDefinition, String buildDefinitionId,
+			int timeout, String buildDefinitionId,
 			String workspaceName, TaskListener listener) throws Exception {
 		
 		// Attempt to use Rest api if this is for a build definition
-		if (useBuildDefinition && avoidUsingToolkit) {
-			
-			listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_rest());
+		listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_rest());
 
-			String uri = RTCBuildConstants.URI_INCOMING_CHANGES + "?"; //$NON-NLS-1$
-			uri += RTCBuildConstants.QUERY_PARAM_BUILD_DEFINITION + "=" + Util.encode(buildDefinitionId); //$NON-NLS-1$
-			JSON json = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, listener).getJson();
-			Boolean changes = JSONHelper.getBoolean(json, JSON_PROP_CHANGES);
-			if (changes != null) {
-				return changes;
-        	} else {
-        		// problems reading response from RTC;
-    			LOGGER.finer("Unexpected response to " + uri + " received: " + (json == null ? "null" : json.toString(4))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-				throw new IOException(Messages.RTCFacadeFacade_unexpected_incoming_response(uri, (json == null ? "null" : json.getClass()))); //$NON-NLS-2$  //$NON-NLS-1$
-			}
-
-		} else {
-			
-			listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_toolkit());
-		
-			RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, listener.getLogger());
-			Boolean changesIncoming = (Boolean) facade.invoke(
-					"incomingChanges", //$NON-NLS-1$
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							int.class, // timeout
-							String.class, // buildDefinition
-							String.class, // buildWorkspace
-							Object.class, // listener
-							Locale.class}, // clientLocale
-					serverURI, userId, password,
-					timeout, 
-					(useBuildDefinition ? buildDefinitionId : ""), //$NON-NLS-1$
-					(useBuildDefinition ? "" : workspaceName), //$NON-NLS-1$
-					listener, LocaleProvider.getLocale());
-			return changesIncoming;
+		String uri = RTCBuildConstants.URI_INCOMING_CHANGES + "?"; //$NON-NLS-1$
+		uri += RTCBuildConstants.QUERY_PARAM_BUILD_DEFINITION + "=" + Util.encode(buildDefinitionId); //$NON-NLS-1$
+		JSON json = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, listener).getJson();
+		Boolean changes = JSONHelper.getBoolean(json, JSON_PROP_CHANGES);
+		if (changes != null) {
+			return changes;
+    	} else {
+    		// problems reading response from RTC;
+			LOGGER.finer("Unexpected response to " + uri + " received: " + (json == null ? "null" : json.toString(4))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			throw new IOException(Messages.RTCFacadeFacade_unexpected_incoming_response(uri, (json == null ? "null" : json.getClass()))); //$NON-NLS-2$  //$NON-NLS-1$
 		}
-	}
 
+	}
+	
+	/**
+	 * Checks to see if there are incoming changes for the RTC build workspace (meaning a build is needed).
+	 * Use the facade based on the configuration info.
+	 * 
+	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildDefinition The name (id) of the build definition that describes the build workspace.
+	 * May be <code>null</code> if a buildWorkspace is supplied. Only one of buildWorkspace/buildDefinition
+	 * should be supplied.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
+	 * buildDefinition is supplied. Only one of buildWorkspace/buildDefinition
+	 * should be supplied.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @return Returns <code>true</code> if there are changes to the build workspace;
+	 * <code>false</code> otherwise
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
+	public static Integer incomingChangesUsingBuildToolkit(String buildToolkitPath, String serverURI, 
+			String userId, String password,
+			int timeout, boolean useBuildDefinition, String buildDefinitionId,
+			String workspaceName, TaskListener listener) throws Exception {
+		listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_toolkit());
+		
+		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, listener.getLogger());
+		Integer changesIncoming = (Integer) facade.invoke(
+				"incomingChanges", //$NON-NLS-1$
+				new Class[] { String.class, // serverURI
+						String.class, // userId
+						String.class, // password
+						int.class, // timeout
+						String.class, // buildDefinition
+						String.class, // buildWorkspace
+						Object.class, // listener
+						Locale.class}, // clientLocale
+				serverURI, userId, password,
+				timeout, 
+				(useBuildDefinition ? buildDefinitionId : ""), //$NON-NLS-1$
+				(useBuildDefinition ? "" : workspaceName), //$NON-NLS-1$
+				listener, LocaleProvider.getLocale());
+		return changesIncoming;
+
+	}
 	/**
 	 * Logs into the repository to test the connection. Essentially exercises the configuration parameters supplied.
 	 * Either the rest service or the build toolkit will be used to test the connection.

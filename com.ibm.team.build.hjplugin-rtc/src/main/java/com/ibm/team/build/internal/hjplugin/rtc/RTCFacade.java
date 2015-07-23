@@ -164,11 +164,11 @@ public class RTCFacade {
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
 	 * @param clientLocale The locale of the requesting client
-	 * @return Returns <code>true</code> if there are changes to the build workspace;
-	 * <code>false</code> otherwise
+	 * @return Returns <code>Non zero</code> if there are changes to the build workspace;
+	 * <code>0</code> otherwise
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
-	public boolean incomingChanges(String serverURI, String userId,
+	public int incomingChanges(String serverURI, String userId,
 			String password, int timeout,
 			String buildDefinition, String buildWorkspace, Object listener, Locale clientLocale)
 			throws Exception {
@@ -366,7 +366,7 @@ public class RTCFacade {
 	 * build configuration. May be <code>null</code> if buildWorkspace is supplied. Only one of
 	 * buildWorkspace/buildResultUUID should be supplied.
 	 * @param hjWorkspacePath The path where the contents of the RTC workspace should be loaded.
-	 * @param changeLog The file where a description of the changes made should be written.
+	 * @param changeLog The file where a description of the changes made should be written. May be <code> null </code>.
 	 * @param baselineSetName The name to give the snapshot created. If <code>null</code> no snapshot
 	 * 				will be created.
 	 * @param listener A listener that will be notified of the progress and errors encountered.
@@ -385,7 +385,10 @@ public class RTCFacade {
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
-		ChangeReport report = new ChangeReport(changeLog);
+		ChangeReport report = null;
+		if (changeLog != null) {
+			report = new ChangeReport(changeLog);
+		}
 		try	{
 			return repoConnection.checkout(buildResultUUID, buildWorkspace,
 					hjWorkspacePath, report, baselineSetName, clientConsole, monitor, clientLocale);

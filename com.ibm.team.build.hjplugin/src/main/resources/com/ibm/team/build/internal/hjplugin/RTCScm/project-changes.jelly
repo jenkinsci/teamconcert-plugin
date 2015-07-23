@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -30,15 +30,16 @@
 	<j:otherwise>
 		<j:set var="reported" value="${false}"/>
 		<j:forEach var="b" items="${builds}">
+		  <j:forEach var="changeSet" items="${b.changeSets}">
 			<j:set var="summarize" value="${false}"/>
-			<j:set var="snapshotlink" value="${browser.getBaselineSetLink(b.changeSet)}"/>
+			<j:set var="snapshotlink" value="${browser.getBaselineSetLink(changeSet)}"/>
 			<j:if test="${snapshotlink!=null}">
 				<j:set var="summarize" value="${true}"/>
 			</j:if>
-			<j:if test="${b.changeSet.isPersonalBuild()}">
+			<j:if test="${changeSet.isPersonalBuild()}">
 				<j:set var="summarize" value="${true}"/>
 			</j:if>
-			<j:if test="${!b.changeSet.isEmptySet()}">
+			<j:if test="${!changeSet.isEmptySet()}">
 				<j:set var="summarize" value="${true}"/>
 			</j:if>
 			<j:if test="${summarize}" >
@@ -46,14 +47,14 @@
 				<h2><a href="${b.number}/changes">${b.displayName}
 					(<i:formatDate value="${b.timestamp.time}" type="both" dateStyle="medium" timeStyle="medium"/>)</a></h2>
 				<j:choose>
-					<j:when test="${b.changeSet.isPersonalBuild()}">
+					<j:when test="${changeSet.isPersonalBuild()}">
 						<b>${%personal.build}</b>
 						<br/>
 					</j:when>
 					<j:otherwise>
 		 				<b>${%changes.summary}</b>
 						<br/>
-						<j:set var="snapshotName" value="${b.changeSet.getBaselineSetName()}"/>
+						<j:set var="snapshotName" value="${changeSet.getBaselineSetName()}"/>
 						<j:if test="${snapshotlink!=null}">
 							<j:if test="${snapshotName==null}">
 						    	<j:set var="snapshotName" value="${browser.descriptor.displayName}"/>
@@ -64,13 +65,13 @@
 						</j:if>
 				
 						<j:choose>
-							<j:when test="${b.changeSet.isEmptySet()}">
+							<j:when test="${changeSet.isEmptySet()}">
 								${%changes.none}
 							</j:when>
 							<j:otherwise>
-								<j:if test="${!b.changeSet.getComponentChanges().isEmpty()}">
-									<b>${%changes.component(b.changeSet.getComponentChangeCount())}</b>
-									<j:forEach var="cc" items="${b.changeSet.componentChanges}" varStatus="loop">
+								<j:if test="${!changeSet.getComponentChanges().isEmpty()}">
+									<b>${%changes.component(changeSet.getComponentChangeCount())}</b>
+									<j:forEach var="cc" items="${changeSet.componentChanges}" varStatus="loop">
 										<div class="component-message" style="width: 650px; margin-left: 14px;">
 											<table>
 												<tr>
@@ -82,8 +83,8 @@
 									</j:forEach>
 								</j:if>
 				      
-								<j:set var="acceptedCount" value="${b.changeSet.getChangeSetsAcceptedCount()}" />
-								<j:set var="discardedCount" value="${b.changeSet.getChangeSetsDiscardedCount()}" />
+								<j:set var="acceptedCount" value="${changeSet.getChangeSetsAcceptedCount()}" />
+								<j:set var="discardedCount" value="${changeSet.getChangeSetsDiscardedCount()}" />
 								<b>${%changeSets.accepted(acceptedCount)}</b>
 								<br/>
 								<j:if test="${discardedCount!=0}">
@@ -93,14 +94,14 @@
 								<br/>
 				
 				      
-								<j:if test="${!b.changeSet.getAffectedComponents().isEmpty()}">
+								<j:if test="${!changeSet.getAffectedComponents().isEmpty()}">
 								        
-									<j:forEach var="ac" items="${b.changeSet.getAffectedComponents()}" varStatus="cmp">
+									<j:forEach var="ac" items="${changeSet.getAffectedComponents()}" varStatus="cmp">
 										<b>${ac.getName()}</b>
 										<br/>
-										<j:if test="${!b.changeSet.getChangeSetsAccepted(ac.getItemId()).isEmpty()}" >
+										<j:if test="${!changeSet.getChangeSetsAccepted(ac.getItemId()).isEmpty()}" >
 											<ul>
-												<j:forEach var="cs" items="${b.changeSet.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
+												<j:forEach var="cs" items="${changeSet.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
 													<li>
 														<j:set var="labeled" value="false"/>
 														<j:set var="wi" value="${cs.getWorkItem()}"/>
@@ -134,11 +135,11 @@
 										</j:if>
 				
 										<j:if test="${discardedCount!=0}">
-											<j:if test="${!b.changeSet.getChangeSetsDiscarded(ac.getItemId()).isEmpty()}" >
+											<j:if test="${!changeSet.getChangeSetsDiscarded(ac.getItemId()).isEmpty()}" >
 												<j:text>&#160;&#160;${%discarded}</j:text>
 				
 												<ul>
-													<j:forEach var="cs" items="${b.changeSet.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
+													<j:forEach var="cs" items="${changeSet.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
 				
 														<li>
 															<j:set var="labeled" value="false"/>
@@ -179,6 +180,7 @@
 					</j:otherwise>
 				</j:choose>
 			</j:if>
+	     </j:forEach>
 		</j:forEach>
 
 		<j:if test="${!reported}">

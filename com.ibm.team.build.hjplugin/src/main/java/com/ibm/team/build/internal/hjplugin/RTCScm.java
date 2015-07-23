@@ -16,18 +16,23 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.BuildListener;
+import hudson.model.ParameterValue;
 import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.CauseAction;
 import hudson.model.Hudson;
+import hudson.model.Job;
 import hudson.model.Node;
+import hudson.model.ParametersAction;
+import hudson.model.Queue.Task;
+import hudson.model.Run;
+import hudson.model.StringParameterValue;
 import hudson.remoting.Channel;
 import hudson.remoting.RemoteOutputStream;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
 import hudson.scm.SCM;
@@ -44,10 +49,12 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
 import org.jvnet.localizer.LocaleProvider;
@@ -315,6 +322,11 @@ public class RTCScm extends SCM {
 			return getBuildToolkit(buildTool, Hudson.getInstance(), listener);
 		}
 		
+		@Override
+		public boolean isApplicable(Job project) {
+			return true;
+		}
+		
 		/**
 		 * For a given build tool on a given node, resolve what directory is expected to contains the build toolkit.
 		 * Jenkins provides tool installation abilities as well as a way of describing where a tool is located on 
@@ -352,7 +364,7 @@ public class RTCScm extends SCM {
 			return listBox;
 		}
 
-		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath AbstractProject<?, ?> project, @QueryParameter String serverURI) {
+		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?, ?> project, @QueryParameter String serverURI) {
 			return new StandardListBoxModel()
 			.withEmptySelection()
 			.withMatching(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
@@ -495,7 +507,7 @@ public class RTCScm extends SCM {
 	     * @return The result of the validation (will be ok if valid)
 		 */
 		public FormValidation doCheckJobConnection(
-				@AncestorInPath AbstractProject<?, ?> project,
+				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
 				@QueryParameter("buildTool") String buildTool,
 				@QueryParameter("serverURI") String serverURI,
@@ -698,7 +710,7 @@ public class RTCScm extends SCM {
 		 * @return Whether the build workspace is valid or not. Never <code>null</code>
 		 */
 		public FormValidation doValidateBuildWorkspace(
-				@AncestorInPath AbstractProject<?, ?> project,
+				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
 				@QueryParameter("buildTool") String buildTool,
 				@QueryParameter("serverURI") String serverURI,
@@ -758,7 +770,7 @@ public class RTCScm extends SCM {
 		 * @return Whether the build definition is valid or not. Never <code>null</code>
 		 */
 		public FormValidation doValidateBuildDefinition(
-				@AncestorInPath AbstractProject<?, ?> project,
+				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
 				@QueryParameter("buildTool") String buildTool,
 				@QueryParameter("serverURI") String serverURI,
@@ -900,6 +912,13 @@ public class RTCScm extends SCM {
 	    }
 	}
 	
+	/*
+	 * Convenience constructor for instantiating RTCSCM with only a buildType and the rest of the parameters are set to defaults	 * 
+	 */
+	public RTCScm(BuildType buildType) {
+		this(false, null, null, DescriptorImpl.DEFAULT_SERVER_TIMEOUT, null, null, null, null, buildType, false);
+	}
+	
 	@DataBoundConstructor
 	public RTCScm(boolean overrideGlobal, String buildTool, String serverURI, int timeout, String userId, Secret password, String passwordFile,
 			String credentialsId, BuildType buildType, boolean avoidUsingToolkit) {
@@ -944,8 +963,7 @@ public class RTCScm extends SCM {
     }
 
 	@Override
-	public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build,
-			Launcher launcher, TaskListener listener) throws IOException,
+	public SCMRevisionState calcRevisionsFromBuild(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws IOException,
 			InterruptedException {
 		// Our check for incoming changes uses the flow targets and does a real time compare
 		// So for now we don't return a special revision state
@@ -953,10 +971,11 @@ public class RTCScm extends SCM {
 	}
 
 	@Override
-	public boolean checkout(AbstractBuild<?, ?> build, Launcher arg1,
-			FilePath workspacePath, BuildListener listener, File changeLogFile) throws IOException,
+	public void checkout(Run<?, ?> build, Launcher arg1,
+			FilePath workspacePath, TaskListener listener, File changeLogFile, SCMRevisionState baseline) throws IOException,
 			InterruptedException {
 		
+        LOGGER.finer("RTCScm.checkout : Begin");
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
 
 		String label = getLabel(build);
@@ -964,7 +983,8 @@ public class RTCScm extends SCM {
 		String nodeBuildToolkit;
 		String buildWorkspace = getBuildWorkspace();
 		String buildDefinition = getBuildDefinition();
-		String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
+		String buildResultUUID = getBuildResultUUID(build, listener);
+
 		String buildType = getBuildType();
 		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
 
@@ -978,12 +998,14 @@ public class RTCScm extends SCM {
 		RTCBuildResultAction buildResultAction;
 		
 		try {
+			Node node = workspacePath.toComputer().getNode();
 			localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
-			nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), build.getBuiltOn(), listener);
-			RTCLoginInfo loginInfo = getLoginInfo(build.getProject(), localBuildToolkit);
+			// Get the build toolkit on the node where the checkout is happening.
+			nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
+			RTCLoginInfo loginInfo = getLoginInfo(build.getParent(), localBuildToolkit);
 			
 			if (LOGGER.isLoggable(Level.FINER)) {
-				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				LOGGER.finer("checkout : " + build.getParent().getName() + " " + build.getDisplayName() + " " + node.getNodeName() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 						" Load directory=\"" + workspacePath.getRemote() + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" Build tool=\"" + getBuildTool() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Local Build toolkit=\"" + localBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
@@ -1009,7 +1031,7 @@ public class RTCScm extends SCM {
 				sendJarsToSlave(workspacePath);
 			}
 
-			RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
+			RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit,
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
 					useBuildDefinitionInBuild, buildDefinition, buildResultUUID,
@@ -1021,7 +1043,7 @@ public class RTCScm extends SCM {
 			}
 
 			if (LOGGER.isLoggable(Level.FINER)) {
-				LOGGER.finer("checkout : " + build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				LOGGER.finer("checkout : " + build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 						" initial buildResultUUID=\"" + buildResultUUID + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" current buildResultUUID=\"" + buildResultInfo.getBuildResultUUID() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" scheduled=\"" + buildResultInfo.isScheduled() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
@@ -1051,11 +1073,14 @@ public class RTCScm extends SCM {
 			buildResultAction = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
 			build.addAction(buildResultAction);
 
-			OutputStream changeLogStream = new FileOutputStream(changeLogFile);
-			RemoteOutputStream changeLog = new RemoteOutputStream(changeLogStream);
-			
+			RemoteOutputStream changeLog = null;
+			if (changeLogFile != null) {
+				OutputStream changeLogStream = new FileOutputStream(changeLogFile);
+				changeLog = new RemoteOutputStream(changeLogStream);
+			}
+
 			RTCCheckoutTask checkout = new RTCCheckoutTask(
-					build.getProject().getName() + " " + build.getDisplayName() + " " + build.getBuiltOnStr(), //$NON-NLS-1$ //$NON-NLS-2$
+					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
 					buildWorkspace,
 					label,
@@ -1068,7 +1093,7 @@ public class RTCScm extends SCM {
 				if (rootUrl != null) {
 					rootUrl = Util.encode(rootUrl);
 				}
-				String projectUrl = build.getProject().getUrl();
+				String projectUrl = build.getParent().getUrl();
 				if (projectUrl != null) {
 					projectUrl = Util.encode(projectUrl);
 				}
@@ -1102,13 +1127,14 @@ public class RTCScm extends SCM {
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure4(e.getMessage()));
     	}
-
-
-		return true;
+		finally {
+			LOGGER.finer("RTCScm.checkout : End");
+		}
 	}
 
 	private void sendJarsToSlave(FilePath workspacePath)
 			throws MalformedURLException, IOException, InterruptedException {
+		LOGGER.finer("RTCScm.sendJarsToSlave : Begin");
 		VirtualChannel channel = workspacePath.getChannel();
 		URL facadeJarURL = RTCFacadeFactory.getFacadeJarURL(null);
 		if (channel instanceof Channel && facadeJarURL != null) {
@@ -1119,9 +1145,10 @@ public class RTCScm extends SCM {
 			boolean result = ((Channel) channel).preloadJar(originalClassLoader, jars);
 			LOGGER.finer("Prefetch result for sending jars is " + result);  //$NON-NLS-1$ //$NON-NLS-2$
 		}
+		LOGGER.finer("RTCScm.sendJarsToSlave : Emd");
 	}
 
-	private String getLabel(AbstractBuild<?, ?> build) {
+	private String getLabel(Run<?, ?> build) {
 		// TODO if we have a build definition & build result id we should probably
 		// follow a similar algorithm to RTC?
 		// In the simple plugin case, generate the name from the project and the build
@@ -1139,43 +1166,74 @@ public class RTCScm extends SCM {
 	}
 
 	@Override
-	protected PollingResult compareRemoteRevisionWith(
-			AbstractProject<?, ?> project, Launcher launcher, FilePath workspacePath,
+	public PollingResult compareRemoteRevisionWith(
+			Job<?, ?> project, Launcher launcher, FilePath workspacePath,
 			TaskListener listener, SCMRevisionState revisionState) throws IOException,
 			InterruptedException {
 		// if #requiresWorkspaceForPolling is false, expect that launcher and workspacePath are null
-		
+		LOGGER.finer("RTCScm.compareRemoteRevisionWith : Begin");
+
 		listener.getLogger().println(Messages.RTCScm_checking_for_changes());
 
 		// check to see if there are incoming changes
     	try {
-    		
-    		//if the build is in queue then their are changes, avoid a recheck and resetting the Quiet period
-    		if(project != null && project.isInQueue()) {
-    			if (LOGGER.isLoggable(Level.FINER)) {
-    				LOGGER.finer("The build request for the project " + project.getName() + //$NON-NLS-1$ //$NON-NLS-2$
-    						" is already in queue, return polling result as NO_CHANGES to avoid resetting the quiet time"); //$NON-NLS-1$
-    			}
-    			return PollingResult.NO_CHANGES; 
-    		}
-
+    		boolean bAvoidUsingToolkit = getAvoidUsingToolkit();
     		String masterToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
     		RTCLoginInfo loginInfo = getLoginInfo(project, masterToolkit);
     		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(getBuildType());
-    		
-    		Boolean changesIncoming = RTCFacadeFacade.incomingChanges(masterToolkit,
-    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
-					loginInfo.getTimeout(), getAvoidUsingToolkit(), useBuildDefinitionInBuild,
-					getBuildDefinition(),
-					getBuildWorkspace(),
-					listener);
+    		if (useBuildDefinitionInBuild && bAvoidUsingToolkit) {
+    			//if toolkit is not to be used, and
+	    		//if the build is in queue then their are changes, avoid a recheck and resetting the Quiet period
+	    		if(isInQueue(project)) {
+	    			if (LOGGER.isLoggable(Level.FINER)) {
+	    				LOGGER.finer("The build request for the project " + project.getName() + //$NON-NLS-1$ //$NON-NLS-2$
+	    						" is already in queue, return polling result as NO_CHANGES to avoid resetting the quiet time"); //$NON-NLS-1$
+	    			}
+	    			return new PollingResult(revisionState, new RTCRevisionState(0), Change.NONE); 
+	    		}
 
-    		if (changesIncoming.equals(Boolean.TRUE)) {
-    			listener.getLogger().println(Messages.RTCScm_changes_found());
-    			return PollingResult.SIGNIFICANT;
+	    		Boolean changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(masterToolkit,
+	    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						getBuildDefinition(),
+						getBuildWorkspace(),
+						listener);
+	
+	    		if (changesIncoming.equals(Boolean.TRUE)) {
+	    			listener.getLogger().println(Messages.RTCScm_changes_found());
+	    			// arbitrarily specify non-zero revision hash in current revision state
+	    			return new PollingResult(revisionState, new RTCRevisionState(1), Change.SIGNIFICANT);
+	    		} else {
+	    			listener.getLogger().println(Messages.RTCScm_no_changes_found());
+	    			return new PollingResult(revisionState, new RTCRevisionState(0), Change.NONE);
+	    		}
     		} else {
-    			listener.getLogger().println(Messages.RTCScm_no_changes_found());
-    			return PollingResult.NO_CHANGES;
+    			Integer currentRevisionHash = RTCFacadeFacade.incomingChangesUsingBuildToolkit(masterToolkit,
+	    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), useBuildDefinitionInBuild,
+						getBuildDefinition(),
+						getBuildWorkspace(),
+						listener);
+    			RTCRevisionState currentRevisionState = new RTCRevisionState(currentRevisionHash);
+    			Change change = null;
+    			if (isInQueue(project)) {
+    				// get last revision hash
+    				if (revisionState instanceof RTCRevisionState) {
+	    				Integer lastRevisionHash = ((RTCRevisionState)revisionState).getLastRevisionHash();
+	    				change = currentRevisionHash.equals(lastRevisionHash) ? Change.NONE : Change.SIGNIFICANT;
+    				} else {
+    					// we are in quite period, and previous revisionState is not of RTCRevisionState type...
+    					// ideally we should never come here.
+    					if (LOGGER.isLoggable(Level.FINER)) {
+    	    				LOGGER.finer("The build request for the project " + project.getName() + //$NON-NLS-1$ //$NON-NLS-2$
+    	    						" is already in queue, return polling result with changes as NONE to avoid resetting the quiet time"); //$NON-NLS-1$
+    	    			}
+    					change = Change.NONE;
+    				}
+    			} else {
+    				change = (currentRevisionHash == 0) ? Change.NONE : Change.SIGNIFICANT;
+    			}
+    			return new PollingResult(revisionState, currentRevisionState, change);
     		}
     		
     	} catch (Exception e) {
@@ -1196,7 +1254,21 @@ public class RTCScm extends SCM {
     		
     		// if we can't check for changes then we can't build it
     		throw new AbortException(Messages.RTCScm_checking_for_changes_failure2(eToReport.getMessage()));
-    	}    		
+    	}
+    	finally {
+    		LOGGER.finer("RTCScm.compareRemoteRevisionWith : End");
+    	}
+	}
+
+	private boolean isInQueue(Job<?, ?> project) {
+		if(project instanceof AbstractProject) {
+			return project.isInQueue();
+		}else if (project instanceof Task && Jenkins.getInstance().getQueue() != null) {
+			return Jenkins.getInstance().getQueue().contains((Task)project);
+		} else {
+			// returning false, since there is no good way to determine if job is in queue
+			return false;
+		}
 	}
 
 	public static boolean unexpectedFailure(Throwable e) {
@@ -1225,8 +1297,8 @@ public class RTCScm extends SCM {
 		return overrideGlobal;
 	}
 	
-	public RTCLoginInfo getLoginInfo(AbstractProject project, String toolkit) throws InvalidCredentialsException {
-		return new RTCLoginInfo(project, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
+	public RTCLoginInfo getLoginInfo(Job<?, ?> job, String toolkit) throws InvalidCredentialsException {
+		return new RTCLoginInfo(job, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
 	}
 	
 	public String getBuildTool() {
@@ -1365,5 +1437,73 @@ public class RTCScm extends SCM {
 	@Exported
 	public String getType() {
 		return super.getType();
+	}
+	
+	@Override
+    public String getKey() {
+		LOGGER.finer("RTCScm.getKey : Begin");
+		StringBuilder key = new StringBuilder();
+		key.append("teamconcert-")
+			.append(getServerURI())
+			.append("-")
+			.append(getBuildTool());
+
+		if (buildDefinition != null) {	
+			key.append("-")
+			   .append(buildDefinition);
+		}
+		if (buildWorkspace != null) {
+			key.append("-")
+			   .append(buildWorkspace);
+		}
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finer("RTCScm.getKey key is " + key);
+		}
+		LOGGER.finer("RTCScm.getKey : End");
+		return key.toString();
+    }
+	
+	private static String getBuildResultUUID(Run<?,?> build, TaskListener listener) throws IOException, InterruptedException {
+		 LOGGER.finest("RTCScm.getBuildResultUUID : Begin");
+		 String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
+		 if (buildResultUUID == null) {
+			LOGGER.finer("RTCScm.getBuildResultUUID : Unable to find buildResultUUID from environment.");
+			// check if buildResultUUID parameter is available from ParametersAction
+			buildResultUUID = getValueFromParametersAction(build, RTCBuildResultAction.BUILD_RESULT_UUID);
+		 }
+		 return buildResultUUID;
+	}
+	
+	private static String getValueFromParametersAction(Run<?,?> build, String key) {
+		String value = null;
+		LOGGER.finest("RTCScm.getValueFromParametersAction : Begin");
+		for (ParametersAction paction: build.getActions(ParametersAction.class)) {
+			List<ParameterValue> pValues = paction.getParameters();
+			if (pValues == null) {
+				continue;
+			}
+            for(ParameterValue pv : pValues) {
+            	if (pv instanceof StringParameterValue && pv.getName().equals(key)) {
+            		value = Util.fixEmptyAndTrim((String) pv.getValue());
+            		if (value != null) {
+            			break;
+            		}
+            	}
+            }
+            if (value != null) {
+            	break;
+            }
+        }
+		if (value == null) {
+			if (LOGGER.isLoggable(Level.WARNING)) {
+			 LOGGER.warning("RTCScm.getValueFromParametersAction : Unable to find a value for key : " + key);
+			}
+		}
+		else {
+			if (LOGGER.isLoggable(Level.INFO)) {
+				 LOGGER.info("RTCScm.getValueFromParametersAction : Found value : " + value + " for key : " + key);
+			}
+		}
+		return value;
 	}
 }
