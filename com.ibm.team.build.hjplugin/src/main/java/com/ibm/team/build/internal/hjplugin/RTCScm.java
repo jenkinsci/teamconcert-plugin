@@ -917,7 +917,7 @@ public class RTCScm extends SCM {
 	 * Convenience constructor for instantiating RTCSCM with only a buildType and the rest of the parameters are set to defaults	 * 
 	 */
 	public RTCScm(BuildType buildType) {
-		this(false, null, null, DescriptorImpl.DEFAULT_SERVER_TIMEOUT, null, null, null, null, buildType, false);
+		this(false, false, null, null, DescriptorImpl.DEFAULT_SERVER_TIMEOUT, null, null, null, null, buildType, false);
 	}
 	
 	@DataBoundConstructor
