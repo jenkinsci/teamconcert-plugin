@@ -261,4 +261,15 @@ public class RTCTestingFacade extends RTCFacade {
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		return testClient.testBadFetchLocation(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
 	}
+	
+	public void testCompareIncomingChanges() throws Exception {
+		RTCAcceptReportUtilityTests testsClassObject = new RTCAcceptReportUtilityTests();
+		testsClassObject.testMatchingAcceptReports();
+		testsClassObject.testAcceptReportsWithDifferentAcceptedChangesets();
+		testsClassObject.testAcceptReportsWithDifferentDiscardedChangesets();
+		testsClassObject.testAcceptReportsWithDifferentAcceptedComponents();
+		testsClassObject.testAcceptReportsWithDifferentRemovedComponents();
+		testsClassObject.testAcceptReportsWithOppositeChangesets();
+		testsClassObject.testNonMatchingAcceptReports();
+	}
 }

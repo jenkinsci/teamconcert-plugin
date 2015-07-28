@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -141,7 +141,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		int changeCount = result.getComponentChangeCount() +
@@ -430,7 +430,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		Assert.assertTrue(result.isPersonalBuild());
@@ -548,7 +548,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		int changeCount = result.getComponentChangeCount() +
@@ -666,7 +666,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
-	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogReader);
+	    		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogReader);
 	    		
 	    		// verify the result
 	    		int changeCount = result.getComponentChangeCount() +

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,10 +13,9 @@ package com.ibm.team.build.internal.hjplugin.tests.utils;
 
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
 import hudson.model.TaskListener;
+import hudson.model.Job;
+import hudson.model.Run;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.SCM;
@@ -37,14 +36,14 @@ public class MockScm extends SCM {
 	
 	@Override
 	public SCMRevisionState calcRevisionsFromBuild(
-			AbstractBuild<?, ?> build, Launcher launcher,
+			Run<?, ?> build, FilePath workspace, Launcher launcher,
 			TaskListener listener) throws IOException, InterruptedException {
 		return null;
 	}
 
 	@Override
-	protected PollingResult compareRemoteRevisionWith(
-			AbstractProject<?, ?> project, Launcher launcher,
+	public PollingResult compareRemoteRevisionWith(
+			Job<?, ?> project, Launcher launcher,
 			FilePath workspace, TaskListener listener,
 			SCMRevisionState baseline) throws IOException,
 			InterruptedException {
@@ -52,10 +51,9 @@ public class MockScm extends SCM {
 	}
 
 	@Override
-	public boolean checkout(AbstractBuild<?, ?> build, Launcher launcher,
-			FilePath workspace, BuildListener listener, File changelogFile)
+	public void checkout(Run<?, ?> build, Launcher launcher,
+			FilePath workspace, TaskListener listener, File changelogFile, SCMRevisionState baseline)
 			throws IOException, InterruptedException {
-		return false;
 	}
 
 	@Override

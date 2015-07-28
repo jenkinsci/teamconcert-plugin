@@ -214,11 +214,11 @@ public class RepositoryConnection {
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
-	 * @return <code>true</code> if there are changes for the build workspace
-	 * <code>false</code> otherwise
+	 * @return <code>Non zero</code> if there are changes for the build workspace
+	 * <code>0</code> otherwise
 	 * @throws Exception Thrown if anything goes wrong.
 	 */
-	public boolean incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener,
+	public int incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener,
 			IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(10));
@@ -243,7 +243,7 @@ public class RepositoryConnection {
 		}
 
 		AcceptReport report = SourceControlUtility.checkForIncoming(fRepositoryManager, workspace, monitor.newChild(80));
-		return report.getChangesAcceptedCount() > 0;
+		return RTCAcceptReportUtility.hashCode(report);
 	}
 
 	/**
@@ -257,7 +257,7 @@ public class RepositoryConnection {
 	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName should be
 	 * supplied
 	 * @param fetchDestination The location the build workspace is to be loaded
-	 * @param changeReport The report to be built of all the changes accepted/discarded
+	 * @param changeReport The report to be built of all the changes accepted/discarded. May be <code> null </code>.
 	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
@@ -348,24 +348,28 @@ public class RepositoryConnection {
             if (monitor.isCanceled()) {
             	throw new InterruptedException();
             }
-            
-            // build change report
-            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-            changeReportBuilder.populateChangeReport(changeReport,
-            		workspaceConnection.getResolvedWorkspace(), acceptReport,
-            		listener, monitor.newChild(2));
+            if (changeReport != null) {
+		            // build change report
+		            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+		            changeReportBuilder.populateChangeReport(changeReport,
+		            		workspaceConnection.getResolvedWorkspace(), acceptReport,
+		            		listener, monitor.newChild(2));
+            }
             
             synchronizeLoad = true;
         } else {
-        	
-            // build change report
-            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-            changeReportBuilder.populateChangeReport(changeReport,
-            		buildConfiguration.isPersonalBuild(),
-            		listener);
+        	if (changeReport != null) {
+	            // build change report
+	            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+	            changeReportBuilder.populateChangeReport(changeReport,
+	            		buildConfiguration.isPersonalBuild(),
+	            		listener);
+        	}
         }
-		changeReport.prepareChangeSetLog();
-
+        if ( changeReport != null ) {
+        	changeReport.prepareChangeSetLog();
+        }
+        
         ISharingManager manager = FileSystemCore.getSharingManager();
         final ILocation fetchLocation = buildConfiguration.getFetchDestinationPath();
         ISandbox sandbox = manager.getSandbox(fetchLocation, false);

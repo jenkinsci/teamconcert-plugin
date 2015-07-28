@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -31,8 +31,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
-
-import javax.servlet.ServletException;
 
 import net.sf.json.JSONObject;
 
@@ -187,9 +185,8 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
         /**
          * Checks if the path to the build toolkit is valid
          */
-        public FormValidation doCheckHome(@QueryParameter File value)
-            throws IOException, ServletException {
-
+        @Override
+        public FormValidation doCheckHome(@QueryParameter File value) {
             return validateBuildToolkit(false, value);
         }
         
