@@ -1,0 +1,35 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2014 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+    <p>
+        Esta função pode ser usada na implementação de <i>Delivery Pipelines</i>. Se ativada, Jenkins manterá o
+        Resultado de Compilação do RTC aberto, permitindo que resultados de outros estágios sejam inseridos no mesmo
+        objeto.
+    </p>
+    <p>
+        A propriedade boleana
+        <code>com.ibm.rational.connector.hudson.queueOnly</code>
+        deverá ser usada na <i>Build Engine</i> em conjunto com essa função para garantir que o Resultado de
+        Compilação do RTC se mantenha aberto mesmo quando requisitado desde o proprio Cliente RTC.
+    </p>
+    <p>
+        <i>Observe que um mecanismo deverá ser providenciado para concluir o Resultado de Compilação do RTC ao
+            final do processo. Consulte <a
+            href="https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/r_completebuild.html">Ant Tasks</a>
+            como exemplo.
+        </i>
+    </p>
+</div>
