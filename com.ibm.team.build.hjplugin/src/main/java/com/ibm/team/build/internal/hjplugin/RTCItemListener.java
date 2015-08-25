@@ -20,6 +20,7 @@ import hudson.util.RunList;
 
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildResultHelper;
 import com.ibm.team.build.internal.hjplugin.util.RTCScmConfigHelper;
@@ -27,10 +28,14 @@ import com.ibm.team.build.internal.hjplugin.util.RTCScmConfigHelper;
 @Extension
 public class RTCItemListener extends ItemListener {
 
+	private static final Logger LOGGER = Logger.getLogger(RTCItemListener.class.getName());
+
 	@Override
 	public void onDeleted(Item item) {
+		LOGGER.finest("onDeleted : Start");
 		try {
 			if (item instanceof AbstractProject) {
+				LOGGER.finer("onDeleted: Working with an AbstractProject"); //$NON-NLS$
 				AbstractProject<?, ?> project = (AbstractProject<?, ?>) item;
 				Set<RTCScm> rtcScmConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
 				if (!rtcScmConfigs.isEmpty()) {
@@ -47,5 +52,6 @@ public class RTCItemListener extends ItemListener {
 		} finally {
 			super.onDeleted(item);
 		}
+		LOGGER.finest("onDeleted : End");
 	}
 }

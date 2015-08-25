@@ -43,7 +43,7 @@ public class RTCRunListener extends RunListener<Run> {
 
 	@Override
 	public void onCompleted(Run build, TaskListener listener) {
-		LOGGER.finer("onCompleted : Start");
+		LOGGER.finest("onCompleted : Start");
 		// if launched by Hudson/Jenkins terminate the build created in RTC
 		try {
 			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
@@ -52,7 +52,7 @@ public class RTCRunListener extends RunListener<Run> {
 					if (action.ownsBuildResultLifecycle()) {
 						SCM scmSystem = null;
 						if (build instanceof AbstractBuild) {
-							LOGGER.finer("build is an AbstractBuild");
+							LOGGER.finer("build is not a workflow job");
 							scmSystem = ((AbstractBuild)build).getProject().getScm();
 						}
 						
@@ -62,7 +62,7 @@ public class RTCRunListener extends RunListener<Run> {
 						} else {
 							// we are assuming that the action is from when the build was started and that
 							// transient SCM is still available.
-							LOGGER.finer("Getting scm from action");
+							LOGGER.finer("Getting SCM from action");
 							scm = action.getScm();
 							if (scm == null && build instanceof AbstractBuild) {
 								// perhaps the action has be re-constituted from the serialized format.
@@ -129,14 +129,17 @@ public class RTCRunListener extends RunListener<Run> {
     	} finally {
     		super.onCompleted(build, listener);
     	}
+		LOGGER.finest("onCompleted : End");
 	}
 
 	@Override
 	public void onDeleted(Run r) {
+		LOGGER.finest("onDeleted : Start");
 		// delete the build results associated with the build if any
 		try {
 			List<RTCBuildResultAction> buildResultActions = r.getActions(RTCBuildResultAction.class);
 			if (!buildResultActions.isEmpty() && r instanceof AbstractBuild) {
+				LOGGER.finer("build is an AbstractBuild");
 				// get the RTCScms configured if any (could be >1 if Multi SCM plugin involved.
 				// (job may of changed so that it nolonger has RTCScm as the SCM provider)
 				Set<RTCScm> rtcScmConfigs = RTCScmConfigHelper.getCurrentConfigs(((AbstractBuild)r).getProject());
@@ -145,5 +148,6 @@ public class RTCRunListener extends RunListener<Run> {
 		} finally {
 			super.onDeleted(r);
 		}
+		LOGGER.finest("onDeleted : End");
 	}
 }
