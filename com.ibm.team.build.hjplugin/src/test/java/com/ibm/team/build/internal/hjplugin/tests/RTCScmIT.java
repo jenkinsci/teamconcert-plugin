@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -104,7 +104,7 @@ public class RTCScmIT extends HudsonTestCase {
 			assertEquals(null, scm.getUserId());
 			assertEquals(null, scm.getPassword());
 			assertEquals(null, scm.getPasswordFile());
-			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildType());
+			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildTypeStr());
 			assertEquals(TEST_BUILD_DEFINITION, scm.getBuildDefinition());
 			assertEquals(TEST_BUILD_WORKSPACE, scm.getBuildWorkspace());
 			
@@ -120,7 +120,7 @@ public class RTCScmIT extends HudsonTestCase {
 			assertEquals(TEST_USER_ID, scm.getUserId());
 			assertEquals(TEST_PASSWORD, scm.getPassword());
 			assertEquals(TEST_PASSWORD_FILE, scm.getPasswordFile());
-			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildType());
+			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildTypeStr());
 			assertEquals(TEST_BUILD_DEFINITION, scm.getBuildDefinition());
 			assertEquals(TEST_BUILD_WORKSPACE, scm.getBuildWorkspace());
 
