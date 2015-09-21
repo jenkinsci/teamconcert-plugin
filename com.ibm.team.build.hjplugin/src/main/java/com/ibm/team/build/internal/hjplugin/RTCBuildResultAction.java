@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,6 +22,8 @@ import org.kohsuke.stapler.export.ExportedBean;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * An action that is associated with a Hudson/Jenkins build. Serialized so that it can contribute
@@ -34,6 +36,8 @@ import java.util.Map;
  */
 @ExportedBean(defaultVisibility = 999)
 public class RTCBuildResultAction implements Serializable, Action, EnvironmentContributingAction {
+
+    private static final Logger LOGGER = Logger.getLogger(RTCBuildResultAction.class.getName());
 
 	static final String BUILD_RESULT_UUID = "buildResultUUID";
 	private static final String RTC_BUILD_RESULT_UUID = "RTCBuildResultUUID";
@@ -59,10 +63,15 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 * incorporates our SCM provider (i.e. MultiSCM). 
 	 */
 	public RTCBuildResultAction(String serverURI, String buildResultUUID, boolean ownsRTCBuildResultLifecycle, RTCScm scm) {
+		LOGGER.finest("RTCBuildResultAction : Instantiating a build result action"); //$NON-NLS-1$
+
 		this.buildResultUUID = buildResultUUID;
         String uri = Util.fixEmpty(serverURI);
         if (uri != null && !uri.endsWith(SLASH)) {
         	uri = uri + SLASH;
+        	if (LOGGER.isLoggable(Level.FINER)) {
+        		LOGGER.finer("RTCBuildResultAction : Received URI " + uri); //$NON-NLS-1$
+        	}
         }
         this.serverURI = uri;
         this.createdBuildResult = ownsRTCBuildResultLifecycle;
@@ -70,6 +79,9 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
         
         if (buildResultUUID != null) {
         	this.buildProperties.put(RTC_BUILD_RESULT_UUID, buildResultUUID);
+        	if (LOGGER.isLoggable(Level.FINER)) {
+        		LOGGER.finer("RTCBuildResultAction : Received build result uuid " + buildResultUUID); //$NON-NLS-1$
+        	}
         }
 	}
 	
@@ -80,8 +92,16 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	public String getBuildResultUUID() {
 		return buildResultUUID;
 	}
+	
+	/**
+	 * @return the current map of build properties associated with this build result action.
+	 */
+	public Map<String, String> getBuildProperties() {
+		return buildProperties;
+	}
 
 	public void buildEnvVars(AbstractBuild<?, ?> build, EnvVars env) {
+		LOGGER.finest("RTCBuildResultAction.buildEnvVars : Enter"); //$NON-NLS-1$
 		for (Map.Entry<String, String> entry : buildProperties.entrySet()) {
 			env.put(entry.getKey(), entry.getValue());
 		}
@@ -133,6 +153,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 * @param buildProperties The build properties to include
 	 */
 	public void addBuildProperties(Map<String, String> buildProperties) {
+		LOGGER.finest("RTCBuildResultAction.addBuildProperties : Enter"); //$NON-NLS-1$
 		for (Map.Entry<String, String> entry : buildProperties.entrySet()) {
 			this.buildProperties.put(entry.getKey(), entry.getValue());
 		}

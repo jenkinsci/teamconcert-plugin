@@ -108,7 +108,7 @@
         
 	    <f:block>
 	    <table width="100%">
-	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildType == 'buildDefinition'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
+	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildTypeStr == 'buildDefinition'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
 
 			    <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >
 			        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
@@ -119,7 +119,7 @@
 
 	        </f:radioBlock>
 
-	        <f:radioBlock title="${%buildWorkspace.type}" name="buildType" value="buildWorkspace" checked="${instance != null &amp;&amp; instance.buildType == 'buildWorkspace'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildWorkspaceType" >
+	        <f:radioBlock title="${%buildWorkspace.type}" name="buildType" value="buildWorkspace" checked="${instance != null &amp;&amp; instance.buildTypeStr == 'buildWorkspace'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildWorkspaceType" >
 
 			    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
 			        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />

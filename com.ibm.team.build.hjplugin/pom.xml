@@ -19,7 +19,7 @@
 
 	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>teamconcert</artifactId>
-	<version>1.1.9.5-SNAPSHOT</version>
+	<version>1.1.9.6-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 
 	<name>Team Concert Plugin</name>
@@ -92,12 +92,12 @@
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.0.2</version>
+			<version>1.0.3</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.0.2</version>
+			<version>1.0.3</version>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>

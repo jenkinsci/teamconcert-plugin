@@ -15,7 +15,7 @@
 
 	<groupId>com.ibm.team.build</groupId>
 	<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<packaging>eclipse-plugin</packaging>
 
 	<properties>

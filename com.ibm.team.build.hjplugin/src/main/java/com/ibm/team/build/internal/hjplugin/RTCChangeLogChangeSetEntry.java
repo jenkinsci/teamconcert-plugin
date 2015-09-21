@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,12 +22,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Logger;
 
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
 @ExportedBean(defaultVisibility=999)
 public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
+	
+    private static final Logger LOGGER = Logger.getLogger(RTCChangeLogChangeSetEntry.class.getName());
 
     private static final String FORMAT = "yyyy-MM-dd HH:mm:ss"; //$NON-NLS-1$
 
@@ -189,6 +192,7 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 	private WorkItemDesc primaryWorkItem;
 
 	public RTCChangeLogChangeSetEntry() {
+		LOGGER.finest("RTCChangeLogChangeSetEntry : Instantiating a changelog set entry"); //$NON-NLS-1$
 		changes = new ArrayList<RTCChangeLogChangeSetEntry.ChangeDesc>();
 		workItems = new ArrayList<RTCChangeLogChangeSetEntry.WorkItemDesc>(0);
 	}
@@ -208,6 +212,7 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 	@Override
     @Exported
 	public String getMsg() {
+		LOGGER.finest("RTCChangeLogChangeSetEntry.getMsg : Begin");
 		if (primaryWorkItem == null) {
 			return comment;
 		} else {
@@ -230,12 +235,14 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 	@Override
 	@Exported
 	public User getAuthor() {
+		LOGGER.finest("RTCChangeLogSetEntry.getAuthor : Begin");
 		return User.get(owner);
 	}
 
 	@Override
 	@Exported
 	public Collection<String> getAffectedPaths() {
+		LOGGER.finest("RTCChangeLogSetEntry.getAffectedPaths : Begin");
 		List<String> result;
 		List<ChangeDesc> affectedVersionables = getAffectedVersionables();
 		if (affectedVersionables == null) {
@@ -271,6 +278,7 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 	@Override
 	@Exported
 	public long getTimestamp() {
+		LOGGER.finest("RTCChangeLogChangeSetEntry.getTimeStamp : Begin");
 		return changeSetModDate.getTime();
 	}
 

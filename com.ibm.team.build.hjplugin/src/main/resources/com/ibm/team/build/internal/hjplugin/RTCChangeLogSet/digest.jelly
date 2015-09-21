@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -20,138 +20,141 @@
   "it" is the RTCChangeLogSet instance
 -->
     <?jelly escape-by-default='true'?>
-    
- <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
 
-  <j:set var="snapshotlink" value="${browser.getBaselineSetLink(it)}"/>
-  <j:set var="snapshotName" value="${it.getBaselineSetName()}"/>
-  <j:if test="${snapshotlink!=null}">
-    <j:if test="${snapshotName==null}">
-      <j:set var="snapshotName" value="${browser.descriptor.displayName}"/>
-    </j:if>
-    <b>${%snapshot.label} :&#160;</b>
-    <a href="${snapshotlink}"> ${snapshotName}</a>
-    <br/>
-  </j:if>
+  <!-- We want to display info for changeLogSet only from RTCScm-->    
+  <j:set var="expectedClass" value="com.ibm.team.build.internal.hjplugin.RTCChangeLogSet"/>
+  <j:if test="${it.getClass().getName()==expectedClass}">
+      <j:set var="browser" value="${it.browser}"/>
+      <j:set var="snapshotlink" value="${browser.getBaselineSetLink(it)}"/>
+      <j:set var="snapshotName" value="${it.getBaselineSetName()}"/>
+      <j:if test="${snapshotlink!=null}">
+        <j:if test="${snapshotName==null}">
+          <j:set var="snapshotName" value="${browser.descriptor.displayName}"/>
+        </j:if>
+        <b>${%snapshot.label} :&#160;</b>
+        <a href="${snapshotlink}"> ${snapshotName}</a>
+        <br/>
+      </j:if>
 
-  <j:choose>
-    <j:when test="${it.emptySet}">
       <j:choose>
-        <j:when test="${it.isPersonalBuild()}">
-          ${%personal.build}
+        <j:when test="${it.emptySet}">
+          <j:choose>
+            <j:when test="${it.isPersonalBuild()}">
+              ${%personal.build}
+            </j:when>
+            <j:otherwise>
+              ${%changes.none}
+            </j:otherwise>
+          </j:choose>
         </j:when>
         <j:otherwise>
-          ${%changes.none}
+          <j:set var="componentChangeCount" value="${it.getComponentChangeCount()}" />
+          <j:if test="${componentChangeCount!=0}">
+            <b>${%changes.component(componentChangeCount)}</b>
+            <j:forEach var="cc" items="${it.componentChanges}" varStatus="loop">
+              <div class="component-message" style="width: 650px; margin-left: 14px;">
+                <table>
+                  <tr>
+                    <td><t:editTypeIcon type="${cc.actionType}" /></td>
+                    <td><st:out value="${cc.name}"/></td>
+                  </tr>
+                </table>
+              </div>
+            </j:forEach>
+            <br/>
+          </j:if>
+          
+          <j:set var="acceptedCount" value="${it.getChangeSetsAcceptedCount()}" />
+          <j:set var="discardedCount" value="${it.getChangeSetsDiscardedCount()}" />
+          <b>${%changeSets.accepted(acceptedCount)}</b>
+          <br/>
+          <j:if test="${discardedCount!=0}">
+            <b>${%changeSets.discarded(discardedCount)}</b>
+            <br/>
+          </j:if>
+          <br/>
+          
+          <j:if test="${!it.getAffectedComponents().isEmpty()}">
+            
+            <j:forEach var="ac" items="${it.getAffectedComponents()}" varStatus="cmp">
+              <b>${ac.getName()}</b>
+              <br/>
+              <j:if test="${!it.getChangeSetsAccepted(ac.getItemId()).isEmpty()}" >
+                <ul>
+                  <j:forEach var="cs" items="${it.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
+                    <li>
+                      <j:set var="labeled" value="false"/>
+                      <j:set var="wi" value="${cs.getWorkItem()}"/>
+                      <j:if test="${wi!=null}">
+                         <j:set var="labeled" value="true"/>
+                         <a href="${browser.getWorkItemLink(wi)}"> ${wi.getMsg()}</a>
+                      </j:if>
+                      <j:set var="cmt" value="${cs.getComment()}"/>
+                      <j:if test="${cmt!=null}">
+                         <j:if test="${wi!=null}">
+                            <j:text> - </j:text>
+                         </j:if>
+                      </j:if>
+                      <j:if test="${cmt!=null}">
+                         <j:set var="labeled" value="true"/>
+                         ${cmt}
+                      </j:if>
+                      <j:if test="${!labeled}">
+                        <j:text>&lt;</j:text>${%changeSet.nocomment}<j:text>&gt;</j:text>
+                      </j:if>
+                   
+                      (<a href="changes#component${cmp.index}accepted${loop.index}">${%detail}</a>)
+                      <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
+                      <j:if test="${cslink!=null}">
+                        <j:text> / </j:text>
+                        (<a href="${cslink}">${%changeSet.label}</a>)
+                      </j:if>
+                    </li>
+                  </j:forEach>
+                </ul>
+              </j:if>  
+    
+              <j:if test="${discardedCount!=0}">
+                <j:if test="${!it.getChangeSetsDiscarded(ac.getItemId()).isEmpty()}" >
+                  <j:text>&#160;&#160;${%discarded}</j:text>
+    
+                  <ul>
+                    <j:forEach var="cs" items="${it.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
+                      <li>
+                        <j:set var="labeled" value="false"/>
+                        <j:set var="wi" value="${cs.getWorkItem()}"/>
+                        <j:if test="${wi!=null}">
+                          <j:set var="labeled" value="true"/>
+                          <a href="${browser.getWorkItemLink(wi)}"> ${wi.getMsg()}</a>
+                        </j:if>
+                        <j:set var="cmt" value="${cs.getComment()}"/>
+                        <j:if test="${cmt!=null}">
+                          <j:if test="${wi!=null}">
+                            <j:text> - </j:text>
+                          </j:if>
+                        </j:if>
+                        <j:if test="${cmt!=null}">
+                          <j:set var="labeled" value="true"/>
+                          ${cmt}
+                        </j:if>
+                        <j:if test="${!labeled}">
+                          <j:text>&lt;</j:text>${%changeSet.nocomment}<j:text>&gt;</j:text>
+                        </j:if>
+     
+                        (<a href="changes#component${cmp.index}discarded${loop.index}">${%detail}</a>)
+                        <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
+                        <j:if test="${cslink!=null}">
+                          <j:text> / </j:text>
+                          (<a href="${cslink}">${%changeSet.label}</a>)
+                        </j:if>
+                      </li>
+                    </j:forEach>
+                  </ul>
+                </j:if>
+              </j:if>
+            </j:forEach>
+          </j:if>
         </j:otherwise>
       </j:choose>
-    </j:when>
-    <j:otherwise>
-      <j:set var="componentChangeCount" value="${it.getComponentChangeCount()}" />
-      <j:if test="${componentChangeCount!=0}">
-        <b>${%changes.component(componentChangeCount)}</b>
-        <j:forEach var="cc" items="${it.componentChanges}" varStatus="loop">
-          <div class="component-message" style="width: 650px; margin-left: 14px;">
-            <table>
-              <tr>
-                <td><t:editTypeIcon type="${cc.actionType}" /></td>
-                <td><st:out value="${cc.name}"/></td>
-              </tr>
-            </table>
-          </div>
-        </j:forEach>
-        <br/>
-      </j:if>
-      
-      <j:set var="acceptedCount" value="${it.getChangeSetsAcceptedCount()}" />
-      <j:set var="discardedCount" value="${it.getChangeSetsDiscardedCount()}" />
-      <b>${%changeSets.accepted(acceptedCount)}</b>
-      <br/>
-      <j:if test="${discardedCount!=0}">
-        <b>${%changeSets.discarded(discardedCount)}</b>
-        <br/>
-      </j:if>
-      <br/>
-      
-      <j:if test="${!it.getAffectedComponents().isEmpty()}">
-        
-        <j:forEach var="ac" items="${it.getAffectedComponents()}" varStatus="cmp">
-          <b>${ac.getName()}</b>
-          <br/>
-          <j:if test="${!it.getChangeSetsAccepted(ac.getItemId()).isEmpty()}" >
-            <ul>
-              <j:forEach var="cs" items="${it.getChangeSetsAccepted(ac.getItemId())}" varStatus="loop">
-                <li>
-                  <j:set var="labeled" value="false"/>
-                  <j:set var="wi" value="${cs.getWorkItem()}"/>
-                  <j:if test="${wi!=null}">
-                     <j:set var="labeled" value="true"/>
-                     <a href="${browser.getWorkItemLink(wi)}"> ${wi.getMsg()}</a>
-                  </j:if>
-                  <j:set var="cmt" value="${cs.getComment()}"/>
-                  <j:if test="${cmt!=null}">
-                     <j:if test="${wi!=null}">
-                        <j:text> - </j:text>
-                     </j:if>
-                  </j:if>
-                  <j:if test="${cmt!=null}">
-                     <j:set var="labeled" value="true"/>
-                     ${cmt}
-                  </j:if>
-                  <j:if test="${!labeled}">
-                    <j:text>&lt;</j:text>${%changeSet.nocomment}<j:text>&gt;</j:text>
-                  </j:if>
-               
-                  (<a href="changes#component${cmp.index}accepted${loop.index}">${%detail}</a>)
-                  <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
-                  <j:if test="${cslink!=null}">
-                    <j:text> / </j:text>
-                    (<a href="${cslink}">${%changeSet.label}</a>)
-                  </j:if>
-                </li>
-              </j:forEach>
-            </ul>
-          </j:if>  
-
-          <j:if test="${discardedCount!=0}">
-            <j:if test="${!it.getChangeSetsDiscarded(ac.getItemId()).isEmpty()}" >
-              <j:text>&#160;&#160;${%discarded}</j:text>
-
-              <ul>
-                <j:forEach var="cs" items="${it.getChangeSetsDiscarded(ac.getItemId())}" varStatus="loop">
-                  <li>
-                    <j:set var="labeled" value="false"/>
-                    <j:set var="wi" value="${cs.getWorkItem()}"/>
-                    <j:if test="${wi!=null}">
-                      <j:set var="labeled" value="true"/>
-                      <a href="${browser.getWorkItemLink(wi)}"> ${wi.getMsg()}</a>
-                    </j:if>
-                    <j:set var="cmt" value="${cs.getComment()}"/>
-                    <j:if test="${cmt!=null}">
-                      <j:if test="${wi!=null}">
-                        <j:text> - </j:text>
-                      </j:if>
-                    </j:if>
-                    <j:if test="${cmt!=null}">
-                      <j:set var="labeled" value="true"/>
-                      ${cmt}
-                    </j:if>
-                    <j:if test="${!labeled}">
-                      <j:text>&lt;</j:text>${%changeSet.nocomment}<j:text>&gt;</j:text>
-                    </j:if>
- 
-                    (<a href="changes#component${cmp.index}discarded${loop.index}">${%detail}</a>)
-                    <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
-                    <j:if test="${cslink!=null}">
-                      <j:text> / </j:text>
-                      (<a href="${cslink}">${%changeSet.label}</a>)
-                    </j:if>
-                  </li>
-                </j:forEach>
-              </ul>
-            </j:if>
-          </j:if>
-        </j:forEach>
-      </j:if>
-    </j:otherwise>
-  </j:choose>
+  </j:if>
 </j:jelly>
