@@ -19,7 +19,7 @@
 
 	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>teamconcert</artifactId>
-	<version>1.1.9.5-SNAPSHOT</version>
+	<version>1.1.9.6-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 
 	<name>Team Concert Plugin</name>
