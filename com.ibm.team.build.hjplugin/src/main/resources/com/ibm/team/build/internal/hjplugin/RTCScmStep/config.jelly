@@ -24,8 +24,8 @@
                 
                 <f:optionalBlock name="avoidUsingToolkit" title="${%avoidUsingToolkit.title}" field="avoidUsingToolkit" inline="true" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/avoidUsingToolkit"/>
                 
-                <f:entry title="${%serverURI.title}" field="serverUri" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/serverURI">
-                    <f:textbox name="serverUri" clazz="required" checkMessage="${%serverURI.checkMessage}" />
+                <f:entry title="${%serverURI.title}" field="serverURI" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/serverURI">
+                    <f:textbox name="serverURI" clazz="required" checkMessage="${%serverURI.checkMessage}" />
                 </f:entry>
                 
                 <f:entry title="${%credentialsId.title}" field="credentialsId" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/credentialsId">

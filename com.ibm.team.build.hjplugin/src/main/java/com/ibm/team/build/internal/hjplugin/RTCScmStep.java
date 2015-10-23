@@ -69,7 +69,7 @@ public class RTCScmStep extends SCMStep {
 	protected SCM createSCM() {
 		LOGGER.finest("RTCScmStep.createSCM : Begin");
 		if (isOverrideGlobal()) {
-			return new RTCScm(true, overrideConfig.getBuildTool(), overrideConfig.getServerUri(), 
+			return new RTCScm(true, overrideConfig.getBuildTool(), overrideConfig.getServerURI(), 
 					overrideConfig.getTimeout(), null, null, null, 
 					overrideConfig.getCredentialsId(), buildType, overrideConfig.getAvoidUsingToolkit());
 		}
@@ -122,7 +122,7 @@ public class RTCScmStep extends SCMStep {
 	}
 	
 	public static class OverrideConfig {
-		private String serverUri;
+		private String serverURI;
 		private String credentialsId;
 		private String buildTool;
 		private int timeout = RTCScm.DEFAULT_SERVER_TIMEOUT;
@@ -132,15 +132,15 @@ public class RTCScmStep extends SCMStep {
 		// Need to decouple overrideGlobal flag from the buildTool parameter in @{link RTCScm}
 		// Then we can use a @{link DataBoundSetter} for buildTool 
 		@DataBoundConstructor
-		public OverrideConfig(String serverUri, String credentialsId, String buildTool) {
+		public OverrideConfig(String serverURI, String credentialsId, String buildTool) {
 			LOGGER.finest("RTCScmStep.OverrideConfig : Begin");
-			this.serverUri = serverUri;
+			this.serverURI = serverURI;
 			this.credentialsId = credentialsId;
 			this.buildTool = buildTool;
 		}
 
-		public String getServerUri() {
-			return serverUri;
+		public String getServerURI() {
+			return serverURI;
 		}
 
 		public String getCredentialsId() {
@@ -160,6 +160,17 @@ public class RTCScmStep extends SCMStep {
 
 		public int getTimeout() {
 			return timeout;
+		}
+		
+		@Deprecated
+		@DataBoundSetter
+		public void setServerUri(String serverUri) {
+			this.serverURI = serverUri;
+		}
+		
+		@Deprecated
+		public String getServerUri() {
+			return this.serverURI;
 		}
 		
 		@DataBoundSetter
