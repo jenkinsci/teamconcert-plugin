@@ -190,6 +190,11 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 	private boolean changesSorted;
 	private List<WorkItemDesc> workItems;
 	private WorkItemDesc primaryWorkItem;
+	
+	private static final String RTCWI_START_TAG = "<rtcwi>"; //$NON-NLS-1$
+	private static final String RTCWI_END_TAG = "</rtcwi>"; //$NON-NLS-1$
+	private static final String RTCCS_START_TAG = "<rtccs>"; //$NON-NLS-1$
+	private static final String RTCCS_END_TAG = "</rtccs>"; //$NON-NLS-1$
 
 	public RTCChangeLogChangeSetEntry() {
 		LOGGER.finest("RTCChangeLogChangeSetEntry : Instantiating a changelog set entry"); //$NON-NLS-1$
@@ -216,6 +221,22 @@ public class RTCChangeLogChangeSetEntry extends RTCChangeLogSetEntry {
 		if (primaryWorkItem == null) {
 			return comment;
 		} else {
+			if (workItems.size() > 0) {
+				StringBuilder res = new StringBuilder();
+				res.append(RTCWI_START_TAG);
+				res.append(primaryWorkItem.getMsg());
+				res.append(RTCWI_END_TAG);
+				for (WorkItemDesc wiDesc : workItems) {
+					res.append(RTCWI_START_TAG);
+					res.append(wiDesc.getMsg());
+					res.append(RTCWI_END_TAG);
+				}
+				res.append(RTCCS_START_TAG);
+				res.append(comment);
+				res.append(RTCCS_END_TAG);
+				
+				return res.toString();
+			}
 			return primaryWorkItem.getMsg() + " - " + comment; //$NON-NLS-1$
 		}
 	}
