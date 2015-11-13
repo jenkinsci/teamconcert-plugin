@@ -398,6 +398,37 @@ public class RTCFacade {
 			throw Utils.checkForCancellation(e);
 		}
 	}
+	
+	/**
+	 * Get details regarding build workspace name, and build definition id form buildResultUUID. 
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The build result to relate build results with. This should not be null.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * This is defined as an Object due to class loader issues. It is expected to implement
+	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
+	 * @return <code>Map<String, String></code> of build workspace name, and build definition id
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
+	public Map<String, String> getBuildResultUUIDDetails(String serverURI, String userId, String password,
+			int timeout, String buildResultUUID, final Object listener, Locale clientLocale) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
+		AbstractBuildClient buildClient = getBuildClient(); 
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try	{
+			return repoConnection.getBuildResultUUIDDetails(buildResultUUID, 
+					clientConsole, monitor, clientLocale);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
 
 	/**
 	 * delete the build result identified

@@ -13,6 +13,7 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -244,6 +245,41 @@ public class RepositoryConnection {
 
 		AcceptReport report = SourceControlUtility.checkForIncoming(fRepositoryManager, workspace, monitor.newChild(80));
 		return RTCAcceptReportUtility.hashCode(report);
+	}
+	
+	/**
+	 * Get details regarding build workspace name, and build definition id from buildResultUUID.
+	 * @param buildResultUUID  The id of the build result (which also contains the build request & build definition instance)
+	 * Cannot be <code>null</code>.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
+	 * @return
+	 * @throws Exception Thrown if anything goes wrong
+	 */
+	public Map<String, String> getBuildResultUUIDDetails(String buildResultUUID, 
+			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
+		if (buildResultUUID == null) {
+			return new HashMap<String, String>();
+		}
+		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
+		ensureLoggedIn(monitor.newChild(1));
+		
+		BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), null);
+		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+		buildConfiguration.initialize(buildResultHandle, null, listener, monitor.newChild(1), clientLocale);
+		String buildDefinitionId = buildConfiguration.getBuildProperties().get("buildDefinitionId");
+		
+		Map<String, String> result = new HashMap<String, String>();
+		result.put("buildDefinitionId", buildDefinitionId);
+/*
+		BuildWorkspaceDescriptor workspace = buildConfiguration.getBuildWorkspaceDescriptor();
+		String workspaceName = workspace.getWorkspace(fRepositoryManager, monitor.newChild(1)).getName();
+		result.put("buildWorkspaceName", workspaceName);
+*/		
+		return result;
 	}
 
 	/**

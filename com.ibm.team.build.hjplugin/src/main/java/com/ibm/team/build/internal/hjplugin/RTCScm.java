@@ -50,6 +50,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -70,6 +71,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
+import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
@@ -981,6 +983,69 @@ public class RTCScm extends SCM {
 		// So for now we don't return a special revision state
 		return SCMRevisionState.NONE;
 	}
+	
+	/**
+	 * Expecting buildResultUUID as non-null, match with buildDefinition and buildWorkspace
+	 * @param loginInfo
+	 * @param buildResultUUID
+	 * @param buildDefinition
+	 * @param buildWorkspace
+	 * @return true if matches, false otherwise
+	 */
+	private boolean match(RTCLoginInfo loginInfo, String buildToolkit, String buildResultUUID, String buildDefinition, String buildWorkspace,
+			boolean debug, TaskListener listener, Locale clientLocale) throws InterruptedException, AbortException {
+		if (buildDefinition == null) {
+			return false;
+		}
+		
+		RTCFacadeWrapper facade;
+		Map<String, String> details = null;
+		try {
+			facade = RTCFacadeFactory.getFacade(buildToolkit, debug ? listener.getLogger() : null);
+			
+			// get buildDefinition and buildWorkspace for buildResultUUID...
+			details = (Map<String, String>) facade.invoke("getBuildResultUUIDDetails", new Class[] { //$NON-NLS-1$
+					String.class, // serverURI,
+					String.class, // userId,
+					String.class, // password,
+					int.class, // timeout,
+					String.class, // buildResultUUID,
+					Object.class, // listener
+					Locale.class // clientLocale
+			}, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+					loginInfo.getTimeout(), buildResultUUID,
+					listener, clientLocale);
+		} catch (Exception e) {
+			Throwable eToReport = e;
+			if (eToReport instanceof InvocationTargetException && e.getCause() != null) {
+				eToReport = e.getCause();
+			}
+			if (eToReport instanceof InterruptedException) {
+				listener.getLogger().println("Exception while getting buildResultUUID details");
+				throw (InterruptedException) eToReport;
+			}
+//			if (debug) {
+//				debug("Failed to get buildResultUUID details", eToReport); //$NON-NLS-1$
+//			}
+			// throw AbortException with this message
+			throw new AbortException(e.getMessage());
+		}
+		
+		String buildDefinitionId = details.get("buildDefinitionId");
+		
+		if (!buildDefinition.equals(buildDefinitionId)) {
+			return false;
+		}
+/*		
+		String buildWorkspaceName = details.get("buildWorkspaceName");
+		if (buildWorkspace != null) {
+			if (!buildWorkspace.equals(buildWorkspaceName)) {
+				return false;
+			}
+		}
+*/
+		return true;
+	}
 
 	@Override
 	public void checkout(Run<?, ?> build, Launcher arg1,
@@ -997,6 +1062,27 @@ public class RTCScm extends SCM {
 		String buildDefinition = getBuildDefinition();
 		String buildResultUUID = getBuildResultUUID(build, listener);
 
+		Node node = workspacePath.toComputer().getNode();
+		localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
+		// Get the build toolkit on the node where the checkout is happening.
+		nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
+
+		boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
+
+		RTCLoginInfo loginInfo;
+		try {
+			loginInfo = getLoginInfo(build.getParent(), localBuildToolkit);
+		} catch (InvalidCredentialsException e1) {
+			// TODO Auto-generated catch block
+			throw new AbortException(e1.getMessage());
+		}
+		// if buildResultUUID is not null then we need to match...
+		if (buildResultUUID != null) {
+			if (!match(loginInfo, nodeBuildToolkit, buildResultUUID, buildDefinition, buildWorkspace, debug, listener, LocaleProvider.getLocale())) {
+				buildResultUUID = null;
+			}
+		}
+
 		String buildType = getBuildTypeStr();
 		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
 
@@ -1010,11 +1096,6 @@ public class RTCScm extends SCM {
 		RTCBuildResultAction buildResultAction;
 		
 		try {
-			Node node = workspacePath.toComputer().getNode();
-			localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
-			// Get the build toolkit on the node where the checkout is happening.
-			nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
-			RTCLoginInfo loginInfo = getLoginInfo(build.getParent(), localBuildToolkit);
 			
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finer("checkout : " + build.getParent().getName() + " " + build.getDisplayName() + " " + node.getNodeName() + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
@@ -1030,8 +1111,6 @@ public class RTCScm extends SCM {
 						" Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 
-			boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
-			
 			if (workspacePath.isRemote()) {
 				// Slaves do a lazy remote class loader. The slave's class loader will request things as needed
 				// from the remote master. The class loader on the master is the one that knows about the hjplugin-rtc.jar
