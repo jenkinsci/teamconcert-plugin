@@ -92,12 +92,12 @@
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.0.5</version>
+			<version>1.0.6</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.0.5</version>
+			<version>1.0.6</version>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
