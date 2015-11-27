@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -16,12 +16,15 @@ import hudson.scm.EditType;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.logging.Logger;
 
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
 @ExportedBean(defaultVisibility=999)
 public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements Comparable<RTCChangeLogComponentEntry> {
+	
+    private static final Logger LOGGER = Logger.getLogger(RTCChangeLogComponentEntry.class.getName());
 
 	private String componentItemId;
 	private String componentName;
@@ -46,6 +49,7 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 	@Override
 	@Exported
 	public String getMsg() {
+		LOGGER.finest("RTCChangeLogComponentEntry.getMsg : Begin");
 		if (action.equalsIgnoreCase("Added")) { //$NON-NLS-1$
 			return Messages.RTCChangeLogComponentEntry_added_component(componentName);
 		} else if (action.equalsIgnoreCase("Dropped")) { //$NON-NLS-1$
@@ -57,6 +61,7 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 	@Override
 	@Exported
 	public User getAuthor() {
+		LOGGER.finest("RTCChangeLogComponentEntry.getAuthor : Begin");
 		// We don't know who added/removed a component from the stream
 		return User.getUnknown();
 	}
@@ -64,6 +69,7 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 	@Override
 	@Exported
 	public Collection<String> getAffectedPaths() {
+		LOGGER.finest("RTCChangeLogComponentEntry.getAffectedPaths : Begin");
 		// There are no affected paths
 		return Collections.emptyList();
 	}
@@ -82,6 +88,7 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 	}
 
 	public int compareTo(RTCChangeLogComponentEntry o) {
+		LOGGER.finest("RTCChangeLogComponentEntry.compareTo : Begin");
 		if (!action.equalsIgnoreCase(o.action)) {
 			return action.equalsIgnoreCase("Added") ? -1 : 1; //$NON-NLS-1$
 		}
@@ -96,6 +103,7 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 
 	@Override
 	public int hashCode() {
+		LOGGER.finest("RTCChangeLogComponentEntry.hashCode : Begin");
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((action == null) ? 0 : action.hashCode());
@@ -106,6 +114,7 @@ public class RTCChangeLogComponentEntry extends RTCChangeLogSetEntry implements 
 
 	@Override
 	public boolean equals(Object obj) {
+		LOGGER.finest("RTCChangeLogComponentEntry.equals : Begin");
 		if (this == obj)
 			return true;
 		if (obj == null)

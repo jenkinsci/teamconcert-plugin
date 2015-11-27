@@ -37,6 +37,17 @@ public class RTCChangeLogParser extends ChangeLogParser {
 	@Override
 	public ChangeLogSet<? extends Entry> parse(Run build, RepositoryBrowser<?> browser,
 			File changelogFile) throws IOException, SAXException {
+		LOGGER.finest("RTCChangeLogParser.parse with changelogFile: Begin"); //$NON-NLS$1
+		if (LOGGER.isLoggable(Level.FINER)) {
+			try {
+				if (changelogFile != null) {
+					LOGGER.finer("Parsing changelog for file " +  changelogFile.getAbsolutePath()); //$NON-NLS$1
+				}
+			}
+			catch (SecurityException exp) {
+				LOGGER.finer("Error getting changelog file path for filename" +  changelogFile.getName()); //$NON-NLS$1
+			}
+		}
 		FileInputStream inputStream = new FileInputStream(changelogFile);
         CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT); //$NON-NLS-1$
 		Reader reader = new InputStreamReader(inputStream, decoder);
@@ -45,12 +56,12 @@ public class RTCChangeLogParser extends ChangeLogParser {
 	
 	public ChangeLogSet<? extends Entry> parse(Run build, RepositoryBrowser<?> browser,
 			Reader changelogReader) throws IOException, SAXException {
-
+		LOGGER.finest("RTCChangeLogParser.parse with Reader : Begin"); //$NON-NLS$1
 		try {
 			RTCChangeLogSet result = new RTCChangeLogSet(build, browser);
 			Digester2 digester = getDigester();
 			digester.push(result);
-	
+
 			digester.addSetProperties("changelog"); //$NON-NLS-1$
 			digester.addBeanPropertySetter("*/baselineSetItemId"); //$NON-NLS-1$
 			digester.addBeanPropertySetter("*/baselineSetName"); //$NON-NLS-1$
@@ -106,7 +117,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 			// The digested node/change set is added to the list through {{RTCChangeLogSet.add()}}
 			digester.addSetNext("*/component", "add"); //$NON-NLS-1$ //$NON-NLS-2$
 	
-	
+
 			// Do the actual parsing
 			digester.parse(changelogReader);
 			return result;
@@ -117,6 +128,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 	}
 	
 	private Digester2 getDigester() {
+		LOGGER.finest("RTCChangeLogParser.getDigester : Begin");
 		Digester2 digester;
 		try {
 			digester = new Digester2();
@@ -138,6 +150,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 	}
 
 	private void dumpClassLoader(String string) {
+		LOGGER.finest("RTCChangeLogParser.dumpClassLoader : Begin");
 		String message = string + "\n";
 		String indent = "  ";
 		ClassLoader classLoader = this.getClass().getClassLoader();
@@ -147,6 +160,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 		message += indent + "ContextClassLoader: " + contextClassLoader.getClass().getName() + "\n";
 		message += appendClassLoaderParents(contextClassLoader.getParent(), indent);
 		LOGGER.log(Level.FINER, message);
+		LOGGER.finest("RTCChangeLogParser.dumpClassLoader : End");
 	}
 
 	private static String appendClassLoaderParents(ClassLoader parent,

@@ -17,122 +17,122 @@
     <?jelly escape-by-default='true'?>
     
     <f:block>
-        <table width="100%">        
-            <f:optionalBlock name="overrideGlobal" title="${%overrideGlobal.title(descriptor.globalServerURI)}" field="overrideGlobal" checked="${instance.overrideGlobal}" inline="true" >
+    <table width="100%">
+        <f:optionalBlock name="overrideGlobal" title="${%overrideGlobal.title(descriptor.globalServerURI)}" field="overrideGlobal" checked="${instance.overrideGlobal}" inline="true" >
+    
+        <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" >
+            <f:select name="buildTool" />
+        </f:entry>
         
-                <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" >
-                    <f:select name="buildTool" />
-                </f:entry>
-                
-                <f:optionalBlock name="avoidUsingToolkit" title="${%avoidUsingToolkit.title}" field="avoidUsingToolkit" checked="${descriptor.getAvoidUsingToolkit()}" inline="true" />
-                    
-                <f:entry title="${%serverURI.title}"  field="serverURI" >
-                    <f:textbox name="serverURI" default="${descriptor.globalServerURI}" clazz="required" checkMessage="${%serverURI.checkMessage}" />
-                </f:entry>
+        <f:optionalBlock name="avoidUsingToolkit" title="${%avoidUsingToolkit.title}" field="avoidUsingToolkit" checked="${descriptor.getAvoidUsingToolkit()}" inline="true" />
+            
+        <f:entry title="${%serverURI.title}"  field="serverURI" >
+            <f:textbox name="serverURI" default="${descriptor.globalServerURI}" clazz="required" checkMessage="${%serverURI.checkMessage}" />
+        </f:entry>
+
+        <f:entry title="${%timeout.title}" field="timeout">
+            <f:textbox name="timeout" default="${descriptor.globalTimeout}" />
+        </f:entry>
         
-                <f:entry title="${%timeout.title}" field="timeout">
-                    <f:textbox name="timeout" default="${descriptor.globalTimeout}" />
+        <f:entry title="${%credentialsId.title}" field="credentialsId" >
+            <c:select name="credentialsId"/>
+        </f:entry>
+
+        <!--
+            if editting enabled, show all the boxes as before
+            if no editting enabled but they have overridden global userid/password/file show the overridden values
+            if no editting enabled and set credentials only show the credentials.
+        -->
+
+        <j:set var="editAllowed" value="${descriptor.deprecatedCredentialEditAllowed()}"/>
+        <j:if test="${editAllowed || scm.usingDeprecatedPassword()}">
+            <f:entry >
+                <j:text><b>${%credentials.setup}</b></j:text>
+            </f:entry>
+            <j:if test="${!editAllowed}" >
+                <f:entry >
+                    <j:text>${%credentials.readonly}</j:text>
                 </f:entry>
-                
-                <f:entry title="${%credentialsId.title}" field="credentialsId" >
-                    <c:select name="credentialsId"/>
-                </f:entry>
-        
-                <!--
-                    if editting enabled, show all the boxes as before
-                    if no editting enabled but they have overridden global userid/password/file show the overridden values
-                    if no editting enabled and set credentials only show the credentials.
-                -->
-        
-                <j:set var="editAllowed" value="${descriptor.deprecatedCredentialEditAllowed()}"/>
-                <j:if test="${editAllowed || scm.usingDeprecatedPassword()}">
-                    <f:entry >
-                        <j:text><b>${%credentials.setup}</b></j:text>
+            </j:if>
+
+            <j:choose>
+                <j:when test="${editAllowed}" >
+                    <f:entry title="${%userId.title}" field="userId" >
+                        <f:textbox name="userId" default="${descriptor.globalUserId}" />
                     </f:entry>
-                    <j:if test="${!editAllowed}" >
-                        <f:entry >
-                            <j:text>${%credentials.readonly}</j:text>
+                </j:when>
+                <j:otherwise>
+                    <f:entry title="${%userId.title}" field="userId" >
+                        <f:readOnlyTextbox name="userId"/>
+                    </f:entry>
+                </j:otherwise>
+            </j:choose>
+            
+            <j:if test="${editAllowed || scm.showPasswordFile()}">
+                <j:choose>
+                    <j:when test="${editAllowed}" >
+                        <f:entry title="${%passwordFile.title}" field="passwordFile" >
+                            <f:textbox name="passwordFile" default="${descriptor.globalPasswordFile}"/>
                         </f:entry>
-                    </j:if>
+                    </j:when>
+                    <j:otherwise>
+                        <f:entry title="${%passwordFile.title}" field="passwordFile" >
+                            <f:readOnlyTextbox name="passwordFile" />
+                        </f:entry>
+                    </j:otherwise>
+                </j:choose>
+            </j:if>
+
+            <j:if test="${editAllowed || scm.showPassword()}">
+                <j:choose>
+                    <j:when test="${editAllowed}" >
+                        <f:entry title="${%password.title}" field="password" >
+                            <f:password name="password" />
+                        </f:entry>
+                    </j:when>
+                    <j:otherwise>
+                        <f:entry title="${%password.title}" field="password" >
+                            <f:password name="password" readonly="readonly" />
+                        </f:entry>
+                    </j:otherwise>
+                </j:choose>
+            </j:if>
+		</j:if>
+    
+        <f:validateButton title="${%checkJobConnection.title}" progress="${%checkJobConnection.progress}" 
+            method="checkJobConnection" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit" />
         
-                    <j:choose>
-                        <j:when test="${editAllowed}" >
-                            <f:entry title="${%userId.title}" field="userId" >
-                                <f:textbox name="userId" default="${descriptor.globalUserId}" />
-                            </f:entry>
-                        </j:when>
-                        <j:otherwise>
-                            <f:entry title="${%userId.title}" field="userId" >
-                                <f:readOnlyTextbox name="userId"/>
-                            </f:entry>
-                        </j:otherwise>
-                    </j:choose>
-                    
-                    <j:if test="${editAllowed || scm.showPasswordFile()}">
-                        <j:choose>
-                            <j:when test="${editAllowed}" >
-                                <f:entry title="${%passwordFile.title}" field="passwordFile" >
-                                    <f:textbox name="passwordFile" default="${descriptor.globalPasswordFile}"/>
-                                </f:entry>
-                            </j:when>
-                            <j:otherwise>
-                                <f:entry title="${%passwordFile.title}" field="passwordFile" >
-                                    <f:readOnlyTextbox name="passwordFile" />
-                                </f:entry>
-                            </j:otherwise>
-                        </j:choose>
-                    </j:if>
+        </f:optionalBlock>
         
-                    <j:if test="${editAllowed || scm.showPassword()}">
-                        <j:choose>
-                            <j:when test="${editAllowed}" >
-                                <f:entry title="${%password.title}" field="password" >
-                                    <f:password name="password" />
-                                </f:entry>
-                            </j:when>
-                            <j:otherwise>
-                                <f:entry title="${%password.title}" field="password" >
-                                    <f:password name="password" readonly="readonly" />
-                                </f:entry>
-                            </j:otherwise>
-                        </j:choose>
-                    </j:if>
-                </j:if>
-            
-                <f:validateButton title="${%checkJobConnection.title}" progress="${%checkJobConnection.progress}" 
-                    method="checkJobConnection" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit" />
-            
-            </f:optionalBlock>
-            
-            <f:optionalBlock name="keepBuildResultOpen" title="${%keepBuildResultOpen.title}" field="keepBuildResultOpen" inline="true" />
-            
-        </table>
+        <f:optionalBlock name="keepBuildResultOpen" title="${%keepBuildResultOpen.title}" field="keepBuildResultOpen" inline="true" />
+        
+    </table>
     </f:block>
         
-    <f:block>
-        <table width="100%">
-            <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildType == 'buildDefinition'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
-    
-                <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >
-                    <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
-                </f:entry>
-                
-                <f:validateButton title="${%validateBuildDefinition.title}" progress="${%validateBuildDefinition.progress}" 
-                    method="validateBuildDefinition" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
-    
-            </f:radioBlock>
-    
-            <f:radioBlock title="${%buildWorkspace.type}" name="buildType" value="buildWorkspace" checked="${instance != null &amp;&amp; instance.buildType == 'buildWorkspace'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildWorkspaceType" >
-    
-                <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
-                    <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />
-                </f:entry>
-    
-                <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
-                    method="validateBuildWorkspace" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
-    
-            </f:radioBlock>
-        </table>
-    </f:block>
+	    <f:block>
+	    <table width="100%">
+	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildTypeStr == 'buildDefinition'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
+
+			    <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >
+			        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
+			    </f:entry>
+			    
+			    <f:validateButton title="${%validateBuildDefinition.title}" progress="${%validateBuildDefinition.progress}" 
+			        method="validateBuildDefinition" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
+
+	        </f:radioBlock>
+
+	        <f:radioBlock title="${%buildWorkspace.type}" name="buildType" value="buildWorkspace" checked="${instance != null &amp;&amp; instance.buildTypeStr == 'buildWorkspace'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildWorkspaceType" >
+
+			    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
+			        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />
+			    </f:entry>
+
+			    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
+			        method="validateBuildWorkspace" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
+
+		    </f:radioBlock>
+	    </table>
+	    </f:block>
             
 </j:jelly>
