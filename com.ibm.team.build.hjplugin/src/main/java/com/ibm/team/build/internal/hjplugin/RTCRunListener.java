@@ -73,27 +73,28 @@ public class RTCRunListener extends RunListener<Run> {
 						}
 						
 						if (scm != null) {
-			    if (!scm.getKeepBuildResultOpen()) {
-							LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
-									" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$
-									" Server URI=\"" + scm.getServerURI() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-									" Build result=\"" + build.getResult() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-		
-							String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
-							RTCLoginInfo loginInfo = scm.getLoginInfo(build.getParent(), masterBuildToolkit);
-				    		RTCFacadeFacade.terminateBuild(masterBuildToolkit,
-									loginInfo.getServerUri(),
-									loginInfo.getUserId(), loginInfo.getPassword(),
-									loginInfo.getTimeout(),
-									scm.getAvoidUsingToolkit(),
-									action.getBuildResultUUID(),
-					build.getResult(), listener);
-			    } else {
-				LOGGER.finer("Current Build: " + build.getDisplayName() + //$NON-NLS-1$
-					" Build Result UUID: "
-					+ action.getBuildResultUUID() + //$NON-NLS-1$
-					" Build Result set to be kept open (ensure to close it afterwards - i.e. Ant Task)"); //$NON-NLS-1$
-			    }
+							if (!scm.getKeepBuildResultOpen()) {
+								LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
+										" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$
+										" Server URI=\"" + scm.getServerURI() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+										" Build result=\"" + build.getResult() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+			
+								String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
+								RTCLoginInfo loginInfo = scm.getLoginInfo(build.getParent(), masterBuildToolkit);
+					    		RTCFacadeFacade.terminateBuild(masterBuildToolkit,
+										loginInfo.getServerUri(),
+										loginInfo.getUserId(), loginInfo.getPassword(),
+										loginInfo.getTimeout(),
+										scm.getAvoidUsingToolkit(),
+										action.getBuildResultUUID(),
+										build.getResult(),
+										listener);
+						    } else {
+								LOGGER.finer("Current Build: " + build.getDisplayName() + //$NON-NLS-1$
+									" Build Result UUID: "
+									+ action.getBuildResultUUID() + //$NON-NLS-1$
+									" Build Result set to be kept open (ensure to close it afterwards - i.e. Ant Task)"); //$NON-NLS-1$
+						    }
 						} else {
 							LOGGER.finer("Completed Build: " + build.getDisplayName() + //$NON-NLS-1$
 								" Build Result UUID: " + action.getBuildResultUUID() + //$NON-NLS-1$

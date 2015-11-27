@@ -959,26 +959,13 @@ public class RTCScm extends SCM {
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
 			LOGGER.finer("RTCScm constructed with " + //$NON-NLS-1$
-		    " overrideGlobal=\""
-		    + this.overrideGlobal
-		    + //$NON-NLS-1$
-		    "\" keepBuildResultOpen=\""
-		    + this.keepBuildResultOpen
-		    + //$NON-NLS-1$
-		    "\" buildTool=\""
-		    + this.buildTool
-		    + //$NON-NLS-1$
-		    "\" serverURI=\""
-		    + this.serverURI
-		    + //$NON-NLS-1$
-		    "\" timeout=\""
-		    + this.timeout
-		    + //$NON-NLS-1$
-		    "\" userId=\""
-		    + this.userId
-		    + //$NON-NLS-1$
-		    "\" password "
-		    + (this.password == null ? "is not supplied" : "(" + Secret.toString(this.password).length() + " characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+					" overrideGlobal=\"" + this.overrideGlobal + //$NON-NLS-1$
+					"\" keepBuildResultOpen=\"" + this.keepBuildResultOpen + //$NON-NLS-1$
+					"\" buildTool=\"" + this.buildTool + //$NON-NLS-1$
+					"\" serverURI=\"" + this.serverURI + //$NON-NLS-1$
+					"\" timeout=\"" + this.timeout + //$NON-NLS-1$
+					"\" userId=\"" + this.userId + //$NON-NLS-1$
+					"\" password " + (this.password == null ? "is not supplied" : "(" + Secret.toString(this.password).length() +" characters)") + //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 					" passwordFile=\"" + this.passwordFile + //$NON-NLS-1$
 					"\" credentialsId=\"" + this.credentialsId + //$NON-NLS-1$
 					"\" buildType=\"" + this.buildTypeStr + //$NON-NLS-1$
