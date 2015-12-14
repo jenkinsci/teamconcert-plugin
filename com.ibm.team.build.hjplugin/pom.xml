@@ -66,6 +66,10 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.build.outputEncoding>UTF-8</project.build.outputEncoding>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<buildtoolkitcurrent>${env.buildtoolkitcurrent}</buildtoolkitcurrent>
+		<buildtoolkit60>${env.buildtoolkit60}</buildtoolkit60>
+		<buildtoolkit502>${env.buildtoolkit502}</buildtoolkit502>
+		<buildtoolkit407>${env.buildtoolkit407}</buildtoolkit407>
 	</properties>
 
 	<!-- get every artifact through repo.jenkins-ci.org, which proxies all the 
@@ -143,13 +147,12 @@
 						<phase>integration-test</phase>
 						<goals>
 							<goal>integration-test</goal>
-							<goal>verify</goal>
 						</goals>
 						<configuration>
 							<argLine>-XX:MaxPermSize=1024m -Xms2048m -Xmx3g -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError</argLine>
 							<systemPropertyVariables>
 								<com.ibm.team.build.configured>false</com.ibm.team.build.configured>
-								<com.ibm.team.build.toolkit>C:/Program Files (x86)/IBM/TeamConcertBuild/buildsystem/buildtoolkit</com.ibm.team.build.toolkit>
+								<com.ibm.team.build.toolkit>${buildtoolkitcurrent}</com.ibm.team.build.toolkit>
 								<com.ibm.team.build.serverURI>https://higgins.ottawa.ibm.com:9443/ccm</com.ibm.team.build.serverURI>
 								<com.ibm.team.build.userId>HJPluginTests</com.ibm.team.build.userId>
 								<com.ibm.team.build.password>HJPluginTests</com.ibm.team.build.password>
@@ -157,8 +160,88 @@
 								<com.ibm.team.build.passwordFile>C:/Jenkins/HJPluginTests-password</com.ibm.team.build.passwordFile>
 								<com.ibm.team.build.timeout>480</com.ibm.team.build.timeout>
 							</systemPropertyVariables>
+							<summaryFile>target/failsafe-reports/failsafe-summary.xml</summaryFile>
 						</configuration>
 					</execution>
+					<execution>
+						<id>integration-test-60</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<configuration>
+							<argLine>-XX:MaxPermSize=1024m -Xms2048m -Xmx3g -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError</argLine>
+							<systemPropertyVariables>
+								<com.ibm.team.build.configured>false</com.ibm.team.build.configured>
+								<com.ibm.team.build.toolkit>${buildtoolkit60}</com.ibm.team.build.toolkit>
+								<com.ibm.team.build.serverURI>https://higgins.ottawa.ibm.com:9443/ccm</com.ibm.team.build.serverURI>
+								<com.ibm.team.build.userId>HJPluginTests</com.ibm.team.build.userId>
+								<com.ibm.team.build.password>HJPluginTests</com.ibm.team.build.password>
+								<com.ibm.team.build.userIdForAuthenticationFailures>HJPluginTestsFail</com.ibm.team.build.userIdForAuthenticationFailures>
+								<com.ibm.team.build.passwordFile>C:/Jenkins/HJPluginTests-password</com.ibm.team.build.passwordFile>
+								<com.ibm.team.build.timeout>480</com.ibm.team.build.timeout>
+							</systemPropertyVariables>
+							<summaryFile>target/failsafe-reports/failsafe-summary-60.xml</summaryFile>
+						</configuration>
+					</execution>
+					
+					<execution>
+						<id>integration-test-502</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<configuration>
+							<argLine>-XX:MaxPermSize=1024m -Xms2048m -Xmx3g -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError</argLine>
+							<systemPropertyVariables>
+								<com.ibm.team.build.configured>false</com.ibm.team.build.configured>
+								<com.ibm.team.build.toolkit>${buildtoolkit502}</com.ibm.team.build.toolkit>
+								<com.ibm.team.build.serverURI>https://higgins.ottawa.ibm.com:9443/ccm</com.ibm.team.build.serverURI>
+								<com.ibm.team.build.userId>HJPluginTests</com.ibm.team.build.userId>
+								<com.ibm.team.build.password>HJPluginTests</com.ibm.team.build.password>
+								<com.ibm.team.build.userIdForAuthenticationFailures>HJPluginTestsFail</com.ibm.team.build.userIdForAuthenticationFailures>
+								<com.ibm.team.build.passwordFile>C:/Jenkins/HJPluginTests-password</com.ibm.team.build.passwordFile>
+								<com.ibm.team.build.timeout>480</com.ibm.team.build.timeout>
+							</systemPropertyVariables>
+							<summaryFile>target/failsafe-reports/failsafe-summary-502.xml</summaryFile>
+						</configuration>
+					</execution>
+					
+					<execution>
+						<id>integration-test-407</id>
+						<phase>integration-test</phase>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<configuration>
+							<argLine>-XX:MaxPermSize=1024m -Xms2048m -Xmx3g -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError</argLine>
+							<systemPropertyVariables>
+								<com.ibm.team.build.configured>false</com.ibm.team.build.configured>
+								<com.ibm.team.build.toolkit>${buildtoolkit407}</com.ibm.team.build.toolkit>
+								<com.ibm.team.build.serverURI>https://higgins.ottawa.ibm.com:9443/ccm</com.ibm.team.build.serverURI>
+								<com.ibm.team.build.userId>HJPluginTests</com.ibm.team.build.userId>
+								<com.ibm.team.build.password>HJPluginTests</com.ibm.team.build.password>
+								<com.ibm.team.build.userIdForAuthenticationFailures>HJPluginTestsFail</com.ibm.team.build.userIdForAuthenticationFailures>
+								<com.ibm.team.build.passwordFile>C:/Jenkins/HJPluginTests-password</com.ibm.team.build.passwordFile>
+								<com.ibm.team.build.timeout>480</com.ibm.team.build.timeout>
+							</systemPropertyVariables>
+							<summaryFile>target/failsafe-reports/failsafe-summary-407.xml</summaryFile>
+						</configuration>
+					</execution>
+					<execution>
+			            <id>verify</id>
+			            <goals>
+			              <goal>verify</goal>
+			            </goals>
+			            <configuration>
+			              <summaryFiles>
+			                <summaryFile>target/failsafe-reports/failsafe-summary-407.xml</summaryFile>
+			                <summaryFile>target/failsafe-reports/failsafe-summary-502.xml</summaryFile>
+			                <summaryFile>target/failsafe-reports/failsafe-summary-60.xml</summaryFile>
+			                <summaryFile>target/failsafe-reports/failsafe-summary.xml</summaryFile>
+			              </summaryFiles>
+			            </configuration>
+          			</execution>
 				</executions>
 			</plugin>
 	        <plugin>

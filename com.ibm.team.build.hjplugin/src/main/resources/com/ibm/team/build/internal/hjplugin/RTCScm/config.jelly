@@ -108,7 +108,7 @@
         
 	    <f:block>
 	    <table width="100%">
-	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildTypeStr == 'buildDefinition'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
+	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildTypeStr == 'buildDefinition' || instance.buildDefinition != null}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
 
 			    <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >
 			        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
