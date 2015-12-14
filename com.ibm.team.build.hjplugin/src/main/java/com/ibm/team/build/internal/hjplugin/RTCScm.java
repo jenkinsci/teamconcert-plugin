@@ -184,10 +184,10 @@ public class RTCScm extends SCM {
 		public boolean configure(StaplerRequest req, JSONObject json)
 				throws FormException {
 			LOGGER.finest("DescriptorImpl.configure: Begin");
-			globalBuildTool = Util.fixEmptyAndTrim(req.getParameter("buildTool")); //$NON-NLS-1$
-			globalServerURI = Util.fixEmptyAndTrim(req.getParameter("serverURI")); //$NON-NLS-1$
-			globalUserId = Util.fixEmptyAndTrim(req.getParameter("userId")); //$NON-NLS-1$
-			String timeout = req.getParameter("timeout"); //$NON-NLS-1$
+			globalBuildTool = Util.fixEmptyAndTrim(json.optString("buildTool")); //$NON-NLS-1$
+			globalServerURI = Util.fixEmptyAndTrim(json.optString("serverURI")); //$NON-NLS-1$
+			globalUserId = Util.fixEmptyAndTrim(json.optString("userId")); //$NON-NLS-1$
+			String timeout = json.optString("timeout"); //$NON-NLS-1$
 			globalAvoidUsingToolkit = json.containsKey("avoidUsingToolkit"); //$NON-NLS-1$
 			
 			try {
@@ -195,11 +195,11 @@ public class RTCScm extends SCM {
 			} catch (NumberFormatException e) {
 				globalTimeout = 0;
 			}
-			String password = req.getParameter("password"); //$NON-NLS-1$
+			String password = json.optString("password"); //$NON-NLS-1$
 			globalPassword = password == null || password.length() == 0 ? null : Secret.fromString(password);
-			globalPasswordFile = Util.fixEmptyAndTrim(req.getParameter("passwordFile")); //$NON-NLS-1$
-			globalCredentialsId = Util.fixEmptyAndTrim(req.getParameter("_.credentialsId")); //$NON-NLS-1$
-			if (globalCredentialsId != null) {
+			globalPasswordFile = Util.fixEmptyAndTrim(json.optString("passwordFile")); //$NON-NLS-1$
+			globalCredentialsId = Util.fixEmptyAndTrim(json.optString("credentialsId")); //$NON-NLS-1$
+			if (globalCredentialsId != "") {
 				// They are saving with credentials. Remove the vestiges of the old authentication method
 				globalPassword = null;
 				globalPasswordFile = null;
@@ -1085,8 +1085,7 @@ public class RTCScm extends SCM {
 
 		String buildType = getBuildTypeStr();
 		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(buildType) || buildResultUUID != null;
-
-
+		
 		// Log in build result where the build was initiated from RTC
 		// Because if initiated from RTC we will ignore build workspace if its a buildWorkspaceType
 		if (buildResultUUID != null) {
@@ -1512,11 +1511,18 @@ public class RTCScm extends SCM {
 
     @Exported
 	public String getBuildTypeStr() {
-
-		// migrate existing jobs with only build workspace defined to build workspace type
+		// migrate existing jobs with only build workspace or build definition defined
+    	boolean oldData = false;
 		if (buildTypeStr == null && buildWorkspace != null) {
 			buildTypeStr = BUILD_WORKSPACE_TYPE;
+			oldData = true;
+		}else if(buildTypeStr == null && buildDefinition != null) {
+			buildTypeStr = BUILD_DEFINITION_TYPE;
+			oldData = true;
 		}
+		if(oldData) {
+			LOGGER.warning("The job's config.xml has data stored in an older format, to migrate to the newer format resave the job's configuration");
+		} 
 		return buildTypeStr;
 	}
     
