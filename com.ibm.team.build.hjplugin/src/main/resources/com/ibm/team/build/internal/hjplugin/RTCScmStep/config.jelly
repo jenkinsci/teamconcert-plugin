@@ -1,0 +1,60 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2015 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementatio
+ *******************************************************************************/
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+    <?jelly escape-by-default='true'?>
+    <f:block>
+        <table width="100%">
+            <f:optionalBlock name="overrideConfig" title="${%overrideGlobal.title}">
+    
+                <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildTool">
+                    <f:select name="buildTool" clazz="required"/>
+                </f:entry>
+                
+                <f:optionalBlock name="avoidUsingToolkit" title="${%avoidUsingToolkit.title}" field="avoidUsingToolkit" inline="true" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/avoidUsingToolkit"/>
+                
+                <f:entry title="${%serverURI.title}" field="serverURI" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/serverURI">
+                    <f:textbox name="serverURI" clazz="required" checkMessage="${%serverURI.checkMessage}" />
+                </f:entry>
+                
+                <f:entry title="${%credentialsId.title}" field="credentialsId" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/credentialsId">
+                    <c:select name="credentialsId" />
+                </f:entry>   
+
+                <f:entry title="${%timeout.title}" field="timeout" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/timeout">
+                    <f:textbox name="timeout" default="${descriptor.getDefaultTimeout()}"/>
+                </f:entry>
+
+            </f:optionalBlock>
+         </table>
+    </f:block>
+            
+    <f:block>
+        <table width="100%">
+
+            <f:radioBlock title="${%buildDefinition.type}" name="buildType" field="buildType" value="buildDefinition" default="true" checked="${instance == null}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType">
+                <f:entry title="${%buildDefinition.title}" field="buildDefinition" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinition">
+                    <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}"/>
+                </f:entry>
+            </f:radioBlock>
+
+            <f:radioBlock title="${%buildWorkspace.type}" name="buildType" field="buildType" value="buildWorkspace" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildWorkspaceType">
+                <f:entry title="${%buildWorkspace.title}" field="buildWorkspace" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buidWorkspace">
+                    <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}"/>
+                </f:entry>
+           </f:radioBlock>
+        </table>
+    </f:block>
+
+</j:jelly>

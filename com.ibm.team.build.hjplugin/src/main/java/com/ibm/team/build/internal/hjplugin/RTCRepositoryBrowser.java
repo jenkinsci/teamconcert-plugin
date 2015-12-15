@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -19,13 +19,14 @@ import hudson.scm.RepositoryBrowser;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.logging.Logger;
 
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.export.Exported;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
 
 public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry> {
+    private static final Logger LOGGER = Logger.getLogger(RTCRepositoryBrowser.class.getName());
 
 	private static final long serialVersionUID = 1L;
 
@@ -36,22 +37,42 @@ public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry
 	@DataBoundConstructor
 	public RTCRepositoryBrowser(String serverURI) {
 		super();
-        this.url = Util.fixEmpty(serverURI);
-        if (this.url != null && !this.url.endsWith(SLASH)) {
-        	this.url = this.url + SLASH;
+		LOGGER.finest("RTCRepositoryBrowser.constructor : Begin"); //$NON-NLS$1
+        this.url = getServerURI(serverURI);
+	}
+	
+	/**
+	 * @return the server uri guaranteed to have a trailing slash or <code>null</code> if none.
+	 */
+	private String getServerURI(String serverURI) {
+        LOGGER.finest("RTCRepositoryBrowser.getServerURI : Begin"); //$NON-NLS$1
+		serverURI = Util.fixEmpty(serverURI);
+        if (serverURI != null && !serverURI.endsWith(SLASH)) {
+        	serverURI = serverURI + SLASH;
         }
+        return serverURI;
+	}
+	
+	/**
+	 * @return the server uri guaranteed to have a trailing slash or <code>null</code> if none.
+	 */
+	private String getServerURI() {
+		return getServerURI(this.url);
 	}
 	
 	@Override
 	public URL getChangeSetLink(RTCChangeLogSetEntry changeSet)
 			throws IOException {
+        LOGGER.finest("RTCRepositoryBrowser.getChangeSetLink : Begin"); //$NON-NLS$1
 		if (changeSet instanceof RTCChangeLogChangeSetEntry) {
+	        LOGGER.finer("RTCRepositoryBrowser.getChangeSetLink : changeSet is from RTC"); //$NON-NLS$1
 			RTCChangeLogChangeSetEntry changeSetEntry = (RTCChangeLogChangeSetEntry) changeSet;
 			String workspaceItemId = changeSetEntry.getWorkspaceItemId();
 			String changeSetItemId = changeSetEntry.getChangeSetItemId();
 			
-			if (changeSetItemId != null && url != null) {
-				StringBuilder buffer = new StringBuilder(url);
+			String serverURI = getServerURI();
+			if (changeSetItemId != null && serverURI != null) {
+				StringBuilder buffer = new StringBuilder(serverURI);
 				buffer.append("resource/itemOid/com.ibm.team.scm.ChangeSet/"); //$NON-NLS-1$
 				buffer.append(changeSetItemId);
 				if (workspaceItemId != null && workspaceItemId.length() > 0) {
@@ -64,14 +85,16 @@ public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry
 	}
 	
 	public URL getVersionableStateLink(RTCChangeLogChangeSetEntry changeSet, ChangeDesc changeDesc) throws MalformedURLException {
+        LOGGER.finest("RTCRepositoryBrowser.getVersionableStateLink : Begin"); //$NON-NLS$1
 		String workspaceItemId = changeSet.getWorkspaceItemId();
 		String componentItemId = changeSet.getComponentItemId();
 		String versionableItemId = changeDesc.getItemId();
 		String versionableStateId = changeDesc.getStateId();
-		if (url != null && workspaceItemId != null && componentItemId != null 
+		String serverURI = getServerURI();
+		if (serverURI != null && workspaceItemId != null && componentItemId != null 
 				&& versionableItemId != null && versionableStateId != null
 				&& !changeDesc.isFolderChange()) {
-			StringBuilder buffer = new StringBuilder(url);
+			StringBuilder buffer = new StringBuilder(serverURI);
 			buffer.append("resource/itemOid/com.ibm.team.scm.Versionable/"); //$NON-NLS-1$
 			buffer.append(versionableItemId).append("/").append(versionableStateId); //$NON-NLS-1$
 			buffer.append("?workspace=").append(workspaceItemId); //$NON-NLS-1$
@@ -82,8 +105,11 @@ public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry
 	}
 	
 	public URL getWorkItemLink(RTCChangeLogChangeSetEntry.WorkItemDesc workItem) throws MalformedURLException {
-		if (url != null && workItem != null && workItem.getNumber() != null && workItem.getNumber().length() > 0) {
-			StringBuilder buffer = new StringBuilder(url);
+        LOGGER.finest("RTCRepositoryBrowser.getWorkItemLink : Begin"); //$NON-NLS$1
+		String serverURI = getServerURI();
+		if (serverURI != null && workItem != null && workItem.getNumber() != null && workItem.getNumber().length() > 0) {
+	        LOGGER.finer("RTCRepositoryBrowser.getWorkItemLink : Creating work item link"); //$NON-NLS$1
+			StringBuilder buffer = new StringBuilder(serverURI);
 			buffer.append("resource/itemName/com.ibm.team.workitem.WorkItem/"); //$NON-NLS-1$
 			buffer.append(workItem.getNumber());
 			return new URL(buffer.toString());
@@ -92,8 +118,11 @@ public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry
 	}
 
 	public URL getBaselineSetLink(RTCChangeLogSet changeLog) throws MalformedURLException {
-		if (url != null && changeLog != null && changeLog.getBaselineSetItemId() != null && changeLog.getBaselineSetItemId().length() > 0) {
-			StringBuilder buffer = new StringBuilder(url);
+        LOGGER.finest("RTCRepositoryBrowser.getBaselineSetLink : Begin"); //$NON-NLS$1
+		String serverURI = getServerURI();
+		if (serverURI != null && changeLog != null && changeLog.getBaselineSetItemId() != null && changeLog.getBaselineSetItemId().length() > 0) {
+	        LOGGER.finer("RTCRepositoryBrowser.getBaselineSetLink : Creating baselineLink"); //$NON-NLS$1
+			StringBuilder buffer = new StringBuilder(serverURI);
 			buffer.append("resource/itemOid/com.ibm.team.scm.BaselineSet/"); //$NON-NLS-1$
 			buffer.append(changeLog.getBaselineSetItemId());
 			return new URL(buffer.toString());

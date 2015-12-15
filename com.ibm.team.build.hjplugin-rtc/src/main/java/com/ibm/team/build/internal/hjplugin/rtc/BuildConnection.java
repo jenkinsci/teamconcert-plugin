@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.client.ClientFactory;
@@ -37,7 +38,6 @@ import com.ibm.team.build.common.model.IBuildConfigurationElement;
 import com.ibm.team.build.common.model.IBuildDefinition;
 import com.ibm.team.build.common.model.IBuildEngine;
 import com.ibm.team.build.common.model.IBuildEngineHandle;
-import com.ibm.team.build.common.model.IBuildItemHandle;
 import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildRequest;
 import com.ibm.team.build.common.model.IBuildRequestHandle;
@@ -52,6 +52,8 @@ import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IContributor;
 import com.ibm.team.repository.common.IContributorHandle;
+import com.ibm.team.repository.common.ItemNotFoundException;
+import com.ibm.team.repository.common.StaleDataException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 import com.ibm.team.repository.common.query.IItemQuery;
@@ -61,18 +63,12 @@ import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 
 public class BuildConnection {
-
-    public static final int OK = 0;
+	
+	public static final int OK = 0;
     public static final int UNSTABLE = 1;
     public static final int ERROR = 2;
 
 	private static final Logger LOGGER = Logger.getLogger(BuildConnection.class.getName());
-
-    /**
-     * Minimum properties required when retrieving the build result for setting status
-     */
-    private Collection<String> PROPERTIES = Arrays.asList(new String[] { IBuildResult.PROPERTY_BUILD_STATE,
-            IBuildResult.PROPERTY_BUILD_DEFINITION, IBuildResult.PROPERTY_BUILD_STATUS });
 
     /**
      * The engine element ID.  Constant from HudsonConfigurationElement
@@ -80,11 +76,18 @@ public class BuildConnection {
     public static final String HJ_ENGINE_ELEMENT_ID = "com.ibm.rational.connector.hudson.engine"; //$NON-NLS-1$
 
 	/**
+	 * The definition's element ID. Constant from HudsonConfigurationElement (not available in the toolkit)
+	 */
+	public static final String HJ_ELEMENT_ID = "com.ibm.rational.connector.hudson";  //$NON-NLS-1$
+
+	/**
 	 * The Hudson URL. Constant from HudsonConfigurationElement
 	 */
 	public static final String PROPERTY_HUDSON_URL = "com.ibm.rational.connector.hudson.url"; //$NON-NLS-1$
 
 	private static final String SLASH = "/"; //$NON-NLS-1$
+	private static final int MAX_RETRIES = 5;
+	private static final int RETRY_DELAY = 100; // in milliseconds
 
 	final private ITeamRepository fTeamRepository;
 	private ITeamBuildClient fTeamBuildClient;
@@ -107,11 +110,12 @@ public class BuildConnection {
 	 * if there is no build engine associated with the build definition
 	 * @throws TeamRepositoryException Thrown if problems are encountered
 	 * @throws RTCConfigurationException Thrown if the build definition is not valid
+	 * @throws InterruptedException Propagated since it is likely the build getting cancelled.
 	 */
 	public IBuildResultHandle createBuildResult(String buildDefinitionId,
 			IWorkspaceHandle personalBuildWorkspace, String buildLabel,
 			IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale)
-			throws TeamRepositoryException, RTCConfigurationException {
+			throws TeamRepositoryException, RTCConfigurationException, InterruptedException {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IBuildDefinition buildDefinition = getBuildDefinition(buildDefinitionId, monitor.newChild(20));
@@ -147,18 +151,112 @@ public class BuildConnection {
         IBuildRequest buildRequest = getTeamBuildRequestClient().requestBuild(params, monitor.newChild(20));
         IBuildResultHandle buildResultHandle = buildRequest.getBuildResult();
 
-        if (buildLabel != null) {
-            IBuildResult buildResult = (IBuildResult) getTeamRepository().itemManager().fetchPartialItem(
-                    buildResultHandle, IItemManager.REFRESH,
-                    Arrays.asList(IBuildResult.PROPERTIES_VIEW_ITEM), monitor.newChild(20));
+		IBuildResult buildResult = (IBuildResult) getTeamRepository().itemManager().fetchCompleteItem(
+		        buildResultHandle, IItemManager.REFRESH, monitor.newChild(20));
 
-            buildResult = (IBuildResult) buildResult.getWorkingCopy();
-            buildResult.setLabel(buildLabel);
-            getTeamBuildClient().save(buildResult, monitor.newChild(20));
-        }
+        setBuildResultLabel(buildResult, buildLabel, listener, clientLocale, monitor);
 
 		return buildResultHandle;
 	}
+
+	/**
+	 * Set the label on the build result, retrying if stale data occurs (race condition between the server & plugin)
+	 * @param buildResultHandle The build result created/started
+	 * @param buildLabel The label to put on the build
+	 * @param listener The listener to log issues setting the label to.
+	 * @param clientLocale The client's locale.
+	 * @param monitor The monitor to handle cancellation
+	 * @return Returns the build result with the updated label. If we are not able to 
+	 * save due to stale data, then this may not be the copy in the repository.
+	 * @throws TeamRepositoryException Thrown if something goes wrong setting the label.
+	 * @throws InterruptedException Propagated since it is likely the build getting cancelled.
+	 */
+	private IBuildResult setBuildResultLabel(IBuildResult buildResult,
+			String buildLabel, IConsoleOutput listener, Locale clientLocale, SubMonitor monitor)
+			throws TeamRepositoryException, InterruptedException {
+        if (buildLabel != null) {
+			int tries = 0;
+			while(tries <= MAX_RETRIES) {
+				try {
+					tries++;
+			
+					buildResult = (IBuildResult) buildResult.getWorkingCopy();
+					buildResult.setLabel(buildLabel);
+					buildResult = getTeamBuildClient().save(buildResult, monitor.newChild(20));
+					break;
+				} catch (StaleDataException e) {
+					// Could be the RTC server that initiated the job also setting the label to queued
+					// retry
+					if (tries <= MAX_RETRIES) {
+						Thread.sleep(RETRY_DELAY);
+						buildResult = (IBuildResult) getTeamRepository().itemManager().fetchCompleteItem(
+						        buildResult, IItemManager.REFRESH, monitor.newChild(20));
+					} else {
+						// Not propagating the stale data. If we can't set the label, log it and continue with the build
+						listener.log(Messages.get(clientLocale).BuildConnection_set_label_failed(buildLabel));
+					}
+				}
+			}
+		}
+        return buildResult;
+	}
+
+	/**
+	 * Mark the RTC build result as started if it is not already started or abandonned.
+     * @param buildResultInfo The structure to be updated with the build result info.
+     * @param label The label to place on the build when starting it
+	 * @param listener A log to report progress and failures to.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @throws TeamRepositoryException Thrown if anything goes wrong.
+	 * @throws InterruptedException Propagated since it is likely the build getting cancelled.
+	 */
+	public void startBuild(IBuildResultInfo buildResultInfo, String label, IConsoleOutput listener,
+			IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException, InterruptedException {
+		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
+		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultInfo.getBuildResultUUID()), null);
+
+        IBuildResult buildResult = (IBuildResult) getTeamRepository().itemManager().fetchCompleteItem(
+                buildResultHandle, IItemManager.REFRESH, monitor.newChild(10));
+
+        // Only start the build if not already started
+        if (buildResult.getState() == BuildState.NOT_STARTED) {
+
+        	IBuildRequestHandle buildRequestHandle = getBuildRequest(buildResult);
+        	if (buildRequestHandle == null) {
+        		throw new TeamBuildStateException(Messages.get(clientLocale).BuildConnection_start_missing_build_requester());
+        	}
+        	try {
+        		buildResult = getTeamBuildRequestClient().startBuild(buildRequestHandle, IBuildResult.PROPERTIES_COMPLETE, monitor.newChild(60));
+        		buildResultInfo.setOwnLifeCycle(true);
+
+        		// Setting label since we now own the lifecycle of the build
+        		buildResult = setBuildResultLabel(buildResult, label, listener, clientLocale, monitor.newChild(10));
+        	} catch (TeamBuildStateException e) {
+        		// some one got in there first and started/canceled/abandoned the build before we could
+        		// start it. So we don't own the lifecycle.
+        		// See if it was cancelled/abandoned
+        		buildResult = (IBuildResult) getTeamRepository().itemManager().fetchCompleteItem(
+                        buildResultHandle, IItemManager.REFRESH, monitor.newChild(10));
+        		if (buildResult.getState() == BuildState.CANCELED || 
+        				buildResult.getState() == BuildState.INCOMPLETE) {
+        			// the build has been cancelled/abandonned
+        			throw new OperationCanceledException();
+        		}
+        	}
+		} else if (buildResult.getState() == BuildState.CANCELED || 
+				buildResult.getState() == BuildState.INCOMPLETE) {
+			// the build has been cancelled/abandonned
+			throw new OperationCanceledException();
+		} else {
+			// someone else started it
+			buildResultInfo.setOwnLifeCycle(false);
+		}
+        
+        // capture info about who started the build etc.
+        getBuildResultInfo(buildResult, buildResultInfo, listener, clientLocale, monitor.newChild(20));
+    }
 
 	/**
 	 * Mark the build result as terminated
@@ -167,18 +265,18 @@ public class BuildConnection {
 	 * @param buildState Whether the Jenkins build was a success, failure, or unstable
 	 * 0 = success, 1 = unstable, 2 = not success or unstable. We can't create constants
 	 * because the -rtc plugin doesn't expose anything other than the facade.
-	 * @param listener
+	 * @param listener A log to report progress and failures to.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @throws TeamRepositoryException
 	 */
 	public void terminateBuild(String buildResultUUID, boolean aborted, int buildState,
-			IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
+			IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
 
-        IBuildResult buildResult = (IBuildResult) getTeamRepository().itemManager().fetchPartialItem(
-                buildResultHandle, IItemManager.REFRESH, PROPERTIES, monitor.newChild(10));
+        IBuildResult buildResult = (IBuildResult) getTeamRepository().itemManager().fetchCompleteItem(
+                buildResultHandle, IItemManager.REFRESH, monitor.newChild(10));
 
         // Do nothing if the build result is already in a final state.
         if (buildResult.getState() == BuildState.CANCELED || buildResult.getState() == BuildState.INCOMPLETE
@@ -187,8 +285,27 @@ public class BuildConnection {
         }
 
         if (aborted) {
-        	getTeamBuildRequestClient().makeBuildIncomplete(buildResultHandle, IBuildItemHandle.PROPERTIES_REQUIRED, monitor.newChild(90));
+        	if (buildResult.getState() == BuildState.IN_PROGRESS) {
+        		getTeamBuildRequestClient().makeBuildIncomplete(buildResultHandle, IBuildResult.PROPERTIES_COMPLETE, monitor.newChild(90));
+        	} else {
+        		IBuildRequestHandle buildRequestHandle = getBuildRequest(buildResult);
+        		if (buildRequestHandle != null) {
+        			getTeamBuildRequestClient().cancelPendingRequest(buildRequestHandle, IBuildRequestHandle.PROPERTIES_REQUIRED, monitor.newChild(99));
+        		} else {
+        			throw new TeamBuildStateException(Messages.get(clientLocale).BuildConnection_terminate_missing_build_requester());
+        		}
+        	}
         } else {
+        	if (buildResult.getState() == BuildState.NOT_STARTED) {
+        		// The build needs to be started in order to complete it
+             	// we probably failed to start it before, but we are responsible for its lifecycle
+         		IBuildRequestHandle buildRequestHandle = getBuildRequest(buildResult);
+         		if (buildRequestHandle != null) {
+         			buildResult = getTeamBuildRequestClient().startBuild(buildRequestHandle, IBuildResult.PROPERTIES_COMPLETE, monitor.newChild(90));
+        		} else {
+        			throw new TeamBuildStateException(Messages.get(clientLocale).BuildConnection_terminate_missing_build_requester());
+        		}
+            }
         	if (buildState == UNSTABLE && BuildStatus.WARNING.isMoreSevere(buildResult.getStatus())) {
             	buildResult = (IBuildResult) buildResult.getWorkingCopy();
         		buildResult.setStatus(BuildStatus.WARNING);
@@ -198,7 +315,7 @@ public class BuildConnection {
         		buildResult.setStatus(BuildStatus.ERROR);
             	getTeamBuildClient().save(buildResult, monitor.newChild(50));
         	}
-        	getTeamBuildRequestClient().makeBuildComplete(buildResultHandle, false, IBuildItemHandle.PROPERTIES_REQUIRED, monitor.newChild(40));
+        	getTeamBuildRequestClient().makeBuildComplete(buildResultHandle, false, IBuildResult.PROPERTIES_COMPLETE, monitor.newChild(40));
         }
 	}
 
@@ -255,7 +372,7 @@ public class BuildConnection {
 		}
 		
 		// validate the build definition is a hudson/jenkins build definition
-        IBuildConfigurationElement hudsonDefinitionBuildConfigurationElement = buildDefinition.getConfigurationElement("com.ibm.rational.connector.hudson"); //$NON-NLS-1$
+        IBuildConfigurationElement hudsonDefinitionBuildConfigurationElement = buildDefinition.getConfigurationElement(HJ_ELEMENT_ID);
         if (hudsonDefinitionBuildConfigurationElement == null) {
             throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_hudson_config());
         }
@@ -264,7 +381,7 @@ public class BuildConnection {
 		IBuildEngine buildEngine = (IBuildEngine) getTeamRepository().itemManager().fetchPartialItem(
                 buildEngineHandle, IItemManager.REFRESH,
                 Arrays.asList(IBuildEngine.PROPERTY_CONFIGURATION_ELEMENTS), monitor.newChild(50));
-		IBuildConfigurationElement hudsonEngineBuildConfigurationElement = buildEngine.getConfigurationElement("com.ibm.rational.connector.hudson.engine"); //$NON-NLS-1$
+		IBuildConfigurationElement hudsonEngineBuildConfigurationElement = buildEngine.getConfigurationElement(HJ_ENGINE_ELEMENT_ID);
 		if (hudsonEngineBuildConfigurationElement == null) {
             throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_build_engine_hudson_config());
 		}
@@ -422,7 +539,7 @@ public class BuildConnection {
             IllegalArgumentException {
     	// if no build result, we are done
     	if (buildResultHandle == null) {
-    		return "";
+    		return ""; //$NON-NLS-1$
     	}
 
 		return getTeamBuildClient().startBuildActivity(buildResultHandle, label, parentId, autoComplete, progress);
@@ -544,28 +661,33 @@ public class BuildConnection {
      * @param progress Monitor to mark progress on
      * @throws TeamRepositoryException Thrown if the information can not be retrieved
      */
-	public void getBuildResultInfo(IBuildResultInfo buildResultInfo,
-			IConsoleOutput clientConsole, IProgressMonitor progress) throws TeamRepositoryException {
+	private void getBuildResultInfo(IBuildResult buildResult, IBuildResultInfo buildResultInfo,
+			IConsoleOutput clientConsole, Locale clientLocale, IProgressMonitor progress) {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IItemManager itemManager = getTeamRepository().itemManager();
 
-		IBuildResultHandle resultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultInfo.getBuildResultUUID()), null);
-		IBuildResult buildResult = (IBuildResult) itemManager.fetchCompleteItem(resultHandle, IItemManager.DEFAULT, monitor.newChild(25));
-        if (!buildResult.getBuildRequests().isEmpty()) {
-	        IBuildRequest buildRequest = (IBuildRequest) itemManager.fetchCompleteItem((IBuildRequestHandle) buildResult.getBuildRequests().iterator().next(),
-	        		IItemManager.REFRESH, monitor.newChild(10));
-	        boolean isScheduled = isScheduledRequest(buildRequest);
-	        buildResultInfo.setScheduled(isScheduled);
-	        
-	        if (!isScheduled) {
+		IBuildRequestHandle buildRequestHandle = getBuildRequest(buildResult);
+    	if (buildRequestHandle != null) {
+        	try {
+		        IBuildRequest buildRequest = (IBuildRequest) itemManager.fetchCompleteItem(buildRequestHandle,
+		        		IItemManager.REFRESH, monitor.newChild(10));
+		        boolean isScheduled = isScheduledRequest(buildRequest);
+		        buildResultInfo.setScheduled(isScheduled);
 	        	buildResultInfo.setPersonalBuild(buildResult.isPersonalBuild());
-	        	
+		        
 	        	IContributorHandle requestor = buildRequest.getInitiatingContributor();
 	        	if (requestor != null) {
-	        		IContributor contributor = (IContributor) itemManager.fetchCompleteItem(requestor, IItemManager.DEFAULT, monitor.newChild(25));
-	        		buildResultInfo.setRequestor(contributor.getName());
+	        		IContributor contributor;
+					try {
+						contributor = (IContributor) itemManager.fetchCompleteItem(requestor, IItemManager.DEFAULT, monitor.newChild(25));
+		        		buildResultInfo.setRequestor(contributor.getName());
+					} catch (TeamRepositoryException e) {
+						clientConsole.log(Messages.get(clientLocale).BuildConnection_unknown_contributor(e.getMessage()));
+					}
 	        	}
-	        }
+        	} catch(TeamRepositoryException e) {
+        		clientConsole.log(Messages.get(clientLocale).BuildConnection_unknown_start_reason(e.getMessage()));
+        	}
         }
 	}
 	
@@ -590,5 +712,37 @@ public class BuildConnection {
         }
         return false;
     }
+
+    /**
+     * Returns the first build request for the given build, or <code>null</code>
+     * if none.
+     */
+    @SuppressWarnings("unchecked")
+	private IBuildRequestHandle getBuildRequest(IBuildResult result) {
+		List<IBuildRequestHandle> requests = result.getBuildRequests();
+        if (requests.isEmpty()) {
+            return null;
+        }
+        return (IBuildRequestHandle) requests.get(0);
+    }
+
+    /**
+     * Delete the build result
+     * @param buildResultUUID UUID of the build result to delete.
+     * @param clientConsole The console to put messages
+     * @param progress Monitor to mark progress on
+     * @param clientLocale The locale of the caller
+     * @throws TeamRepositoryException
+     */
+	public void deleteBuildResult(String buildResultUUID,
+			IConsoleOutput clientConsole, IProgressMonitor progress,
+			Locale clientLocale) throws TeamRepositoryException {
+		IBuildResultHandle resultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+		try {
+			getTeamBuildClient().delete(resultHandle, progress);
+		} catch (ItemNotFoundException e) {
+			// its ok if it has already been deleted.
+		}
+	}
 
 }

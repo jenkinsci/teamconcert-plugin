@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -37,6 +37,7 @@ public class RTCFacadeFactory {
 	private static final String DISABLE_RTC_FACADE_CLASS_LOADER_PROPERTY = "com.ibm.team.build.disableRTCFacadeClassLoader"; //$NON-NLS-1$
 
     private static transient LRUMap fgRTCFacadeCache;
+	private static transient URL fgHJPlugin_rtcJar;
     
     /**
      * Returns a facade for interfacing with RTC, using the classes in the RTC build toolkit at the given path.
@@ -78,6 +79,25 @@ public class RTCFacadeFactory {
 		}
 		return rtcFacade;
 	}
+	
+	/**
+	 * @return The URL for the jar containing the facade.
+	 */
+	public synchronized static URL getFacadeJarURL(PrintStream debugLog) {
+		// if we already have a cached facade for the toolkit requested, get the path from there.
+		// otherwise find it without creating a facade.
+		if (fgHJPlugin_rtcJar != null) {
+			return fgHJPlugin_rtcJar;
+		}
+		// Find the jar from our class loader
+		Class<?> originalClass = RTCFacadeFactory.class;
+		ClassLoader originalClassLoader = originalClass.getClassLoader();
+		debug(debugLog, "Original class loader: " + originalClassLoader); //$NON-NLS-1$
+
+		// Get the jar for the hjplugin-rtc jar.
+		fgHJPlugin_rtcJar = getHjplugin_rtcJar(originalClassLoader, "com.ibm.team.build.internal.hjplugin.rtc.RTCFacade", debugLog); //$NON-NLS-1$
+		return fgHJPlugin_rtcJar;
+	}
 
 	/**
 	 * Wrapper on the facade to ensure the class loader is setup and restored
@@ -86,7 +106,6 @@ public class RTCFacadeFactory {
 	public static class RTCFacadeWrapper {
 		private Object facade;
 		private ClassLoader newClassLoader;
-		private URL hjplugin_rtcJar;
 		
 		public Object invoke(String methodName, Class[] argumentTypes, Object... arguments) throws Exception {
 			
@@ -123,13 +142,6 @@ public class RTCFacadeFactory {
 			} finally {
 				resetContextClassLoader(currentClassLoader);
 			}
-		}
-
-		/**
-		 * @return The URL for the jar containing the facade.
-		 */
-		public URL getFacadeJarURL() {
-			return hjplugin_rtcJar;
 		}
 		
 		/**
@@ -173,15 +185,15 @@ public class RTCFacadeFactory {
 
 		// Get the jar for the hjplugin-rtc jar.
 		URL[] combinedURLs;
-		result.hjplugin_rtcJar = getHjplugin_rtcJar(originalClassLoader, fullClassName, debugLog);
-		if (result.hjplugin_rtcJar != null) {
+		URL hjplugin_rtcJar = getFacadeJarURL(debugLog);
+		if (hjplugin_rtcJar != null) {
 			combinedURLs = new URL[toolkitURLs.length + 1];
-			combinedURLs[0] = result.hjplugin_rtcJar;
+			combinedURLs[0] = hjplugin_rtcJar;
 			System.arraycopy(toolkitURLs, 0, combinedURLs, 1, toolkitURLs.length);
 		} else {
 			combinedURLs = toolkitURLs;
 		}
-		debug(debugLog, "System class loader " + ClassLoader.getSystemClassLoader());
+		debug(debugLog, "System class loader " + ClassLoader.getSystemClassLoader()); //$NON-NLS-1$
 		
 		// We want the parent class loader to exclude the class loader which would normally
 		// load classes from the hjplugin-rtc jar (because that class loader doesn't include
@@ -197,7 +209,7 @@ public class RTCFacadeFactory {
 			debug(debugLog, "System class loader and original are the same. Using parent " + originalClassLoader.getParent()); //$NON-NLS-1$
 			parentClassLoader = originalClassLoader.getParent();
 		}
-		if (Boolean.parseBoolean(System.getProperty(DISABLE_RTC_FACADE_CLASS_LOADER_PROPERTY, "false"))) {
+		if (Boolean.parseBoolean(System.getProperty(DISABLE_RTC_FACADE_CLASS_LOADER_PROPERTY, "false"))) { //$NON-NLS-1$
 			debug(debugLog, "RTCFacadeClassLoader disabled, using URLClassLoader"); //$NON-NLS-1$
 			result.newClassLoader = new URLClassLoader(combinedURLs, parentClassLoader);
 		} else {
@@ -212,11 +224,12 @@ public class RTCFacadeFactory {
 		
 		// using the new class loader get the facade instance
 		// then revert immediately back to the original class loader
+		ClassLoader originalContextClassLoader = Thread.currentThread().getContextClassLoader();
 		Thread.currentThread().setContextClassLoader(result.newClassLoader);
 		try {
 			result.facade = facadeClass.newInstance();
 		} finally {
-			Thread.currentThread().setContextClassLoader(originalClassLoader);
+			Thread.currentThread().setContextClassLoader(originalContextClassLoader);
 		}
 		
 		debug(debugLog, "facade: " + result.facade); //$NON-NLS-1$
@@ -244,7 +257,7 @@ public class RTCFacadeFactory {
 			URLConnection connection = url.openConnection();
 			if (connection instanceof JarURLConnection) {
 				JarURLConnection jarConnection = (JarURLConnection) connection;
-				debug(debugLog, "hjplugin-rtc jar from the connection " + jarConnection.getJarFileURL());
+				debug(debugLog, "hjplugin-rtc jar from the connection " + jarConnection.getJarFileURL()); //$NON-NLS-1$
 				return jarConnection.getJarFileURL();
 			}
 		} catch (IOException e) {

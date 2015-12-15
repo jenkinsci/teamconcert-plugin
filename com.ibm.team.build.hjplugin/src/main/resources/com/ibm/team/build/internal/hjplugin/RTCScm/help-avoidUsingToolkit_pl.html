@@ -1,0 +1,31 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2014 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Tam gdzie jest to możliwe należy unikać używania pakietu budowania przy wykonywaniu zadań w węźle głównym.
+   Jest to wciąż na etapie eksperymentalnym. Wymagany będzie serwer RTC 5.0,
+który udostępnia niektóre z używanych usług. 
+  </p>
+  <p>
+   Pakiet budowania nie będzie używany przy odpytywaniu produktu RTC i
+kończeniu budowania produktu RTC. Pakiet ten jest jednak nadal wymagany. Jest
+on używany przy innych zadaniach konfiguracyjnych w węźle głównym (tzn.
+sprawdzania poprawności połączenia z produktem RTC, definicji budowania lub
+obszaru roboczego).
+   Jest również używany przy zadaniach pobierania zwykle
+wykonywanych w węzłach podrzędnych.
+  </p>
+</div>

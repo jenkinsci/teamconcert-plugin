@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,13 +21,22 @@ import java.util.Set;
 
 import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
 
 import com.ibm.team.build.client.ClientFactory;
 import com.ibm.team.build.client.ITeamBuildClient;
+import com.ibm.team.build.client.ITeamBuildRequestClient;
+import com.ibm.team.build.common.BuildItemFactory;
 import com.ibm.team.build.common.ScmConstants;
 import com.ibm.team.build.common.model.BuildState;
 import com.ibm.team.build.common.model.BuildStatus;
 import com.ibm.team.build.common.model.IBuildActivity;
+import com.ibm.team.build.common.model.IBuildDefinition;
+import com.ibm.team.build.common.model.IBuildDefinitionHandle;
+import com.ibm.team.build.common.model.IBuildEngine;
+import com.ibm.team.build.common.model.IBuildEngineHandle;
+import com.ibm.team.build.common.model.IBuildRequest;
+import com.ibm.team.build.common.model.IBuildRequestParams;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultContribution;
 import com.ibm.team.build.common.model.IBuildResultHandle;
@@ -51,6 +60,7 @@ import com.ibm.team.links.common.factory.IReferenceFactory;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 import com.ibm.team.repository.common.util.NLS;
@@ -69,10 +79,64 @@ public class BuildConnectionTests {
 	
 	private final static List<String> TERMINATE_PROPERTIES = Arrays.asList(new String[] {
 			IBuildResult.PROPERTY_BUILD_STATE,
-			IBuildResult.PROPERTY_BUILD_STATUS});
+			IBuildResult.PROPERTY_BUILD_STATUS,
+			IBuildResult.PROPERTY_LABEL});
 
 	private RepositoryConnection connection;
 
+	private class BuildResultInfoDelegate implements IBuildResultInfo {
+		private String buildResultUUID;
+		private boolean ownLifeCycle;
+		private boolean isPersonalBuild;
+		private boolean isScheduled;
+		private String requestor;
+
+		public BuildResultInfoDelegate(String buildResultUUID) {
+			this.buildResultUUID = buildResultUUID;
+		}
+
+		@Override
+		public String getBuildResultUUID() {
+			return buildResultUUID;
+		}
+
+		public boolean ownLifeCycle() {
+			return ownLifeCycle;
+		}
+
+		@Override
+		public void setOwnLifeCycle(boolean ownLifeCycle) {
+			this.ownLifeCycle = ownLifeCycle;
+		}
+
+		public boolean isPersonalBuild() {
+			return isPersonalBuild;
+		}
+
+		@Override
+		public void setPersonalBuild(boolean isPersonalBuild) {
+			this.isPersonalBuild = isPersonalBuild;
+		}
+
+		public String getRequestor() {
+			return requestor;
+		}
+
+		@Override
+		public void setRequestor(String requestor) {
+			this.requestor = requestor;
+		}
+
+		public boolean isScheduled() {
+			return isScheduled;
+		}
+
+		@Override
+		public void setScheduled(boolean isScheduled) {
+			this.isScheduled = isScheduled;
+		}
+	}
+	
 	public BuildConnectionTests(RepositoryConnection repositoryConnection) {
 		this.connection = repositoryConnection;
 	}
@@ -85,6 +149,8 @@ public class BuildConnectionTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(artifacts.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID)), null);
 		IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchCompleteItem(buildResultHandle, IItemManager.REFRESH, null);
 		
+		AssertUtil.assertEquals(BuildState.IN_PROGRESS, buildResult.getState());
+		AssertUtil.assertTrue(buildResult.getLabel() != null && !buildResult.getLabel().isEmpty(), "Label should be set");
 		AssertUtil.assertEquals(artifacts.get(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ITEM_ID), buildResult.getBuildDefinition().getItemId().getUuidValue());
 
         verifyBuildWorkspaceContribution(repo, buildClient, buildResult,
@@ -396,18 +462,12 @@ public class BuildConnectionTests {
 		}
 	}
 
-	public void testBuildTermination(String testName) throws Exception {
-		// Test start & terminate build (status ok)
-		// Test start & terminate build (cancelled)
-		// Test start & terminate build (failed)
-		// Test start & terminate build (unstable)
-		// Test start & (set status of build in test to warning) & terminate build (status ok)
-		// Test start & (set status of build in test to error) & terminate build (status unstable)
-		// Test start & (set status of build in test to error) & terminate build (abandon)
-		// Test start & (abandon build in test) & terminate build (status ok)
-		// Test start & (abandon build in test) & terminate build (cancelled)
-		// Test start & (abandon build in test) & terminate build (failed)
-		// Test start & (abandon build in test) & terminate build (unstable)
+	public void testBuildStart(String testName) throws Exception {
+		// Test create (pending) & start (true)
+		// Test create (in progress) & start (false)
+		// Test create (complete) & start (false)
+		// Test create (cancelled = pending & cancelled) & start (operation cancelled)
+		// Test create (incomplete = inprogress & cancelled) & start (operation cancelled)
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository();
 		
@@ -423,54 +483,37 @@ public class BuildConnectionTests {
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+
+			// Test create (pending) & start (true)
+			requestBuild(repo, null, testName, artifactIds);
+			startAndVerify(testName, repo, true, BuildState.IN_PROGRESS, artifactIds);
+
+			// Test create (in progress) & start (false)
+			requestBuild(repo, BuildState.IN_PROGRESS, testName, artifactIds);
+			startAndVerify(testName, repo, false, BuildState.IN_PROGRESS, artifactIds);
+
+			// Test create (complete) & start (false)
+			requestBuild(repo, BuildState.COMPLETED, testName, artifactIds);
+			startAndVerify(testName, repo, false, BuildState.COMPLETED, artifactIds);
+
+			// Test create (cancelled = pending & canceled) & start (operation canceled)
+			requestBuild(repo, BuildState.CANCELED, testName, artifactIds);
+			try {
+				startAndVerify(testName, repo, false, BuildState.CANCELED, artifactIds);
+				AssertUtil.fail("Expected start to result in build being canceled");
+			} catch (OperationCanceledException e) {
+				// good 
+			}
 			
-			// start & terminate build (status ok)
-			startTerminateAndVerify(repo, testName, false, BuildConnection.OK, BuildState.COMPLETED, BuildStatus.OK, artifactIds);
+			// Test create (incomplete = inprogress & cancelled) & start (operation cancelled)
+			requestBuild(repo, BuildState.INCOMPLETE, testName, artifactIds);
+			try {
+				startAndVerify(testName, repo, false, BuildState.INCOMPLETE, artifactIds);
+				AssertUtil.fail("Expected start to result in build being canceled");
+			} catch (OperationCanceledException e) {
+				// good
+			}
 
-			// start & terminate build (cancelled)
-			startTerminateAndVerify(repo, testName, true, BuildConnection.OK, BuildState.INCOMPLETE, BuildStatus.OK, artifactIds);
-			
-			// start & terminate build (failed)
-			startTerminateAndVerify(repo, testName, false, BuildConnection.ERROR, BuildState.COMPLETED, BuildStatus.ERROR, artifactIds);
-
-			// start & terminate build (unstable)
-			startTerminateAndVerify(repo, testName, false, BuildConnection.UNSTABLE, BuildState.COMPLETED, BuildStatus.WARNING, artifactIds);
-
-			// Test start & (set status of build in test to warning) & terminate build (status ok)
-			String buildResultItemId = startBuild(repo, testName, artifactIds);
-			setBuildStatus(repo, buildResultItemId, false, BuildStatus.WARNING);
-			terminateAndVerify(repo, false, BuildConnection.OK, BuildState.COMPLETED, BuildStatus.WARNING, artifactIds);
-			
-			// Test start & (set status of build in test to error) & terminate build (status unstable)
-			buildResultItemId = startBuild(repo, testName, artifactIds);
-			setBuildStatus(repo, buildResultItemId, false, BuildStatus.ERROR);
-			terminateAndVerify(repo, false, BuildConnection.UNSTABLE, BuildState.COMPLETED, BuildStatus.ERROR, artifactIds);
-			
-			// Test start & (set status of build in test to error) & terminate build (abandon)
-			buildResultItemId = startBuild(repo, testName, artifactIds);
-			setBuildStatus(repo, buildResultItemId, false, BuildStatus.ERROR);
-			terminateAndVerify(repo, true, BuildConnection.OK, BuildState.INCOMPLETE, BuildStatus.ERROR, artifactIds);
-
-			// Test start & (abandon build in test) & terminate build (status ok)
-			buildResultItemId = startBuild(repo, testName, artifactIds);
-			setBuildStatus(repo, buildResultItemId, true, BuildStatus.ERROR);
-			terminateAndVerify(repo, true, BuildConnection.OK, BuildState.INCOMPLETE, BuildStatus.ERROR, artifactIds);
-
-			// Test start & (abandon build in test) & terminate build (cancelled)
-			buildResultItemId = startBuild(repo, testName, artifactIds);
-			setBuildStatus(repo, buildResultItemId, true, BuildStatus.ERROR);
-			terminateAndVerify(repo, true, BuildConnection.OK, BuildState.INCOMPLETE, BuildStatus.ERROR, artifactIds);
-
-			// Test start & (abandon build in test) & terminate build (failed)
-			buildResultItemId = startBuild(repo, testName, artifactIds);
-			setBuildStatus(repo, buildResultItemId, true, BuildStatus.OK);
-			terminateAndVerify(repo, true, BuildConnection.OK, BuildState.INCOMPLETE, BuildStatus.OK, artifactIds);
-
-			// Test start & (abandon build in test) & terminate build (unstable)
-			buildResultItemId = startBuild(repo, testName, artifactIds);
-			setBuildStatus(repo, buildResultItemId, true, BuildStatus.WARNING);
-			terminateAndVerify(repo, true, BuildConnection.OK, BuildState.INCOMPLETE, BuildStatus.WARNING, artifactIds);
-			
 		} finally {
 			
 			// cleanup artifacts created
@@ -480,7 +523,109 @@ public class BuildConnectionTests {
 		}
 	}
 
-	private void setBuildStatus(ITeamRepository repo, String buildResultItemId,
+	public Map<String, String> testBuildTerminationSetup(String testName) throws Exception {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+
+		try {
+			// create a build workspace
+			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+			IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, testName + "1");
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
+			
+			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
+					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ID, testName);
+			
+			return artifactIds;
+		} catch (Exception e) {
+			
+			// cleanup artifacts created
+			SCMUtil.deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID));
+			SCMUtil.deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID));
+			BuildUtil.deleteBuildArtifacts(repo, artifactIds);
+			throw e;
+		}
+	}
+	
+	/**
+	 * Sets up a build result in the requested state & status
+	 * The result can then later be terminated and then verified via {@link #verifyBuildTermination(String, String, Map)}
+	 * @param startBuild Whether to start the build or leave it pending
+	 * @param abandon Whether the build should be abandoned after being started
+	 * @param buildStatus The status to put on the started build
+	 * @param artifactIds Ids of the artifacts in play
+	 * @throws Exception thrown if anything goes wrong with the setup
+	 */
+	public void testBuildTerminationTestSetup(boolean startBuild,
+			boolean abandon, String buildStatus, Map<String, String> artifactIds)
+			throws Exception {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		String buildDefinitionId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ID);
+		if (startBuild) {
+			String buildResultItemId = startBuild(repo, buildDefinitionId, artifactIds);
+			BuildStatus status = BuildStatus.valueOf(buildStatus);
+			if (abandon || status != BuildStatus.OK) {
+				setBuildStatus(repo, buildResultItemId, abandon, status);
+			}
+		} else {
+			requestBuild(repo, BuildState.NOT_STARTED, buildDefinitionId, artifactIds);
+		}
+	}
+
+	/**
+	 * Verify that after termination that the build result is in the expected state
+	 * with the expected status.
+	 * @param expectedState The expected build state
+	 * @param expectedStatus The expected build status
+	 * @param artifactIds The artifacts now in play
+	 * @throws TeamRepositoryException Thrown if anything goes wrong
+	 */
+	public void verifyBuildTermination(String expectedState, String expectedStatus,
+			Map<String, String> artifactIds)
+			throws TeamRepositoryException {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+
+		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+		IBuildResultHandle buildResultHandle;
+		IBuildResult buildResult;
+		buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
+		buildResult = (IBuildResult) repo.itemManager().fetchPartialItem(buildResultHandle, 
+				IItemManager.REFRESH, TERMINATE_PROPERTIES, null);
+		AssertUtil.assertEquals(expectedState, buildResult.getState().name());
+		AssertUtil.assertEquals(expectedStatus, buildResult.getStatus().name());
+	}
+
+	/**
+	 * Verify that the build result really has been deleted
+	 * @param artifactIds The artifacts now in play
+	 * @throws TeamRepositoryException Thrown if anything goes wrong
+	 */
+	public void verifyBuildResultDeleted(Map<String, String> artifactIds)
+			throws TeamRepositoryException {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+
+		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+		IBuildResultHandle buildResultHandle;
+		buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
+		try {
+			repo.itemManager().fetchPartialItem(buildResultHandle, 
+				IItemManager.REFRESH, TERMINATE_PROPERTIES, null);
+			AssertUtil.fail("Build result found for " + buildResultItemId);
+		} catch (ItemNotFoundException e) {
+			// good
+		}
+	}
+
+	private static void setBuildStatus(ITeamRepository repo, String buildResultItemId,
 			boolean abandon, BuildStatus status) throws Exception {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 		IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchPartialItem(buildResultHandle, 
@@ -493,17 +638,6 @@ public class BuildConnectionTests {
 					IBuildResult.PROPERTY_BUILD_STATE,
 					IBuildResult.PROPERTY_BUILD_STATUS}, null);
 		}
-	}
-
-	private void startTerminateAndVerify(ITeamRepository repo, String testName, boolean aborted, int buildState,
-			BuildState expectedState, BuildStatus expectedStatus,
-			Map<String, String> artifactIds)
-			throws Exception, TeamRepositoryException {
-		startBuild(repo, testName, artifactIds);
-
-		// terminate
-		terminateAndVerify(repo, aborted, buildState, expectedState,
-				expectedStatus, artifactIds);
 	}
 
 	private String startBuild(ITeamRepository repo, String testName,
@@ -526,19 +660,63 @@ public class BuildConnectionTests {
 		return buildResultItemId;
 	}
 
-	private void terminateAndVerify(ITeamRepository repo, boolean aborted,
-			int buildState, BuildState expectedState,
-			BuildStatus expectedStatus, Map<String, String> artifactIds)
+	public static void requestBuild(ITeamRepository repo, BuildState initialState, String testName,
+			Map<String, String> artifactIds) throws Exception, TeamRepositoryException {
+		
+		String engineItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_ENGINE_ITEM_ID);
+		String defnItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ITEM_ID);
+		IBuildEngineHandle buildEngineHandle = (IBuildEngineHandle) IBuildEngine.ITEM_TYPE.createItemHandle(UUID.valueOf(engineItemId), null);
+		IBuildDefinitionHandle buildDefinitionHandle = (IBuildDefinitionHandle) IBuildDefinition.ITEM_TYPE.createItemHandle(UUID.valueOf(defnItemId), null);
+		
+        IBuildRequestParams params = BuildItemFactory.createBuildRequestParams();
+        params.setBuildDefinition(buildDefinitionHandle);
+        params.setAllowDuplicateRequests(true);
+        params.setPersonalBuild(false);
+        params.getPotentialHandlers().add(buildEngineHandle);
+        params.setStartBuild(false);
+        ITeamBuildRequestClient service = (ITeamBuildRequestClient) repo.getClientLibrary(ITeamBuildRequestClient.class);
+        IBuildRequest buildRequest = service.requestBuild(params, null);
+        IBuildResultHandle buildResultHandle = buildRequest.getBuildResult();
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultHandle.getItemId().getUuidValue());
+		
+		service.claimRequest(buildRequest, buildEngineHandle, IBuildRequest.PROPERTIES_REQUIRED, null);
+		
+		if (initialState == BuildState.IN_PROGRESS) {
+    		service.startBuild(buildRequest, new String[0], null);
+		} else if (initialState == BuildState.CANCELED) {
+			service.cancelPendingRequest(buildRequest, new String[0], null);
+		} else if (initialState == BuildState.INCOMPLETE) {
+    		service.startBuild(buildRequest, new String[0], null);
+			setBuildStatus(repo, buildResultHandle.getItemId().getUuidValue(), true, BuildStatus.OK);
+		} else if (initialState == BuildState.COMPLETED) {
+    		service.startBuild(buildRequest, new String[0], null);
+			setBuildStatus(repo, buildResultHandle.getItemId().getUuidValue(), false, BuildStatus.OK);
+    		service.makeBuildComplete(buildResultHandle, false, new String[0], null);
+		} // else initialState == BuildState.NOT_STARTED
+	}
+
+	private void startAndVerify(String label,
+			ITeamRepository repo,
+			boolean expectedResult,
+			BuildState expectedState, Map<String, String> artifactIds)
 					throws Exception, TeamRepositoryException {
 		final Exception[] failure = new Exception[] {null};
 		IConsoleOutput listener = getListener(failure);
 
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
-		connection.terminateBuild(buildResultItemId, aborted, buildState, listener, null);
-		if (failure[0] != null) {
-			throw failure[0];
+		OperationCanceledException cancelException = null;
+		try {
+			BuildResultInfoDelegate buildResultInfoDelegate = new BuildResultInfoDelegate(buildResultItemId);
+			connection.startBuild(buildResultInfoDelegate, label, listener, null, Locale.getDefault());
+			AssertUtil.assertEquals(expectedResult, buildResultInfoDelegate.ownLifeCycle());
+			
+			if (failure[0] != null) {
+				throw failure[0];
+			}
+		} catch (OperationCanceledException e) {
+			cancelException  = e;
 		}
-
+		
 		// verify
 		IBuildResultHandle buildResultHandle;
 		IBuildResult buildResult;
@@ -546,11 +724,18 @@ public class BuildConnectionTests {
 		buildResult = (IBuildResult) repo.itemManager().fetchPartialItem(buildResultHandle, 
 				IItemManager.REFRESH, TERMINATE_PROPERTIES, null);
 		AssertUtil.assertEquals(expectedState, buildResult.getState());
-		AssertUtil.assertEquals(expectedStatus, buildResult.getStatus());
+		if (expectedResult) {
+			// label will only be set if we started build
+			AssertUtil.assertEquals(label, buildResult.getLabel());
+		}
 		
 		// delete the build result artifact
 		BuildUtil.deleteBuildResult(repo, buildResultItemId);
 		artifactIds.remove(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+		
+		if (cancelException != null) {
+			throw cancelException;
+		}
 	}
 
 	private IConsoleOutput getListener(final Exception[] failure) {
@@ -599,34 +784,13 @@ public class BuildConnectionTests {
 				throw failure[0];
 			}
 			
-			// wrap the build result info so that we can supply the build result uuid
-			IBuildResultInfo buildResultInfoWrapper = new IBuildResultInfo() {
-				
-				@Override
-				public void setScheduled(boolean isScheduled) {
-					buildResultInfo.setScheduled(isScheduled);
-				}
-				
-				@Override
-				public void setRequestor(String requestor) {
-					buildResultInfo.setRequestor(requestor);
-				}
-				
-				@Override
-				public void setPersonalBuild(boolean isPersonalBuild) {
-					buildResultInfo.setPersonalBuild(isPersonalBuild);
-				}
-				
-				@Override
-				public String getBuildResultUUID() {
-					// Just calling to make sure it is actually callable (we are doing reflection to get
-					// the actual uuid)
-					buildResultInfo.getBuildResultUUID();
-					return buildResultItemId;
-				}
-			};
+			BuildResultInfoDelegate buildResultInfoDelegate = new BuildResultInfoDelegate(buildResultItemId);
 			BuildConnection buildConnection = new BuildConnection(repo);
-			buildConnection.getBuildResultInfo(buildResultInfoWrapper, listener, new NullProgressMonitor());
+			buildConnection.startBuild(buildResultInfoDelegate, "testGettingInfo", listener, new NullProgressMonitor(), Locale.getDefault());
+			buildResultInfo.setOwnLifeCycle(buildResultInfoDelegate.ownLifeCycle());
+			buildResultInfo.setPersonalBuild(buildResultInfoDelegate.isPersonalBuild());
+			buildResultInfo.setRequestor(buildResultInfoDelegate.getRequestor());
+			buildResultInfo.setScheduled(buildResultInfoDelegate.isScheduled());
 			
 			return repo.loggedInContributor().getName();
 		} finally {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,14 +15,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
+import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.build.common.model.BuildState;
+import com.ibm.team.build.internal.client.TeamBuildClientFactory;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
+import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
@@ -55,6 +61,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
 	public static final String ARTIFACT_BASELINE_SET_ITEM_ID = "baselineSetItemId";
 	public static final String ARTIFACT_BUILD_DEFINITION_ITEM_ID = "buildDefinitionItemId";
+	public static final String ARTIFACT_BUILD_DEFINITION_ID = "buildDefinitionId";
 	public static final String ARTIFACT_BUILD_ENGINE_ITEM_ID = "buildEngineItemId";
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 	
@@ -81,9 +88,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		result.put("componentDroppedItemId", ((IComponent) cDropped.get(componentDroppedName)).getItemId().getUuidValue());
 		return result;
 	}
-	
-	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String workspaceName,
-			String componentName, IProgressMonitor progress) throws Exception {
+
+	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
+			String componentName, boolean createBuildDefinition, IProgressMonitor progress) throws Exception {
 				
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
@@ -92,7 +99,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
-		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, name + "_stream");
 		String c1 = "/" + componentName;
 		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 				c1 + "/",
@@ -107,7 +114,26 @@ public class TestSetupTearDownUtil extends BuildClient {
 				c1 + "/f2/",
 				});
 		
-		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, name);
+		
+		if (createBuildDefinition) {
+			
+			BuildUtil.createBuildDefinition(repo, name, true, artifactIds,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
+					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+			
+			Exception[] failure = new Exception[] {null};
+			IConsoleOutput listener = getListener(failure);
+
+			String buildResultItemId = connection.createBuildResult(name, null, "my buildLabel", listener, null, Locale.getDefault());
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
+			if (failure[0] != null) {
+				throw failure[0];
+			}
+
+		}
+		
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
 		// capture interesting uuids to verify against
@@ -548,7 +574,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 			IWorkspaceConnection workspace, IComponent component,
 			Map<String, IItemHandle> pathToHandle,
 			Map<String, String> artifactIds, int changeSetNumber) throws Exception {
-		// TODO Auto-generated method stub
 		artifactIds.put("/", component.getRootFolder().getItemId().getUuidValue());
 		IChangeSetHandle cs = workspace.createChangeSet(component, "Component Root property changes", false, null);
 		artifactIds.put("cs" + changeSetNumber, cs.getItemId().getUuidValue());
@@ -647,6 +672,21 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 	
+	public Map<String, String> setupBuildResultContributionsInQueuedBuild(ConnectionDetails connectionDetails,
+									String workspaceName,
+									String componentName,
+									String buildDefinitionId,
+									IProgressMonitor progress) throws Exception {
+		Map<String, String> artifactIds = setupBuildResultContributions(connectionDetails, workspaceName, componentName, buildDefinitionId, progress);
+		// create a build result, but not started (mimic requested in RTC but queued only property is true for build engine)
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		BuildConnectionTests.requestBuild(repo, BuildState.NOT_STARTED, buildDefinitionId, artifactIds);
+		return artifactIds;
+	}
+
+	@SuppressWarnings("restriction")
 	public Map<String, String> setupBuildResultContributions(ConnectionDetails connectionDetails,
 									String workspaceName,
 									String componentName,
@@ -780,11 +820,41 @@ public class TestSetupTearDownUtil extends BuildClient {
 		artifacts.put("cs1", cs1.getItemId().getUuidValue());
 	}
 	
-	public void testBuildTermination(ConnectionDetails connectionDetails,
+	public void testBuildStart(ConnectionDetails connectionDetails,
 			String testName) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
-		buildConnectionTests.testBuildTermination(testName);
+		buildConnectionTests.testBuildStart(testName);
+	}
+	
+	public Map<String, String> testBuildTerminationSetup(ConnectionDetails connectionDetails,
+			String testName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		return buildConnectionTests.testBuildTerminationSetup(testName);
+	}
+	
+	public void testBuildTerminationTestSetup(ConnectionDetails connectionDetails,
+			boolean startBuild, boolean abandon, String buildStatus,
+			Map<String, String> artifactIds) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.testBuildTerminationTestSetup(startBuild, abandon, buildStatus, artifactIds);
+	}
+	
+	public void verifyBuildTermination(ConnectionDetails connectionDetails,
+			String expectedState, String expectedStatus,
+			Map<String, String> artifactIds) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.verifyBuildTermination(expectedState, expectedStatus, artifactIds);
+	}
+	
+	public void verifyBuildResultDeleted(ConnectionDetails connectionDetails,
+			Map<String, String> artifactIds) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.verifyBuildResultDeleted(artifactIds);
 	}
 	
 	public String testBuildResultInfo(ConnectionDetails connectionDetails,
@@ -793,6 +863,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
 		return buildConnectionTests.testBuildResultInfo(testName, buildResultInfo);
 	}
+
 	public Map<String, String> testComponentLoading(ConnectionDetails connectionDetails,
 			String workspaceName, String componentName, String hjPath, String buildPath,
 			IProgressMonitor progress) throws Exception {
@@ -911,4 +982,53 @@ public class TestSetupTearDownUtil extends BuildClient {
 		}
 		return artifactIds;
 	}
+
+	@SuppressWarnings("restriction")
+	public Map<String, String> setupTestBuildDefinition(
+			ConnectionDetails connectionDetails, String uniqueName,
+			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository(); 
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, uniqueName + "_stream");
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, uniqueName, new String[] {
+				"/" + uniqueName + "/",
+				});
+		
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, uniqueName);
+		IComponent component = (IComponent) pathToHandle.get(uniqueName);
+		
+		// capture interesting uuids to verify against
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		
+		BuildUtil.createBuildDefinition(repo, uniqueName, true, artifactIds,
+				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
+				IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+				IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+		return artifactIds;
+	}
+
+	public static IConsoleOutput getListener(final Exception[] failure) {
+		IConsoleOutput listener = new IConsoleOutput() {
+			
+			@Override
+			public void log(String message, Exception e) {
+				failure[0] = e;
+			}
+			
+			@Override
+			public void log(String message) {
+				// not good
+				throw new AssertionFailedException(message);
+			}
+		};
+		return listener;
+	}
+
 }

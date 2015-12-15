@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,6 +13,7 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -214,11 +215,11 @@ public class RepositoryConnection {
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
-	 * @return <code>true</code> if there are changes for the build workspace
-	 * <code>false</code> otherwise
+	 * @return <code>Non zero</code> if there are changes for the build workspace
+	 * <code>0</code> otherwise
 	 * @throws Exception Thrown if anything goes wrong.
 	 */
-	public boolean incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener,
+	public int incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener,
 			IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(10));
@@ -243,7 +244,42 @@ public class RepositoryConnection {
 		}
 
 		AcceptReport report = SourceControlUtility.checkForIncoming(fRepositoryManager, workspace, monitor.newChild(80));
-		return report.getChangesAcceptedCount() > 0;
+		return RTCAcceptReportUtility.hashCode(report);
+	}
+	
+	/**
+	 * Get details regarding build workspace name, and build definition id from buildResultUUID.
+	 * @param buildResultUUID  The id of the build result (which also contains the build request & build definition instance)
+	 * Cannot be <code>null</code>.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
+	 * @return
+	 * @throws Exception Thrown if anything goes wrong
+	 */
+	public Map<String, String> getBuildResultUUIDDetails(String buildResultUUID, 
+			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
+		if (buildResultUUID == null) {
+			return new HashMap<String, String>();
+		}
+		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
+		ensureLoggedIn(monitor.newChild(1));
+		
+		BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), null);
+		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+		buildConfiguration.initialize(buildResultHandle, null, listener, monitor.newChild(1), clientLocale);
+		String buildDefinitionId = buildConfiguration.getBuildProperties().get("buildDefinitionId");
+		
+		Map<String, String> result = new HashMap<String, String>();
+		result.put("buildDefinitionId", buildDefinitionId);
+/*
+		BuildWorkspaceDescriptor workspace = buildConfiguration.getBuildWorkspaceDescriptor();
+		String workspaceName = workspace.getWorkspace(fRepositoryManager, monitor.newChild(1)).getName();
+		result.put("buildWorkspaceName", workspaceName);
+*/		
+		return result;
 	}
 
 	/**
@@ -257,7 +293,7 @@ public class RepositoryConnection {
 	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName should be
 	 * supplied
 	 * @param fetchDestination The location the build workspace is to be loaded
-	 * @param changeReport The report to be built of all the changes accepted/discarded
+	 * @param changeReport The report to be built of all the changes accepted/discarded. May be <code> null </code>.
 	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
@@ -304,6 +340,13 @@ public class RepositoryConnection {
         // Ensure we hang onto this between the accept and the load steps so that if 
         // we are synchronizing, we use the same cached sync times.
         IWorkspaceConnection workspaceConnection = workspace.getConnection(fRepositoryManager, false, monitor.newChild(1));
+        
+        // Warn if the build user id can't see all the components in the build workspace
+        if (!workspaceConnection.getUnreadableComponents().isEmpty()) {
+            listener.log(Messages.getDefault().RepositoryConnection_hidden_components(
+                    workspaceConnection.getName(), workspaceConnection.getUnreadableComponents().size()));
+        }
+
         boolean synchronizeLoad = false;
 
         if (!buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch()) {
@@ -341,24 +384,28 @@ public class RepositoryConnection {
             if (monitor.isCanceled()) {
             	throw new InterruptedException();
             }
-            
-            // build change report
-            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-            changeReportBuilder.populateChangeReport(changeReport,
-            		workspaceConnection.getResolvedWorkspace(), acceptReport,
-            		listener, monitor.newChild(2));
+            if (changeReport != null) {
+		            // build change report
+		            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+		            changeReportBuilder.populateChangeReport(changeReport,
+		            		workspaceConnection.getResolvedWorkspace(), acceptReport,
+		            		listener, monitor.newChild(2));
+            }
             
             synchronizeLoad = true;
         } else {
-        	
-            // build change report
-            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-            changeReportBuilder.populateChangeReport(changeReport,
-            		buildConfiguration.isPersonalBuild(),
-            		listener);
+        	if (changeReport != null) {
+	            // build change report
+	            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+	            changeReportBuilder.populateChangeReport(changeReport,
+	            		buildConfiguration.isPersonalBuild(),
+	            		listener);
+        	}
         }
-		changeReport.prepareChangeSetLog();
-
+        if ( changeReport != null ) {
+        	changeReport.prepareChangeSetLog();
+        }
+        
         ISharingManager manager = FileSystemCore.getSharingManager();
         final ILocation fetchLocation = buildConfiguration.getFetchDestinationPath();
         ISandbox sandbox = manager.getSandbox(fetchLocation, false);
@@ -490,14 +537,35 @@ public class RepositoryConnection {
 		return buildResult.getItemId().getUuidValue();
 	}
 
+	/**
+	 * Mark a build result as started, if it is not already started
+	 * @param buildResultInfo A structure in which to record if we own the build and 
+	 * info about how it was started (who and is it personal).
+	 * @param buildLabel The label to give to the RTC build
+	 * @param listener Listener to provide log info to.
+	 * @param progress Monitor to listen for cancellation on.
+	 * @param clientLocale The client's locale for error/log messages
+	 * @throws Exception Thrown if anything goes wrong.
+	 */
+	public void startBuild(IBuildResultInfo buildResultInfo, String buildLabel,
+			IConsoleOutput listener, IProgressMonitor progress,
+			Locale clientLocale) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(25));
+		
+		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
+		buildConnection.startBuild(buildResultInfo, buildLabel,
+				listener, monitor.newChild(75), clientLocale);
+	}
+
 	public void terminateBuild(String buildResultUUID,  boolean aborted, int buildState,
-			IConsoleOutput listener, IProgressMonitor progress) throws Exception {
+			IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(5));
 
 		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
 		buildConnection.terminateBuild(buildResultUUID, aborted, buildState, listener,
-				monitor.newChild(95));
+				monitor.newChild(95), clientLocale);
 	}
 
 	public void ensureLoggedIn(IProgressMonitor progress) throws TeamRepositoryException {
@@ -593,12 +661,19 @@ public class RepositoryConnection {
 				buildUrl, clientConsole, monitor.newChild(50));
 	}
 
-	public void getBuildResultInfo(IBuildResultInfo buildResultInfo,
-			IConsoleOutput clientConsole, SubMonitor progress) throws TeamRepositoryException {
+	/**
+	 * Delete build result
+	 * @param buildResultUUID The UUID of the build result to delete
+	 * @param progress Monitor to handle cancellation
+	 * @param clientLocale Locale of the calling client
+	 * @throws TeamRepositoryException Thrown if anything goes wrong
+	 */
+	public void deleteBuildResult(String buildResultUUID, IConsoleOutput clientConsole,
+			IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		ensureLoggedIn(monitor.newChild(50));
-		
-		getBuildConnection().getBuildResultInfo(buildResultInfo, clientConsole, monitor.newChild(50));
-	}
+		ensureLoggedIn(monitor.newChild(5));
 
+		getBuildConnection().deleteBuildResult(buildResultUUID, clientConsole,
+				monitor.newChild(95), clientLocale);
+	}
 }

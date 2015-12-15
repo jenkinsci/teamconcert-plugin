@@ -162,7 +162,9 @@ public class BuildConfiguration {
         IBuildEngine buildEngine = (IBuildEngine) itemManager.fetchCompleteItem(buildRequest.getHandler(), IItemManager.REFRESH, monitor.newChild(10));
 			
         // Add built-in properties.
-        buildProperties.put("buildResultUUID", buildResultHandle.getItemId().getUuidValue()); //$NON-NLS-1$
+        // Do not add the buildResultUUID property. It will be made available in the RTCBuildResultUUID property
+        // We want to be clear on when it is supplied in the original env. vs. build result is created later by us.
+        // buildProperties.put("buildResultUUID", buildResultHandle.getItemId().getUuidValue()); //$NON-NLS-1$
         buildProperties.put("requestUUID", buildRequest.getItemId().getUuidValue()); //$NON-NLS-1$
         buildProperties.put("buildDefinitionId", buildRequest.getBuildDefinitionInstance().getBuildDefinitionId()); //$NON-NLS-1$
         buildProperties.put("repositoryAddress", ((ITeamRepository) buildRequest.getOrigin()).getRepositoryURI()); //$NON-NLS-1$

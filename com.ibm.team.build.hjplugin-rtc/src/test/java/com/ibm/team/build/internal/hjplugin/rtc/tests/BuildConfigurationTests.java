@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -110,7 +110,7 @@ public class BuildConfigurationTests {
 					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.singletonList(component)).getBuildProperty() );
 			
 			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 			
 			// create the build result
 			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
@@ -134,7 +134,7 @@ public class BuildConfigurationTests {
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = getListener(failure);
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 		
 		// get the build result
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
@@ -162,23 +162,6 @@ public class BuildConfigurationTests {
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
 		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion should not be needed");
-	}
-
-	private IConsoleOutput getListener(final Exception[] failure) {
-		IConsoleOutput listener = new IConsoleOutput() {
-			
-			@Override
-			public void log(String message, Exception e) {
-				failure[0] = e;
-			}
-			
-			@Override
-			public void log(String message) {
-				// not good
-				throw new AssertionFailedException(message);
-			}
-		};
-		return listener;
 	}
 
 	public Map<String, String> setupNewLoadRules(String workspaceName,
@@ -249,7 +232,7 @@ public class BuildConfigurationTests {
 					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.EMPTY_LIST).getBuildProperty() );
 			
 			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 			
 			// create the build result
 			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
@@ -287,7 +270,7 @@ public class BuildConfigurationTests {
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = getListener(failure);
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 		
 		// get the build result
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
@@ -382,7 +365,7 @@ public class BuildConfigurationTests {
 					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.EMPTY_LIST).getBuildProperty() );
 			
 			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 			
 			// create the build result
 			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
@@ -417,7 +400,7 @@ public class BuildConfigurationTests {
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = getListener(failure);
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 		
 		// get the build result
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
@@ -525,7 +508,7 @@ public class BuildConfigurationTests {
 					"propertyC", "original");
 			
 			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 			
 			// create the build result for a personal build
 			IBuildResultHandle buildResultHandle = createPersonalBuildResult(testName, buildStream.getResolvedWorkspace(),
@@ -713,7 +696,7 @@ public class BuildConfigurationTests {
 					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.singletonList(component)).getBuildProperty() );
 			
 			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 			
 			// create the build result
 			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
@@ -738,7 +721,7 @@ public class BuildConfigurationTests {
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = getListener(failure);
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 		
 		// get the build result
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
@@ -757,7 +740,7 @@ public class BuildConfigurationTests {
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
 		Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = getListener(failure);
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 		
 		// get the build result
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);

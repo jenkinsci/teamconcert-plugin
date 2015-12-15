@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -23,8 +23,7 @@ public abstract class AbstractBuildClient {
 	 * Get the encapsulation of connection details
 	 * @param repositoryAddress URL of RTC server
 	 * @param userId The user id to use for login. Never <code>null</code>
-	 * @param password The password to use for login. Hint, use {@link #determinePassword(String, File)}
-	 * first to determine the password to use.
+	 * @param password The password to use for login.
 	 * @param timeout The timeout value for testing the connection.
 	 * @throws Exception if anything should go wrong retrieving the password from the password file
 	 * @ShortOp
@@ -65,17 +64,14 @@ public abstract class AbstractBuildClient {
 	public abstract RepositoryConnection removeRepositoryConnection(ConnectionDetails connectionDetails);
 
 	/**
-	 * Determines the password to use when connecting to a repository. If a password file is supplied,
-	 * it is extracted from there. Otherwise the password given will be used. If no password or the
-	 * empty string, this is considered an error. If the password file is invalid (doesn't exist,
-	 * contents are not an obfuscated password) then this is also an error. In general, the password
-	 * should be determined on the Master.
-	 * @param password The password to use by default if there is no password file. Can be
-	 * <code>null</code> if the password file is supplied
+	 * Determines the password to use when connecting to a repository from a file.
+	 * If the password file is invalid (doesn't exist, contents are not an obfuscated password) its an error.
+	 * In general, the password should be determined from a file only on the Master (we
+	 * don't want them to have to propagate the file to the slave).
 	 * @param passwordFile A file containing an obfuscated password. Can be <code>null</code>
 	 * @param clientLocale The locale of the requesting client
-	 * @return The password to use.
+	 * @return The password from the file.
 	 */
-	public abstract String determinePassword(String password, File passwordFile, Locale clientLocale) throws Exception;
+	public abstract String determinePassword(File passwordFile, Locale clientLocale) throws Exception;
 
 }

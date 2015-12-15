@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,9 +21,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import junit.framework.TestCase;
+
 import org.junit.Assert;
 import org.junit.Test;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
@@ -35,7 +36,8 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSetEntry;
 
 @SuppressWarnings("nls")
-public class RTCChangeLogParserTest extends HudsonTestCase {
+public class RTCChangeLogParserTest extends TestCase {
+	//https://issues.jenkins-ci.org/browse/JENKINS-21977
 
 	private static final String EOL = System.getProperty("line.separator", "\n"); 
 	
@@ -96,7 +98,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 				"</changelog>");
 		
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLog);
 		
 		// use the iterator to collect all the items
 		// compare against the other methods that return the categorized items
@@ -217,7 +219,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		URL changeLogURL = getClass().getResource("MissingComponentName.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertEquals(1, result.getAffectedComponents().size());
 		Assert.assertEquals(3, result.getChangeSetsAcceptedCount());
@@ -233,7 +235,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		URL changeLogURL = getClass().getResource("DuplicateComponentName.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertEquals(2, result.getAffectedComponents().size());
 		Assert.assertEquals(2, result.getChangeSetsAcceptedCount());
@@ -254,7 +256,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 				"</changelog>");
 		
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLog);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLog);
 		Assert.assertFalse("Expected no change entries", result.iterator().hasNext());
 		Assert.assertTrue("Expected it to be an empty set", result.isEmptySet());
 		Assert.assertEquals(0, result.getAffectedComponents().size());
@@ -265,7 +267,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		URL changeLogURL = getClass().getResource("Defect261133.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertEquals("ハローワールド #6", result.getBaselineSetName());
 		Assert.assertEquals(1, result.getAffectedComponents().size());
@@ -288,7 +290,7 @@ public class RTCChangeLogParserTest extends HudsonTestCase {
 		URL changeLogURL = getClass().getResource("PersonalBuild.xml");
 		File changeLogFile = new File(changeLogURL.toURI());
 		RTCChangeLogParser parser = new RTCChangeLogParser();
-		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, changeLogFile);
+		RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changeLogFile);
 		
 		Assert.assertFalse("Expected no change entries", result.iterator().hasNext());
 		Assert.assertTrue("Expected it to be an empty set", result.isEmptySet());

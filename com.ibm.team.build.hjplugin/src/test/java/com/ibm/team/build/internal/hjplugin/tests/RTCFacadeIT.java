@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,8 +11,6 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import java.io.File;
-import java.util.Locale;
 import java.util.Map;
 
 import org.junit.Assert;
@@ -20,6 +18,8 @@ import org.jvnet.hudson.test.HudsonTestCase;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
+import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
 @SuppressWarnings("nls")
 public class RTCFacadeIT extends HudsonTestCase {
@@ -29,89 +29,70 @@ public class RTCFacadeIT extends HudsonTestCase {
 	@Override
 	public void setUp() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			super.setUp();
 			facade = RTCFacadeFactory.getFacade(Config.DEFAULT.getToolkit(), null);
 		}
 	}
 
 	@Override
 	protected void tearDown() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			super.tearDown();
-		}
+		// Didn't start H/J
 	}
 
+	/**
+	 * Test "Test Connection" with a valid password
+	 */
 	public void testTestConnectionWithPassword() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			String errorMessage = (String) facade.invoke(
-					"testConnection",
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							File.class, // passwordFile
-							int.class, // timeout
-							Locale.class}, // clientLocale
+			String errorMessage = RTCFacadeFacade.testConnection(
+					Config.DEFAULT.getToolkit(),
 					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-					Config.DEFAULT.getPassword(), null,
-					Config.DEFAULT.getTimeout(), Locale.getDefault());
+					Config.DEFAULT.getPassword(),
+					Config.DEFAULT.getTimeout(),
+					false); // using toolkit
+			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+
+			errorMessage = RTCFacadeFacade.testConnection(
+					Config.DEFAULT.getToolkit(),
+					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
+					Config.DEFAULT.getPassword(),
+					Config.DEFAULT.getTimeout(),
+					true); // avoiding toolkit
 			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
 		}
 	}
 
+	/**
+	 * Test "Test Connection" with an invalid password
+	 */
 	public void testTestConnectionWithInvalidPassword() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			String errorMessage = (String) facade.invoke(
-					"testConnection",
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							File.class, // passwordFile
-							int.class, // timeout
-							Locale.class}, // clientLocale
-					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-					"invalid password", null,
-					Config.DEFAULT.getTimeout(), Locale.getDefault());
+			String errorMessage = RTCFacadeFacade.testConnection(
+					Config.DEFAULT.getToolkit(),
+					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserIDForAuthenticationFailures(),
+					"invalid password",
+					Config.DEFAULT.getTimeout(),
+					false); // using toolkit
 			assertTrue("Successful testConnection with invalid password", errorMessage != null && errorMessage.length() != 0);
+
+			errorMessage = RTCFacadeFacade.testConnection(
+					Config.DEFAULT.getToolkit(),
+					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserIDForAuthenticationFailures(),
+					"invalid password",
+					Config.DEFAULT.getTimeout(),
+					true); // avoiding toolkit
+			assertTrue("Successful testConnection with invalid password", errorMessage != null && errorMessage.length() != 0);
+
 		}
 	}
 
-	public void testTestConnectionWithPasswordFile() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			String errorMessage = (String) facade.invoke(
-					"testConnection",
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							File.class, // passwordFile
-							int.class, // timeout
-							Locale.class}, // clientLocale
-					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-					null, new File(Config.DEFAULT.getPasswordFile()),
-					Config.DEFAULT.getTimeout(), Locale.getDefault());
-			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
-		}
-	}
-
-	public void testTestConnectionWithInvalidPasswordFile() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			String errorMessage = (String) facade.invoke(
-					"testConnection",
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							File.class, // passwordFile
-							int.class, // timeout
-							Locale.class}, // clientLocale
-					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-					null, new File("/invalidPasswordFile"),
-					Config.DEFAULT.getTimeout(), Locale.getDefault());
-			assertTrue("Successful testConnection with invalid password file", errorMessage != null && errorMessage.length() != 0);
-		}
-	}
-
+	/**
+	 * Test "Test Build Workspace" validates correctly a singly occurring workspace (valid)
+	 * and multiple workspaces with the same name (invalid)
+	 */
 	public void testTestBuildWorkspace() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
@@ -119,47 +100,57 @@ public class RTCFacadeIT extends HudsonTestCase {
 							String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
-							File.class, // passwordFile,
 							int.class, // timeout,
 							String.class, // singleWorkspaceName,
 							String.class}, // multipleWorkspaceName
-					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-					Config.DEFAULT.getPassword(), null,
-					Config.DEFAULT.getTimeout(),
-					"SinglyOccuringWS", 
-					"MultipleOccurrenceWS");
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(),
+					"Singly Occuring=WS&encoded", 
+					"Multiple Occurrence=WS");
 
 			try {
 				
-				String errorMessage = (String) facade.invoke(
-					"testBuildWorkspace",
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							File.class, // passwordFile
-							int.class, // timeout
-							String.class, // buildWorkspace
-							Locale.class}, // clientLocale
-					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-					Config.DEFAULT.getPassword(), null,
-					Config.DEFAULT.getTimeout(),
-					"SinglyOccuringWS", Locale.getDefault());
+				String errorMessage = RTCFacadeFacade.testBuildWorkspace(
+					Config.DEFAULT.getToolkit(),
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(),
+					false, // using toolkit
+					"Singly Occuring=WS&encoded");
+				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+
+				errorMessage = RTCFacadeFacade.testBuildWorkspace(
+						Config.DEFAULT.getToolkit(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						true, // avoiding toolkit
+						"Singly Occuring=WS&encoded");
 				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
 
 				try {
-					errorMessage = (String) facade.invoke(
-							"testBuildWorkspace",
-							new Class[] { String.class, // serverURI
-									String.class, // userId
-									String.class, // password
-									File.class, // passwordFile
-									int.class, // timeout
-									String.class, // buildWorkspace
-									Locale.class}, // clientLocale
-							Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-							Config.DEFAULT.getPassword(), null,
-							Config.DEFAULT.getTimeout(),
-							"MultipleOccurrenceWS", Locale.getDefault());
+					errorMessage = RTCFacadeFacade.testBuildWorkspace(
+							Config.DEFAULT.getToolkit(),
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(),
+							false, // using toolkit
+							"Multiple Occurrence=WS");
+					assertTrue("There should be more than 1 workspace with the name", errorMessage != null && errorMessage.contains("More than 1"));
+
+					errorMessage = RTCFacadeFacade.testBuildWorkspace(
+							Config.DEFAULT.getToolkit(),
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(),
+							true, // avoiding toolkit
+							"Multiple Occurrence=WS");
 					assertTrue("There should be more than 1 workspace with the name", errorMessage != null && errorMessage.contains("More than 1"));
 				} catch (Exception e) {
 					e.printStackTrace(System.out);
@@ -171,38 +162,158 @@ public class RTCFacadeIT extends HudsonTestCase {
 						new Class[] { String.class, // serverURI
 								String.class, // userId
 								String.class, // password
-								File.class, // passwordFile
 								int.class, // timeout
 								Map.class}, // setupArtifacts
-								Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-								Config.DEFAULT.getPassword(), null,
-								Config.DEFAULT.getTimeout(),
-								setupArtifacts);
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						setupArtifacts);
 			}
 		}
 	}
 
+	/**
+	 * Test "Test Build Workspace" identifies the workspace is missing
+	 */
 	public void testTestMissingBuildWorkspace() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+			
 			try {
-				String errorMessage = (String) facade.invoke(
-					"testBuildWorkspace",
-					new Class[] { String.class, // serverURI
-							String.class, // userId
-							String.class, // password
-							File.class, // passwordFile
-							int.class, // timeout
-							String.class, // buildWorkspace
-							Locale.class}, // clientLocale
-					Config.DEFAULT.getServerURI(), Config.DEFAULT.getUserID(),
-					Config.DEFAULT.getPassword(), null,
-					Config.DEFAULT.getTimeout(),
-					"MissingWorkspace" + System.currentTimeMillis(), Locale.getDefault());
-				assertTrue(errorMessage != null && errorMessage.contains("Unable to find"));
+				String errorMessage = RTCFacadeFacade.testBuildWorkspace(
+					Config.DEFAULT.getToolkit(),
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(),
+					false, // using toolkit
+					"MissingWorkspace" + System.currentTimeMillis());
+				assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
+
+				errorMessage = RTCFacadeFacade.testBuildWorkspace(
+						Config.DEFAULT.getToolkit(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						true, // avoiding toolkit
+						"MissingWorkspace" + System.currentTimeMillis());
+				assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
 			} catch (Exception e) {
 				e.printStackTrace(System.out);
 				Assert.fail(e.getMessage());
 			}
+		}
+	}
+
+	/**
+	 * Test "Test Build Definition" identifies the build definition doesn't exist
+	 */
+	public void testTestMissingBuildDefinition() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+			
+			try {
+				String errorMessage = RTCFacadeFacade.testBuildDefinition(
+					Config.DEFAULT.getToolkit(),
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(),
+					false, // using toolkit
+					"MissingBuildDefinition" + System.currentTimeMillis());
+				assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
+
+				errorMessage = RTCFacadeFacade.testBuildWorkspace(
+						Config.DEFAULT.getToolkit(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						true, // avoiding toolkit
+						"MissingBuildDefinition" + System.currentTimeMillis());
+					assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
+			} catch (Exception e) {
+				e.printStackTrace(System.out);
+				Assert.fail(e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * Test "Test Build Definition" validates the build definition is setup properly
+	 * TODO Add more tests to validate improperly setup build definitions
+	 */
+	public void testTestBuildDefinition() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+
+			String buildDefinitionName = "BuildDefinitionName" + System.currentTimeMillis();
+			@SuppressWarnings("unchecked")
+			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
+					"setupTestBuildDefinition", new Class[] {
+							String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							int.class, // timeout,
+							String.class}, // Build Definition Name,
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(),
+					buildDefinitionName);
+
+			try {
+				
+				String errorMessage = RTCFacadeFacade.testBuildDefinition(
+					Config.DEFAULT.getToolkit(),
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(),
+					false, // using toolkit
+					buildDefinitionName);
+				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+
+				errorMessage = RTCFacadeFacade.testBuildDefinition(
+						Config.DEFAULT.getToolkit(),
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						true, // avoiding toolkit
+						buildDefinitionName);
+				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+
+			} finally {
+				testingFacade.invoke(
+						"tearDown",
+						new Class[] { String.class, // serverURI
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								Map.class}, // setupArtifacts
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						setupArtifacts);
+			}
+		}
+	}
+	
+	/**
+	 * Execute tests comparing incoming changes, for quite period implementation
+	 * @throws Exception
+	 */
+	public void testCompareIncomingChanges() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			System.out.println("&&&&&& Calling testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
+			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			testingFacade.invoke("testCompareIncomingChanges", null, null);
+			System.out.println("&&&&&& Called testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
 		}
 	}
 }

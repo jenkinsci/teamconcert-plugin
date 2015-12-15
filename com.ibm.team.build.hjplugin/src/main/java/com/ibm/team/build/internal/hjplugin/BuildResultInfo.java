@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,8 @@
 
 package com.ibm.team.build.internal.hjplugin;
 
+import java.io.Serializable;
+
 /**
  * This class is used in the H/J plugin to hold information about
  * the build result (like how it was started and by whom).
@@ -18,20 +20,35 @@ package com.ibm.team.build.internal.hjplugin;
  * the -rtc plugin can populate it appropriately. It can not implement
  * the IBuildResultInfo interface because it is within the -rtc plugin
  * and not accessible at this level.
+ * 
+ * It is also used potentially on the slave when initializing the build result
+ * prior to actual checkout. The info within is sent from the slave to the client
+ * so that Hudson/Jenkins extensions to the build can be created.
  */
-public class BuildResultInfo {
+public class BuildResultInfo implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
 	private final String buildResultUUID;
+	private boolean ownLifeCycle;
 	private boolean isPersonalBuild;
 	private boolean isScheduled;
 	private String requestor;
 	
-	public BuildResultInfo(String buildResultUUID) {
+	public BuildResultInfo(String buildResultUUID, boolean ownBuildResultLifeCycle) {
 		this.buildResultUUID = buildResultUUID;
+		this.ownLifeCycle = ownBuildResultLifeCycle;
 	}
 
 	public String getBuildResultUUID() {
 		return buildResultUUID;
+	}
+	
+	public boolean ownLifeCycle() {
+		return ownLifeCycle;
+	}
+	
+	public void setOwnLifeCycle(boolean ownLifeCycle) {
+		this.ownLifeCycle = ownLifeCycle;
 	}
 
 	public boolean isPersonalBuild() {
