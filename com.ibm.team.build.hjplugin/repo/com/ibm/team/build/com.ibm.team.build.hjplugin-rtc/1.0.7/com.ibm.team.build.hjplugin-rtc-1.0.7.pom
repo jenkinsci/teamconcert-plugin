@@ -5,6 +5,5 @@
   <groupId>com.ibm.team.build</groupId>
   <artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
   <version>1.0.7</version>
-  <packaging>test-jar</packaging>
   <description>POM was created from install:install-file</description>
 </project>

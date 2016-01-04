@@ -72,6 +72,7 @@ import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
@@ -1169,13 +1170,14 @@ public class RTCScm extends SCM {
 				changeLog = new RemoteOutputStream(changeLogStream);
 			}
 
+			RtcExtensionProvider lrProvider = RtcExtensionProvider.getCompLoadRules(build, listener);
 			RTCCheckoutTask checkout = new RTCCheckoutTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
 					buildWorkspace,
 					label,
 					listener, changeLog,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale());
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), lrProvider);
 
 			// publish in the build result links to the project and the build
 			if (buildResultUUID != null) {

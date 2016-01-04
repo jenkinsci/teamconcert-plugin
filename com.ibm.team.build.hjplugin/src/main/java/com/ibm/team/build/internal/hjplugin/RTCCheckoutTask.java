@@ -20,6 +20,7 @@ import hudson.util.Secret;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Locale;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
 
 public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     private static final Logger LOGGER = Logger.getLogger(RTCCheckoutTask.class.getName());
@@ -45,6 +47,7 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 	private String contextStr;
 	private boolean debug;
 	private Locale clientLocale;
+	private RtcExtensionProvider lrProvider;
 	
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -79,7 +82,8 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 			String serverURI, String userId, String password, int timeout,
 			String buildResultUUID, String buildWorkspace,
 			String baselineSetName, TaskListener listener,
-			RemoteOutputStream changeLog, boolean isRemote, boolean debug, Locale clientLocale) {
+			RemoteOutputStream changeLog, boolean isRemote,
+			boolean debug, Locale clientLocale, RtcExtensionProvider lrProvider) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -96,6 +100,7 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     	this.isRemote = isRemote;
     	this.debug = debug;
     	this.clientLocale = clientLocale;
+    	this.lrProvider = lrProvider;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -173,12 +178,15 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 					OutputStream.class, // changeLog,
 					String.class, // baselineSetName,
 					Object.class, // listener
-					Locale.class // clientLocale
+					Locale.class, // clientLocale
+					Object.class, //comp load rules
+					PrintStream.class //print stream
 			}, serverURI, userId, Secret.toString(password),
 					timeout, buildResultUUID, buildWorkspace,
 					workspace.getAbsolutePath(),
 					changeLog, baselineSetName,
-					listener, clientLocale);
+					listener, clientLocale, lrProvider, listener.getLogger());
+
 
     	} catch (Exception e) {
     		Throwable eToReport = e;
@@ -196,7 +204,7 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     		
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure2(eToReport.getMessage()));
-    	}
+    	} 
     }
 
 	@Override

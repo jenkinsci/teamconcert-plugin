@@ -14,6 +14,8 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.io.PrintStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -35,6 +37,7 @@ import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationE
 import com.ibm.team.build.internal.publishing.WorkItemPublisher;
 import com.ibm.team.build.internal.scm.AcceptReport;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
+import com.ibm.team.build.internal.scm.LoadComponents;
 import com.ibm.team.build.internal.scm.RepositoryManager;
 import com.ibm.team.build.internal.scm.SourceControlUtility;
 import com.ibm.team.filesystem.client.FileSystemCore;
@@ -44,6 +47,7 @@ import com.ibm.team.filesystem.client.ISharingManager;
 import com.ibm.team.filesystem.client.internal.SharingManager;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaEvent;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaListener;
+import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.ServerVersionCheckException;
 import com.ibm.team.repository.common.TeamRepositoryException;
@@ -53,6 +57,8 @@ import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.IBaselineSet;
+import com.ibm.team.scm.common.IComponent;
+import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IWorkspaceSearchCriteria;
 
@@ -302,8 +308,8 @@ public class RepositoryConnection {
 	 * @return <code>Map<String, String></code> of build properties
 	 * @throws Exception Thrown if anything goes wrong
 	 */
-	public Map<String, String> checkout(String buildResultUUID, String buildWorkspaceName, String hjFetchDestination, ChangeReport changeReport,
-			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
+	public Map<String, String> checkout(String buildResultUUID, String buildWorkspaceName, Object lrProvider, String hjFetchDestination, ChangeReport changeReport,
+			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, final PrintStream logger) throws Exception {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
@@ -425,6 +431,14 @@ public class RepositoryConnection {
             
             // we don't need to check for a corrupt sandbox if it doesn't exist or is marked as "Delete Before Fetch"
         	File fetchDestinationFile = buildConfiguration.getFetchDestinationFile();
+        	
+        	if(lrProvider != null) {
+        		RtcExtensionProviderUtil.preUpdateFileCopyArea(lrProvider, logger, fetchDestinationFile,
+        				workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(),
+						buildResultUUID, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+        	}
+        	
         	boolean deleteNeeded = buildConfiguration.isDeleteNeeded();
             if (fetchDestinationFile.exists() && !deleteNeeded) { 
                
@@ -474,14 +488,42 @@ public class RepositoryConnection {
             	throw new InterruptedException();
             }
 
+            Map<String, String> compLoadRules = null;
+            String excludeComponents = null;
+            boolean includedComponents = buildConfiguration.includeComponents();
+            Collection<IComponentHandle> components = buildConfiguration.getComponents();
+            String snapshotUUID = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID);
+        	Map<String, String> componentInfo = getComponentInfoFromWorkspace(workspaceConnection.getComponents(), monitor.newChild(2));
+            if(lrProvider != null) {
+				compLoadRules = RtcExtensionProviderUtil.getComponentLoadRules(
+						lrProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
+						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+				excludeComponents = RtcExtensionProviderUtil.getExcludeComponentList(
+						lrProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
+						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+			}
+            
+            if(excludeComponents != null && excludeComponents.trim().length() > 0) {
+            	includedComponents = false;
+            	components = new LoadComponents(getTeamRepository(), excludeComponents).getComponentHandles();
+            }
+            
             SourceControlUtility.updateFileCopyArea(workspaceConnection,
-                    fetchDestinationFile.getCanonicalPath(), buildConfiguration.includeComponents(),
-                    buildConfiguration.getComponents(),
-                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, monitor.newChild(1)),
+                    fetchDestinationFile.getCanonicalPath(), includedComponents,
+                    components,
+                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, compLoadRules, monitor.newChild(1)),
                     buildConfiguration.createFoldersForComponents(), monitor.newChild(40));
 
             listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_complete());
             
+            if(lrProvider != null) {
+        		RtcExtensionProviderUtil.postUpdateFileCopyArea(lrProvider, logger, fetchDestinationFile,
+        				workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(),
+						buildResultUUID, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+        	}
             try {
             	getBuildConnection().completeBuildActivity(buildResultHandle, parentActivityId, monitor.newChild(1));
             } catch (TeamRepositoryException e) {
@@ -520,6 +562,18 @@ public class RepositoryConnection {
         return buildProperties;
 	}
 
+
+	private Map<String, String> getComponentInfoFromWorkspace(List components, SubMonitor newChild) {
+		Map<String, String> compMap = new HashMap<String, String>();
+		try {
+			List<IComponent> componentsInfo = fRepository.itemManager().fetchCompleteItems(components, IItemManager.DEFAULT, newChild);
+			for (IComponent iComponent : componentsInfo) {
+				compMap.put(iComponent.getItemId().getUuidValue(), iComponent.getName());
+			}
+		} catch (TeamRepositoryException e) {
+		}
+		return compMap;
+	}
 
 	/**
 	 * Create an RTC build result.

@@ -209,7 +209,7 @@ public class RTCBuildTaskIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						buildResultInfo.getBuildResultUUID(),
 						null, getTestName(), listener,
-						remoteChangeLog, true, false, Locale.getDefault());
+						remoteChangeLog, true, false, Locale.getDefault(), null);
 				
 				checkoutTask.invoke(sandboxDir, null);
 
@@ -329,7 +329,7 @@ public class RTCBuildTaskIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						buildResultInfo.getBuildResultUUID(),
 						null, getTestName(), listener,
-						remoteChangeLog, true, false, Locale.getDefault());
+						remoteChangeLog, true, false, Locale.getDefault(), null);
 				
 				checkoutTask.invoke(sandboxDir, null);
 

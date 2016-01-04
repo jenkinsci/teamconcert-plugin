@@ -379,7 +379,8 @@ public class RTCFacade {
 	public Map<String, String> checkout(String serverURI, String userId, String password,
 			int timeout, String buildResultUUID, String buildWorkspace,
 			String hjWorkspacePath, OutputStream changeLog,
-			String baselineSetName, final Object listener, Locale clientLocale) throws Exception {
+			String baselineSetName, final Object listener, Locale clientLocale,
+			Object lrProvider, PrintStream logger) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -390,8 +391,8 @@ public class RTCFacade {
 			report = new ChangeReport(changeLog);
 		}
 		try	{
-			return repoConnection.checkout(buildResultUUID, buildWorkspace,
-					hjWorkspacePath, report, baselineSetName, clientConsole, monitor, clientLocale);
+			return repoConnection.checkout(buildResultUUID, buildWorkspace, lrProvider,
+					hjWorkspacePath, report, baselineSetName, clientConsole, monitor, clientLocale, logger);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
