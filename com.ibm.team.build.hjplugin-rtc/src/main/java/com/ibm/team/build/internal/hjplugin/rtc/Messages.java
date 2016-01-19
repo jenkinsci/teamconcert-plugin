@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -278,6 +278,18 @@ public class Messages {
      */
     public String RepositoryConnection_checkout_accept(Object arg1) {
         return MessageFormat.format(getString("RepositoryConnection.checkout_accept"), arg1);
+    }
+    
+    public String RepositoryConnection_accept_unable_to_start_call_connector() {
+    	return getString("RepositoryConnection.accept_unable_to_start_call_connector");
+    }
+    
+    /**
+     * RTC Load : Unable to find WorkspaceConnection created by Accept
+     * 
+     */
+    public String RepositoryConnection_load_no_workspace_connection_for_synched_load() {
+    	return getString("RepositoryConnection.load_no_workspace_connection_for_synched_load");
     }
 
     /**

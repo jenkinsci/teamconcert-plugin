@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2015 IBM Corporation and others.
+ * Copyright (c) 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -133,7 +133,13 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 		return null;
 	}
 
-	public static RtcExtensionProvider getCompLoadRules(Run<?, ?> build, TaskListener listener) {
+	/**
+	 * 
+	 * @param build
+	 * @param listener
+	 * @return
+	 */
+	public static RtcExtensionProvider getExtensionProvider(Run<?, ?> build, TaskListener listener) {
 		if (isEnabled(build, listener)) {
 			for (RtcExtensionProvider lrProvider : RtcExtensionProvider.all()) {
 				boolean canCreate = lrProvider.isApplicable(build);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2015 IBM Corporation and others.
+ * Copyright (c) 2015, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -40,7 +40,7 @@ public class RTCAcceptReportUtility {
 	 * added (accepted) v/s deleted (discarded), reverse the uuid value if an item is
 	 * deleted (discarded). 
 	 */
-	public static int hashCode(AcceptReport acceptReport) {
+	public static int hashCode(AcceptReport acceptReport, boolean ignoreOutgoingFromBuildWorkspace) {
 		Set<String> uuidSet = new HashSet<String>();
 		for (IComponentHandle addedComponents : acceptReport.getComponentAdds()) {
 			uuidSet.add(addedComponents.getItemId().getUuidValue());
@@ -54,8 +54,10 @@ public class RTCAcceptReportUtility {
 			uuidSet.add(acceptChangeSet.getItemId().getUuidValue());
 		}
 		
-		for (IChangeSetHandle discardChangeSet : acceptReport.getDiscardChangeSets()) {
-			uuidSet.add(reverse(discardChangeSet.getItemId().getUuidValue()));
+		if (!ignoreOutgoingFromBuildWorkspace) {
+			for (IChangeSetHandle discardChangeSet : acceptReport.getDiscardChangeSets()) {
+				uuidSet.add(reverse(discardChangeSet.getItemId().getUuidValue()));
+			}
 		}
 		return uuidSet.hashCode(); 
 	}	

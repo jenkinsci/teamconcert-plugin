@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,32 +8,32 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
-
 package com.ibm.team.build.internal.hjplugin;
 
 import hudson.AbortException;
 import hudson.model.TaskListener;
-import hudson.remoting.RemoteOutputStream;
 import hudson.remoting.VirtualChannel;
 import hudson.util.Secret;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Locale;
-import java.util.Map;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
 
-@Deprecated
-public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
-    private static final Logger LOGGER = Logger.getLogger(RTCCheckoutTask.class.getName());
 
+/**
+ * Class responsible for Loading
+ *
+ */
+public class RTCLoadTask extends RTCTask<Void> {
+	private static final Logger LOGGER = Logger.getLogger(RTCLoadTask.class.getName());
+	
 	private String buildToolkit;
     private String serverURI;
 	private String userId;
@@ -43,11 +43,12 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 	private String buildResultUUID;
 	private TaskListener listener;
 	private String baselineSetName;
-	private RemoteOutputStream changeLog;
 	private boolean isRemote;
 	private String contextStr;
 	private boolean debug;
 	private Locale clientLocale;
+	private String parentActivityId;
+	private String connectorId;
 	private RtcExtensionProvider extProvider;
 	
 	/**
@@ -60,7 +61,7 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Task that performs checkout work on the master or the slave
+	 * Task that performs accept work on the master or the slave
 	 * @param contextStr Context for logging
 	 * @param buildToolkit The build toolkit to use when working with the facade
 	 * @param serverURI The address of the repository server
@@ -74,18 +75,17 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 	 * @param buildResultUUID The build result to relate build results with.
 	 * @param baselineSetName The name to give the baselineSet created
 	 * @param listener A listener that will be notified of the progress and errors encountered.
-	 * @param changeLog Output stream to hold the Change log results. May be <code>null</code>.
 	 * @param isRemote Whether this will be executed on the Master or a slave
 	 * @param debug Whether to report debugging messages to the listener
 	 * @param clientLocale The locale of the requesting client
-	 * @param extProvider extension provider can be <code>null</code>
+	 * @param extProvider The extension provider can be <code>null</code> 
 	 */
-	public RTCCheckoutTask(String contextStr, String buildToolkit,
+	public RTCLoadTask(String contextStr, String buildToolkit,
 			String serverURI, String userId, String password, int timeout,
 			String buildResultUUID, String buildWorkspace,
 			String baselineSetName, TaskListener listener,
-			RemoteOutputStream changeLog, boolean isRemote,
-			boolean debug, Locale clientLocale, RtcExtensionProvider extProvider) {
+			boolean isRemote, boolean debug, Locale clientLocale, 
+			String parentActivityId, String connectorId, RtcExtensionProvider extProvider) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -98,10 +98,11 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     	this.buildResultUUID = buildResultUUID;
     	this.baselineSetName = baselineSetName;
     	this.listener = listener;
-    	this.changeLog = changeLog;
     	this.isRemote = isRemote;
     	this.debug = debug;
     	this.clientLocale = clientLocale;
+    	this.parentActivityId = parentActivityId;
+    	this.connectorId = connectorId;
     	this.extProvider = extProvider;
 	}
 	/**
@@ -116,7 +117,7 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 		this.buildUrl = buildUrl;
 	}
 
-	public Map<String, String> invoke(File workspace, VirtualChannel channel) throws IOException, InterruptedException {
+	public Void invoke(File workspace, VirtualChannel channel) throws IOException, InterruptedException {
 		if (debug) {
 			debug("Running " + contextStr); //$NON-NLS-1$
 			debug("serverURI " + serverURI); //$NON-NLS-1$
@@ -127,6 +128,7 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 			debug("listener is " + (listener == null ? "null" : "not null")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("Running remote " + isRemote); //$NON-NLS-1$
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
+			debug("parentActivityId " + parentActivityId);
 		}
 
 		try {
@@ -134,42 +136,8 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     		if (debug) {
     			debug("hjplugin-rtc.jar " + RTCFacadeFactory.getFacadeJarURL(listener.getLogger()).toString()); //$NON-NLS-1$
     		}
-    		if (buildResultUUID != null) {
-				try {
-					facade.invoke(
-							"createBuildLinks", new Class[] { //$NON-NLS-1$
-							String.class, // serverURI,
-									String.class, // userId,
-									String.class, // password,
-									int.class, // timeout,
-									String.class, // buildResultUUID
-									String.class, // rootUrl
-									String.class, // projectUrl
-									String.class, // buildUrl
-									Object.class, // listener)
-							}, serverURI, userId, Secret.toString(password), 
-							timeout, buildResultUUID, root, projectUrl,
-							buildUrl, listener);
-				} catch (Exception e) {
-	    			// failure to create links is not a reason to abort the build unless cancelled
-					Throwable eToReport = e;
-					if (e instanceof InvocationTargetException) {
-						eToReport = e.getCause();
-					}
-		    		if (eToReport instanceof InterruptedException) {
-		    			if (debug) {
-		    				debug("build link creation interrupted " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
-		    			}
-		    			throw (InterruptedException) eToReport;
-		    		}
-					listener.getLogger().println(Messages.RTCScm_link_creation_failure(e.getMessage()));
-	    			if (debug) {
-	    				debug("Failed to create build links", eToReport); //$NON-NLS-1$
-	    			}
-				}
-    		}
     		
-			return (Map<String, String>) facade.invoke("checkout", new Class[] { //$NON-NLS-1$
+			facade.invoke("load", new Class[] { //$NON-NLS-1$
 					String.class, // serverURI,
 					String.class, // userId,
 					String.class, // password,
@@ -177,18 +145,19 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
 					String.class, // buildResultUUID,
 					String.class, // buildWorkspace,
 					String.class, // hjWorkspacePath,
-					OutputStream.class, // changeLog,
 					String.class, // baselineSetName,
 					Object.class, // listener
 					Locale.class, // clientLocale
-					Object.class, //ext provider
+					String.class, // parentActivityId
+					String.class, // connectorId
+					Object.class, //extension provider
 					PrintStream.class //print stream
 			}, serverURI, userId, Secret.toString(password),
 					timeout, buildResultUUID, buildWorkspace,
 					workspace.getAbsolutePath(),
-					changeLog, baselineSetName,
-					listener, clientLocale, extProvider, listener.getLogger());
-
+					baselineSetName,
+					listener, clientLocale, parentActivityId, connectorId,
+					extProvider, listener.getLogger());
 
     	} catch (Exception e) {
     		Throwable eToReport = e;
@@ -206,11 +175,14 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     		
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure2(eToReport.getMessage()));
-    	} 
+    	}
+		
+		return null;
     }
 
 	@Override
 	protected Logger getLogger() {
 		return LOGGER;
 	}
+	
 }
