@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -72,6 +72,7 @@ import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
@@ -82,6 +83,10 @@ public class RTCScm extends SCM {
     private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
 
 	private static final String DEBUG_PROPERTY = "com.ibm.team.build.debug"; //$NON-NLS-1$
+	
+	private static final String CALL_CONNECTOR_TIMEOUT_PROPERTY = "com.ibm.team.build.callConnector.timeout"; //$NON-NLS-1$
+	
+	private static final String IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING = "com.ibm.team.build.ignoreOutgoingFromBuildWorkspaceWhilePolling"; //$NON-NLS-1$
 	
 	private static final String DEPRECATED_CREDENTIAL_EDIT_ALLOWED = "com.ibm.team.build.credential.edit"; //$NON-NLS-1$
 
@@ -1078,7 +1083,7 @@ public class RTCScm extends SCM {
 		}
 		// if buildResultUUID is not null then we need to match...
 		if (buildResultUUID != null) {
-			if (!match(loginInfo, nodeBuildToolkit, buildResultUUID, buildDefinition, buildWorkspace, debug, listener, LocaleProvider.getLocale())) {
+			if (!match(loginInfo, localBuildToolkit, buildResultUUID, buildDefinition, buildWorkspace, debug, listener, LocaleProvider.getLocale())) {
 				buildResultUUID = null;
 			}
 		}
@@ -1168,14 +1173,22 @@ public class RTCScm extends SCM {
 				OutputStream changeLogStream = new FileOutputStream(changeLogFile);
 				changeLog = new RemoteOutputStream(changeLogStream);
 			}
+			
+			//get the extension provider
+			RtcExtensionProvider extProvider = RtcExtensionProvider.getExtensionProvider(build, listener);
+			
+			String strCallConnectorTimeout = build.getEnvironment(listener).get(CALL_CONNECTOR_TIMEOUT_PROPERTY);
+			if ((strCallConnectorTimeout == null) || !strCallConnectorTimeout.matches("\\d+")) {
+				strCallConnectorTimeout = "";
+			}
 
-			RTCCheckoutTask checkout = new RTCCheckoutTask(
+			RTCAcceptTask acceptTask = new RTCAcceptTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
 					buildWorkspace,
 					label,
 					listener, changeLog,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale());
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout);
 
 			// publish in the build result links to the project and the build
 			if (buildResultUUID != null) {
@@ -1191,11 +1204,36 @@ public class RTCScm extends SCM {
 				if (buildUrl != null) {
 					buildUrl = Util.encode(buildUrl);
 				}
-				checkout.setLinkURLs(rootUrl,  projectUrl, buildUrl);
+				acceptTask.setLinkURLs(rootUrl,  projectUrl, buildUrl);
 			}
 			
-			Map<String, String> buildProperties = workspacePath.act(checkout);
+			Map<String, Object> acceptResult = workspacePath.act(acceptTask);
+			Map<String, String> buildProperties = (Map<String, String>)acceptResult.get("buildProperties");
 			buildResultAction.addBuildProperties(buildProperties);
+			String parentActivityId = (String)acceptResult.get("parentActivityId");
+			String connectorId = (String)acceptResult.get("connectorId");
+			
+			RTCLoadTask loadTask = new RTCLoadTask(
+					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
+					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
+					buildResultUUID, buildWorkspace,	label, listener,
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider);
+			if (buildResultUUID != null) {
+				String rootUrl = Hudson.getInstance().getRootUrl();
+				if (rootUrl != null) {
+					rootUrl = Util.encode(rootUrl);
+				}
+				String projectUrl = build.getParent().getUrl();
+				if (projectUrl != null) {
+					projectUrl = Util.encode(projectUrl);
+				}
+				String buildUrl = build.getUrl();
+				if (buildUrl != null) {
+					buildUrl = Util.encode(buildUrl);
+				}
+				loadTask.setLinkURLs(rootUrl,  projectUrl, buildUrl);
+			}
+			workspacePath.act(loadTask);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;
@@ -1300,12 +1338,15 @@ public class RTCScm extends SCM {
 	    			return new PollingResult(revisionState, new RTCRevisionState(0), Change.NONE);
 	    		}
     		} else {
+    			String strIgnoreOutgoingFromBuildWorkspace = System.getProperty(IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING);
+    			boolean ignoreOutgoingFromBuildWorkspace = "true".equals(strIgnoreOutgoingFromBuildWorkspace); 
+    			
     			Integer currentRevisionHash = RTCFacadeFacade.incomingChangesUsingBuildToolkit(masterToolkit,
 	    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
 						loginInfo.getTimeout(), useBuildDefinitionInBuild,
 						getBuildDefinition(),
 						getBuildWorkspace(),
-						listener);
+						listener, ignoreOutgoingFromBuildWorkspace);
     			RTCRevisionState currentRevisionState = new RTCRevisionState(currentRevisionHash);
     			Change change = null;
     			if (isInQueue(project)) {
@@ -1323,7 +1364,21 @@ public class RTCScm extends SCM {
     					change = Change.NONE;
     				}
     			} else {
-    				change = (currentRevisionHash == 0) ? Change.NONE : Change.SIGNIFICANT;
+    				if (project.isBuilding()) {
+    					RTCBuildResultAction rtcBuildResultAction = project.getLastBuild().getAction(RTCBuildResultAction.class);
+    					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null) &&
+    							(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver").equals("true"))) {
+    						// snapshot has been created, 
+    						// hence further changes would not be taken by this build...
+    						change = (currentRevisionHash == 0) ? Change.NONE : Change.SIGNIFICANT;
+    					} else {
+    						// build is running, but snapshot has not been created yet,
+    						// hence any further changes can still be considered by this build
+    						change = Change.NONE;
+    					}
+    				} else {
+    					change = (currentRevisionHash == 0) ? Change.NONE : Change.SIGNIFICANT;
+    				}
     			}
     			return new PollingResult(revisionState, currentRevisionState, change);
     		}

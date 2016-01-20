@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -135,7 +135,7 @@ public class RTCFacadeFacade {
 	public static Integer incomingChangesUsingBuildToolkit(String buildToolkitPath, String serverURI, 
 			String userId, String password,
 			int timeout, boolean useBuildDefinition, String buildDefinitionId,
-			String workspaceName, TaskListener listener) throws Exception {
+			String workspaceName, TaskListener listener, boolean ignoreOutgoingFromBuildWorkspace) throws Exception {
 		listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_toolkit());
 		
 		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, listener.getLogger());
@@ -148,12 +148,13 @@ public class RTCFacadeFacade {
 						String.class, // buildDefinition
 						String.class, // buildWorkspace
 						Object.class, // listener
-						Locale.class}, // clientLocale
+						Locale.class, // clientLocale
+						boolean.class}, // ignoreOutgoingFromBuildWorkspace
 				serverURI, userId, password,
 				timeout, 
 				(useBuildDefinition ? buildDefinitionId : ""), //$NON-NLS-1$
 				(useBuildDefinition ? "" : workspaceName), //$NON-NLS-1$
-				listener, LocaleProvider.getLocale());
+				listener, LocaleProvider.getLocale(), ignoreOutgoingFromBuildWorkspace);
 		return changesIncoming;
 
 	}

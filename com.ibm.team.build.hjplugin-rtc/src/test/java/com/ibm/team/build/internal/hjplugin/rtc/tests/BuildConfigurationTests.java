@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -141,7 +141,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel",listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -154,7 +154,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertTrue(buildConfiguration.includeComponents(), "Should be a list of components to include");
 		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "Should be creating a folder for the component");
 		AssertUtil.assertEquals(0, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponents().size());
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID), buildConfiguration.getComponents().iterator().next().getItemId().getUuidValue());
 		File expectedLoadDir = new File(hjPath);
@@ -290,7 +290,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
@@ -420,7 +420,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
@@ -644,7 +644,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, "loadDir/here");

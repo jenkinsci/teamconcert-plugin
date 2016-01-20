@@ -4,6 +4,6 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ibm.team.build</groupId>
   <artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
   <description>POM was created from install:install-file</description>
 </project>

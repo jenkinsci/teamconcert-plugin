@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -45,6 +45,7 @@ import com.ibm.team.build.internal.scm.ComponentLoadRules;
 import com.ibm.team.build.internal.scm.LoadComponents;
 import com.ibm.team.filesystem.client.ILocation;
 import com.ibm.team.filesystem.client.internal.PathLocation;
+import com.ibm.team.filesystem.client.operations.ILoadRule2;
 import com.ibm.team.filesystem.common.IFileItemHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
@@ -335,10 +336,12 @@ public class BuildConfiguration {
      * returned. Never <code>null</code>
      * @throws TeamRepositoryException If anything goes wrong retrieving the load rules
      */
-    public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection, IProgressMonitor progress) throws TeamRepositoryException {
+    @SuppressWarnings("rawtypes")
+	public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection, Map<String, String> compLoadRules, IProgressMonitor progress) throws TeamRepositoryException {
     	SubMonitor monitor = SubMonitor.convert(progress, 100);
         if (loadRuleUUIDs != null) {
-        	// Determine if the new format of load rules is supported and if so, will it be able to find
+          	Collection loadRules = new ArrayList<Object>();
+           // Determine if the new format of load rules is supported and if so, will it be able to find
         	// the schema to validate against.
         	boolean useOverride = false;
     		try {
@@ -357,18 +360,19 @@ public class BuildConfiguration {
     		} catch (ClassNotFoundException e) {
     			// uses old load rule support
     		}
-
+    		
+    		Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules);
+    		Map<String, Object> allLoadRules = new HashMap<String, Object>();
+    		
 			if (useOverride) {
             	ComponentLoadRules rules = new ComponentLoadRules(loadRuleUUIDs);
             	Map<IComponentHandle, IFileItemHandle> ruleFiles = rules.getLoadRuleFiles();
-            	
-            	Collection loadRules = new ArrayList<Object>(ruleFiles.size());
             	monitor.setWorkRemaining(20 * ruleFiles.size());
                 for (Map.Entry<IComponentHandle, IFileItemHandle> entry : ruleFiles.entrySet()) {
                     IComponentHandle componentHandle = entry.getKey();;
                     try {
-                        Object rule = NonValidatingLoadRuleFactory.getLoadRule(workspaceConnection, componentHandle, entry.getValue(), monitor.newChild(10));
-                        loadRules.add(rule);
+                    	Object rule = NonValidatingLoadRuleFactory.getLoadRule(workspaceConnection, componentHandle, entry.getValue(), monitor.newChild(10));
+                        allLoadRules.put(componentHandle.getItemId().getUuidValue(), rule);
                     } catch (TeamRepositoryException e1) {
                     	// Generalized to handle more than just the VersionablePermissionException
                     	// That exception can't be handled directly because its not defined in older releases
@@ -392,16 +396,82 @@ public class BuildConfiguration {
                         }
                     }
                 }
-                return loadRules;
-        	} else {
-            	ComponentLoadRules rules = new ComponentLoadRules(loadRuleUUIDs); 
-                return rules.getLoadRules(workspaceConnection, monitor.newChild(100));
+                
+  		    }else {
+				ComponentLoadRules rules = new ComponentLoadRules(loadRuleUUIDs);
+				Map<IComponentHandle, IFileItemHandle> ruleFiles = rules.getLoadRuleFiles();
+				for (Map.Entry<IComponentHandle, IFileItemHandle> entry : ruleFiles.entrySet()) {
+					IComponentHandle componentHandle = entry.getKey();
+					try {
+						Map<IComponentHandle, IFileItemHandle> cFile = new HashMap<IComponentHandle, IFileItemHandle>(1);
+						cFile.put(entry.getKey(), entry.getValue());
+						ComponentLoadRules cRule = new ComponentLoadRules(cFile);
+						Collection<ILoadRule2> cRuleObj = cRule.getLoadRules(workspaceConnection, monitor.newChild(1));
+						if (cRuleObj != null && cRuleObj.size() == 1) {
+							allLoadRules.put(componentHandle.getItemId().getUuidValue(), cRuleObj.iterator().next());
+						}
+					} catch (Exception e) {
+						throw new TeamRepositoryException(e);
+					}
+				}
             }
+			
+			//consolidate the loadrules, load rules provided via extension override the pre defined ones
+			if (customLoadRules != null && customLoadRules.size() > 0) {
+				for (Map.Entry<String, Object> cRule : customLoadRules.entrySet()) {
+					Object rule = cRule.getValue();
+					if(rule instanceof ILoadRule2) {
+						allLoadRules.put(cRule.getKey(), rule);
+					}
+				}
+			}
+			if(allLoadRules != null && allLoadRules.size() > 0) {
+				loadRules = allLoadRules.values();
+			}
+	        return loadRules;
+        }else if (compLoadRules != null && compLoadRules.size() > 0) {
+        	//no predefine load rules defined  use the custom load rules
+         	Collection<Object> loadRules = new ArrayList<Object>();
+            Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules);
+        	if(customLoadRules != null && customLoadRules.size() > 0) {
+        		for (Map.Entry<String, Object> cRule : customLoadRules.entrySet()) {
+					Object rule = cRule.getValue();
+					if(rule instanceof ILoadRule2) {
+						loadRules.add(rule);
+					}
+				}
+        	}
+        	if(loadRules.size() > 0) {
+        		return loadRules;
+        	}
         }
         return Collections.EMPTY_LIST;
     }
 
-    private boolean getIncludeComponents(IBuildDefinitionInstance instance) {
+    //TODO: Check if Object can be changed to ILoadRule2
+    private Map<String, Object> getCustomLoadRules(IWorkspaceConnection connection,
+			Map<String, String> compLoadRules) {
+    	Map<String, Object> lRules = new HashMap<String, Object>();
+    	if(compLoadRules != null && compLoadRules.size() > 0) {
+    		for(String comp : compLoadRules.keySet()) {
+    			String lrFile = compLoadRules.get(comp);
+    			if(lrFile != null && new File(lrFile).isFile()) {
+    	             try {
+						Object rule = NonValidatingLoadRuleFactory.getLoadRule(connection, lrFile, null);
+						if(rule != null) {
+							lRules.put(comp, rule);
+						}
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+    			}
+    		}
+    	}
+		return lRules;
+	}
+
+	private boolean getIncludeComponents(IBuildDefinitionInstance instance) {
         IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_INCLUDE_COMPONENTS);
         if (property != null && property.getValue().length() > 0) {
             return Boolean.valueOf(property.getValue());

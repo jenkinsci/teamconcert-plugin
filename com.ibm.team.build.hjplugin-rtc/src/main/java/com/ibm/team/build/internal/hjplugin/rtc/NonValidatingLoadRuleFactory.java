@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,9 @@
 package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -167,6 +170,24 @@ public class NonValidatingLoadRuleFactory {
         return handler.getLoadRule(connection, progress);
     }
 
+    public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, String filePath, IProgressMonitor progress) throws TeamRepositoryException {
+        try {
+			File lFile = new File(filePath);
+			if (lFile != null && lFile.exists() && lFile.isFile()) {
+			    // assume UTF-8 because we are assuming we generated it.
+			    CharsetDecoder decoder = Charset.forName(IFileContent.ENCODING_UTF_8).newDecoder()
+			            .onMalformedInput(CodingErrorAction.REPORT)
+			            .onUnmappableCharacter(CodingErrorAction.REPORT);
+			    Reader reader = new InputStreamReader(new FileInputStream(lFile), decoder);
+			    return getLoadRule(connection, null, reader, null);
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        return null;
+    }
+    
     public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, IComponentHandle componentHandle, IFileItemHandle fileVersionable,
             IProgressMonitor progress) throws TeamRepositoryException {
 
@@ -191,6 +212,7 @@ public class NonValidatingLoadRuleFactory {
         
         return getLoadRule(connection, componentHandle, reader, monitor.newChild(98));
     }
+
 
     private static boolean isXMLInput(BufferedReader input) throws IOException {
         boolean result = false;

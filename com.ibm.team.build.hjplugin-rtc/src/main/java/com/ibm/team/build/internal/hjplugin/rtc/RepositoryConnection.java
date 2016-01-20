@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,6 +14,8 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.io.PrintStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -35,6 +37,7 @@ import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationE
 import com.ibm.team.build.internal.publishing.WorkItemPublisher;
 import com.ibm.team.build.internal.scm.AcceptReport;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
+import com.ibm.team.build.internal.scm.LoadComponents;
 import com.ibm.team.build.internal.scm.RepositoryManager;
 import com.ibm.team.build.internal.scm.SourceControlUtility;
 import com.ibm.team.filesystem.client.FileSystemCore;
@@ -44,6 +47,7 @@ import com.ibm.team.filesystem.client.ISharingManager;
 import com.ibm.team.filesystem.client.internal.SharingManager;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaEvent;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaListener;
+import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.ServerVersionCheckException;
 import com.ibm.team.repository.common.TeamRepositoryException;
@@ -53,6 +57,8 @@ import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.IBaselineSet;
+import com.ibm.team.scm.common.IComponent;
+import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IWorkspaceSearchCriteria;
 
@@ -216,12 +222,13 @@ public class RepositoryConnection {
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
+	 * @param ignoreOutgoingFromBuildWorkspace if true, then ignore outgoing changes from build workspace
 	 * @return <code>Non zero</code> if there are changes for the build workspace
 	 * <code>0</code> otherwise
 	 * @throws Exception Thrown if anything goes wrong.
 	 */
 	public int incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener,
-			IProgressMonitor progress, Locale clientLocale) throws Exception {
+			IProgressMonitor progress, Locale clientLocale, boolean ignoreOutgoingFromBuildWorkspace) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(10));
 		BuildWorkspaceDescriptor workspace;
@@ -245,7 +252,7 @@ public class RepositoryConnection {
 		}
 
 		AcceptReport report = SourceControlUtility.checkForIncoming(fRepositoryManager, workspace, monitor.newChild(80));
-		return RTCAcceptReportUtility.hashCode(report);
+		return RTCAcceptReportUtility.hashCode(report, ignoreOutgoingFromBuildWorkspace);
 	}
 	
 	/**
@@ -284,6 +291,372 @@ public class RepositoryConnection {
 	}
 
 	/**
+	 * Update the build workspace. Create a snapshot of the build workspace and
+	 * report on the changes made to it. Update the build result with information about the build.
+	 * A call to this method should be followed by call to load method.
+	 * 
+	 * @param buildResultUUID The id of the build result (which also contains the build request & build definition instance)
+	 * May be <code>null</code> if buildWorkspaceName is supplied. Only one of buildResultUUID/buildWorkspaceName should be
+	 * supplied
+	 * @param buildWorkspaceName Name of the RTC build workspace (changes will be accepted into it)
+	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName should be
+	 * supplied
+	 * @param hjFetchDestination The location the build workspace is to be loaded
+	 * @param changeReport The report to be built of all the changes accepted/discarded. May be <code> null </code>.
+	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
+	 * @param callConnectorTimeout user defined call connector timeout
+	 * @return <code>Map<String, Object></code> containing build properties, and CallConnector details
+	 * @throws Exception Thrown if anything goes wrong
+	 */
+	public Map<String, Object> accept(String buildResultUUID, String buildWorkspaceName, String hjFetchDestination, ChangeReport changeReport,
+			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale,
+			String callConnectorTimeout) throws Exception {
+
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
+		ensureLoggedIn(monitor.newChild(1));
+		
+		BuildWorkspaceDescriptor workspace;
+        
+		BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), hjFetchDestination);
+		
+		// If we have a build result, the build definition that describes what is to be accepted into & how to load
+		// Otherwise, the build workspace on the Jenkins definition is used.
+		IBuildResultHandle buildResultHandle = null;
+		if (buildResultUUID != null && buildResultUUID.length() > 0) {
+			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+	        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
+
+		} else {
+			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(1), clientLocale);
+			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName);
+		}
+		
+		Map<String, String> buildProperties = buildConfiguration.getBuildProperties();
+
+        workspace = buildConfiguration.getBuildWorkspaceDescriptor();
+
+        listener.log(Messages.getDefault().RepositoryConnection_checkout_setup());
+        String parentActivityId = getBuildConnection().startBuildActivity(buildResultHandle,
+                Messages.getDefault().RepositoryConnection_pre_build_activity(), null, false, monitor.newChild(1));
+
+        AcceptReport acceptReport = null;
+        
+        getBuildConnection().addWorkspaceContribution(workspace.getWorkspace(fRepositoryManager, monitor.newChild(1)),
+        		buildResultHandle, monitor.newChild(1));
+
+        // Ensure we hang onto this between the accept and the load steps so that if 
+        // we are synchronizing, we use the same cached sync times.
+        IWorkspaceConnection workspaceConnection = workspace.getConnection(fRepositoryManager, false, monitor.newChild(1));
+        
+        // Warn if the build user id can't see all the components in the build workspace
+        if (!workspaceConnection.getUnreadableComponents().isEmpty()) {
+            listener.log(Messages.getDefault().RepositoryConnection_hidden_components(
+                    workspaceConnection.getName(), workspaceConnection.getUnreadableComponents().size()));
+        }
+
+        if (!buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch()) {
+            listener.log(Messages.getDefault().RepositoryConnection_checkout_accept(
+            		workspaceConnection.getName()));
+
+            getBuildConnection().startBuildActivity(buildResultHandle,
+                    Messages.getDefault().RepositoryConnection_activity_accepting_changes(), parentActivityId, true,
+                    monitor.newChild(1));
+
+            if (monitor.isCanceled()) {
+            	throw new InterruptedException();
+            }
+            
+            acceptReport = SourceControlUtility.acceptAllIncoming(
+                    fRepositoryManager, workspace, buildConfiguration.getSnapshotName(),
+                    monitor.newChild(40));
+            buildProperties.put("team.scm.acceptPhaseOver", "true");
+            getBuildConnection().addSnapshotContribution(acceptReport.getSnapshot(), buildResultHandle, monitor.newChild(1));
+            
+            int acceptCount = acceptReport.getChangesAcceptedCount();
+            if (acceptCount > 0) {
+                buildProperties.put(IJazzScmConfigurationElement.PROPERTY_CHANGES_ACCEPTED, String.valueOf(acceptCount));
+            }
+
+            IBaselineSet snapshot = acceptReport.getSnapshot();
+            if (snapshot != null) {
+            	buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, snapshot.getItemId().getUuidValue());
+            }
+            
+            if (buildResultHandle != null) {
+            	WorkItemPublisher workItemPublisher = new WorkItemPublisher();
+            	workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), getTeamRepository());
+            }
+
+            if (monitor.isCanceled()) {
+            	throw new InterruptedException();
+            }
+            if (changeReport != null) {
+		            // build change report
+		            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+		            changeReportBuilder.populateChangeReport(changeReport,
+		            		workspaceConnection.getResolvedWorkspace(), acceptReport,
+		            		listener, monitor.newChild(2));
+            }
+            
+        } else {
+        	if (changeReport != null) {
+	            // build change report
+	            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+	            changeReportBuilder.populateChangeReport(changeReport,
+	            		buildConfiguration.isPersonalBuild(),
+	            		listener);
+        	}
+        }
+        if ( changeReport != null ) {
+        	changeReport.prepareChangeSetLog();
+        }
+
+        buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("buildProperties", buildProperties);
+        
+        // lets cache the workspace connection object for subsequent "load" call...
+        CallConnector<IWorkspaceConnection> callConnector = null;
+        String connectorId = "";
+        try {
+            if ((callConnectorTimeout != null) && (!"".equals(callConnectorTimeout)) && callConnectorTimeout.matches("\\d+")) {
+            	long timeout = Long.parseLong(callConnectorTimeout) * 1000;
+            	callConnector = new CallConnector<IWorkspaceConnection>(workspaceConnection, timeout);
+            } else {
+            	callConnector = new CallConnector<IWorkspaceConnection>(workspaceConnection);
+            }
+    		callConnector.start();
+    		connectorId = (new Long(callConnector.getId())).toString();
+        } catch(Exception e) {
+    		String errorMessage = Messages.getDefault().RepositoryConnection_accept_unable_to_start_call_connector();
+    		// can't proceed if load has to be synchronized, 
+    		// since we are unable to obtain workspace connection object
+    		TeamBuildException exception = new TeamBuildException(errorMessage);
+    		listener.log(errorMessage, exception);
+    		throw exception;
+        }
+        result.put("connectorId", connectorId);
+        result.put("parentActivityId", parentActivityId);
+        
+        return result;
+	}
+
+	/**
+	 * Load the build workspace. This call is expected to follow a call to accept method.
+	 * 
+	 * @param buildResultUUID The id of the build result (which also contains the build request & build definition instance)
+	 * May be <code>null</code> if buildWorkspaceName is supplied. Only one of buildResultUUID/buildWorkspaceName should be
+	 * supplied
+	 * @param buildWorkspaceName Name of the RTC build workspace (changes will be accepted into it)
+	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName should be
+	 * supplied
+	 * @param hjFetchDestination The location the build workspace is to be loaded
+	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+	 * @param clientLocale The locale of the requesting client
+	 * @param buildProperties buildProperties created so far by accept call
+	 * @param connectorId CallConnector id to retrieve shared data (workspaceConnection) from, that was created by accept call
+	 * @param extProvider Extension provider
+	 * @param logger logger object
+	 * @throws Exception Thrown if anything goes wrong
+	 */
+	public void load(String buildResultUUID, String buildWorkspaceName, String hjFetchDestination,
+			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale,
+			String parentActivityId, String connectorId, Object extProvider, final PrintStream logger) throws Exception {
+        // Lets get same workspaceConnection as created by accept call so that if 
+        // we are synchronizing, we use the same cached sync times.
+        IWorkspaceConnection workspaceConnection = null;
+        if (!"".equals(connectorId)) {
+        	workspaceConnection = (IWorkspaceConnection)CallConnector.getValue(Long.parseLong(connectorId));
+        }
+
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+
+		ensureLoggedIn(monitor.newChild(1));
+		
+        BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), hjFetchDestination);
+		
+		// If we have a build result, the build definition that describes what is to be accepted into & how to load
+		// Otherwise, the build workspace on the Jenkins definition is used.
+		IBuildResultHandle buildResultHandle = null;
+		if (buildResultUUID != null && buildResultUUID.length() > 0) {
+			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+	        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
+
+		} else {
+			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(1), clientLocale);
+			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName);
+		}
+		
+        boolean synchronizeLoad = !buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch();
+        BuildWorkspaceDescriptor workspace = buildConfiguration.getBuildWorkspaceDescriptor();
+
+        // if we could not get workspace connection created by accept call, lets create it afresh
+        if (workspaceConnection == null) {
+    		String errorMessage = Messages.getDefault().RepositoryConnection_load_no_workspace_connection_for_synched_load();
+        	if (synchronizeLoad) {
+        		// can't proceed if load has to be synchronized, 
+        		// since we are unable to obtain workspace connection object
+        		TeamBuildException exception = new TeamBuildException(errorMessage);
+        		listener.log(errorMessage, exception);
+        		throw exception;
+        	}
+        	// otherwise just log error message
+        	listener.log(errorMessage);
+        	// and proceed by creating a new workspace connection...
+        	workspaceConnection = workspace.getConnection(fRepositoryManager, false, monitor.newChild(1));
+        }
+
+		ISharingManager manager = FileSystemCore.getSharingManager();
+        final ILocation fetchLocation = buildConfiguration.getFetchDestinationPath();
+        ISandbox sandbox = manager.getSandbox(fetchLocation, false);
+
+        // Create a listener to handle corrupt states which may happen during loading
+        ICorruptCopyFileAreaListener corruptSandboxListener = new ICorruptCopyFileAreaListener () {
+            public void corrupt(ICorruptCopyFileAreaEvent event) {
+                if (event.isCorrupt() && event.getRoot().equals(fetchLocation)) {
+                    listener.log(Messages.getDefault().RepositoryConnection_corrupt_metadata(
+                    		fetchLocation.toOSString()));
+                }
+            }
+        };
+        
+        try {
+            
+            // we don't need to check for a corrupt sandbox if it doesn't exist or is marked as "Delete Before Fetch"
+        	File fetchDestinationFile = buildConfiguration.getFetchDestinationFile();
+        	if(extProvider != null) {
+        		RtcExtensionProviderUtil.preUpdateFileCopyArea(extProvider, logger, fetchDestinationFile,
+        				workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(),
+						buildResultUUID, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+        	}
+        	
+        	boolean deleteNeeded = buildConfiguration.isDeleteNeeded();
+            if (fetchDestinationFile.exists() && !deleteNeeded) { 
+               
+                if (!sandbox.isRegistered()) {
+                    // the sandbox must be registered in order to call .isCorrupted()
+                    manager.register(sandbox, false, monitor.newChild(1));
+                }
+                
+                if (sandbox.isCorrupted(monitor.newChild(1))) {
+                    deleteNeeded = true;
+                    listener.log(Messages.getDefault().RepositoryConnection_corrupt_metadata_found(
+                            fetchDestinationFile.getCanonicalPath()));
+                    LOGGER.finer("Corrupt metadata for sandbox " +  //$NON-NLS-1$
+                            fetchDestinationFile.getCanonicalPath());
+                }
+            }
+
+            if (deleteNeeded) {
+                listener.log(Messages.getDefault().RepositoryConnection_checkout_clean_sandbox(
+                        fetchDestinationFile.getCanonicalPath()));
+
+                File toDelete = fetchDestinationFile;
+                // the sandbox must be deregistered in order to delete
+                manager.deregister(sandbox, monitor.newChild(1));
+                
+                boolean deleteSucceeded = delete(toDelete, listener, monitor.newChild(1));
+
+                if (!deleteSucceeded || fetchDestinationFile.exists()) {
+                    throw new TeamBuildException(Messages.getDefault().RepositoryConnection_checkout_clean_failed(
+                            fetchDestinationFile.getCanonicalPath()));
+                }
+            }
+
+            // Add the listener just before the fetch stage
+            ((SharingManager) FileSystemCore.getSharingManager()).addListener(corruptSandboxListener);
+
+            listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_start(
+                    fetchDestinationFile.getCanonicalPath()));
+            getBuildConnection().startBuildActivity(buildResultHandle, Messages.getDefault().RepositoryConnection_activity_fetching(),
+                    parentActivityId, true, monitor.newChild(1));
+
+            // TODO This affects all loads ever after (and with multi-threaded ...)
+            // setScmMaxContentThreads(getMaxScmContentThreads(buildDefinitionInstance));
+
+            if (monitor.isCanceled()) {
+            	throw new InterruptedException();
+            }
+            
+            // Warn if the build user id can't see all the components in the build workspace
+            if (!workspaceConnection.getUnreadableComponents().isEmpty()) {
+                listener.log(Messages.getDefault().RepositoryConnection_hidden_components(
+                        workspaceConnection.getName(), workspaceConnection.getUnreadableComponents().size()));
+            }
+            
+            Map<String, String> buildProperties = buildConfiguration.getBuildProperties();
+            Map<String, String> compLoadRules = null;
+            String excludeComponents = null;
+            boolean includedComponents = buildConfiguration.includeComponents();
+            Collection<IComponentHandle> components = buildConfiguration.getComponents();
+            String snapshotUUID = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID);
+        	Map<String, String> componentInfo = getComponentInfoFromWorkspace(workspaceConnection.getComponents(), monitor.newChild(2));
+            if(extProvider != null) {
+				compLoadRules = RtcExtensionProviderUtil.getComponentLoadRules(
+						extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
+						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+				excludeComponents = RtcExtensionProviderUtil.getExcludeComponentList(
+						extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
+						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+			}
+            
+            if(excludeComponents != null && excludeComponents.trim().length() > 0) {
+            	includedComponents = false;
+            	components = new LoadComponents(getTeamRepository(), excludeComponents).getComponentHandles();
+            }
+            
+            SourceControlUtility.updateFileCopyArea(workspaceConnection,
+                    fetchDestinationFile.getCanonicalPath(), includedComponents,
+                    components,
+                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, compLoadRules, monitor.newChild(1)),
+                    buildConfiguration.createFoldersForComponents(), monitor.newChild(40));
+         
+            listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_complete());
+            
+            if(extProvider != null) {
+        		RtcExtensionProviderUtil.postUpdateFileCopyArea(extProvider, logger, fetchDestinationFile,
+        				workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(),
+						buildResultUUID, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+        	}
+            
+            try {
+            	getBuildConnection().completeBuildActivity(buildResultHandle, parentActivityId, monitor.newChild(1));
+            } catch (TeamRepositoryException e) {
+            	listener.log(Messages.getDefault().RepositoryConnection_complete_checkout_activity_failed(e.getMessage()), e);
+            }
+
+        } finally {
+            /*
+             * Force a deregistration of the sandbox so that its Metadata is guaranteed to be flushed
+             * And possibly so the next time we try to delete the file copy area, it will succeed.
+             */
+            ((SharingManager) FileSystemCore.getSharingManager()).removeListener(corruptSandboxListener);
+            try {
+                manager.deregister(sandbox, monitor.newChild(1));
+            } catch (OperationCanceledException e) {
+            	// propagate the cancel (we don't want it logged).
+            	// It may mean though that an error is lost if it was a different error that
+            	// caused us to exit out to this finally block. The alternative is to make the
+            	// thread interrupted for the next task to handle the cancel.
+            	throw e;
+            } catch (Exception e) {
+            	listener.log(Messages.getDefault().RepositoryConnection_checkout_termination_error(e.getMessage()), e);
+            }
+        }
+        
+	}
+
+	/**
 	 * Update the build workspace and load it. Create a snapshot of the build workspace and
 	 * report on the changes made to it. Update the build result with information about the build.
 	 * 
@@ -302,8 +675,9 @@ public class RepositoryConnection {
 	 * @return <code>Map<String, String></code> of build properties
 	 * @throws Exception Thrown if anything goes wrong
 	 */
+	@Deprecated
 	public Map<String, String> checkout(String buildResultUUID, String buildWorkspaceName, String hjFetchDestination, ChangeReport changeReport,
-			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale) throws Exception {
+			String defaultSnapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, Object extProvider, final PrintStream logger) throws Exception {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
@@ -425,6 +799,14 @@ public class RepositoryConnection {
             
             // we don't need to check for a corrupt sandbox if it doesn't exist or is marked as "Delete Before Fetch"
         	File fetchDestinationFile = buildConfiguration.getFetchDestinationFile();
+        	
+        	if(extProvider != null) {
+        		RtcExtensionProviderUtil.preUpdateFileCopyArea(extProvider, logger, fetchDestinationFile,
+        				workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(),
+						buildResultUUID, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+        	}
+        	
         	boolean deleteNeeded = buildConfiguration.isDeleteNeeded();
             if (fetchDestinationFile.exists() && !deleteNeeded) { 
                
@@ -473,15 +855,43 @@ public class RepositoryConnection {
             if (monitor.isCanceled()) {
             	throw new InterruptedException();
             }
-
+            
+            Map<String, String> compLoadRules = null;
+            String excludeComponents = null;
+            boolean includedComponents = buildConfiguration.includeComponents();
+            Collection<IComponentHandle> components = buildConfiguration.getComponents();
+            String snapshotUUID = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID);
+        	Map<String, String> componentInfo = getComponentInfoFromWorkspace(workspaceConnection.getComponents(), monitor.newChild(2));
+            if(extProvider != null) {
+				compLoadRules = RtcExtensionProviderUtil.getComponentLoadRules(
+						extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
+						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+				excludeComponents = RtcExtensionProviderUtil.getExcludeComponentList(
+						extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
+						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+			}
+            
+            if(excludeComponents != null && excludeComponents.trim().length() > 0) {
+            	includedComponents = false;
+            	components = new LoadComponents(getTeamRepository(), excludeComponents).getComponentHandles();
+            }
+            
             SourceControlUtility.updateFileCopyArea(workspaceConnection,
-                    fetchDestinationFile.getCanonicalPath(), buildConfiguration.includeComponents(),
-                    buildConfiguration.getComponents(),
-                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, monitor.newChild(1)),
+                    fetchDestinationFile.getCanonicalPath(), includedComponents,
+                    components,
+                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, compLoadRules, monitor.newChild(1)),
                     buildConfiguration.createFoldersForComponents(), monitor.newChild(40));
 
             listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_complete());
             
+            if(extProvider != null) {
+        		RtcExtensionProviderUtil.postUpdateFileCopyArea(extProvider, logger, fetchDestinationFile,
+        				workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(),
+						buildResultUUID, fConnectionDetails.getRepositoryAddress(), 
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+        	}
             try {
             	getBuildConnection().completeBuildActivity(buildResultHandle, parentActivityId, monitor.newChild(1));
             } catch (TeamRepositoryException e) {
@@ -520,6 +930,18 @@ public class RepositoryConnection {
         return buildProperties;
 	}
 
+
+	private Map<String, String> getComponentInfoFromWorkspace(List components, SubMonitor newChild) {
+		Map<String, String> compMap = new HashMap<String, String>();
+		try {
+			List<IComponent> componentsInfo = fRepository.itemManager().fetchCompleteItems(components, IItemManager.DEFAULT, newChild);
+			for (IComponent iComponent : componentsInfo) {
+				compMap.put(iComponent.getItemId().getUuidValue(), iComponent.getName());
+			}
+		} catch (TeamRepositoryException e) {
+		}
+		return compMap;
+	}
 
 	/**
 	 * Create an RTC build result.

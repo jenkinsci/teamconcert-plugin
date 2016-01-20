@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -164,13 +164,14 @@ public class RTCFacade {
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
 	 * @param clientLocale The locale of the requesting client
+	 * @param ignoreOutgoingFromBuildWorkspace if true, then ignore any outgoing changes from build workspace
 	 * @return Returns <code>Non zero</code> if there are changes to the build workspace;
 	 * <code>0</code> otherwise
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
 	public int incomingChanges(String serverURI, String userId,
 			String password, int timeout,
-			String buildDefinition, String buildWorkspace, Object listener, Locale clientLocale)
+			String buildDefinition, String buildWorkspace, Object listener, Locale clientLocale, boolean ignoreOutgoingFromBuildWorkspace)
 			throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
@@ -178,7 +179,7 @@ public class RTCFacade {
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
-			return repoConnection.incomingChanges(buildDefinition, buildWorkspace, clientConsole, monitor, clientLocale);
+			return repoConnection.incomingChanges(buildDefinition, buildWorkspace, clientConsole, monitor, clientLocale, ignoreOutgoingFromBuildWorkspace);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -354,6 +355,98 @@ public class RTCFacade {
 
 	/**
 	 * Accept changes into the build workspace and write a description of the changes into the ChangeLogFile.
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The build result to relate build results with. It also specifies the
+	 * build configuration. May be <code>null</code> if buildWorkspace is supplied. Only one of
+	 * buildWorkspace/buildResultUUID should be supplied.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
+	 * buildResultUUID is supplied. Only one of buildWorkspace/buildResultUUID
+	 * should be supplied.
+	 * @param hjWorkspacePath The path where the contents of the RTC workspace should be loaded.
+	 * @param changeLog The file where a description of the changes made should be written. May be <code> null </code>.
+	 * @param baselineSetName The name to give the snapshot created. If <code>null</code> no snapshot
+	 * 				will be created.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * This is defined as an Object due to class loader issues. It is expected to implement
+	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
+	 * @param callConnectorTimeout user defined value for call connector timeout
+	 * @return Map<String, Object> returns a map of objects see RepositoryConnection#accept for more details.
+	 * @throws Exception
+	 */
+	public Map<String, Object> accept(String serverURI, String userId, String password,
+			int timeout, String buildResultUUID, String buildWorkspace,
+			String hjWorkspacePath, OutputStream changeLog,
+			String baselineSetName, final Object listener, Locale clientLocale, String callConnectorTimeout) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
+		AbstractBuildClient buildClient = getBuildClient(); 
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		ChangeReport report = null;
+		if (changeLog != null) {
+			report = new ChangeReport(changeLog);
+		}
+		try	{
+			return repoConnection.accept(buildResultUUID, buildWorkspace,
+					hjWorkspacePath, report, baselineSetName, clientConsole, monitor, clientLocale, callConnectorTimeout);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+
+	/**
+	 * Load the contents of the updated build workspace at hjWorkspacePath.
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The build result to relate build results with. It also specifies the
+	 * build configuration. May be <code>null</code> if buildWorkspace is supplied. Only one of
+	 * buildWorkspace/buildResultUUID should be supplied.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
+	 * buildResultUUID is supplied. Only one of buildWorkspace/buildResultUUID
+	 * should be supplied.
+	 * @param hjWorkspacePath The path where the contents of the RTC workspace should be loaded.
+	 * @param baselineSetName The name to give the snapshot created. If <code>null</code> no snapshot
+	 * 				will be created.
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * This is defined as an Object due to class loader issues. It is expected to implement
+	 * {@link TaskListener}.
+	 * @param clientLocale The locale of the requesting client
+	 * @param parentActivityId id for parent activity under which load has to be performed.
+	 * @param connectorId id to locate the connector to retrieve object created by accept call.
+	 * @throws Exception If any non-recoverable error occurs.
+	 */
+	public void load(String serverURI, String userId, String password,
+			int timeout, String buildResultUUID, String buildWorkspace,
+			String hjWorkspacePath,
+			String baselineSetName, final Object listener, Locale clientLocale, 
+			String parentActivityId, String connectorId, Object extProvider, PrintStream logger) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
+		AbstractBuildClient buildClient = getBuildClient(); 
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		IConsoleOutput clientConsole = getConsoleOutput(listener);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try	{
+			repoConnection.load(buildResultUUID, buildWorkspace,
+					hjWorkspacePath, baselineSetName, clientConsole, monitor, clientLocale, parentActivityId, 
+					connectorId, extProvider, logger);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+
+	
+	/**
+	 * Accept changes into the build workspace and write a description of the changes into the ChangeLogFile.
 	 * Load the contents of the updated build workspace at hjWorkspacePath.
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
@@ -379,7 +472,8 @@ public class RTCFacade {
 	public Map<String, String> checkout(String serverURI, String userId, String password,
 			int timeout, String buildResultUUID, String buildWorkspace,
 			String hjWorkspacePath, OutputStream changeLog,
-			String baselineSetName, final Object listener, Locale clientLocale) throws Exception {
+			String baselineSetName, final Object listener, Locale clientLocale,
+			Object extProvider, PrintStream logger) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -391,7 +485,8 @@ public class RTCFacade {
 		}
 		try	{
 			return repoConnection.checkout(buildResultUUID, buildWorkspace,
-					hjWorkspacePath, report, baselineSetName, clientConsole, monitor, clientLocale);
+					hjWorkspacePath, report, baselineSetName, clientConsole, monitor, clientLocale, 
+					extProvider, logger);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
