@@ -275,10 +275,8 @@ public class RepositoryConnection {
 		
 		ensureLoggedIn(monitor.newChild(1));
 		
-		BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), null);
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-		buildConfiguration.initialize(buildResultHandle, null, listener, monitor.newChild(1), clientLocale);
-		String buildDefinitionId = buildConfiguration.getBuildProperties().get("buildDefinitionId");
+		String buildDefinitionId = BuildConfiguration.getBuildDefinitionId(getTeamRepository(), buildResultHandle, monitor.newChild(1), clientLocale);
 		
 		Map<String, String> result = new HashMap<String, String>();
 		result.put("buildDefinitionId", buildDefinitionId);

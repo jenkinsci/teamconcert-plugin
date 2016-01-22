@@ -107,6 +107,35 @@ public class BuildConfiguration {
 	}
 	
 	/**
+	 * 
+	 * @param teamRepository team repository instance
+	 * @param buildResultHandle The build result that will reference the build request that contains the
+	 * configuration details. Never <code>null</code>.
+	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
+	 * @param clientLocale The locale of the requesting client
+	 * @return
+	 * @throws TeamRepositoryException If anything goes wrong while fetching configuration
+	 */
+	public static String getBuildDefinitionId(ITeamRepository teamRepository, IBuildResultHandle buildResultHandle, IProgressMonitor progress,
+			Locale clientLocale) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		IItemManager itemManager = teamRepository.itemManager();
+
+        IBuildResult result = (IBuildResult) itemManager.fetchCompleteItem(
+                buildResultHandle, IItemManager.REFRESH, monitor.newChild(5));
+
+        if (result.getBuildRequests().isEmpty()) {
+        	throw new IllegalStateException("No build request for the build result");
+        }
+        
+        IBuildRequest buildRequest = (IBuildRequest) itemManager.fetchCompleteItem((IBuildRequestHandle) result.getBuildRequests().iterator().next(),
+        		IItemManager.REFRESH, monitor.newChild(10));
+        IBuildDefinitionInstance buildDefinitionInstance = buildRequest.getBuildDefinitionInstance();
+		String buildDefinitionId = buildDefinitionInstance.getBuildDefinitionId();
+		return buildDefinitionId;
+	}
+	
+	/**
 	 * Initialize configuration that describes how to build & load.
 	 * @param buildResultHandle The build result that will reference the build request that contains the
 	 * configuration details. Never <code>null</code>. If there is no build result available, you should

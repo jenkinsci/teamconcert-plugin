@@ -1367,7 +1367,7 @@ public class RTCScm extends SCM {
     				if (project.isBuilding()) {
     					RTCBuildResultAction rtcBuildResultAction = project.getLastBuild().getAction(RTCBuildResultAction.class);
     					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null) &&
-    							(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver").equals("true"))) {
+    							"true".equals(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver"))) {
     						// snapshot has been created, 
     						// hence further changes would not be taken by this build...
     						change = (currentRevisionHash == 0) ? Change.NONE : Change.SIGNIFICANT;
