@@ -640,7 +640,16 @@ public class RepositoryConnection {
              */
             ((SharingManager) FileSystemCore.getSharingManager()).removeListener(corruptSandboxListener);
             try {
-                manager.deregister(sandbox, monitor.newChild(1));
+            	/*
+            	 * check if the monitor is cancelled if it is then pass a NullProgressMonitor
+            	 * deregister of the sandbox should happen irrespective of the operation.
+            	 */
+            	
+            	IProgressMonitor newMonitor = new NullProgressMonitor();
+            	if(monitor != null && !monitor.isCanceled()) {
+            		newMonitor = monitor.newChild(1);
+            	}
+                manager.deregister(sandbox, newMonitor);
             } catch (OperationCanceledException e) {
             	// propagate the cancel (we don't want it logged).
             	// It may mean though that an error is lost if it was a different error that
