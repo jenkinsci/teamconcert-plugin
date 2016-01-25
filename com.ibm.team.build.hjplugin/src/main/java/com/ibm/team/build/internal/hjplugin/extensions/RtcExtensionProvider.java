@@ -21,8 +21,12 @@ import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
+import hudson.Util;
 import hudson.model.TaskListener;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
 import hudson.model.Run;
+import hudson.model.StringParameterValue;
 
 /**
  * 
@@ -48,8 +52,12 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 		LOGGER.finest("LoadRuleProvider.isEnabled : Begin");
 		boolean enabled = false;
 		try {
-			enabled = Boolean.parseBoolean(build.getEnvironment(listener).get(
-					USE_DYNAMIC_LOAD_RULE));
+			enabled = Boolean.parseBoolean(Util.fixEmptyAndTrim(build.getEnvironment(listener).get(
+					USE_DYNAMIC_LOAD_RULE)));
+			if (!enabled) {
+				// Check whether the variable can be found from parameters action
+				enabled = Boolean.parseBoolean(getValueFromParametersAction(build, USE_DYNAMIC_LOAD_RULE));
+			}
 		} catch (Exception e) {
 			LOGGER.finer("LoadRuleProvider.isEnabled : Error reading property for dynamic load rules.");
 			enabled = false;
@@ -169,4 +177,26 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 		return Jenkins.getInstance().getExtensionList(RtcExtensionProvider.class);
 	}
 
+	private static String getValueFromParametersAction(Run<?,?> build, String key) {
+		String value = null;
+		LOGGER.finest("RtcExtensionProvider.getValueFromParametersAction : Begin");
+		for (ParametersAction paction: build.getActions(ParametersAction.class)) {
+			List<ParameterValue> pValues = paction.getParameters();
+			if (pValues == null) {
+				continue;
+			}
+            for(ParameterValue pv : pValues) {
+            	if (pv instanceof StringParameterValue && key.equals(pv.getName())) {
+            		value = Util.fixEmptyAndTrim((String) pv.getValue());
+            		if (value != null) {
+            			break;
+            		}
+            	}
+            }
+            if (value != null) {
+            	break;
+            }
+        }
+		return value;
+	}
 }
