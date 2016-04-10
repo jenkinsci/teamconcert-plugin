@@ -43,10 +43,12 @@ import com.ibm.team.scm.client.IWorkspaceConnection.IRevertOp;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.AcceptFlags;
+import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IChange;
 import com.ibm.team.scm.common.IChangeSet;
 import com.ibm.team.scm.common.IChangeSetHandle;
 import com.ibm.team.scm.common.IComponent;
+import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.dto.IItemConflictReport;
 import com.ibm.team.scm.common.dto.IUpdateReport;
@@ -797,6 +799,36 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		return artifactIds;
 	}
+	
+	public Map<String, String> setupSnapshot(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String snapshotName,  IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository(); 
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		
+		IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, workspaceName);
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildWorkspace, componentName, new String[] {
+				"/",
+				"/f/",
+				"/f/a.txt",
+				});
+		
+		IComponentHandle component = (IComponentHandle) pathToHandle.get(componentName);
+
+		// capture interesting uuids to verify against
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		
+		IBaselineSetHandle buildSnapshot = SCMUtil.createSnapshot(buildWorkspace, snapshotName);
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BASELINE_SET_ITEM_ID, buildSnapshot.getItemId().getUuidValue());
+
+		return artifactIds;
+
+	}
+
 
 	private void createXMLEncodingTestChangeSet(ITeamRepository repo,
 			IWorkspaceConnection workspace, IComponent component,
@@ -972,6 +1004,25 @@ public class TestSetupTearDownUtil extends BuildClient {
 				testName, hjPath, buildPath);
 		try {
 			buildConfigurationTests.testBadFetchLocation(workspaceName, testName, hjPath, buildPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+	
+	public Map<String, String> testBuildSnapshotConfiguration(
+			ConnectionDetails connectionDetails, String workspaceName, String snapshotName, String componentName,
+			String workspacePrefix, String hjPath, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = setupSnapshot(connectionDetails, workspaceName, componentName, snapshotName, progress);
+		try {
+			buildConfigurationTests.testLoadSnapshotConfiguration(snapshotName, workspacePrefix, hjPath);
 		} catch (Exception e) {
 			try {
 				tearDown(connectionDetails, artifactIds, progress);

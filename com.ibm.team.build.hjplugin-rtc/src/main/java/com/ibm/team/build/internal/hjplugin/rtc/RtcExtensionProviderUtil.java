@@ -15,91 +15,106 @@ import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class RtcExtensionProviderUtil {
 	
-	public static void preUpdateFileCopyArea(
-			final Object lrProvider, final PrintStream logger, final File workspace, final String workspaceUUID, final String workspaceName,
-			final String buildResultUUID, final String repoURL, String userId, String password) {
-		try {
-			if (lrProvider != null) {
-				Method preUpdateFileCopyArea = lrProvider.getClass()
-						.getMethod("preUpdateFileCopyArea", String.class, String.class, String.class, String.class, String.class, String.class, File.class, PrintStream.class);//$NON-NLS-1$
-				if (preUpdateFileCopyArea != null) {
-					preUpdateFileCopyArea.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, workspace, logger);
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return;
-	}
+	private static final Logger LOGGER = Logger.getLogger(RtcExtensionProviderUtil.class.getName());
 	
-	public static void postUpdateFileCopyArea(
-			final Object lrProvider, final PrintStream logger, final File workspace, final String workspaceUUID, final String workspaceName,
-			final String buildResultUUID, final String repoURL, String userId, String password) {
-		try {
-			if (lrProvider != null) {
-				Method postUpdateFileCopyArea = lrProvider.getClass()
-						.getMethod("postUpdateFileCopyArea", String.class, String.class, String.class, String.class, String.class, String.class, File.class, PrintStream.class);//$NON-NLS-1$
-				if (postUpdateFileCopyArea != null) {
-					postUpdateFileCopyArea.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, workspace, logger);
-				}
+	public static void preUpdateFileCopyArea(final Object lrProvider, final PrintStream logger, final File workspace, final String workspaceUUID,
+			final String workspaceName, final String buildResultUUID, final String repoURL, String userId, String password) throws Exception {
+		if (lrProvider != null) {
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.preUpdateFileCopyArea: invoking preUpdateFileCopyArea on '" + lrProvider.getClass().getName() + "' - Begin"); //$NON-NLS-1$//$NON-NLS-2$
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+			Method preUpdateFileCopyArea = lrProvider
+					.getClass()
+					.getMethod(
+							"preUpdateFileCopyArea", String.class, String.class, String.class, String.class, String.class, String.class, File.class, PrintStream.class);//$NON-NLS-1$
+			if (preUpdateFileCopyArea != null) {
+				preUpdateFileCopyArea.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, workspace, logger);
+			}
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.preUpdateFileCopyArea: invoking preUpdateFileCopyArea on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
+			}
 		}
-		return;
+
+	}
+
+	public static void postUpdateFileCopyArea(final Object lrProvider, final PrintStream logger, final File workspace, final String workspaceUUID,
+			final String workspaceName, final String buildResultUUID, final String repoURL, String userId, String password) throws Exception {
+		if (lrProvider != null) {
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.postUpdateFileCopyArea: invoking postUpdateFileCopyArea on '" + lrProvider.getClass().getName() + "' - Begin"); //$NON-NLS-1$//$NON-NLS-2$
+			}
+			Method postUpdateFileCopyArea = lrProvider
+					.getClass()
+					.getMethod(
+							"postUpdateFileCopyArea", String.class, String.class, String.class, String.class, String.class, String.class, File.class, PrintStream.class);//$NON-NLS-1$
+			if (postUpdateFileCopyArea != null) {
+				postUpdateFileCopyArea
+						.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, workspace, logger);
+			}
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.postUpdateFileCopyArea: invoking postUpdateFileCopyArea on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
+			}
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static Map<String, String> getComponentLoadRules(
-			final Object lrProvider, final PrintStream logger, final String workspaceUUID, final String workspaceName, final String snapshotUUID,
-			final String buildResultUUID, Map<String, String> componentInfo, final String repoURL, String userId, String password) {
-		try {
-			if (lrProvider != null) {
-				Method getComponentLoadRulesMethod = lrProvider.getClass()
-						.getMethod("getComponentLoadRules", String.class, String.class, String.class, Map.class, String.class, String.class, String.class, PrintStream.class);//$NON-NLS-1$
-				if (getComponentLoadRulesMethod != null) {
-					return (Map<String, String>) getComponentLoadRulesMethod
-							.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, componentInfo,
-									repoURL, userId, password, logger);
-				}
+	public static Map<String, String> getComponentLoadRules(final Object lrProvider, final PrintStream logger, final String workspaceUUID,
+			final String workspaceName, final String snapshotUUID, final String buildResultUUID, Map<String, String> componentInfo,
+			final String repoURL, String userId, String password) throws Exception {
+		if (lrProvider != null) {
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.getComponentLoadRules: invoking getComponentLoadRules on '" + lrProvider.getClass().getName() + "' - Begin"); //$NON-NLS-1$//$NON-NLS-2$
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+			Method getComponentLoadRulesMethod = lrProvider
+					.getClass()
+					.getMethod(
+							"getComponentLoadRules", String.class, String.class, String.class, Map.class, String.class, String.class, String.class, PrintStream.class);//$NON-NLS-1$
+			if (getComponentLoadRulesMethod != null) {
+				return (Map<String, String>)getComponentLoadRulesMethod.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID,
+						componentInfo, repoURL, userId, password, logger);
+			}
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.getComponentLoadRules: invoking getComponentLoadRules on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
+			}
 		}
 		return null;
 	}
 
-	public static String getExcludeComponentList(final Object lrProvider, final PrintStream logger,
-			final String workspaceUUID, final String workspaceName, final String snapshotUUID, final String buildResultUUID,
-			Map<String, String> componentInfo, final String repoURL, String userId, String password) {
-		try {
-			if (lrProvider != null) {
-				Method getExcludeComponents = lrProvider.getClass().getMethod(
-						"getExcludeComponents", String.class, String.class, String.class, Map.class, String.class, String.class, String.class, PrintStream.class);//$NON-NLS-1$
-				if (getExcludeComponents != null) {
-					@SuppressWarnings("unchecked")
-					List<String> components = (List<String>) getExcludeComponents
-							.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, componentInfo,
-									repoURL, userId, password, logger);
-					if (components != null && components.size() > 0) {
-						StringBuffer result = new StringBuffer();
-						for (String component : components) {
-							if (component != null
-									&& component.trim().length() > 0)
-								result.append(component.trim()).append(' ');
-						}
-						String resultStr = result.toString().trim();
-						if (resultStr.length() > 0) {
-							return resultStr;
-						}
+	public static String getExcludeComponentList(final Object lrProvider, final PrintStream logger, final String workspaceUUID,
+			final String workspaceName, final String snapshotUUID, final String buildResultUUID, Map<String, String> componentInfo,
+			final String repoURL, String userId, String password) throws Exception {
+		if (lrProvider != null) {
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.getExcludeComponentList: invoking getExcludeComponents on '" + lrProvider.getClass().getName() + "' - Begin"); //$NON-NLS-1$//$NON-NLS-2$
+			}
+			Method getExcludeComponents = lrProvider
+					.getClass()
+					.getMethod(
+							"getExcludeComponents", String.class, String.class, String.class, Map.class, String.class, String.class, String.class, PrintStream.class);//$NON-NLS-1$
+			if (getExcludeComponents != null) {
+				@SuppressWarnings("unchecked")
+				List<String> components = (List<String>)getExcludeComponents.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID,
+						componentInfo, repoURL, userId, password, logger);
+				if (components != null && components.size() > 0) {
+					StringBuffer result = new StringBuffer();
+					for (String component : components) {
+						if (component != null && component.trim().length() > 0)
+							result.append(component.trim()).append(' ');
+					}
+					String resultStr = result.toString().trim();
+					if (resultStr.length() > 0) {
+						return resultStr;
 					}
 				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.getExcludeComponentList: invoking getExcludeComponents on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
+			}
 		}
 		return null;
 	}

@@ -34,6 +34,7 @@ import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConfiguration;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
+import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.Messages;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCConfigurationException;
@@ -41,15 +42,19 @@ import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
 import com.ibm.team.build.internal.scm.ComponentLoadRules;
 import com.ibm.team.build.internal.scm.LoadComponents;
+import com.ibm.team.build.internal.scm.RepositoryManager;
 import com.ibm.team.filesystem.common.IFileItemHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
+import com.ibm.team.scm.common.IBaselineSet;
+import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IChangeSetHandle;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
@@ -154,7 +159,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertTrue(buildConfiguration.includeComponents(), "Should be a list of components to include");
 		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "Should be creating a folder for the component");
 		AssertUtil.assertEquals(0, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null, null).size());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponents().size());
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID), buildConfiguration.getComponents().iterator().next().getItemId().getUuidValue());
 		File expectedLoadDir = new File(hjPath);
@@ -290,7 +295,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null, null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
@@ -420,7 +425,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null, null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
@@ -644,7 +649,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
 		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
-				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null).size());
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, null, null).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, "loadDir/here");
@@ -755,6 +760,47 @@ public class BuildConfigurationTests {
 			AssertUtil.fail("The relative fetch location should have been bad: " + buildPath);
 		} catch (RTCConfigurationException e) {
 			// good, the fetch location was bad
+		}
+	}
+	
+	public void testLoadSnapshotConfiguration(String snapshotName, String workspacePrefix, String hjPath) throws Exception {
+		connection.ensureLoggedIn(null);
+		Exception[] failure = new Exception[] {null};
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
+		
+		ITeamRepository repo = connection.getTeamRepository();
+		RepositoryManager manager = connection.getRepositoryManager();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
+		IBaselineSet bs = RTCSnapshotUtils.getSnapshot(repo, snapshotName, null, Locale.getDefault());
+		buildConfiguration.initialize(bs, 	repo.loggedInContributor(), workspacePrefix, null);
+		if (failure[0] != null) {
+			throw failure[0];
+		}
+		// Things that have be right in BuildConfiguration
+		AssertUtil.assertEquals(buildConfiguration.getBuildSnapshotDescriptor().getSnapshotUUID(), bs.getItemId().getUuidValue());
+		AssertUtil.assertTrue(buildConfiguration.getBuildWorkspaceDescriptor() != null, "WorkspaceDescriptor cannot be null for snapshot load");
+		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "isPersonalBuild cannot be true for a snapshot load");
+		AssertUtil.assertFalse(buildConfiguration.acceptBeforeFetch(), "acceptBeforeFetch cannot be true for a snapshot load");
+
+		IWorkspaceHandle workspaceHandle =  buildConfiguration.getBuildWorkspaceDescriptor().getWorkspaceHandle();
+		String workspaceName = buildConfiguration.getBuildWorkspaceDescriptor().getConnection(manager, false, null).getName();		
+		// verify the following
+		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFolders for components cannot be true for testLoadSnapshotConfiguration");
+		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "includeComponents cannot be true for testLoadSnapshotConfiguration");
+		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "isDeleteNeeded cannot be true for  testLoadSnapshotConfiguration");
+		AssertUtil.assertEquals(buildConfiguration.getComponents(), Collections.emptyList());
+		AssertUtil.assertTrue(buildConfiguration.getBuildProperties().keySet().size() == 0, "buildProperties has to be zero size");
+		AssertUtil.assertEquals(buildConfiguration.getFetchDestinationFile().getCanonicalPath(), hjPath);
+		AssertUtil.assertEquals(buildConfiguration.getSnapshotName(), null);
+		
+		// Call tearDown and ensure that the workspace is deleted
+		buildConfiguration.tearDown(manager, null, listener, Locale.getDefault());
+		try {
+			workspaceManager.getWorkspaceConnection(workspaceHandle, null);
+			AssertUtil.fail("tearDown failed to delete workspace " + workspaceName);
+		}	catch (ItemNotFoundException exp) {
+			// this is what we want
 		}
 	}
 }

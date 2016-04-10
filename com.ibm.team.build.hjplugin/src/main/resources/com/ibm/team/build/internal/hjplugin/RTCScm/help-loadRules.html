@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Select a load rules file to specify how to load the build workspace. If Dynamic Load Rules were specified by using an extension, those rules take precedence over the ones specified here.
+  </p>
+  <p>
+  	To apply load rules, list them in the following JSON format, save the list to a file on disk, and specify the path to the file in this field.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	You can also specify "componentId" instead of "componentName." The "componentId" is the item ID (UUID) of the component. 
+	If you specify both "componentName" and "componentId," the lookup occurs only by "componentId."
+  </p>
+  <p>
+  	The "filePath" value is the full path to the load rule file in the repository; that is, the remote path. 
+  	You can also specify "fileItemId" instead of "filePath." The "fileItemId" is the item ID (UUID) of the load rule file. 
+  	When you specify the file path, use forward slashes (/) to separate the path segments. If you specify both "filePath" and "fileItemId," the lookup occurs only by "fileItemId."
+  </p>
+
+</div>

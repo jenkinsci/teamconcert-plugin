@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   ワークスペース内の一部のコンポーネントのみをビルドする場合は、ロードする必要のないコンポーネントを除外できます。
+  </p>
+  <p>
+  	コンポーネントを除外するには、それらを JSON フォーマットでリストし、そのリストをディスク上のファイルに保存し、そのファイルのパスをこのフィールドに指定してください。
+  </p>
+  <p>
+  <pre>
+  {
+    "componentsToExclude":[
+      {
+	    "componentName":"JUnit"
+      },
+      {
+	    "componentName":"Releng"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+  	「componentName」の代わりに「componentId」を指定することもできます。「componentId」はコンポーネントの項目 ID (UUID) です。 「componentName」と「componentId」の両方を指定した場合、ルックアップは「componentId」によってのみ行われます。
+  </p>
+</div>

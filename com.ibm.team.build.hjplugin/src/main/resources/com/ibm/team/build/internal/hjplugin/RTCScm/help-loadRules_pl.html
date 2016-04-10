@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Wybierz plik reguł ładowania określający sposób ładowania obszaru roboczego budowania. Jeśli za pomocą rozszerzenia określono dynamiczne reguły ładowania, te reguły będą miały pierwszeństwo przed regułami określonymi w tym miejscu.
+  </p>
+  <p>
+  	Aby zastosować reguły ładowania, należy utworzyć ich listę w następującym formacie JSON, zapisać tę listę w pliku na dysku i podać w tym miejscu ścieżkę do tego pliku.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	Element componentName można zastąpić elementem componentId. Element componentId jest identyfikatorem UUID komponentu.
+	Jeśli zostaną określone oba elementy - componentName i componentId, komponent zostanie wyszukany tylko według elementu componentId.
+  </p>
+  <p>
+  	Wartością elementu filePath jest pełna ścieżka do pliku reguł ładowania w repozytorium, czyli ścieżka zdalna.
+  	Element filePath można zastąpić elementem fileItemId. Element fileItemId jest identyfikatorem UUID pliku reguł ładowania.
+  	Podczas podawania ścieżki do pliku w celu oddzielania segmentów ścieżki używaj ukośników (/). Jeśli zostaną określone oba elementy - filePath i fileItemId, komponent zostanie wyszukany tylko według elementu fileItemId.
+  </p>
+
+</div>

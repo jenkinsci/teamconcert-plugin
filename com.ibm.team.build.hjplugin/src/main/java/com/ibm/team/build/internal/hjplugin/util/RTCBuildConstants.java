@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -107,7 +107,70 @@ public interface RTCBuildConstants {
      * Finds exact matches of a particular workspace name:
      * http://localhost:9080/service/com.ibm.team.scm.common.rest.IScmRichClientRestService/searchWorkspaces?workspaceNameKind=exact&workspaceName=myWorkspace
      */
-    public static final String URI_SEARCH_WORKSPACES = "service/com.ibm.team.scm.common.rest.IScmRichClientRestService/searchWorkspaces?workspaceNameKind=exact&workspaceName="; //$NON-NLS-1$
+	public static final String URI_SEARCH_WORKSPACES = "service/com.ibm.team.scm.common.rest.IScmRichClientRestService/searchWorkspaces?workspaceNameKind=exact&workspaceName="; //$NON-NLS-1$
+	
+	/**
+	 * URI to fetch components by item ID. You can specify only one component id
+	 * with this URI. If you want to batch fetch components by id then you need
+	 * to add multiple componentItemIds parameter.
+	 * 
+	 * For example:
+	 * 
+	 * <pre>
+	 * 	https://localhost:9443/jazz/service/com.ibm.team.scm.common.rest.IScmRichClientRestService/components2?componentItemIds=_ITkVUNlIEeWHquPepBzvOQ
+	 * </pre>
+	 */
+	public static final String URI_GET_COMPONENTS = "service/com.ibm.team.scm.common.rest.IScmRichClientRestService/components2?componentItemIds="; //$NON-NLS-1$
+	
+	/**
+	 * URI to search components by name. This URI is configured to perform a
+	 * case sensitive search of components by the exact name specified in
+	 * namePattern.
+	 * 
+	 * For example:
+	 * 
+	 * <pre>
+	 * https://localhost:9443/jazz/service/com.ibm.team.scm.common.rest.IScmRichClientRestService/searchComponents2?exact=true&namePattern=JUnit
+	 * </pre>
+	 * 
+	 */
+	public static final String URI_SEARCH_COMPONENTS = "service/com.ibm.team.scm.common.rest.IScmRichClientRestService/searchComponents2?exact=true&namePattern="; //$NON-NLS-1$
+	
+	/**
+	 * URI to fetch a versionable by path in the context of the given workspace
+	 * and component.
+	 * 
+	 * For example
+	 * 
+	 * <pre>
+	 * https://localhost:9443/jazz/service/com.ibm.team.scm.common.rest.IScmRichClientRestService/versionable?
+	 * 		contextItemNamespace=com.ibm.team.scm&contextItemType=Workspace&contextItemId=_IY9ysNlIEeWHquPepBzvOQ&componentItemId=_ITkVUNlIEeWHquPepBzvOQ&path=/
+	 * </pre>
+	 */
+	public static final String URI_GET_VERSIONABLE_BY_PATH = "service/com.ibm.team.scm.common.rest.IScmRichClientRestService/versionable?contextItemNamespace=com.ibm.team.scm&contextItemType=Workspace&path="; //$NON-NLS-1$
+	
+	/**
+	 * URI to fetch a versionable by item ID in the context of the given
+	 * workspace and component.
+	 * 
+	 * For example
+	 * 
+	 * <pre>
+	 * https://localhost:9443/jazz/service/com.ibm.team.scm.common.rest.IScmRichClientRestService/versionable?
+	 * 		contextItemNamespace=com.ibm.team.scm&contextItemType=Workspace&contextItemId=_d6NJwNlMEeWHquPepBzvOQ&componentItemId=_xYEzgdlTEeWHquPepBzvOQ
+	 * 		&itemId=_oxfJMNn4EeW6lec1vN4vpA&itemType=FileItem&itemNamespace=com.ibm.team.filesystem
+	 * </pre>
+	 */
+	public static final String URI_GET_VERSIONABLE_BY_ID = "service/com.ibm.team.scm.common.rest.IScmRichClientRestService/versionable?contextItemNamespace=com.ibm.team.scm&contextItemType=Workspace&itemType=FileItem&itemNamespace=com.ibm.team.filesystem&itemId="; //$NON-NLS-1$
+
+    
+    /**
+     * URI for searching for streams (uses ITeamModelledRestService)
+     * 
+     * Finds exact matches of a particular stream name:
+     * http://localhost:9080/service/com.ibm.team.scm.common.rest.IScmRichClientRestService/searchWorkspaces?workspaceKind=streams&workspaceNameKind=exact&workspaceName=myWorkspace
+     */
+    public static final String URI_SEARCH_STREAMS = "service/com.ibm.team.scm.common.rest.IScmRichClientRestService/searchWorkspaces?workspaceKind=streams&workspaceNameKind=exact&workspaceName="; //$NON-NLS-1$  
     
     // Configuration element constants
     /**

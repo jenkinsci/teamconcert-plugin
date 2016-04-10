@@ -16,17 +16,14 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.ParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.AbstractProject;
 import hudson.model.CauseAction;
 import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Node;
-import hudson.model.ParametersAction;
 import hudson.model.Queue.Task;
 import hudson.model.Run;
-import hudson.model.StringParameterValue;
 import hudson.remoting.Channel;
 import hudson.remoting.RemoteOutputStream;
 import hudson.remoting.VirtualChannel;
@@ -47,9 +44,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -61,6 +59,7 @@ import net.sf.json.JSONObject;
 import org.jvnet.localizer.LocaleProvider;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
@@ -89,7 +88,11 @@ public class RTCScm extends SCM {
 	private static final String IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING = "com.ibm.team.build.ignoreOutgoingFromBuildWorkspaceWhilePolling"; //$NON-NLS-1$
 	
 	private static final String DEPRECATED_CREDENTIAL_EDIT_ALLOWED = "com.ibm.team.build.credential.edit"; //$NON-NLS-1$
-
+	
+	private static final BigInteger BIGINT_ZERO = new BigInteger("0");
+	
+	private static final BigInteger BIGINT_ONE = new BigInteger("1"); 
+	
 	// persisted fields for SCM
     private boolean overrideGlobal;
     
@@ -102,18 +105,29 @@ public class RTCScm extends SCM {
 	private String passwordFile;
 	private String credentialsId;
 
-	// Job configuration settings
 	public static final String BUILD_WORKSPACE_TYPE = "buildWorkspace"; //$NON-NLS-1$
 	public static final String BUILD_DEFINITION_TYPE = "buildDefinition"; //$NON-NLS-1$
+	public static final String BUILD_SNAPSHOT_TYPE = "buildSnapshot"; //$NON-NLS-1$
+	public static final String BUILD_STREAM_TYPE = "buildStream"; //$NON-NLS-1$
 
 	public static final int DEFAULT_SERVER_TIMEOUT = DescriptorImpl.DEFAULT_SERVER_TIMEOUT;
 
+	// Job configuration settings
 	private BuildType buildType;
 	
 	private String buildTypeStr;
 	private String buildWorkspace;
 	private String buildDefinition;
-
+	private String buildSnapshot;
+	private String buildStream;
+	private String loadDirectory;
+	private boolean clearLoadDirectory;
+	private boolean createFoldersForComponents;
+	private String componentsToExclude; // file having details on components to be excluded during load
+	private String loadRules; // file having details on mapping between components and their load rules
+	private String acceptBeforeLoad;
+	private boolean generateChangelogWithGoodBuild;
+	
 	// Don't persist the browser because it references the server url that can be changing in the
 	// global config.
 	@Deprecated 
@@ -131,12 +145,86 @@ public class RTCScm extends SCM {
 		public String value;
 		public String buildDefinition;
 		public String buildWorkspace;
+		public String buildSnapshot;
+		public String buildStream;
+		public String loadDirectory;
+		public boolean clearLoadDirectory;
+		public boolean createFoldersForComponents;
+		public String componentsToExclude;
+		public String loadRules;
+		private String acceptBeforeLoad = "true";
+		private boolean generateChangelogWithGoodBuild;
 		
 		@DataBoundConstructor
-		public BuildType(String value, String buildDefinition, String buildWorkspace) {
+		public BuildType(String value, String buildDefinition, String buildWorkspace, String buildSnapshot, String buildStream) {
 			this.value = value;
 			this.buildDefinition = buildDefinition;
 			this.buildWorkspace = buildWorkspace;
+			this.buildSnapshot = buildSnapshot;
+			this.buildStream = buildStream;
+		}
+		
+		@DataBoundSetter
+		public void setLoadDirectory(String loadDirectory) {
+			this.loadDirectory = loadDirectory;
+		}
+
+		public String getLoadDirectory() {
+			return this.loadDirectory;
+		}
+		
+		@DataBoundSetter
+		public void setClearLoadDirectory(boolean clearLoadDirectory) {
+			this.clearLoadDirectory = clearLoadDirectory;
+		}
+		
+		public boolean getClearLoadDirectory() {
+			return clearLoadDirectory;
+		}
+		
+		@DataBoundSetter
+		public void setCreateFoldersForComponents(boolean createFoldersForComponents) {
+			this.createFoldersForComponents = createFoldersForComponents;
+		}
+		
+		public boolean getCreateFoldersForComponents() {
+			return createFoldersForComponents;
+		}
+		
+		@DataBoundSetter
+		public void setComponentsToExclude(String componentsToExclude) {
+			this.componentsToExclude = componentsToExclude;
+		}
+		
+		public String getComponentsToExclude() {
+			return componentsToExclude;
+		}
+		
+		@DataBoundSetter
+		public void setLoadRules(String loadRules) {
+			this.loadRules = loadRules;
+		}
+		
+		public String getLoadRules() {
+			return loadRules;
+		}
+		
+		@DataBoundSetter
+		public void setAcceptBeforeLoad(boolean acceptBeforeLoad) {
+			this.acceptBeforeLoad = String.valueOf(acceptBeforeLoad);
+		}
+		
+		public boolean getAcceptBeforeLoad() {
+			return Boolean.parseBoolean(acceptBeforeLoad);
+		}
+		
+		public boolean getGenerateChangelogWithGoodBuild() {
+			return generateChangelogWithGoodBuild;
+		}
+		
+		@DataBoundSetter
+		public void setGenerateChangelogWithGoodBuild(boolean generateChangelogWithGoodBuild) {
+			this.generateChangelogWithGoodBuild = generateChangelogWithGoodBuild;
 		}
 	}
 	
@@ -489,7 +577,7 @@ public class RTCScm extends SCM {
 				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit) {
 			LOGGER.finest("DescriptorImpl.doCheckGlobalConnection: Begin");
 			boolean avoidUsingToolkit = Boolean.parseBoolean(Util.fixNull(avoidUsingBuildToolkit));
-			ValidationResult result = validateConnectInfo(true, buildTool, serverURI, userId, password, passwordFile, credId, timeout, avoidUsingToolkit);
+			ValidationResult result = validateConnectInfo(null, true, buildTool, serverURI, userId, password, passwordFile, credId, timeout, avoidUsingToolkit);
 
 			// validate the connection
 			if (result.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
@@ -503,7 +591,7 @@ public class RTCScm extends SCM {
 		/**
 		 * For the job configuration check that the connection works (with whatever
 		 * access preferred). Use either the information supplied or the previously stored
-		 * global information dependin on whether to override the global information.
+		 * global information depending on whether to override the global information.
 		 * Main idea is check server, user credentials are valid for logging in.
 		 * @param override Whether to use the global settings or not
 		 * @param buildTool The build tool selected to be used in builds
@@ -546,7 +634,7 @@ public class RTCScm extends SCM {
 				avoidUsingToolkit = Boolean.parseBoolean(Util.fixNull(avoidUsingBuildToolkit));
 			}
 
-			ValidationResult result = validateConnectInfo(!overrideGlobal, buildTool, serverURI, userId, password, passwordFile, credId, timeout, avoidUsingToolkit);
+			ValidationResult result = validateConnectInfo(project, !overrideGlobal, buildTool, serverURI, userId, password, passwordFile, credId, timeout, avoidUsingToolkit);
 
 			// validate the connection
 			if (result.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
@@ -575,6 +663,7 @@ public class RTCScm extends SCM {
 	     * @return The result of the validation (will be ok if valid)
 		 */
 		private ValidationResult validateConnectInfo(
+				final Job<?,?> project,
 				final boolean checkingGlobalSettings,
 				final String buildTool,
 				final String serverURI,
@@ -649,7 +738,7 @@ public class RTCScm extends SCM {
 	    	}
 			
 			try {
-				result.loginInfo = new RTCLoginInfo(null, result.buildToolkitPath,
+				result.loginInfo = new RTCLoginInfo(project, result.buildToolkitPath,
 						serverURI, userId, password, passwordFile, credId,
 						Integer.parseInt(timeout));
 			} catch (InvalidCredentialsException e) {
@@ -751,7 +840,7 @@ public class RTCScm extends SCM {
 				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
 			}
 			// validate the info for connecting to the server (including toolkit & auth info).
-			ValidationResult connectInfoCheck = validateConnectInfo(
+			ValidationResult connectInfoCheck = validateConnectInfo(project,
 					!overrideGlobalSettings, buildTool, serverURI, userId,
 					password, passwordFile, credId, timeout, avoidUsingToolkit);
 			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
@@ -811,7 +900,7 @@ public class RTCScm extends SCM {
 				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
 			}
 			// validate the info for connecting to the server (including toolkit & auth info).
-			ValidationResult connectInfoCheck = validateConnectInfo(
+			ValidationResult connectInfoCheck = validateConnectInfo(project,
 					!overrideGlobalSettings, buildTool, serverURI, userId,
 					password, passwordFile, credId, timeout, avoidUsingToolkit);
 			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
@@ -823,6 +912,210 @@ public class RTCScm extends SCM {
 						connectInfoCheck.loginInfo, buildDefinition);
 				return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildDefinitionCheck);
 			}
+		}
+		
+		public FormValidation doValidateBuildStream(
+				@AncestorInPath Job<?, ?> project,
+				@QueryParameter("overrideGlobal") final String override,
+				@QueryParameter("buildTool") String buildTool,
+				@QueryParameter("serverURI") String serverURI,
+				@QueryParameter("timeout") String timeout,
+				@QueryParameter("userId") String userId,
+				@QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile,
+				@QueryParameter("credentialsId") String credId,
+				@QueryParameter("avoidUsingToolkit") final String avoidUsingBuildToolkit,
+				@QueryParameter("buildStream") final String buildStream) {
+			LOGGER.finest("DescriptorImpl.doValidateBuildStream : Enter");
+			boolean overrideGlobal = Boolean.parseBoolean(override);
+			boolean avoidUsingToolkit;
+			if (!overrideGlobal) {
+				// use the global settings
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+			}
+			// First do a connection check and then check the stream
+			ValidationResult connectionInfoResult = validateConnectInfo(project, !overrideGlobal, buildTool, serverURI, null, null, null, 
+								credId, timeout, avoidUsingToolkit);
+			if (connectionInfoResult.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return connectionInfoResult.validationResult;
+			} else { // no error, proceed to check the stream
+				FormValidation  streamValidationResult = checkBuildStream(connectionInfoResult.buildToolkitPath, avoidUsingToolkit,
+						connectionInfoResult.loginInfo, buildStream);
+				return Helper.mergeValidationResults(connectionInfoResult.validationResult, streamValidationResult);		
+			}					 
+		}
+
+		/**
+		 * Validate the list of components to exclude.
+		 * 
+		 * @param project The Job that is going to be run
+		 * @param override Whether to override the global connection settings
+		 * @param buildTool The build tool selected to be used in builds (Job setting)
+		 * @param serverURI The RTC server uri (Job setting)
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
+		 *            credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
+		 *            password if the credentials id was not supplied. (Job setting)
+		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
+		 *            connection. (Job setting)
+		 * @param buildTypeStr Type of the build configuration
+		 * @param buildWorkspace The workspace to build from
+		 * @param buildStream The stream to build from
+		 * @param componentsToExclude Path to the file specifying the list of components to exclude
+		 * 
+		 * @return Whether the list of components to exclude is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doValidateComponentsToExclude(@AncestorInPath Job<?, ?> project,
+				@QueryParameter("overrideGlobal") final String override, @QueryParameter("buildTool") String buildTool,
+				@QueryParameter("serverURI") String serverURI, @QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId,
+				@QueryParameter("password") String password, @QueryParameter("passwordFile") String passwordFile,
+				@QueryParameter("credentialsId") String credId, @QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit,
+				@QueryParameter("value") String buildTypeStr, @QueryParameter("buildWorkspace") String buildWorkspace,
+				@QueryParameter("buildStream") String buildStream, @QueryParameter("componentsToExclude") String componentsToExclude) {
+
+			LOGGER.finest("DescriptorImpl.doValidateComponentsToExclude: Begin"); //$NON-NLS-1$
+
+			// first validate if the user has specified the components to
+			// exclude file path
+			if (componentsToExclude == null || componentsToExclude.trim().length() == 0) {
+				return FormValidation.error(Messages.RTCScm_components_to_exclude_specify_file_path());
+			}
+
+			// validate if the required fields are provided
+			// this validation does not require any server call, so it is better
+			// to fail upright than failing after validating other details like
+			// workspace which requires a server call
+			String componentsToExcludeJson = null;
+			try {
+				componentsToExcludeJson = Helper.validateAndGetComponentsToExcludeJson(componentsToExclude);
+			} catch (Exception e) {
+				return FormValidation.error(e, e.getMessage());
+			}
+
+			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+			boolean avoidUsingToolkit;
+			if (!overrideGlobalSettings) {
+				// use the global settings instead of the ones supplied
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				userId = getGlobalUserId();
+				password = getGlobalPassword();
+				passwordFile = getGlobalPasswordFile();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+			}
+			// validate the info for connecting to the server (including toolkit
+			// & auth info).
+			ValidationResult connectInfoCheck = validateConnectInfo(project, !overrideGlobalSettings, buildTool, serverURI, userId, password, passwordFile,
+					credId, timeout, avoidUsingToolkit);
+			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return connectInfoCheck.validationResult;
+			}
+			// connect info is good, now validate the list of components to
+			// exclude
+			boolean isStreamConfiguration = BUILD_STREAM_TYPE.equals(buildTypeStr);
+			if (isStreamConfiguration) {
+				buildWorkspace = buildStream;
+			}
+			FormValidation componentsToExcludeCheck = checkComponentsToExclude(connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
+					connectInfoCheck.loginInfo, isStreamConfiguration, buildWorkspace, componentsToExcludeJson);
+
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, componentsToExcludeCheck);
+		}
+
+		/**
+		 * Validate the component-to-load-rule file mapping.
+		 * 
+		 * @param project The Job that is going to be run
+		 * @param override Whether to override the global connection settings
+		 * @param buildTool The build tool selected to be used in builds (Job setting)
+		 * @param serverURI The RTC server uri (Job setting)
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
+		 *            credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
+		 *            password if the credentials id was not supplied. (Job setting)
+		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
+		 *            connection. (Job setting)
+		 * @param buildTypeStr Type of the build configuration
+		 * @param buildWorkspace The workspace to build from
+		 * @param loadRules Path to the file specifying the component-to-load-rule file mapping
+		 * 
+		 * @return Whether the component-to-load-rule file mapping is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doValidateLoadRules(@AncestorInPath Job<?, ?> project, @QueryParameter("overrideGlobal") final String override,
+				@QueryParameter("buildTool") String buildTool, @QueryParameter("serverURI") String serverURI,
+				@QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId, @QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile, @QueryParameter("credentialsId") String credId,
+				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit, @QueryParameter("value") String buildTypeStr,
+				@QueryParameter("buildWorkspace") String buildWorkspace, @QueryParameter("buildStream") String buildStream,
+				@QueryParameter("loadRules") String loadRules) {
+
+			LOGGER.finest("DescriptorImpl.doValidateLoadRules: Begin"); //$NON-NLS-1$
+
+			// first validate if the user has specified the
+			// component-to-load-rule mapping file path
+			if (loadRules == null || loadRules.trim().length() == 0) {
+				return FormValidation.error(Messages.RTCScm_load_rule_mapping_specify_file_path());
+			}
+
+			// validate if the required fields are provided
+			// this validation does not require any server call, so it is better
+			// to fail upright than failing after validating other details like
+			// workspace which requires a server call
+			String loadRulesJson = null;
+			try {
+				loadRulesJson = Helper.validateAndGetLoadRulesJson(loadRules);
+			} catch (Exception e) {
+				return FormValidation.error(e, e.getMessage());
+			}
+			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+			boolean avoidUsingToolkit;
+			if (!overrideGlobalSettings) {
+				// use the global settings instead of the ones supplied
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				userId = getGlobalUserId();
+				password = getGlobalPassword();
+				passwordFile = getGlobalPasswordFile();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+			}
+			// validate the info for connecting to the server (including toolkit
+			// & auth info).
+			ValidationResult connectInfoCheck = validateConnectInfo(project, !overrideGlobalSettings, buildTool, serverURI, userId, password, passwordFile,
+					credId, timeout, avoidUsingToolkit);
+			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return connectInfoCheck.validationResult;
+			}
+
+			// conenct info is good, now validate the component-to-load-rule
+			// file mapping entries
+			boolean isStreamConfiguration = BUILD_STREAM_TYPE.equals(buildTypeStr);
+			if (isStreamConfiguration) {
+				buildWorkspace = buildStream;
+			}
+			FormValidation loadRulesCheck = checkLoadRules(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
+					isStreamConfiguration, buildWorkspace, loadRulesJson);
+
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, loadRulesCheck);
 		}
 
 		/** 
@@ -874,6 +1167,48 @@ public class RTCScm extends SCM {
 	    	
 	    	return FormValidation.ok(Messages.RTCScm_build_workspace_success());
 	    }
+	    
+	    private FormValidation checkBuildStream(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo, String buildStream) {
+	    	try {
+	    		String errorMessage = RTCFacadeFacade.testBuildStream(buildToolkitPath,
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						avoidUsingToolkit, buildStream);
+				errorMessage = Util.fixEmptyAndTrim(errorMessage);
+				if (errorMessage != null) {
+	    			return FormValidation.error(errorMessage);
+				}
+	    	}
+	    	catch (InvocationTargetException exp){ 
+	    		Throwable eToReport = exp.getCause();
+	    		if (eToReport == null) {
+	    			eToReport = exp;
+	    		}
+	    		if (LOGGER.isLoggable(Level.FINER)) {
+	    	    	LOGGER.finer("checkBuildStream attempted with " +  //$NON-NLS-1$
+	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+	    	    	        "\" buildStream=\"" + buildStream + //$NON-NLS-1$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    			LOGGER.log(Level.FINER, "checkBuildStream invocation failure " + eToReport.getMessage(), exp); //$NON-NLS-1$
+	    		}
+	    		return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
+	    	}
+	    	catch (Exception exp) {
+	    		if (LOGGER.isLoggable(Level.FINER)) {
+	    			LOGGER.finer("checkBuildStream attempted with " +  //$NON-NLS-1$
+	    	    	        " buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+	    	    	        "\" buildStream=\"" + buildStream + //$NON-NLS-1$
+	    	    			"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+	    	    			"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+	    	    			"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+	    			LOGGER.log(Level.FINER, "checkBuildStream failed " + exp.getMessage(), exp); //$NON-NLS-1$
+	    		}
+	    		return FormValidation.error(exp, exp.getMessage());
+	    	}
+	    	return FormValidation.ok(Messages.RTCScm_build_stream_success());
+	    
+	    }
 
 		/**
 		 * Validate the build definition is a H/J definition and usable
@@ -923,7 +1258,116 @@ public class RTCScm extends SCM {
 	    	
 	    	return FormValidation.ok(Messages.RTCScm_build_definition_success());
 	    }
+
+		/**
+		 * Validate if the specified components exist in the repository and included in the given workspace.
+		 * 
+		 * @param buildToolkitPath Path to the build toolkit
+		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
+		 * @param loginInfo The login credentials
+		 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
+		 * @param buildWorkspace The name of the workspace to validate
+		 * @param componentsToExclude Json text spe
+		 * @return The result of the validation. Never <code>null</code>
+		 */
+		private FormValidation checkComponentsToExclude(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo,
+				boolean isStreamConfiguration, String buildWorkspace, String componentsToExclude) {
+
+			try {
+				String errorMessage = RTCFacadeFacade.testComponentsToExclude(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, isStreamConfiguration, buildWorkspace,
+						componentsToExclude);
+				if (errorMessage != null && errorMessage.length() != 0) {
+					return FormValidation.error(errorMessage);
+				}
+			} catch (InvocationTargetException e) {
+				Throwable eToReport = e.getCause();
+				if (eToReport == null) {
+					eToReport = e;
+				}
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkComponentsToExclude attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
+							"\" componentsToExclude=\"" + componentsToExclude + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkComponentsToExclude invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
+				}
+				return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
+			} catch (Exception e) {
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkComponentsToExclude attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
+							"\" componentsToExclude=\"" + componentsToExclude + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkComponentsToExclude failed " + e.getMessage(), e); //$NON-NLS-1$
+				}
+				return FormValidation.error(e, e.getMessage());
+			}
+
+			return FormValidation.ok(Messages.RTCScm_components_to_exclude_valid());
+		}
+
+		/**
+		 * Validate if the specified components/load rule files exist in the repository and included in the given
+		 * workspace.
+		 * 
+		 * @param buildToolkitPath Path to the build toolkit
+		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
+		 * @param loginInfo The login credentials
+		 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
+		 * @param buildWorkspace The name of the workspace to validate
+		 * @param componentsToExclude Json text spe
+		 * @return The result of the validation. Never <code>null</code>
+		 */
+		private FormValidation checkLoadRules(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo,
+				boolean isStreamConfiguration, String buildWorkspace, String loadRules) {
+
+			try {
+				String errorMessage = RTCFacadeFacade.testLoadRules(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, isStreamConfiguration, buildWorkspace, loadRules);
+				if (errorMessage != null && errorMessage.length() != 0) {
+					return FormValidation.error(errorMessage);
+				}
+			} catch (InvocationTargetException e) {
+				Throwable eToReport = e.getCause();
+				if (eToReport == null) {
+					eToReport = e;
+				}
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
+							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkLoadRules invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
+				}
+				return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
+			} catch (Exception e) {
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
+							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkLoadRules failed " + e.getMessage(), e); //$NON-NLS-1$
+				}
+				return FormValidation.error(e, e.getMessage());
+			}
+
+			return FormValidation.ok(Messages.RTCScm_load_rule_mapping_valid());
+		}
 	}
+	
 	
 	/*
 	 * Convenience constructor for instantiating RTCSCM with only a buildType and the rest of the parameters are set to defaults	 * 
@@ -957,6 +1401,15 @@ public class RTCScm extends SCM {
 			this.buildTypeStr = buildType.value;
 			this.buildWorkspace = buildType.buildWorkspace;
 			this.buildDefinition = buildType.buildDefinition;
+			this.buildSnapshot = buildType.buildSnapshot;
+			this.buildStream = buildType.buildStream;
+			this.loadDirectory = buildType.loadDirectory;
+			this.clearLoadDirectory = buildType.clearLoadDirectory;
+			this.createFoldersForComponents = buildType.createFoldersForComponents;
+			this.componentsToExclude = buildType.componentsToExclude;
+			this.loadRules = buildType.loadRules;
+			this.acceptBeforeLoad = buildType.acceptBeforeLoad;
+			this.generateChangelogWithGoodBuild = buildType.generateChangelogWithGoodBuild;
 		}
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
@@ -971,7 +1424,16 @@ public class RTCScm extends SCM {
 					"\" credentialsId=\"" + this.credentialsId + //$NON-NLS-1$
 					"\" buildType=\"" + this.buildTypeStr + //$NON-NLS-1$
 					"\" buildWorkspace=\"" + this.buildWorkspace + //$NON-NLS-1$
-					"\" buildDefinition=\"" + this.buildDefinition + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					"\" buildDefinition=\"" + this.buildDefinition +  //$NON-NLS-1$
+					"\" buildSnapshot=\"" + this.buildSnapshot + //$NON-NLS-1$
+					"\" buildStream=\"" + this.buildStream + //$NON-NLS-1$
+					"\" loadDirectory=\"" + this.loadDirectory + //$NON-NLS-1$
+					"\" clearLoadDirectory=\"" + this.clearLoadDirectory + //$NON-NLS-1$  
+					"\" createFoldersForComponents=\"" + this.createFoldersForComponents + //$NON-NLS-1$  
+					"\" componentsToExclude=\"" + this.componentsToExclude + //$NON-NLS-1$
+					"\" loadRules=\"" + this.loadRules + //$NON-NLS-1$
+					"\" acceptBeforeLoad=\"" + this.acceptBeforeLoad + 
+					"\" generateChangelogWithGoodBuild=\"" + this.generateChangelogWithGoodBuild); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 	
@@ -1063,10 +1525,15 @@ public class RTCScm extends SCM {
 		String label = getLabel(build);
 		String localBuildToolkit;
 		String nodeBuildToolkit;
-		String buildWorkspace = getBuildWorkspace();
-		String buildDefinition = getBuildDefinition();
-		String buildResultUUID = getBuildResultUUID(build, listener);
+		String buildWorkspace = Util.fixEmptyAndTrim(getBuildWorkspace());
+		String buildDefinition = Util.fixEmptyAndTrim(getBuildDefinition());
+		String buildSnapshot = parseBuildSnapshot(build, listener);
 
+		String buildStream = Util.fixEmptyAndTrim(getBuildStream());
+		String buildResultUUID = getBuildResultUUID(build, listener);
+		
+		validateInput(getBuildTypeStr(), buildSnapshot, buildStream);
+		
 		Node node = workspacePath.toComputer().getNode();
 		localBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
 		// Get the build toolkit on the node where the checkout is happening.
@@ -1078,7 +1545,6 @@ public class RTCScm extends SCM {
 		try {
 			loginInfo = getLoginInfo(build.getParent(), localBuildToolkit);
 		} catch (InvalidCredentialsException e1) {
-			// TODO Auto-generated catch block
 			throw new AbortException(e1.getMessage());
 		}
 		// if buildResultUUID is not null then we need to match...
@@ -1109,8 +1575,10 @@ public class RTCScm extends SCM {
 						" Node Build toolkit=\"" + nodeBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Server URI=\"" + loginInfo.getServerUri() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Userid=\"" + loginInfo.getUserId() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" BuildType=\"" + buildType + "\"" + //$NON-NLS-1$
 						" Build definition=\"" + buildDefinition + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Build workspace=\"" + buildWorkspace + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" Build snapshot=\"" + buildSnapshot + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" useBuildDefinitionInBuild=\"" + useBuildDefinitionInBuild + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 			}
@@ -1181,14 +1649,23 @@ public class RTCScm extends SCM {
 			if ((strCallConnectorTimeout == null) || !strCallConnectorTimeout.matches("\\d+")) {
 				strCallConnectorTimeout = "";
 			}
+			
 
+			// Get previous snapshot UUID for comparison in stream case
+			String previousSnapshotUUIDForChangeLog = Helper.getSnapshotUUIDFromPreviousBuild(build, localBuildToolkit, loginInfo, getBuildStream(), getGenerateChangelogWithGoodBuild(), LocaleProvider.getLocale());
+
+			String parentActivityId = "";
+			String connectorId = "";
+			Map<String, String> streamData = new HashMap<String, String>();
 			RTCAcceptTask acceptTask = new RTCAcceptTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
 					buildWorkspace,
-					label,
+					buildSnapshot,
+					buildStream,
+					label, previousSnapshotUUIDForChangeLog,
 					listener, changeLog,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout);
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, getAcceptBeforeLoad());
 
 			// publish in the build result links to the project and the build
 			if (buildResultUUID != null) {
@@ -1206,18 +1683,25 @@ public class RTCScm extends SCM {
 				}
 				acceptTask.setLinkURLs(rootUrl,  projectUrl, buildUrl);
 			}
-			
+				
 			Map<String, Object> acceptResult = workspacePath.act(acceptTask);
-			Map<String, String> buildProperties = (Map<String, String>)acceptResult.get("buildProperties");
+			Map<String, String> buildProperties = (Map<String, String>)acceptResult.get("buildProperties"); //$NON-NLS-1$
 			buildResultAction.addBuildProperties(buildProperties);
-			String parentActivityId = (String)acceptResult.get("parentActivityId");
-			String connectorId = (String)acceptResult.get("connectorId");
+			parentActivityId = (String)acceptResult.get("parentActivityId"); //$NON-NLS-1$
+			connectorId = (String)acceptResult.get("connectorId"); //$NON-NLS-1$
+			streamData = (Map<String, String>)acceptResult.get("buildStreamData"); //$NON-NLS-1$
 			
+			// create componentsToExclude if needed
+			String componentsToExcludeJson = Helper.validateAndGetComponentsToExcludeJson(componentsToExclude);			
+			// create loadrules if needed
+			String loadRulesJson = Helper.validateAndGetLoadRulesJson(loadRules);
+
 			RTCLoadTask loadTask = new RTCLoadTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
-					buildResultUUID, buildWorkspace,	label, listener,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider);
+					buildResultUUID, buildWorkspace, buildSnapshot, buildStream, streamData, label, listener,
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider, clearLoadDirectory, 
+					createFoldersForComponents, componentsToExcludeJson, loadRulesJson, getAcceptBeforeLoad());
 			if (buildResultUUID != null) {
 				String rootUrl = Hudson.getInstance().getRootUrl();
 				if (rootUrl != null) {
@@ -1233,8 +1717,13 @@ public class RTCScm extends SCM {
 				}
 				loadTask.setLinkURLs(rootUrl,  projectUrl, buildUrl);
 			}
-			workspacePath.act(loadTask);
-
+			// Build properties from the load task. Merge it with the properties from accept task
+			if (Util.fixEmptyAndTrim(loadDirectory) != null) {
+				FilePath newWorkspacePath = workspacePath.child(loadDirectory);
+				newWorkspacePath.act(loadTask);
+			} else {
+				workspacePath.act(loadTask);
+			}
     	} catch (Exception e) {
     		Throwable eToReport = e;
     		if (eToReport instanceof InvocationTargetException) {
@@ -1302,11 +1791,19 @@ public class RTCScm extends SCM {
 			InterruptedException {
 		// if #requiresWorkspaceForPolling is false, expect that launcher and workspacePath are null
 		LOGGER.finest("RTCScm.compareRemoteRevisionWith : Begin");
-
+		
 		listener.getLogger().println(Messages.RTCScm_checking_for_changes());
 
 		// check to see if there are incoming changes
     	try {
+    		// If the current configuration does not support polling, return no changes
+    		if (!isConfigSupportsPolling(getBuildTypeStr())) {
+    			listener.getLogger().println(Messages.RTCScm_polling_not_supported());
+    			LOGGER.finer("Polling is not supported for this configuration");
+    			return new PollingResult(revisionState, new RTCRevisionState(BIGINT_ZERO), Change.NONE);  
+    		}
+
+    		// Handle polling request for build workspace or build definition
     		boolean bAvoidUsingToolkit = getAvoidUsingToolkit();
     		String masterToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
     		RTCLoginInfo loginInfo = getLoginInfo(project, masterToolkit);
@@ -1319,7 +1816,7 @@ public class RTCScm extends SCM {
 	    				LOGGER.finer("The build request for the project " + project.getName() + //$NON-NLS-1$ //$NON-NLS-2$
 	    						" is already in queue, return polling result as NO_CHANGES to avoid resetting the quiet time"); //$NON-NLS-1$
 	    			}
-	    			return new PollingResult(revisionState, new RTCRevisionState(0), Change.NONE); 
+	    			return new PollingResult(revisionState, new RTCRevisionState(BIGINT_ZERO), Change.NONE); 
 	    		}
 
 	    		Boolean changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(masterToolkit,
@@ -1332,30 +1829,45 @@ public class RTCScm extends SCM {
 	    		if (changesIncoming.equals(Boolean.TRUE)) {
 	    			listener.getLogger().println(Messages.RTCScm_changes_found());
 	    			// arbitrarily specify non-zero revision hash in current revision state
-	    			return new PollingResult(revisionState, new RTCRevisionState(1), Change.SIGNIFICANT);
+	    			return new PollingResult(revisionState, new RTCRevisionState(BIGINT_ONE), Change.SIGNIFICANT);
 	    		} else {
 	    			listener.getLogger().println(Messages.RTCScm_no_changes_found());
-	    			return new PollingResult(revisionState, new RTCRevisionState(0), Change.NONE);
+	    			return new PollingResult(revisionState, new RTCRevisionState(BIGINT_ZERO), Change.NONE);
 	    		}
     		} else {
+    			// If acceptBeforeLoad is false, we should always build.
+    			if (!getAcceptBeforeLoad()) { 
+    				return new PollingResult(revisionState, new RTCRevisionState(BIGINT_ZERO), Change.SIGNIFICANT);
+    			}
     			String strIgnoreOutgoingFromBuildWorkspace = System.getProperty(IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING);
     			boolean ignoreOutgoingFromBuildWorkspace = "true".equals(strIgnoreOutgoingFromBuildWorkspace); 
+    			// Get the previous snapshot for stream case
+    			String streamChangesData = Helper.getStreamChangesDataFromLastBuild(project, masterToolkit, loginInfo, getBuildStream(), LocaleProvider.getLocale());
     			
-    			Integer currentRevisionHash = RTCFacadeFacade.incomingChangesUsingBuildToolkit(masterToolkit,
+    			BigInteger currentRevisionHash = RTCFacadeFacade.incomingChangesUsingBuildToolkit(masterToolkit,
 	    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
 						loginInfo.getTimeout(), useBuildDefinitionInBuild,
 						getBuildDefinition(),
 						getBuildWorkspace(),
+						getBuildStream(),
+						streamChangesData,
 						listener, ignoreOutgoingFromBuildWorkspace);
+    			LOGGER.finer("currentRevisionHash is " + currentRevisionHash.toString());
     			RTCRevisionState currentRevisionState = new RTCRevisionState(currentRevisionHash);
     			Change change = null;
     			if (isInQueue(project)) {
+    				LOGGER.finer("Project is already in QUEUE");
     				// get last revision hash
     				if (revisionState instanceof RTCRevisionState) {
-	    				Integer lastRevisionHash = ((RTCRevisionState)revisionState).getLastRevisionHash();
+    					// If current hash is not equal to previous hash, then return SIGNIFICANT change
+    					// This makes the polling reset quiet period
+    					// otherwise we will let the quiet period to expire
+	    				BigInteger lastRevisionHash = ((RTCRevisionState)revisionState).getLastRevisionHash();
+	    				LOGGER.finer("LAST REVISION STATE " + lastRevisionHash.toString());
 	    				change = currentRevisionHash.equals(lastRevisionHash) ? Change.NONE : Change.SIGNIFICANT;
+	    				LOGGER.finer("Change is " + change.toString());
     				} else {
-    					// we are in quite period, and previous revisionState is not of RTCRevisionState type...
+    					// we are in quiet period, and previous revisionState is not of RTCRevisionState type...
     					// ideally we should never come here.
     					if (LOGGER.isLoggable(Level.FINER)) {
     	    				LOGGER.finer("The build request for the project " + project.getName() + //$NON-NLS-1$ //$NON-NLS-2$
@@ -1365,19 +1877,22 @@ public class RTCScm extends SCM {
     				}
     			} else {
     				if (project.isBuilding()) {
+        				LOGGER.finer("Project is building");
     					RTCBuildResultAction rtcBuildResultAction = project.getLastBuild().getAction(RTCBuildResultAction.class);
     					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null) &&
     							"true".equals(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver"))) {
     						// snapshot has been created, 
-    						// hence further changes would not be taken by this build...
-    						change = (currentRevisionHash == 0) ? Change.NONE : Change.SIGNIFICANT;
+    						// hence further changes would not be taken by the running build...
+    						change = (currentRevisionHash.equals(BIGINT_ZERO)) ? Change.NONE : Change.SIGNIFICANT;
     					} else {
     						// build is running, but snapshot has not been created yet,
-    						// hence any further changes can still be considered by this build
+    						// hence any further changes can still be considered by the running build
+    						// therefore return no changes to avoid queueing another build
     						change = Change.NONE;
     					}
     				} else {
-    					change = (currentRevisionHash == 0) ? Change.NONE : Change.SIGNIFICANT;
+        				LOGGER.finer("Project is not in queue nor it is building");
+    					change = (currentRevisionHash.equals(BIGINT_ZERO)) ? Change.NONE : Change.SIGNIFICANT;
     				}
     			}
     			return new PollingResult(revisionState, currentRevisionState, change);
@@ -1589,6 +2104,39 @@ public class RTCScm extends SCM {
 		return buildWorkspace;
 	}
 	
+	public String getLoadDirectory() {
+		return loadDirectory;
+	}
+	
+	public boolean getClearLoadDirectory() {
+		return clearLoadDirectory;
+	}
+	
+	public String getBuildSnapshot() {
+		return buildSnapshot;
+	}
+	
+	public String getBuildStream() {
+		return buildStream;
+	}
+	
+	public boolean getCreateFoldersForComponents() {
+		return createFoldersForComponents;
+	}
+	
+	public String getComponentsToExclude() {
+		return componentsToExclude;
+	}
+	
+	public String getLoadRules() {
+		return loadRules;
+	}
+	
+	public boolean getAcceptBeforeLoad() {
+		// return true if the options has not been set.
+		return !"false".equals(acceptBeforeLoad);
+	}
+	
     @Exported
 	public String getBuildDefinition() {
 		return buildDefinition;
@@ -1598,6 +2146,10 @@ public class RTCScm extends SCM {
 	@Exported
 	public String getType() {
 		return super.getType();
+	}
+	
+	public boolean getGenerateChangelogWithGoodBuild() {
+		return generateChangelogWithGoodBuild;
 	}
 	
 	@Override
@@ -1626,42 +2178,36 @@ public class RTCScm extends SCM {
 	
 	private static String getBuildResultUUID(Run<?,?> build, TaskListener listener) throws IOException, InterruptedException {
 		 LOGGER.finest("RTCScm.getBuildResultUUID : Begin");
-		 String buildResultUUID = Util.fixEmptyAndTrim(build.getEnvironment(listener).get(RTCBuildResultAction.BUILD_RESULT_UUID));
-		 if (buildResultUUID == null) {
-			// check if buildResultUUID parameter is available from ParametersAction
-			buildResultUUID = getValueFromParametersAction(build, RTCBuildResultAction.BUILD_RESULT_UUID);
-		 }
-		 return buildResultUUID;
+		 return Helper.getStringBuildProperty(build, RTCJobProperties.BUILD_RESULT_UUID, listener);
+	}
+
+	private boolean isConfigSupportsPolling(String buildType) {
+		if (buildType.equals(BUILD_DEFINITION_TYPE) || buildType.equals(BUILD_WORKSPACE_TYPE) 
+				|| buildType.equals(BUILD_STREAM_TYPE)) {
+			return true;
+		}
+		return false;
 	}
 	
-	private static String getValueFromParametersAction(Run<?,?> build, String key) {
-		String value = null;
-		LOGGER.finest("RTCScm.getValueFromParametersAction : Begin");
-		for (ParametersAction paction: build.getActions(ParametersAction.class)) {
-			List<ParameterValue> pValues = paction.getParameters();
-			if (pValues == null) {
-				continue;
-			}
-            for(ParameterValue pv : pValues) {
-            	if (pv instanceof StringParameterValue && pv.getName().equals(key)) {
-            		value = Util.fixEmptyAndTrim((String) pv.getValue());
-            		if (value != null) {
-            			break;
-            		}
-            	}
-            }
-            if (value != null) {
-            	break;
-            }
-        }
-        if (LOGGER.isLoggable(Level.FINER)) {
-        	if (value == null) {
-        		LOGGER.finer("RTCScm.getValueFromParametersAction : Unable to find a value for key : " + key + ".Could be a build initiated locally.");
-        	}
-        	else {
-	             LOGGER.finer("RTCScm.getValueFromParametersAction : Found value : " + value + " for key : " + key);
-			}
-        }
-		return value;
+	private String parseBuildSnapshot(Run<?,?> build, TaskListener listener) throws IOException, InterruptedException {
+		String property = Util.fixEmptyAndTrim(getBuildSnapshot());
+		// if it is a job property, resolve it otherwise return the property as such
+		if (Helper.isJobProperty(property)) {
+			return Helper.resolveJobProperty(build, property, listener);
+		} else {
+			return property;
+		}
+	}
+	
+	private static void validateInput(String buildType, String buildSnapshotNameOrUUID, String buildStreamName) throws AbortException {
+		// If  snapshot UUID is null, we cannot proceed with checkout 
+		if (BUILD_SNAPSHOT_TYPE.equals(buildType) && buildSnapshotNameOrUUID == null) {
+			throw new AbortException(Messages.RTCScm_checkout_failure4(Messages.RTCScm_snapshot_not_provided()));
+		}
+		
+		if (BUILD_STREAM_TYPE.equals(buildType) && buildStreamName == null) {
+			throw new AbortException(Messages.RTCScm_checkout_failure4(Messages.RTCScm_stream_not_provided()));
+		}
+		
 	}
 }

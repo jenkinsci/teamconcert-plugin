@@ -16,6 +16,7 @@ import java.util.Set;
 import com.ibm.team.build.internal.scm.AcceptReport;
 import com.ibm.team.scm.common.IChangeSetHandle;
 import com.ibm.team.scm.common.IComponentHandle;
+import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 
 /**
  * Utility class over AcceptReport, that offers: 
@@ -40,6 +41,7 @@ public class RTCAcceptReportUtility {
 	 * added (accepted) v/s deleted (discarded), reverse the uuid value if an item is
 	 * deleted (discarded). 
 	 */
+	@SuppressWarnings("restriction")
 	public static int hashCode(AcceptReport acceptReport, boolean ignoreOutgoingFromBuildWorkspace) {
 		Set<String> uuidSet = new HashSet<String>();
 		for (IComponentHandle addedComponents : acceptReport.getComponentAdds()) {
@@ -60,5 +62,5 @@ public class RTCAcceptReportUtility {
 			}
 		}
 		return uuidSet.hashCode(); 
-	}	
+	}
 }

@@ -1,0 +1,41 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+작업공간의 일부 컴포넌트만 빌드될 경우 로드할 필요가 없는 컴포넌트는 제외할 수 있습니다.
+  </p>
+  <p>
+  	컴포넌트를 제외하려면 다음 JSON 형식으로 해당 컴포넌트를 목록화하고, 이 목록을 디스크에 있는 파일로 저장하고, 이 필드에 해당 파일에 대한 경로를 지정하십시오.
+</p>
+  <p>
+  <pre>
+  {
+    "componentsToExclude":[
+      {
+	    "componentName":"JUnit"
+      },
+      {
+	    "componentName":"Releng"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+  	"componentName" 대신 "componentId"를 지정할 수도 있습니다. "componentId"는 컴포넌트의 항목 ID(UUID)입니다.
+"componentName"과 "componentId"를 둘 다 지정하는 경우 "componentId"로만 검색이 수행됩니다.
+  </p>
+</div>

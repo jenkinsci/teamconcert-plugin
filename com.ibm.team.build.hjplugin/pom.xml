@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2013, 2015 IBM Corporation and others.
+    Copyright (c) 2013, 2016 IBM Corporation and others.
     All rights reserved. This program and the accompanying materials
     are made available under the terms of the Eclipse Public License v1.0
     which accompanies this distribution, and is available at
@@ -19,7 +19,7 @@
 
 	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>teamconcert</artifactId>
-	<version>1.2.0.0-SNAPSHOT</version>
+	<version>1.2.0.0-SNAPSHOT</version> 
 	<packaging>hpi</packaging>
 
 	<name>Team Concert Plugin</name>
@@ -60,7 +60,7 @@
 		<developerConnection>scm:git:https://github.com/jenkinsci/teamconcert-plugin.git</developerConnection>
 		<url>https://github.com/jenkinsci/teamconcert-plugin</url>
 	  <tag>HEAD</tag>
-  </scm>
+	</scm>
 
 	<properties>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -96,12 +96,12 @@
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.0.8</version>
+			<version>1.0.9</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.0.8</version>
+			<version>1.0.9</version>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>

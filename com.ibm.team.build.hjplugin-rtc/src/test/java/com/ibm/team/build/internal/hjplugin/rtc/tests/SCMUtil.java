@@ -46,7 +46,10 @@ import com.ibm.team.scm.client.IWorkspaceConnection.ISaveOp;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.client.content.util.VersionedContentManagerByteArrayInputStreamPovider;
+import com.ibm.team.scm.common.BaselineSetFlags;
 import com.ibm.team.scm.common.ContentHash;
+import com.ibm.team.scm.common.IBaselineSet;
+import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IChangeSetHandle;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
@@ -89,6 +92,10 @@ public class SCMUtil {
 		
 		addVersionables(workspace, component, null, artifacts, contents);
 		return artifacts;
+	}
+	
+	public static IBaselineSetHandle createSnapshot(IWorkspaceConnection workspace, String snapshotName) throws TeamRepositoryException {
+		return workspace.createBaselineSet(null, snapshotName, null, BaselineSetFlags.CREATE_NEW_BASELINES, null);
 	}
 
 	public static IChangeSetHandle addVersionables(IWorkspaceConnection workspace,

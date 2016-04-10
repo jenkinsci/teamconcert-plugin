@@ -21,6 +21,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
@@ -39,6 +40,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 	private String userId;
 	private Secret password;
 	private int timeout;
+	private String buildStream;
+	private String buildSnapshot;
 	private String buildWorkspace;
 	private String buildResultUUID;
 	private TaskListener listener;
@@ -50,6 +53,12 @@ public class RTCLoadTask extends RTCTask<Void> {
 	private String parentActivityId;
 	private String connectorId;
 	private RtcExtensionProvider extProvider;
+	private boolean isDeleteNeeded;
+	private boolean createFoldersForComponents;
+	private String componentsToExclude;
+	private String loadRules;
+	private boolean acceptBeforeLoad;
+	private Map<String,String> buildStreamData;
 	
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -59,7 +68,7 @@ public class RTCLoadTask extends RTCTask<Void> {
 	private String buildUrl;
 
 	private static final long serialVersionUID = 1L;
-
+	
 	/**
 	 * Task that performs accept work on the master or the slave
 	 * @param contextStr Context for logging
@@ -68,24 +77,35 @@ public class RTCLoadTask extends RTCTask<Void> {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
-	 * @param buildDefinition The name (id) of the build definition to use. May be <code>null</code>
-	 * if buildWorkspace is supplied instead.
+ 	 * @param buildResultUUID The build result to relate build results with.
 	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code>
-	 * if buildDefinition is supplied instead.
-	 * @param buildResultUUID The build result to relate build results with.
+	 * if buildDefinition or buildSnapshot or buildStream is supplied instead
+	 * @param buildSnapshot the name/uuid of the RTC build snapshot. May be <code>null</code>
+	 * if buildDefinition or buildWorkspace or buildStream is supplied instead
+	 * @param buildStream The name of the RTC build stream. May be <code>null</code> if one of 
+	 * buildDefinition or buildWorkspace or buildSnapshot is supplied instead
+	 * @param buildStreamData the additional data from stream load obtained from {@link RTCAcceptTask} 
 	 * @param baselineSetName The name to give the baselineSet created
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param isRemote Whether this will be executed on the Master or a slave
 	 * @param debug Whether to report debugging messages to the listener
 	 * @param clientLocale The locale of the requesting client
 	 * @param extProvider The extension provider can be <code>null</code> 
+	 * @param isDeleteNeeded true if Jenkins job is configured to delete load directory before fetching
+	 * @param createFoldersForComponents create folders for components if true
+	 * @param componentsToExclude json text representing the list of components to exclude during load
+	 * @param loadRules json text representing the component to load rule file mapping
+	 * @throws Exception 
 	 */
 	public RTCLoadTask(String contextStr, String buildToolkit,
 			String serverURI, String userId, String password, int timeout,
 			String buildResultUUID, String buildWorkspace,
+			String buildSnapshot, String buildStream,
+			Map<String, String> buildStreamData,
 			String baselineSetName, TaskListener listener,
 			boolean isRemote, boolean debug, Locale clientLocale, 
-			String parentActivityId, String connectorId, RtcExtensionProvider extProvider) {
+			String parentActivityId, String connectorId, RtcExtensionProvider extProvider, boolean isDeleteNeeded, 
+			boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -95,7 +115,10 @@ public class RTCLoadTask extends RTCTask<Void> {
     	this.password = Secret.fromString(password);
     	this.timeout = timeout;
     	this.buildWorkspace = buildWorkspace;
+    	this.buildSnapshot = buildSnapshot;
+    	this.buildStream = buildStream;
     	this.buildResultUUID = buildResultUUID;
+    	this.buildStreamData = buildStreamData;
     	this.baselineSetName = baselineSetName;
     	this.listener = listener;
     	this.isRemote = isRemote;
@@ -104,6 +127,11 @@ public class RTCLoadTask extends RTCTask<Void> {
     	this.parentActivityId = parentActivityId;
     	this.connectorId = connectorId;
     	this.extProvider = extProvider;
+    	this.isDeleteNeeded = isDeleteNeeded;
+    	this.createFoldersForComponents = createFoldersForComponents;
+    	this.componentsToExclude = componentsToExclude;
+    	this.loadRules = loadRules;
+    	this.acceptBeforeLoad = acceptBeforeLoad;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -124,7 +152,10 @@ public class RTCLoadTask extends RTCTask<Void> {
 			debug("userId " + userId); //$NON-NLS-1$
 			debug("timeout " + timeout); //$NON-NLS-1$
 			debug("buildWorkspace " + (buildWorkspace == null ? "n/a" : buildWorkspace)); //$NON-NLS-1$ //$NON-NLS-2$
+			debug("buildSnapshot " + (buildSnapshot == null ? "n/a" : buildSnapshot)); //$NON-NLS-1$ //$NON-NLS-2$
+			debug("buildStream " + (buildStream == null ? "n/a" : buildStream)); //$NON-NLS-1$ //$NON-NLS-2$
 			debug("buildResult " + (buildResultUUID == null ? "n/a" : "defined")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			debug("buildStreamData is " + (buildStreamData == null ? "null" : "not null")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("listener is " + (listener == null ? "null" : "not null")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("Running remote " + isRemote); //$NON-NLS-1$
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
@@ -137,13 +168,17 @@ public class RTCLoadTask extends RTCTask<Void> {
     			debug("hjplugin-rtc.jar " + RTCFacadeFactory.getFacadeJarURL(listener.getLogger()).toString()); //$NON-NLS-1$
     		}
     		
-			facade.invoke("load", new Class[] { //$NON-NLS-1$
+    		
+    		facade.invoke("load", new Class[] { //$NON-NLS-1$
 					String.class, // serverURI,
 					String.class, // userId,
 					String.class, // password,
 					int.class, // timeout,
 					String.class, // buildResultUUID,
 					String.class, // buildWorkspace,
+					String.class, // buildSnapshot,
+					String.class, // buildStream,
+					Map.class, // buildStreamData,
 					String.class, // hjWorkspacePath,
 					String.class, // baselineSetName,
 					Object.class, // listener
@@ -151,13 +186,20 @@ public class RTCLoadTask extends RTCTask<Void> {
 					String.class, // parentActivityId
 					String.class, // connectorId
 					Object.class, //extension provider
-					PrintStream.class //print stream
+					PrintStream.class, //print stream
+					boolean.class, // isDeleteNeeded
+					boolean.class, // createFoldersForComponents
+					String.class, // componentsToBeExcluded
+					String.class, // loadRules
+					boolean.class // acceptBeforeLoad
 			}, serverURI, userId, Secret.toString(password),
 					timeout, buildResultUUID, buildWorkspace,
+					buildSnapshot, buildStream, buildStreamData,
 					workspace.getAbsolutePath(),
 					baselineSetName,
 					listener, clientLocale, parentActivityId, connectorId,
-					extProvider, listener.getLogger());
+					extProvider, listener.getLogger(), isDeleteNeeded, 
+					createFoldersForComponents, componentsToExclude, loadRules, acceptBeforeLoad);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;
@@ -176,7 +218,6 @@ public class RTCLoadTask extends RTCTask<Void> {
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure2(eToReport.getMessage()));
     	}
-		
 		return null;
     }
 

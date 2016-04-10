@@ -1,0 +1,41 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Wenn nur manche Komponenten im Arbeitsbereich erstellt werden sollen, können Sie Komponenten ausschließen, die nicht geladen werden müssen.
+  </p>
+  <p>
+  	Um Komponenten auszuschließen, listen Sie sie im folgenden JSON-Format auf, speichern Sie die Liste in einer Datei auf einem Datenträger und geben Sie den Pfad zur Datei in diesem Feld an.
+  </p>
+  <p>
+  <pre>
+  {
+    "componentsToExclude":[
+      {
+	    "componentName":"JUnit"
+      },
+      {
+	    "componentName":"Releng"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+  	Sie können auch "componentId" (Komponenten-ID) anstelle von "componentName" (Komponentenname) angeben. Bei "componentId" handelt es sich um die Element-ID (UUID) der Komponente.
+  	Wenn Sie sowohl "componentName" als auch "componentId" angeben, erfolgt die Suche nur für "componentId."
+  </p>
+</div>

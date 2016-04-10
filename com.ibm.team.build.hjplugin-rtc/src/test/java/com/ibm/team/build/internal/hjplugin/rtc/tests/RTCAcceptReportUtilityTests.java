@@ -90,8 +90,8 @@ public class RTCAcceptReportUtilityTests {
 						addedComponentHandles1,
 						discardedComponentHandles1);
 
-		Integer hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
-		Integer hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
+		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
+		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
 		AssertUtil.assertEquals(hash1, hash2);
 	}
@@ -115,8 +115,8 @@ public class RTCAcceptReportUtilityTests {
 						addedComponentHandles1,
 						discardedComponentHandles1);
 
-		Integer hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
-		Integer hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
+		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
+		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
 		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
 	}
@@ -140,8 +140,8 @@ public class RTCAcceptReportUtilityTests {
 						addedComponentHandles1,
 						discardedComponentHandles1);
 
-		Integer hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
-		Integer hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
+		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
+		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
 		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
 	}
@@ -165,8 +165,8 @@ public class RTCAcceptReportUtilityTests {
 						addedComponentHandles2,
 						discardedComponentHandles1);
 
-		Integer hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
-		Integer hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
+		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
+		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
 		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
 	}
@@ -190,8 +190,8 @@ public class RTCAcceptReportUtilityTests {
 						addedComponentHandles1,
 						discardedComponentHandles2);
 
-		Integer hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
-		Integer hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
+		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
+		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
 		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
 	}
@@ -214,8 +214,8 @@ public class RTCAcceptReportUtilityTests {
 						addedComponentHandles1,
 						discardedComponentHandles1);
 
-		Integer hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
-		Integer hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
+		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
+		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
 		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
 	}
@@ -242,8 +242,8 @@ public class RTCAcceptReportUtilityTests {
 						addedComponentHandles2,
 						discardedComponentHandles2);
 
-		Integer hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
-		Integer hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
+		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
+		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
 		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
 	}

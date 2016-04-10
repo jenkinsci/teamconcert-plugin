@@ -11,14 +11,10 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.TaskListener;
-import hudson.scm.EditType;
-import hudson.util.StreamTaskListener;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.OutputStream;
+import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
@@ -33,12 +29,17 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemD
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
+
+import hudson.model.TaskListener;
+import hudson.scm.EditType;
+import hudson.util.StreamTaskListener;
 
 @SuppressWarnings("nls")
 public class RepositoryConnectionIT extends HudsonTestCase {
@@ -119,7 +120,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -127,26 +128,14 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false, 
 						null,
-						workspaceName, listener, false);
+						workspaceName, null, null, listener, false);
 				
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -234,7 +223,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -242,28 +231,16 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false, 
 						null,
-						workspaceName, listener, false);
+						workspaceName, null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				@SuppressWarnings("unchecked")
-				Map<String, String> properties = (Map<String, String>) testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Map<String, String> properties = Utils.acceptAndLoad(
+						testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -309,9 +286,9 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false, 
 						null,
-						workspaceName, listener, false);
+						workspaceName,  null, null, listener, false);
 
-				Assert.assertFalse("Expected zero hashcode", hashCode != 0);
+				Assert.assertFalse("Expected zero hashcode", hashCode.equals(new BigInteger("0")));
 	    		
 			} finally {
 				// clean up
@@ -370,7 +347,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 						Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -378,27 +355,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false, 
 						null,
-						workspaceName, listener, false);
+						workspaceName,  null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -440,9 +405,9 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false, 
 						null,
-						workspaceName, listener, false);
+						workspaceName, null, null, listener, false);
 
-				Assert.assertFalse("Expected zero hashcode", hashCode != 0);
+				Assert.assertFalse("Expected zero hashcode", hashCode.equals(new BigInteger("0")));
 	    		
 			} finally {
 				// clean up
@@ -515,7 +480,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						null, listener);
 				Assert.assertTrue(changesIncoming.booleanValue());
 
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -523,28 +488,16 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						true,
 						testName,
-						null, listener, false);
+						null,  null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				String buildResultUUID = setupArtifacts.get("buildResultItemId");
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -586,9 +539,9 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						true,
 						testName,
-						null, listener, false);
+						null,  null, null, listener, false);
 
-				Assert.assertFalse("Expected zero hashcode", hashCode != 0);
+				Assert.assertFalse("Expected zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 	    				Config.DEFAULT.getToolkit(),
@@ -757,7 +710,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -765,27 +718,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false,
 						null,
-						workspaceName, listener, false);
+						workspaceName,  null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -866,7 +807,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -874,27 +815,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false,
 						null,
-						workspaceName, listener, false);
+						workspaceName,  null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -972,7 +901,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -980,27 +909,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false,
 						null,
-						workspaceName, listener, false);
+						workspaceName,  null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -1076,7 +993,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -1084,27 +1001,15 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false,
 						null,
-						workspaceName, listener, false);
+						workspaceName, null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -1168,9 +1073,9 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false,
 						null,
-						workspaceName, listener, false);
+						workspaceName, null, null, listener, false);
 
-				Assert.assertFalse("Expected zero hashcode", hashCode != 0);
+				Assert.assertFalse("Expected zero hashcode", hashCode.equals(new BigInteger("0")));
 	    		
 			} finally {
 				// clean up
@@ -1233,7 +1138,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -1241,28 +1146,16 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false,
 						null,
-						workspaceName, listener, false);
+						workspaceName,  null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				String snapshotName = XML_ENCODED_CHARACTERS;
 				
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -1300,6 +1193,42 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
+		
+	}
+	/*
+	public void testAcceptWithBuildResult() throws Exception {
+		
+	}
+	
+	public void testAcceptWithBuildWorkspace() throws Exception {
+		
+	}
+	
+	public void testLoadWithBuildResult() throws Exception {
+		
+	}
+	
+	public void testLoadWithBuildWorkspaceName() throws Exception {
+		
+	}
+	
+	public void testLoadWithBuildWorkspaceUUID() throws Exception {
+		
+	}
+	*/
+	public void testLoadWithBuildSnapshotName() throws Exception {
+		
+	}
+	
+	public void testLoadWithBuildSnapshotUUID() throws Exception {
+		
+	}
+
+	public void testLoadWithBuildStreamName() throws Exception {
+		
+	}
+	
+	public void testLoadWithBuildStreamUUID() throws Exception {
 		
 	}
 
@@ -1556,7 +1485,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				TaskListener listener = new StreamTaskListener(System.out, null);
 				
 				// ensure that the incoming changes are detected
-				Integer hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
+				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
@@ -1564,9 +1493,9 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						loginInfo.getTimeout(),
 						false,
 						null,
-						workspaceName, listener, false);
+						workspaceName,  null, null, listener, false);
 
-				Assert.assertTrue("Expected non zero hashcode", hashCode != 0);
+				Assert.assertTrue("Expected non zero hashcode", hashCode.equals(new BigInteger("0")));
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -1591,19 +1520,7 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 				setupArtifacts.put("buildResultItemId", buildResultItemId);
 				
 				// checkout the changes
-				testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -1611,7 +1528,6 @@ public class RepositoryConnectionIT extends HudsonTestCase {
 						buildResultItemId, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
-
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();

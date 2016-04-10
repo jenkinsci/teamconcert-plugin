@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -110,7 +110,7 @@ public class RTCBuildResultHelperIT extends HudsonTestCase {
 		RTCBuildToolInstallation tool = new RTCBuildToolInstallation("config_toolkit", Config.DEFAULT.getToolkit(), Collections.EMPTY_LIST);
 		tool.getDescriptor().setInstallations(tool);
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
-		BuildType buildType = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "SomeBuildDefinition", null);
+		BuildType buildType = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "SomeBuildDefinition", null, null, "");
 		RTCScm scm = new RTCScm(true, "config_toolkit", loginInfo.getServerUri(),
 				loginInfo.getTimeout(), loginInfo.getUserId(),
 				Secret.fromString(loginInfo.getPassword()), "", "", buildType , false);

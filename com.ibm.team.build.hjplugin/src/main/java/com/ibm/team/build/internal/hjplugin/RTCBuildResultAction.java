@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -36,7 +36,6 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 
     private static final Logger LOGGER = Logger.getLogger(RTCBuildResultAction.class.getName());
 
-	static final String BUILD_RESULT_UUID = "buildResultUUID";
 	private static final String RTC_BUILD_RESULT_UUID = "RTCBuildResultUUID";
 	private static final String SLASH = "/"; //$NON-NLS-1$
 	private static final String ITEM_OID = "resource/itemOid/com.ibm.team.build.BuildResult/";
@@ -144,11 +143,15 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	/**
 	 * Adds to the RTC Scm build the properties obtained from the build engine
 	 * and build definition.
-	 * @param buildProperties The build properties to include
+	 * @param buildProperties The build properties to include. May be <code>null</code>
 	 */
 	public void addBuildProperties(Map<String, String> buildProperties) {
+		if (buildProperties == null) {
+			return;
+		}
 		LOGGER.finest("RTCBuildResultAction.addBuildProperties : Enter"); //$NON-NLS-1$
 		for (Map.Entry<String, String> entry : buildProperties.entrySet()) {
+			LOGGER.finest("Key : "  + entry.getKey() + " Value : " + entry.getValue());
 			this.buildProperties.put(entry.getKey(), entry.getValue());
 		}
 	}

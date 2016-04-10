@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -42,6 +42,7 @@ import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.IBaselineSet;
+import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IChange;
 import com.ibm.team.scm.common.IChangeSet;
 import com.ibm.team.scm.common.IChangeSetHandle;
@@ -51,6 +52,7 @@ import com.ibm.team.scm.common.IVersionable;
 import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IAncestorReport;
+import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 import com.ibm.team.scm.common.dto.IChangeSetLinkSummary;
 import com.ibm.team.scm.common.dto.INameItemPair;
 import com.ibm.team.scm.common.links.ILinkConstants;
@@ -106,6 +108,37 @@ public class ChangeReportBuilder {
 		// record change sets accepted/discarded
 		fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener, monitor.newChild(85));
 	}
+	
+	/**
+	 * Populates the given {@link ChangeReport} from a {@link IChangeHistorySyncReport}
+	 * @param changeReport - the {@link ChangeReport} to fill in
+	 * @param workspaceHandle - the {@link IWorkspaceHandle} to resolve file paths/names against 
+	 * @param snapshot - the snapshot for this {@link ChangeReport}
+	 * @param snapshotName - the name of the snapshot
+	 * @param acceptReport - the {@link IChangeHistorySyncReport} 
+	 * @param listener - a {@link IConsoleOutput} to which messages should be written to
+	 * @param progress - a {@link IProgressMonitor} to report progress
+	 * @throws TeamRepositoryException
+	 */
+	public void populateChangeReport(ChangeReport changeReport,
+			IWorkspaceHandle workspaceHandle, IBaselineSetHandle snapshot, String snapshotName,
+			IChangeHistorySyncReport acceptReport, IConsoleOutput listener,
+			IProgressMonitor progress) throws TeamRepositoryException {
+		
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
+		// record build workspace
+		changeReport.setWorkspaceItemId(workspaceHandle.getItemId().getUuidValue());
+		
+		// record snapshot if one was created
+		fillSnapshot(changeReport, snapshot, snapshotName, listener, monitor.newChild(5));
+		
+		// record component additions/removals
+		fillComponentChanges(changeReport, acceptReport, listener, monitor.newChild(10)); 
+
+		// record change sets accepted/discarded
+		fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener, monitor.newChild(85));
+	}
 
 	/**
 	 * Populate the contents of an empty ChangeReport with the 
@@ -117,6 +150,16 @@ public class ChangeReportBuilder {
 			boolean isPersonalBuild, IConsoleOutput listener) {
 		changeReport.setIsPersonalBuild(isPersonalBuild);
 	}
+	
+	/**
+	 * Populate the contents of empty ChangeReport with only snapshot link
+	 */
+	public void populateChangeReport(ChangeReport changeReport, IBaselineSetHandle baselineSetHandle, String snapshotName,
+										IConsoleOutput listener, IProgressMonitor progress) {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		// record snapshot if one was created
+		fillSnapshot(changeReport, baselineSetHandle, snapshotName, listener, monitor.newChild(5));
+	}
 
 	private void fillSnapshot(ChangeReport changeReport,
 			AcceptReport acceptReport, IConsoleOutput listener,
@@ -124,6 +167,15 @@ public class ChangeReportBuilder {
 		IBaselineSet snapshot = acceptReport.getSnapshot();
 		if (snapshot != null) {
 			ChangeReport.BaselineSetReport baseLineSet = new BaselineSetReport(snapshot.getItemId().getUuidValue(), snapshot.getName());
+			changeReport.baselineSetCreated(baseLineSet);
+		}
+	}
+	
+	private void fillSnapshot(ChangeReport changeReport,
+			final IBaselineSetHandle snapshot, final String snapshotName, IConsoleOutput listener,
+			IProgressMonitor progress) {
+		if (snapshot != null) {
+			ChangeReport.BaselineSetReport baseLineSet = new BaselineSetReport(snapshot.getItemId().getUuidValue(), snapshotName);
 			changeReport.baselineSetCreated(baseLineSet);
 		}
 	}
@@ -138,9 +190,27 @@ public class ChangeReportBuilder {
 		// and full workitems all at the same time because we don't need the full work items and we don't expect
 		// the full info to be previously cached.
 		// My concern is that the ChangeSetLinks might not scale for larger build accepts
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IChangeSetHandle[] changeSetsAccepted = acceptReport.getAcceptChangeSets();
 		IChangeSetHandle[] changeSetsDisarded = acceptReport.getDiscardChangeSets();
+		fillChangeSetChanges(changeReport, changeSetsAccepted, changeSetsDisarded, workspaceHandle, listener, progress);
+	}
+	
+	private void fillChangeSetChanges(ChangeReport changeReport,
+			IChangeHistorySyncReport compareReport, IWorkspaceHandle workspaceHandle,
+			IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
+		List changeSetsAcceptedList = compareReport.outgoingChangeSets();
+		List changeSetsDisardedList = compareReport.incomingChangeSets();
+		IChangeSetHandle [] changeSetsAccepted = new IChangeSetHandle[changeSetsAcceptedList.size()];
+		IChangeSetHandle [] changeSetsDisarded = new IChangeSetHandle[changeSetsDisardedList.size()];
+		changeSetsAcceptedList.toArray(changeSetsAccepted);
+		changeSetsDisardedList.toArray(changeSetsDisarded);
+		fillChangeSetChanges(changeReport, changeSetsAccepted, changeSetsDisarded, workspaceHandle, listener, progress);
+	}
+	
+	private void fillChangeSetChanges(ChangeReport changeReport,
+			final IChangeSetHandle[] changeSetsAccepted, final IChangeSetHandle[] changeSetsDisarded,
+			IWorkspaceHandle workspaceHandle, IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		List<IChangeSetHandle> changeSetHandles = new ArrayList<IChangeSetHandle>(changeSetsAccepted.length + changeSetsDisarded.length);
 		int numberOfAdds = changeSetsAccepted.length;
 		for (IChangeSetHandle changeSetHandle : changeSetsAccepted) {
@@ -266,11 +336,59 @@ public class ChangeReportBuilder {
 	private void fillComponentChanges(ChangeReport changeReport,
 			AcceptReport acceptReport, IConsoleOutput listener,
 			IProgressMonitor progress) throws TeamRepositoryException {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		
-		// look up the components added & removed to get their names
 		IComponentHandle[] componentAdds = acceptReport.getComponentAdds();
 		IComponentHandle[] componentRemovals = acceptReport.getComponentRemovals();
+		fillComponentChanges(changeReport, componentAdds, componentRemovals, listener, progress);
+	}
+	
+	private void fillComponentChanges(ChangeReport changeReport,
+			IChangeHistorySyncReport compareReport, IConsoleOutput listener,
+			IProgressMonitor progress) throws TeamRepositoryException {
+		List<IComponentHandle> componentAddsList = new ArrayList<IComponentHandle>();
+		List<IComponentHandle> componentRemovalsList = new ArrayList<IComponentHandle>();
+		final List localComponents= compareReport.localComponents();
+		final List remoteComponents = compareReport.remoteComponents();
+		for (int i = 0 ; i < localComponents.size(); i++ ) {
+			IComponentHandle localComponent = (IComponentHandle) localComponents.get(i);
+			boolean matched = false;
+			for (int j = 0 ; j < remoteComponents.size() ; j++) {
+				IComponentHandle remoteComp = (IComponentHandle) remoteComponents.get(j);
+				if (localComponent.sameItemId(remoteComp)) {
+					matched = true;
+					break;
+				}
+			}
+			if (!matched) {
+				componentAddsList.add(localComponent);
+			}
+		}
+		for (int i = 0 ; i < remoteComponents.size(); i++ ) {
+			final IComponentHandle remoteComponent = (IComponentHandle) remoteComponents.get(i);
+			boolean matched = false;
+			for (int j = 0 ; j < localComponents.size() ; j++) {
+				final IComponentHandle localComponent = (IComponentHandle) localComponents.get(j);
+				if (remoteComponent.sameItemId(localComponent)) {
+					matched = true;
+					break;
+				}
+			}
+			if (!matched) {
+				componentRemovalsList.add(remoteComponent);
+			}
+		}
+		IComponentHandle [] componentAdds = new IComponentHandle[componentAddsList.size()];
+		IComponentHandle [] componentRemovals = new IComponentHandle[componentRemovalsList.size()];
+		componentAddsList.toArray(componentAdds);
+		componentRemovalsList.toArray(componentRemovals);
+		fillComponentChanges(changeReport, componentAdds, componentRemovals, listener, progress);
+	}
+	
+	private void fillComponentChanges(ChangeReport changeReport,
+			final IComponentHandle[] componentAdds, final IComponentHandle[] componentRemovals, IConsoleOutput listener,
+			IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		// look up the components added & removed to get their names
+
 		int numberOfAdds = componentAdds.length;
 		List<IComponentHandle> componentHandles = new ArrayList<IComponentHandle>(componentAdds.length + componentRemovals.length);
 		for (IComponentHandle componentHandle : componentAdds) {
@@ -279,8 +397,7 @@ public class ChangeReportBuilder {
 		for (IComponentHandle componentHandle : componentRemovals) {
 			componentHandles.add(componentHandle);
 		}
-		componentAdds = null;
-		componentRemovals = null;
+
 		try {
 			List<IComponent> components = fRepository.itemManager().fetchCompleteItems(componentHandles, IItemManager.DEFAULT, monitor);
 			int i = 0;

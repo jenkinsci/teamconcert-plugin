@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,11 +11,11 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import hudson.model.FreeStyleProject;
 import hudson.util.Secret;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import org.jvnet.hudson.test.HudsonTestCase;
 
@@ -28,7 +28,7 @@ import com.ibm.team.build.internal.hjplugin.util.RTCScmConfigHelper;
 public class RTCScmConfigHelperIT extends HudsonTestCase {
 
 	private static final String DEFN_SERVER_URI = "https://localHost:4321/jazz";
-
+	private static final String SNAPSHOT_NAME = "AnotherSnapshot";
 	/**
 	 * Tests that we can get the RTCScm configuration from the project
 	 * Tests we behave ok if the SCM is not set too
@@ -46,6 +46,33 @@ public class RTCScmConfigHelperIT extends HudsonTestCase {
 			// workspace configured SCM
 			RTCScm rtcScm = createWorkspaceRTCScm();
 			project.setScm(rtcScm);
+			
+			currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
+			assertEquals("Expected Workspace RTCScm instance only", 1, currentConfigs.size());
+			assertEquals("Expected Workspace RTCScm instance", rtcScm, currentConfigs.iterator().next());
+
+			// workspace with load directory configured SCM
+			rtcScm = createWorkspaceWithLoadDirectoryRTCScm();
+			project.setScm(rtcScm);
+
+			currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
+			assertEquals("Expected Workspace with Load directory RTCScm instance only", 1, currentConfigs.size());
+			assertEquals("Expected Workspace with Load directory RTCScm instance", rtcScm, currentConfigs.iterator().next());
+
+			// workspace with delete directory configured SCM
+			rtcScm = createWorkspaceWithDeleteDirectoryRTCScm();
+			project.setScm(rtcScm);
+
+			currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
+			assertEquals("Expected Workspace with delete directory RTCScm instance only", 1, currentConfigs.size());
+			assertEquals("Expected Workspace with delete directory RTCScm instance", rtcScm, currentConfigs.iterator().next());
+
+			// snapshot configured SCM
+			rtcScm = createSnapshotRTCScm();
+			project.setScm(rtcScm);
+			currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
+			assertEquals("Expected Snapshot RTCScm instance only", 1, currentConfigs.size());
+			assertEquals("Expected Snapshot RTCScm instance", rtcScm, currentConfigs.iterator().next());
 			
 			currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
 			assertEquals("Expected Workspace RTCScm instance only", 1, currentConfigs.size());
@@ -117,17 +144,36 @@ public class RTCScmConfigHelperIT extends HudsonTestCase {
 	}
 
 	private RTCScm createUninitializedRTCScm() {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "", "");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "", "", "", "");
 		return new RTCScm(true, "", null, 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 
 	private RTCScm createWorkspaceRTCScm() {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace", "", "");
 		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
+	}
+	
+	private RTCScm createWorkspaceWithLoadDirectoryRTCScm() {
+		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace", "", "");
+		buildSource.setLoadDirectory("testLoadDirectory");
+		buildSource.setClearLoadDirectory(false);
+		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
+	}
+	
+	private RTCScm createWorkspaceWithDeleteDirectoryRTCScm() {
+		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace", "", "");
+		buildSource.setLoadDirectory("");
+		buildSource.setClearLoadDirectory(true);
+		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
+	}
+	
+	private RTCScm createSnapshotRTCScm() {
+		BuildType buildType = new BuildType(RTCScm.BUILD_SNAPSHOT_TYPE, "", "", SNAPSHOT_NAME, "");
+		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildType, false);
 	}
 
 	private RTCScm createBuildDefnRTCScm() {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "AnotherBuildDefinition", "");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "AnotherBuildDefinition", "", "", "");
 		return new RTCScm(true, "", DEFN_SERVER_URI, 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 }

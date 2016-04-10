@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -108,27 +108,86 @@
         
 	    <f:block>
 	    <table width="100%">
-	        <f:radioBlock title="${%buildDefinition.type}" name="buildType" value="buildDefinition" default="true" checked="${instance == null || instance.buildTypeStr == 'buildDefinition' || instance.buildDefinition != null}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType" >
+	    	<f:dropdownList name="buildType" title="${%buildConfiguration.title}">
+	    		<!-- Each of the following dropdownListBlocks has an invisibleEntry containing a hidden input.
+	    		The reason for this is to make sure that the structure of underlying config.xml, and
+	    		the java class at back-end does not break.
+	    		Both (config.xml and java class) expect <value> and <buildTypeStr>.
+	    		If config.xml structure is changed, users might find it difficult to move back to older version if needed.
+	    		-->
+	    		<!-- Build Definition -->
+				<f:dropdownListBlock selected="${instance == null || instance.buildTypeStr == 'buildDefinition'}" title="${%buildDefinition.title}" help="buildDefinitionType">
+					<!-- currentBuildTypeStr is used in config-loadoptions.jelly -->
+					<j:set var="currentBuildTypeStr" value="buildDefinition"/>
+					<f:invisibleEntry field="value" >
+						<input type="hidden" name="value" value="buildDefinition"/>
+					</f:invisibleEntry>
+				    <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >
+				        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
+				    </f:entry>
+				    
+				    <f:validateButton title="${%validateBuildDefinition.title}" progress="${%validateBuildDefinition.progress}" 
+				        method="validateBuildDefinition" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
+				</f:dropdownListBlock>
 
-			    <f:entry title="${%buildDefinition.title}"  field="buildDefinition" >
-			        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
-			    </f:entry>
-			    
-			    <f:validateButton title="${%validateBuildDefinition.title}" progress="${%validateBuildDefinition.progress}" 
-			        method="validateBuildDefinition" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
+	    		<!-- Build Workspace -->
+				<f:dropdownListBlock selected="${instance != null &amp;&amp; instance.buildTypeStr == 'buildWorkspace'}" title="${%buildWorkspace.title}" help="buildWorkspaceType">
+					<!-- currentBuildTypeStr is used in config-loadoptions.jelly -->
+					<j:set var="currentBuildTypeStr" value="buildWorkspace"/>
+					<f:invisibleEntry field="value" >
+						<input type="hidden" name="value" value="buildWorkspace"/>
+					</f:invisibleEntry>
+				    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
+				        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />
+				    </f:entry>
+	
+				    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
+				        method="validateBuildWorkspace" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
 
-	        </f:radioBlock>
+                    <st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 
-	        <f:radioBlock title="${%buildWorkspace.type}" name="buildType" value="buildWorkspace" checked="${instance != null &amp;&amp; instance.buildTypeStr == 'buildWorkspace'}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildWorkspaceType" >
+					<!-- Accept changes before load -->
+                    <f:section name="AcceptOptions" title="${%acceptOptions.title}"/>
+			        <f:optionalBlock name="acceptBeforeLoad" title="${%acceptOptions.acceptBeforeLoad}" field="acceptBeforeLoad" checked="${instance == null || (instance != null &amp;&amp; instance.acceptBeforeLoad)}" inline="true" />
+		    	                        
+				</f:dropdownListBlock>
 
-			    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
-			        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />
-			    </f:entry>
+	    		<!-- snapshot --> 
+				<f:dropdownListBlock selected="${instance != null &amp;&amp; instance.buildTypeStr == 'buildSnapshot'}" title="${%buildSnapshot.title}" help="buildSnapshotType">
+					<!-- currentBuildTypeStr is used in config-loadoptions.jelly -->
+					<j:set var="currentBuildTypeStr" value="buildSnapshot"/>
+					<f:invisibleEntry field="value" >
+						<input type="hidden" name="value" value="buildSnapshot"/>
+					</f:invisibleEntry>
+					
+					<f:entry title="${%buildSnapshot.title}"  field="buildSnapshot" >
+				        <f:textbox name="buildSnapshot" value="${instance.buildSnapshot}" />
+				    </f:entry>
 
-			    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
-			        method="validateBuildWorkspace" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
+				    <st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+				                        
+				</f:dropdownListBlock>
 
-		    </f:radioBlock>
+				<f:dropdownListBlock selected="${instance != null &amp;&amp; instance.buildTypeStr == 'buildStream'}" title="${%buildStream.title}" help="buildStreamType">
+					<!-- currentBuildTypeStr is used in config-loadoptions.jelly -->
+					<j:set var="currentBuildTypeStr" value="buildStream"/>
+					<f:invisibleEntry field="value" >
+						<input type="hidden" name="value" value="buildStream"/>
+					</f:invisibleEntry>
+                    <f:entry title="${%buildStream.title}"  field="buildStream" >
+                        <f:textbox name="buildStream" clazz="required" checkMessage="${%buildStream.checkMessage}" value="${instance.buildStream}" />
+                    </f:entry>
+                    
+                    <f:validateButton title="${%validateBuildStream.title}" progress="${%validateBuildStream.progress}" 
+                        method="validateBuildStream" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildStream" />
+                        
+					<st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+					
+				    <f:section name="changelogOptions" title="${%changelogOptions.title}"/>
+					<f:optionalBlock name="generateChangelogWithGoodBuild" title="${%changelog.compareWithGoodBuild}" field="generateChangelogWithGoodBuild" checked="${instance.generateChangelogWithGoodBuild}" inline="true" />
+
+				</f:dropdownListBlock>
+			</f:dropdownList>
 	    </table>
 	    </f:block>
             

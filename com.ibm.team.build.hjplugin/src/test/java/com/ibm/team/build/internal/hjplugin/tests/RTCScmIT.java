@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -69,14 +69,16 @@ public class RTCScmIT extends HudsonTestCase {
 	private static final String TEST_CRED_ID = "5678";
 	private static final String TEST_BUILD_WORKSPACE = "compile-and-test";
 	private static final String TEST_BUILD_DEFINITION = "_Sf_R8EhyEeKuMu7IPRTOeQ";
+	private static final String TEST_BUILD_SNAPSHOT = "_vf_F8EyGeBuAp7IPRTOeQ";
+	private static final String TEST_BUILD_STREAM = "compile-and-test-stream";
 
 	private RTCScm createEmptyRTCScm() {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "");
+		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "", "", "");
 		return new RTCScm(false, "", "", 0, "", Secret.fromString(""), "", "", buildSource, false);
 	}
 
 	private RTCScm createTestOverrideGlobalRTCScm(boolean useCreds) {
-		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE);
+		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE, TEST_BUILD_SNAPSHOT, TEST_BUILD_STREAM);
 		return new RTCScm(true, "", TEST_SERVER_URI, Integer.parseInt(TEST_TIMEOUT), TEST_USER_ID, Secret.fromString(TEST_PASSWORD), TEST_PASSWORD_FILE,
 				useCreds ? TEST_CRED_ID : null, buildSource, false);
 	}
@@ -104,9 +106,11 @@ public class RTCScmIT extends HudsonTestCase {
 			assertEquals(null, scm.getUserId());
 			assertEquals(null, scm.getPassword());
 			assertEquals(null, scm.getPasswordFile());
+			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildType().value);
 			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildTypeStr());
 			assertEquals(TEST_BUILD_DEFINITION, scm.getBuildDefinition());
 			assertEquals(TEST_BUILD_WORKSPACE, scm.getBuildWorkspace());
+			assertEquals(TEST_BUILD_SNAPSHOT, scm.getBuildSnapshot());
 			
 			RTCChangeLogChangeSetEntry.WorkItemDesc workItem = new WorkItemDesc();
 			workItem.setNumber("2");
@@ -120,9 +124,11 @@ public class RTCScmIT extends HudsonTestCase {
 			assertEquals(TEST_USER_ID, scm.getUserId());
 			assertEquals(TEST_PASSWORD, scm.getPassword());
 			assertEquals(TEST_PASSWORD_FILE, scm.getPasswordFile());
+			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildType().value);
 			assertEquals(RTCScm.BUILD_DEFINITION_TYPE, scm.getBuildTypeStr());
 			assertEquals(TEST_BUILD_DEFINITION, scm.getBuildDefinition());
 			assertEquals(TEST_BUILD_WORKSPACE, scm.getBuildWorkspace());
+			assertEquals(TEST_BUILD_SNAPSHOT, scm.getBuildSnapshot());
 
 			browser = (RTCRepositoryBrowser) scm.getEffectiveBrowser();
 			assertEquals(TEST_SERVER_URI + "/resource/itemName/com.ibm.team.workitem.WorkItem/2" , browser.getWorkItemLink(workItem).toString());

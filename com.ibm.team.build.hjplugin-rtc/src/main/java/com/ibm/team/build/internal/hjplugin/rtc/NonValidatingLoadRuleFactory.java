@@ -14,7 +14,6 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -25,6 +24,8 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
@@ -66,6 +67,8 @@ public class NonValidatingLoadRuleFactory {
      * XML text declaration string that typically is in the first few bytes of an xml file
      */
     private final static String XML_START = "<?xml"; //$NON-NLS-1$
+    
+    private static final Logger LOGGER = Logger.getLogger(NonValidatingLoadRuleFactory.class.getName());
 
     
     private static ILoadRule2 getLoadRule(IWorkspaceConnection connection, IComponentHandle potentialComponentContext, Reader input, IProgressMonitor progress) throws TeamRepositoryException {
@@ -168,25 +171,20 @@ public class NonValidatingLoadRuleFactory {
         }
         
         return handler.getLoadRule(connection, progress);
-    }
+	}
 
-    public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, String filePath, IProgressMonitor progress) throws TeamRepositoryException {
-        try {
-			File lFile = new File(filePath);
-			if (lFile != null && lFile.exists() && lFile.isFile()) {
-			    // assume UTF-8 because we are assuming we generated it.
-			    CharsetDecoder decoder = Charset.forName(IFileContent.ENCODING_UTF_8).newDecoder()
-			            .onMalformedInput(CodingErrorAction.REPORT)
-			            .onUnmappableCharacter(CodingErrorAction.REPORT);
-			    Reader reader = new InputStreamReader(new FileInputStream(lFile), decoder);
-			    return getLoadRule(connection, null, reader, null);
-			}
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+	public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, String filePath, IProgressMonitor progress) throws Exception {
+		// we expect the validation of filePath to be done by the caller
+		File lFile = new File(filePath);
+		if (LOGGER.isLoggable(Level.FINEST)) {
+			LOGGER.finest("NonValidatingLoadRuleFactory.getLoadRule: reading load rules from '" + filePath + "'"); //$NON-NLS-1$ //$NON-NLS-2$
 		}
-        return null;
-    }
+		// assume UTF-8 because we are assuming we generated it.
+		CharsetDecoder decoder = Charset.forName(IFileContent.ENCODING_UTF_8).newDecoder().onMalformedInput(CodingErrorAction.REPORT)
+				.onUnmappableCharacter(CodingErrorAction.REPORT);
+		Reader reader = new InputStreamReader(new FileInputStream(lFile), decoder);
+		return getLoadRule(connection, null, reader, null);
+	}
     
     public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, IComponentHandle componentHandle, IFileItemHandle fileVersionable,
             IProgressMonitor progress) throws TeamRepositoryException {

@@ -13,6 +13,8 @@ package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
 import java.util.Map;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCFacade;
@@ -271,5 +273,13 @@ public class RTCTestingFacade extends RTCFacade {
 		testsClassObject.testAcceptReportsWithDifferentRemovedComponents();
 		testsClassObject.testAcceptReportsWithOppositeChangesets();
 		testsClassObject.testNonMatchingAcceptReports();
+	}
+	
+	public Map<String, String> testBuildSnapshotConfiguration(String serverURL, String userId, String password,
+					int timeout, String workspaceName, String snapshotName, String componentName, String workspacePrefix, String hjPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildSnapshotConfiguration(connectionDetails, workspaceName, snapshotName, componentName,
+				workspacePrefix, hjPath, getProgressMonitor());
 	}
 }

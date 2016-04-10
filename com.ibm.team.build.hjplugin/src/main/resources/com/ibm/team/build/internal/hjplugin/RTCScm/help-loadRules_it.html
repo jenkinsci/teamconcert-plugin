@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Selezionare un file delle regole di caricamento per specificare il modo in cui caricare lo spazio di lavoro di build. Se sono state specificate le regole di caricamento dinamico utilizzando un'estensione, tali regole hanno precedenza rispetto a quelle specificate in questo punto.
+  </p>
+  <p>
+  	Per applicare le regole di caricamento, elencarle nel seguente formato JSON, salvare l'elenco in un file su disco e specificare il percorso del file in questo campo.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	È anche possibile specificare "componentId" invece di "componentName." "componentId" è l'ID elemento (UUID) del componente.
+	Se "componentName" e "componentId" vengono entrambi specificati, la ricerca viene eseguita solo per "componentId."
+  </p>
+  <p>
+  	Il valore "filePath" è il percorso completo del file delle regole di caricamento nel repository; vale a dire, il percorso remoto.
+  	È anche possibile specificare "fileItemId" invece di "filePath." "fileItemId" è l'ID elemento (UUID) del file delle regole di caricamento.
+  	Quando viene specificato il percorso file, utilizzare le barre (/) per separare i segmenti del percorso. Se "filePath" e "fileItemId" vengono entrambi specificati, la ricerca viene eseguita solo per "fileItemId."
+  </p>
+
+</div>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -10,17 +10,13 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.TaskListener;
-import hudson.util.StreamTaskListener;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import junit.framework.Assert;
 
 import org.apache.commons.lang.SystemUtils;
 import org.jvnet.hudson.test.HudsonTestCase;
@@ -31,6 +27,11 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
+
+import hudson.model.TaskListener;
+import hudson.util.StreamTaskListener;
+import junit.framework.Assert;
 
 @SuppressWarnings("nls")
 public class BuildConfigurationIT extends HudsonTestCase {
@@ -106,21 +107,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				
 				// checkout the changes
-				@SuppressWarnings("unchecked")
-				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
-						loginInfo.getServerUri(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
@@ -398,20 +385,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				assertTrue(new File(loadDir, "hij").mkdirs());
 				
 				// checkout the changes
-				@SuppressWarnings("unchecked")
-				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, 
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -516,20 +490,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				assertTrue(new File(sandboxDir, "hij").mkdirs());
 				
 				// checkout the changes
-				@SuppressWarnings("unchecked")
-				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -637,20 +598,7 @@ public class BuildConfigurationIT extends HudsonTestCase {
 				assertTrue(new File(loadDir, "hij").mkdirs());
 				
 				// checkout the changes
-				@SuppressWarnings("unchecked")
-				Map<String, String> buildProperties = (Map<String, String>) testingFacade.invoke(
-						"checkout",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // buildResultUUID,
-								String.class, // workspaceName,
-								String.class, // hjWorkspacePath,
-								OutputStream.class, // changeLog,
-								String.class, // baselineSetName,
-								Object.class, // listener
-								Locale.class}, // clientLocale
+				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade,
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -680,6 +628,116 @@ public class BuildConfigurationIT extends HudsonTestCase {
 						false,
 						buildProperties);
 				
+			} finally {
+				// clean up
+				testingFacade.invoke(
+						"tearDown",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								Map.class}, // setupArtifacts
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts);
+			}
+		}
+	}
+	
+	public void testLoadSnapshot() throws Exception {
+		// Create a workspace with component and take a snapshot
+
+		// verify that the buildConfiguration 
+		
+		// checkout based on the request
+		// make sure only the contents in the workspace's component were loaded
+
+		if (Config.DEFAULT.isConfigured()) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+			
+			String testName = getTestName() + System.currentTimeMillis();
+
+			@SuppressWarnings("unchecked")
+
+			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+					.invoke("testBuildSnapshotConfiguration",
+							new Class[] { String.class, // serverURL,
+									String.class, // userId,
+									String.class, // password,
+									int.class, // timeout,
+									String.class, // workspaceName,
+									String.class, // snapshotName,
+									String.class, // componentName,
+									String.class, // workspacePrefix
+									String.class  // hjPath
+					      },
+							loginInfo.getServerUri(),
+							loginInfo.getUserId(),
+							loginInfo.getPassword(),
+							loginInfo.getTimeout(), 
+							testName,
+							testName,
+							testName,
+							"HPJ",
+							sandboxDir.getPath());
+			
+			try {
+				TaskListener listener = new StreamTaskListener(System.out, null);
+				
+				
+				// checkout the changes
+				 testingFacade.invoke(
+						"load",
+						new Class[] { String.class, //serverURI 
+								String.class, // userId 
+								String.class, // password
+								int.class, // timeout
+								String.class, //buildResultUUID
+								String.class, //buildWorkspace
+								String.class, //buildSnapshot
+								String.class, //buildStream
+								String.class, // hjWorkspacePath
+								String.class, //baselineSetName
+								Object.class, //listener
+								Locale.class, //clientLocale
+								String.class, // parentActivityId
+								String.class, //connectorId
+								Object.class, //extProvide
+								PrintStream.class, // logger
+								boolean.class, // isDeleteNeeded
+								boolean.class, //createFoldersForComponents
+								String.class, // componentsToBeExcluded
+								List.class, //loadRules
+								boolean.class, // acceptBeforeLoad
+						},
+						loginInfo.getServerUri(), 
+						loginInfo.getUserId(), 
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(),
+						null, 
+						null,
+						testName,
+						null,
+						sandboxDir.getCanonicalPath(),
+						"Snapshot", 
+						listener,
+						 Locale.getDefault(), 
+						 "", 
+						"", 
+						null, 
+						listener.getLogger(),
+						 false, 
+						false, 
+						null, 
+						null, 
+						false);
+	    		
+				String[] children = sandboxDir.list();
+				Assert.assertEquals(2, children.length);
+				Assert.assertTrue(new File(sandboxDir, "f").exists());
+				Assert.assertTrue(new File(sandboxDir, "f/a.txt").exists());
+    		
 			} finally {
 				// clean up
 				testingFacade.invoke(

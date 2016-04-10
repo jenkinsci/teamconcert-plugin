@@ -41,14 +41,18 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	private int timeout;
 	private String buildWorkspace;
 	private String buildResultUUID;
+	private String buildSnapshot;
+	private String buildStream;
 	private TaskListener listener;
 	private String baselineSetName;
+	private String previousSnapshotUUID;
 	private RemoteOutputStream changeLog;
 	private boolean isRemote;
 	private String contextStr;
 	private boolean debug;
 	private Locale clientLocale;
 	private String callConnectorTimeout;
+	private boolean acceptBeforeLoad;
 	
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -71,19 +75,24 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	 * if buildWorkspace is supplied instead.
 	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code>
 	 * if buildDefinition is supplied instead.
+	 * @param buildStream The name of the RTC build stream. May be <code>null</code>
+	 * if buildWorkspace or buildDefinition is supplied instead.
 	 * @param buildResultUUID The build result to relate build results with.
 	 * @param baselineSetName The name to give the baselineSet created
+	 * @param previousSnapshotUUID The uuid of the previous snapshot. Used for generating changelog in build stream case.
+	 *    May be <code>null</code> if a buildResultUUID or buildWorkspace is supplied.
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param changeLog Output stream to hold the Change log results. May be <code>null</code>.
 	 * @param isRemote Whether this will be executed on the Master or a slave
 	 * @param debug Whether to report debugging messages to the listener
 	 * @param clientLocale The locale of the requesting client
+	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 */
 	public RTCAcceptTask(String contextStr, String buildToolkit,
 			String serverURI, String userId, String password, int timeout,
-			String buildResultUUID, String buildWorkspace,
-			String baselineSetName, TaskListener listener,
-			RemoteOutputStream changeLog, boolean isRemote, boolean debug, Locale clientLocale, String strCallConnectorTimeout) {
+			String buildResultUUID, String buildWorkspace, String buildSnapshot,
+			String buildStream, String baselineSetName, String previousSnapshotUUID, TaskListener listener,
+			RemoteOutputStream changeLog, boolean isRemote, boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -94,13 +103,17 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
     	this.timeout = timeout;
     	this.buildWorkspace = buildWorkspace;
     	this.buildResultUUID = buildResultUUID;
+    	this.buildSnapshot = buildSnapshot;
+    	this.buildStream = buildStream;
     	this.baselineSetName = baselineSetName;
+    	this.previousSnapshotUUID = previousSnapshotUUID;
     	this.listener = listener;
     	this.changeLog = changeLog;
     	this.isRemote = isRemote;
     	this.debug = debug;
     	this.clientLocale = clientLocale;
     	this.callConnectorTimeout = strCallConnectorTimeout;
+    	this.acceptBeforeLoad = acceptBeforeLoad;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -122,6 +135,9 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 			debug("timeout " + timeout); //$NON-NLS-1$
 			debug("buildWorkspace " + (buildWorkspace == null ? "n/a" : buildWorkspace)); //$NON-NLS-1$ //$NON-NLS-2$
 			debug("buildResult " + (buildResultUUID == null ? "n/a" : "defined")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			debug("buildStream " + (buildStream == null ? "n/a" : buildStream)); //$NON-NLS-1$ //$NON-NLS-2$ 
+			debug("buildSnapshot " + (buildSnapshot == null ? "n/a" : buildSnapshot)); //$NON-NLS-1$ //$NON-NLS-2$
+			debug("previousSnapshotUUID" + (previousSnapshotUUID == null ? "n/a" : previousSnapshotUUID)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("listener is " + (listener == null ? "null" : "not null")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("Running remote " + isRemote); //$NON-NLS-1$
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
@@ -174,17 +190,21 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 					int.class, // timeout,
 					String.class, // buildResultUUID,
 					String.class, // buildWorkspace,
+					String.class, // buildSnapshot,
+					String.class, // buildStream,
 					String.class, // hjWorkspacePath,
 					OutputStream.class, // changeLog,
 					String.class, // baselineSetName,
+					String.class, // previousSnapshotUUID
 					Object.class, // listener
 					Locale.class, // clientLocale
-					String.class // callConnectorTimeout
+					String.class, // callConnectorTimeout
+					boolean.class // acceptBeforeLoad
 			}, serverURI, userId, Secret.toString(password),
-					timeout, buildResultUUID, buildWorkspace,
-					workspace.getAbsolutePath(),
-					changeLog, baselineSetName,
-					listener, clientLocale, callConnectorTimeout);
+					timeout, buildResultUUID, buildWorkspace, buildSnapshot,
+					buildStream, workspace.getAbsolutePath(),
+					changeLog, baselineSetName, previousSnapshotUUID,
+					listener, clientLocale, callConnectorTimeout, acceptBeforeLoad);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

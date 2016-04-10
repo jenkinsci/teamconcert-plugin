@@ -1,0 +1,41 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Se somente alguns componentes na área de trabalho serão construídos, será possível excluir componentes que não precisam ser carregados.
+  </p>
+  <p>
+  	Para excluir componentes, liste-os no formato JSON a seguir, salve a lista em um arquivo no disco e especifique o caminho para o arquivo neste campo.
+  </p>
+  <p>
+  <pre>
+  {
+    "componentsToExclude":[
+      {
+	    "componentName":"JUnit"
+      },
+      {
+	    "componentName":"Releng"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+  	Também é possível especificar o "componentId" em vez de "componentName". O "componentId" é o ID do item (UUID) do componente. 
+  	Se você especificar "componentName" e "componentId", a consulta ocorrerá somente por "componentId."
+  </p>
+</div>

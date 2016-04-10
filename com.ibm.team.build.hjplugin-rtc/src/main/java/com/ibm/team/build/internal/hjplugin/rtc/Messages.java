@@ -144,6 +144,11 @@ public class Messages {
     public String RepositoryConnection_build_definition_not_found(String arg1) {
     	return MessageFormat.format(getString("RepositoryConnection_build_definition_not_found"), arg1);
     }
+    
+    public String RepositoryConnection_snapshot_not_found(Object arg1) {
+        return MessageFormat.format(getString("RepositoryConnection.snapshot_not_found"), arg1);
+    }
+
     /**
      * &lt;unknown>
      * 
@@ -158,6 +163,15 @@ public class Messages {
      */
     public String ChangeReportBuilder_unable_to_get_work_items(Object arg1) {
         return MessageFormat.format(getString("ChangeReportBuilder.unable_to_get_work_items"), arg1);
+    }
+    
+    /**
+     * 
+     * 
+     */
+    
+    public String BuildConfiguration_cannot_delete_workspace(String arg1, String arg2) {
+    	return MessageFormat.format(getString("BuildConfiguration_cannot_delete_workspace"), arg1, arg2);
     }
 
     /**
@@ -247,7 +261,7 @@ public class Messages {
     public String RepositoryConnection_name_not_unique(Object arg1) {
         return MessageFormat.format(getString("RepositoryConnection.name_not_unique"), arg1);
     }
-
+    
     /**
      * CRRTC3505E: The following fetch destination cannot be deleted: "{0}". For more details, open the help system and search for CRRTC3505E.
      * 
@@ -256,6 +270,22 @@ public class Messages {
         return MessageFormat.format(getString("RepositoryConnection.checkout_clean_failed"), arg1);
     }
 
+    public String RepositoryConnection_stream_name_not_unique(Object arg1) {
+    	return MessageFormat.format(getString("RepositoryConnection.stream_name_not_unique"), arg1);
+    }
+    
+    public String RepositoryConnection_stream_not_found(Object arg1) {
+    	return MessageFormat.format(getString("RepositoryConnection.stream_not_found"), arg1);
+    }
+    
+    /**
+     * More than 1 Jazz SCM snapshot  has the name {0}
+     * 
+     */
+    public String RepositoryConnection_snapshot_name_not_unique(Object arg1) {
+        return MessageFormat.format(getString("RepositoryConnection.snapshot_name_not_unique"), arg1);
+    }
+    
     /**
      * CRRTC3531E: Unspecified IO error listing files for directory: "{0}"
      * 
@@ -290,6 +320,14 @@ public class Messages {
      */
     public String RepositoryConnection_load_no_workspace_connection_for_synched_load() {
     	return getString("RepositoryConnection.load_no_workspace_connection_for_synched_load");
+    }
+    
+    /**
+     * RTC Load : Invalid parameters, at least one of buildResultUUID, buildWorkspace or buildSnapshot
+     * should be specified
+     */
+    public String RepositoryConnection_load_invalid_parameters_for_load() {
+    	return getString("RepositoryConnection.load_invalid_parameters_for_load");
     }
 
     /**
@@ -326,7 +364,285 @@ public class Messages {
 	public String RepositoryConnection_hidden_components(Object arg1, Object arg2) {
 		return MessageFormat.format(getString("RepositoryConnection_hidden_components"), arg1, arg2);
 	}
+	
+	/**
+	 * Fetching files from workspace {0}
+	 */
+	public String RepositoryConnection_fetching_files_from_workspace(Object arg1) {
+		return MessageFormat.format(getString("RepositoryConnection.fetching_files_from_workspace"), arg1);
+	}
+	
+	/**
+	 * 
+	 * @return
+	 */
+	public String RepositoryConnection_invalid_load_configuration() {
+		return getString("RepositoryConnection.invalid_load_configuration");
+	}
+	
+	/**
+	 * 
+	 */
+	public String RepositoryConnection_stream_load_no_workspace_snapshot_uuid() {
+		return getString("RepositoryConnection.stream_load_no_workspace_snapshot_uuid");
+	}
 
+	/**
+	 * 
+	 */
+	public String RepositoryConnection_using_build_definition_configuration() {
+		return getString("RepositoryConnection.using_build_definition_configuration");
+	}
+	
+	/**
+	 * 
+	 */
+	public String RepositoryConnection_using_build_workspace_configuration() {
+		return getString("RepositoryConnection.using_build_workspace_configuration");
+	}
+	
+	/**
+	 * 
+	 */
+	public String RepositoryConnection_using_build_snapshot_configuration() {
+		return getString("RepositoryConnection.using_build_snapshot_configuration");
+	}
+	
+	/**
+	 * 
+	 */
+	public String RepositoryConnection_using_build_stream_configuration() {
+		return getString("RepositoryConnection.using_build_stream_configuration");
+	}
+	
+	/**
+	 * Specify the componentsToExclude value.
+	 */
+	public String RepositoryConnection_components_to_exclude_required() {
+		return getString("RepositoryConnection.components_to_exclude_required");
+	}
+	
+	/**
+	 * The component item id "{0}" specified in the list of components to
+	 * exclude is not valid.
+	 */
+	public String RepositoryConnection_components_to_exclude_invalid_uuid(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection.components_to_exclude_invalid_uuid"), arg1);
+	}
+
+	/**
+	 * A component with item ID "{0}" cannot be found.
+	 */
+	public String RepositoryConnection_component_with_id_not_found(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_id_not_found"), arg1);
+	}
+
+	/**
+	 * A component with item ID "{0}" cannot be found.
+	 */
+	public String RepositoryConnection_component_with_name_not_found(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_name_not_found"), arg1);
+	}
+
+	/**
+	 * Could not find component with item id "{0}" in the workspace "{1}".
+	 */
+	public String RepositoryConnection_component_with_id_not_found_ws(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_id_not_found_ws"), arg1, arg2);
+	}
+	
+	/**
+	 * Could not find component with item id "{0}" in the snapshot "{1}".
+	 */
+	public String RepositoryConnection_component_with_id_not_found_snapshot(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_id_not_found_snapshot"), arg1, arg2);
+	}
+	
+	/**
+	 * Could not find component with item id "{0}" in the stream "{1}".
+	 */
+	public String RepositoryConnection_component_with_id_not_found_stream(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_id_not_found_stream"), arg1, arg2);
+	}
+	
+	/**
+	 * More than one component with name "{0}" found in the workspace "{1}".
+	 */
+	public String RepositoryConnection_multiple_components_with_name_in_ws(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.multiple_components_with_name_in_ws"), arg1, arg2);
+	}
+	
+	/**
+	 * More than one component with name "{0}" found in the snapshot "{1}".
+	 */
+	public String RepositoryConnection_multiple_components_with_name_in_snapshot(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.multiple_components_with_name_in_snapshot"), arg1, arg2);
+	}
+	
+	/**
+	 * More than one component with name "{0}" found in the stream "{1}".
+	 */
+	public String RepositoryConnection_multiple_components_with_name_in_stream(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.multiple_components_with_name_in_stream"), arg1, arg2);
+	}
+
+	/**
+	 * Could not find component with name "{0}" in the workspace "{1}".
+	 */
+	public String RepositoryConnection_component_with_name_not_found_ws(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_name_not_found_ws"), arg1, arg2);
+	}
+	
+	/**
+	 * Could not find component with name "{0}" in the snapshot "{1}".
+	 */
+	public String RepositoryConnection_component_with_name_not_found_snapshot(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_name_not_found_snapshot"), arg1, arg2);
+	}
+	
+	/**
+	 * Could not find component with name "{0}" in the stream "{1}".
+	 */
+	public String RepositoryConnection_component_with_name_not_found_stream(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.component_with_name_not_found_stream"), arg1, arg2);
+	}
+
+	/**
+	 * Either componentId or componentName should be specified.
+	 */
+	public String RepositoryConnection_component_id_or_name_required() {
+		return getString("RepositoryConnection.component_id_or_name_required");
+	}
+	
+	/**
+	 * Specify the loadRules value. 
+	 */
+	public String RepositoryConnection_load_rules_required() {
+		return getString("RepositoryConnection.load_rules_required");
+	}
+
+
+	/**
+	 * The component item id "{0}" specified in the component load rules mapping
+	 * file is not valid.
+	 */
+	public String RepositoryConnection_load_rule_file_invalid_component_uuid(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_invalid_component_uuid"), arg1);
+	}
+
+	/**
+	 * The file item id "{0}" specified in the component load rules mapping file
+	 * for the component "{1}", is not valid.
+	 */
+	public String RepositoryConnection_load_rule_file_invalid_item_uuid(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_invalid_item_uuid"), arg1, arg2);
+	}
+
+	/**
+	 * The file path specified in the component load rules mapping file for the
+	 * component "{0}" is empty.
+	 */
+	public String RepositoryConnection_load_rule_file_path_empty(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_path_empty"), arg1);
+	}
+
+	/**
+	 * The specified load rule file "{0}" is not found in the component "{1}" in
+	 * the workspace {2}.
+	 */
+	public String RepositoryConnection_load_rule_file_not_found_ws(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_not_found_ws"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The specified load rule file "{0}" is not found in the component "{1}" in
+	 * the snapshot {2}.
+	 */
+	public String RepositoryConnection_load_rule_file_not_found_snapshot(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_not_found_snapshot"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The specified load rule file "{0}" is not found in the component "{1}" in
+	 * the stream {2}.
+	 */
+	public String RepositoryConnection_load_rule_file_not_found_stream(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_not_found_stream"), arg1, arg2, arg3);
+	}
+
+	/**
+	 * The specified load rule file "{0}" does not resolve to a file in the
+	 * component "{1}" in the workspace "{2}.
+	 */
+	public String RepositoryConnection_load_rule_not_a_file_ws(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_not_a_file_ws"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The specified load rule file "{0}" does not resolve to a file in the
+	 * component "{1}" in the snapshot "{2}.
+	 */
+	public String RepositoryConnection_load_rule_not_a_file_snapshot(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_not_a_file_snapshot"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The specified load rule file "{0}" does not resolve to a file in the
+	 * component "{1}" in the stream "{2}.
+	 */
+	public String RepositoryConnection_load_rule_not_a_file_stream(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_not_a_file_stream"), arg1, arg2, arg3);
+	}
+
+	/**
+	 * The load rule file with item ID "{0}" cannot be found in the component "{1}" in the workspace "{2}".
+	 */
+	public String RepositoryConnection_load_rule_file_with_id_not_found_ws(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_with_id_not_found_ws"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The load rule file with item ID "{0}" cannot be found in the component "{1}" in the snapshot "{2}".
+	 */
+	public String RepositoryConnection_load_rule_file_with_id_not_found_snapshot(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_with_id_not_found_snapshot"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The load rule file with item ID "{0}" cannot be found in the component "{1}" in the stream "{2}".
+	 */
+	public String RepositoryConnection_load_rule_file_with_id_not_found_stream(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_with_id_not_found_stream"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The load rule file with item ID "{0}" does not resolve to a file in the component "{1}" in the workspace "{2}".
+	 */
+	public String RepositoryConnection_load_rule_with_id_not_a_file_ws(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_with_id_not_a_file_ws"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The load rule file with item ID "{0}" does not resolve to a file in the component "{1}" in the snapshot "{2}".
+	 */
+	public String RepositoryConnection_load_rule_with_id_not_a_file_snapshot(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_with_id_not_a_file_snapshot"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * The load rule file with item ID "{0}" does not resolve to a file in the component "{1}" in the stream "{2}".
+	 */
+	public String RepositoryConnection_load_rule_with_id_not_a_file_stream(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_with_id_not_a_file_stream"), arg1, arg2, arg3);
+	}
+	
+	/**
+	 * Either fileItemId or filePath should be specified. 
+	 */
+	public String RepositoryConnection_file_item_id_or_name_required() {
+		return getString("RepositoryConnection.file_item_id_or_name_required");
+	}
+	
     /**
      * Unable to find a build definition with name "{0}"
      */
@@ -441,8 +757,8 @@ public class Messages {
     /**
      * User {0} is unable to access the load rule for component {1}
      */
-    public String BuildConfiguration_load_rule_access_failed(String arg1, String arg2) {
-    	return MessageFormat.format(getString("BuildConfiguration_load_rule_access_failed"), arg1, arg2);
+    public String BuildConfiguration_load_rule_access_failed(String user, String component, String origMsg) {
+    	return MessageFormat.format(getString("BuildConfiguration_load_rule_access_failed"), user, component, origMsg);
     }
     
     /**
@@ -542,6 +858,29 @@ public class Messages {
     public String PropertyVariableHelper_cycle_description() {
     	return getString("PropertyVariableHelper_cycle_description");
     }
+
+	/**
+	 * The file path specified by the dynamic load rule provider for the component "{0}" is either empty or null.
+	 */
+	public String BuildConfiguration_load_rule_file_path_empty_or_null(String arg1) {
+		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_path_empty_or_null"), arg1);
+	}
+
+	/**
+	 * The file path "{0}" specified by the dynamic load rule provider for the component "{1}" does not resolve to a file.
+	 */
+	public String BuildConfiguration_load_rule_file_not_file(String arg1, String arg2) {
+		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_not_file"), arg1, arg2);
+	}
+
+	/**
+	 * The file path "{0}" specified by the dynamic load rule provider for the component "{1}" does not exist.
+	 */
+	public String BuildConfiguration_load_rule_file_does_not_exist(String arg1, String arg2) {
+		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_does_not_exist"), arg1, arg2);
+	}
+
+
 
     /**
      * Get the message from the bundle

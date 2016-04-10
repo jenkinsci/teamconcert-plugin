@@ -43,6 +43,7 @@ import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationE
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
 import com.ibm.team.build.internal.scm.ComponentLoadRules;
 import com.ibm.team.build.internal.scm.LoadComponents;
+import com.ibm.team.build.internal.scm.RepositoryManager;
 import com.ibm.team.filesystem.client.ILocation;
 import com.ibm.team.filesystem.client.internal.PathLocation;
 import com.ibm.team.filesystem.client.operations.ILoadRule2;
@@ -50,12 +51,16 @@ import com.ibm.team.filesystem.common.IFileItemHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IContributor;
+import com.ibm.team.repository.common.IContributorHandle;
 import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.PermissionDeniedException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.scm.client.IWorkspaceConnection;
+import com.ibm.team.scm.client.SCMPlatform;
+import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
+import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 
 @SuppressWarnings("restriction")
@@ -75,9 +80,12 @@ public class BuildConfiguration {
 	private boolean createFoldersForComponents = false;
 	private ITeamRepository teamRepository;
 	private String hjWorkspace;
+	private BuildStreamDescriptor stream;
 	private BuildWorkspaceDescriptor workspace;
+	private BuildSnapshotDescriptor snapshot;
 	private String snapshotName;
 	private Map<String, String> buildProperties = new HashMap<String, String>();
+	
 	/**
 	 * Basic build configuration. Caller should also initialize prior to calling
 	 * the get methods.
@@ -90,6 +98,26 @@ public class BuildConfiguration {
 		this.hjWorkspace = hjWorkspace;
 	}
 	
+	public void setCreateFoldersForComponents(boolean createFoldersForComponents) {
+		this.createFoldersForComponents = createFoldersForComponents;
+	}
+	
+	/**
+	 * Set load rules from specified json data
+	 * @param loadRules
+	 */
+	public void setLoadRules(String loadRules) {
+		loadRuleUUIDs = loadRules;
+	}
+	
+	public void setIncludeComponents(boolean includeComponents) {
+		this.includeComponents = includeComponents;
+	}
+	
+	public void setComponents(Collection<IComponentHandle> components) {
+		this.components = components;
+	}
+	
 	/**
 	 * Initialize configuration that describes how to build & load.
 	 * @param workspaceHandle The build workspace. Never <code>null</code>
@@ -97,17 +125,103 @@ public class BuildConfiguration {
 	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
 	 * @throws IOException If anything goes wrong during the initialization
 	 */
+	@Deprecated
 	public void initialize(IWorkspaceHandle workspaceHandle, String workspaceName, String snapshotName) throws IOException {
+		LOGGER.finest("BuildConfiguration.initialize for workspaceHandle : Enter");
+
 		this.workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(), workspaceName);
 		this.snapshotName = snapshotName;
 		this.fetchDestinationFile = new File(hjWorkspace);
 		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 		
-		LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
+		}
 	}
 	
 	/**
-	 * 
+	 * Initialize a configuration that describes how to load from a RTC SCM snapshot
+	 * @param baselineSetHandle
+	 * @param contributorHandle
+	 * @param workspacePrefix
+	 * @param monitor
+	 * @throws Exception
+	 */
+	public void initialize(IBaselineSet baselineSet, IContributorHandle contributorHandle, String workspacePrefix, IProgressMonitor monitor) throws IOException, TeamRepositoryException{
+		LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Enter");
+		SubMonitor progress = SubMonitor.convert(monitor, 10);
+		
+		String workspaceName =  workspacePrefix + "_" + Long.toString(System.currentTimeMillis()) + "_" + Long.toString(System.nanoTime());
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Creating workspace '" + workspaceName + "'");
+		}
+
+		IWorkspaceConnection workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributorHandle, workspaceName, null, baselineSet, progress.newChild(5));
+		
+		String snapshotUUID =  baselineSet.getItemId().getUuidValue();
+		this.snapshot = new BuildSnapshotDescriptor(teamRepository, snapshotUUID, baselineSet);
+		this.workspace = new BuildWorkspaceDescriptor(teamRepository, workspaceConnection.getResolvedWorkspace().getItemId().getUuidValue(), workspaceName);
+		this.fetchDestinationFile = new File(hjWorkspace);
+		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
+		this.acceptBeforeFetch = false;
+		this.isPersonalBuild = false;
+
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finer("Loading from snapshot: " + snapshotUUID + "  using temporary workspace '" +  workspaceConnection.getName() + "'");
+		}
+	}
+	
+	/**
+	 * Initialize configuration that describes how to build & load with a RTC SCM workspace
+	 * @param workspaceHandle The build workspace. Never <code>null</code>
+	 * @param workspaceName Name of the build workspace. Never <code>null</code>
+	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
+	 * @param acceptBeforeLoad Accept latest changes before loading if true
+	 * @throws IOException If anything goes wrong during the initialization
+	 */
+	public void initialize(IWorkspaceHandle workspaceHandle, String workspaceName, String snapshotName, boolean acceptBeforeLoad) throws IOException {
+		LOGGER.finest("BuildConfiguration.initialize for workspaceHandle : Enter");
+
+		this.workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(), workspaceName);
+		this.snapshotName = snapshotName;
+		this.fetchDestinationFile = new File(hjWorkspace);
+		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
+		this.acceptBeforeFetch = acceptBeforeLoad;
+		
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
+		}
+	}
+	
+	/**
+	 * Initialize configuration that describes how to build & load with a RTC SCM stream
+	 * @param streamHandle The stream handle. Never <code>null</code>
+	 * @param streamName - the name of the stream
+	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
+	 * @param workspacePrefix Prefix for the temporary build workspace to be created. Never <code>null</code>
+	 * @param contributorHandle The handle to the logged in contributor
+	 * @param monitor
+	 * @throws IOException If anything goes wrong during the initialization
+	 * @throws TeamRepositoryException 
+	 */
+	public void initialize(IWorkspaceHandle streamHandle, String streamName, IWorkspace workspace, IBaselineSet baselineSet, IContributorHandle contributorHandle, IProgressMonitor monitor) throws IOException, TeamRepositoryException {
+		LOGGER.finest("BuildConfiguration.initialize for stream : Enter");
+		
+		this.stream = new BuildStreamDescriptor(streamName, baselineSet.getItemId().getUuidValue());
+		this.workspace = new BuildWorkspaceDescriptor(teamRepository, workspace.getItemId().getUuidValue(), workspace.getName()) ;
+		this.snapshotName = baselineSet.getName();
+		this.fetchDestinationFile = new File(hjWorkspace);
+		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
+		this.acceptBeforeFetch = false;
+		this.isPersonalBuild = false;
+
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finer("Building from stream : '" + streamName + "' with temporary workspace '" + workspace.getName() + "'. Created snapshot '" + snapshotName + "'.");
+		}
+	}
+
+	/**
+	 * From the given build result, get the corresponding build definition's id.   
 	 * @param teamRepository team repository instance
 	 * @param buildResultHandle The build result that will reference the build request that contains the
 	 * configuration details. Never <code>null</code>.
@@ -136,7 +250,7 @@ public class BuildConfiguration {
 	}
 	
 	/**
-	 * Initialize configuration that describes how to build & load.
+	 * Initialize configuration that describes how to build & load with a build definition
 	 * @param buildResultHandle The build result that will reference the build request that contains the
 	 * configuration details. Never <code>null</code>. If there is no build result available, you should
 	 * be calling {@link #initialize(IWorkspaceHandle, String, String)}
@@ -366,7 +480,7 @@ public class BuildConfiguration {
      * @throws TeamRepositoryException If anything goes wrong retrieving the load rules
      */
     @SuppressWarnings("rawtypes")
-	public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection, Map<String, String> compLoadRules, IProgressMonitor progress) throws TeamRepositoryException {
+	public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection, Map<String, String> compLoadRules, IProgressMonitor progress, Locale clientLocale) throws Exception {
     	SubMonitor monitor = SubMonitor.convert(progress, 100);
         if (loadRuleUUIDs != null) {
           	Collection loadRules = new ArrayList<Object>();
@@ -390,7 +504,7 @@ public class BuildConfiguration {
     			// uses old load rule support
     		}
     		
-    		Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules);
+    		Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules, clientLocale);
     		Map<String, Object> allLoadRules = new HashMap<String, Object>();
     		
 			if (useOverride) {
@@ -419,7 +533,7 @@ public class BuildConfiguration {
                         }
                         if (contributor != null && component != null) {
                             throw new TeamRepositoryException(Messages.getDefault().BuildConfiguration_load_rule_access_failed(
-                                    contributor.getUserId(), component.getName()), e1);
+                                    contributor.getUserId(), component.getName(), e1.getMessage()), e1);
                         } else {
                             throw e1;
                         }
@@ -447,9 +561,11 @@ public class BuildConfiguration {
 			
 			//consolidate the loadrules, load rules provided via extension override the pre defined ones
 			if (customLoadRules != null && customLoadRules.size() > 0) {
+				LOGGER.finest("BuildConfiguration.getComponentLoadRules: there are load rules provided through extension."); //$NON-NLS-1$
 				for (Map.Entry<String, Object> cRule : customLoadRules.entrySet()) {
 					Object rule = cRule.getValue();
 					if(rule instanceof ILoadRule2) {
+						LOGGER.finest("BuildConfiguration.getComponentLoadRules: using load rules provided through extension for component '" + cRule.getKey() + "'."); //$NON-NLS-1$ //$NON-NLS-2$
 						allLoadRules.put(cRule.getKey(), rule);
 					}
 				}
@@ -461,11 +577,13 @@ public class BuildConfiguration {
         }else if (compLoadRules != null && compLoadRules.size() > 0) {
         	//no predefine load rules defined  use the custom load rules
          	Collection<Object> loadRules = new ArrayList<Object>();
-            Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules);
+            Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules, clientLocale);
         	if(customLoadRules != null && customLoadRules.size() > 0) {
+        		LOGGER.finest("BuildConfiguration.getComponentLoadRules: there are load rules provided through extension."); //$NON-NLS-1$
         		for (Map.Entry<String, Object> cRule : customLoadRules.entrySet()) {
 					Object rule = cRule.getValue();
 					if(rule instanceof ILoadRule2) {
+						LOGGER.finest("BuildConfiguration.getComponentLoadRules: using load rules provided through extension for component '" + cRule.getKey() + "'."); //$NON-NLS-1$ //$NON-NLS-2$
 						loadRules.add(rule);
 					}
 				}
@@ -476,27 +594,73 @@ public class BuildConfiguration {
         }
         return Collections.EMPTY_LIST;
     }
+    
+    /**
+     * Finalizer for a {@link BuildConfiguration} object
+	 * @param progress A progress monitor to check for cancellation with (and mark progress).
+     * @param listener A listener that will be notified of the progress and errors encountered.
+     * @param clientLocale The locale of the requesting client
+     * 
+     */
+	public void tearDown(RepositoryManager repositoryManager, IProgressMonitor monitor, IConsoleOutput listener, Locale clientLocale){
+		LOGGER.finest("BuildConfiguration.tearDown : Enter");
+		SubMonitor progress = SubMonitor.convert(monitor, 5);
+		if (isSnapshotLoad() || isStreamLoad()) {
+			try {
+				IWorkspaceConnection workspaceConnection = workspace.getConnection(repositoryManager, false, progress.newChild(2));
+				deleteWorkspace(workspaceConnection, progress, listener, clientLocale);
+			} catch (TeamRepositoryException exp) {
+				String logMessage = Messages.get(clientLocale).BuildConfiguration_cannot_delete_workspace("''", exp.getMessage());
+				listener.log(logMessage, exp);
+				if (LOGGER.isLoggable(Level.WARNING)) {
+					LOGGER.warning("BuildConfiguration.tearDown : Unable to get workspace details. Log message is " + logMessage);
+				}
+			}
+		}
+	}
+	
+	private void deleteWorkspace(IWorkspaceConnection workspaceConnection, IProgressMonitor monitor, IConsoleOutput listener, Locale clientLocale) {
+		SubMonitor progress = SubMonitor.convert(monitor, 10);
+		String workspaceName = workspaceConnection.getName();
+		try {
+			if (LOGGER.isLoggable(Level.INFO)) {
+				LOGGER.info("BuildConfiguration.deleteWorkspace : Deleting temporary workspace '" + workspaceName + "'");
+			}
+			SCMPlatform.getWorkspaceManager(getTeamRepository()).deleteWorkspace(workspaceConnection.getResolvedWorkspace(), progress);
+		}
+		catch (TeamRepositoryException exp) {
+			String logMessage = Messages.get(clientLocale).BuildConfiguration_cannot_delete_workspace(workspaceName, exp.getMessage()); 
+			listener.log(logMessage, exp);
+			if (LOGGER.isLoggable(Level.WARNING)) {
+				LOGGER.warning("BuildConfiguration.deleteWorkspace : Unable to delete temporary workspace '" + workspaceName + "'. Log message is " + logMessage);
+			}
+		}
+	}
 
-    //TODO: Check if Object can be changed to ILoadRule2
-    private Map<String, Object> getCustomLoadRules(IWorkspaceConnection connection,
-			Map<String, String> compLoadRules) {
-    	Map<String, Object> lRules = new HashMap<String, Object>();
-    	if(compLoadRules != null && compLoadRules.size() > 0) {
-    		for(String comp : compLoadRules.keySet()) {
-    			String lrFile = compLoadRules.get(comp);
-    			if(lrFile != null && new File(lrFile).isFile()) {
-    	             try {
-						Object rule = NonValidatingLoadRuleFactory.getLoadRule(connection, lrFile, null);
-						if(rule != null) {
-							lRules.put(comp, rule);
-						}
-					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-    			}
-    		}
-    	}
+	// TODO: Check if Object can be changed to ILoadRule2
+	private Map<String, Object> getCustomLoadRules(IWorkspaceConnection connection, Map<String, String> compLoadRules, Locale clientLocale)
+			throws Exception {
+		Map<String, Object> lRules = new HashMap<String, Object>();
+		if (compLoadRules != null && compLoadRules.size() > 0) {
+			for (String comp : compLoadRules.keySet()) {
+				String lrFile = compLoadRules.get(comp);
+				if (lrFile == null || lrFile.trim().length() == 0) {
+					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_path_empty_or_null(comp));
+				}
+
+				File fileHandle = new File(lrFile);
+				if (!fileHandle.exists()) {
+					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_does_not_exist(lrFile, comp));
+				}
+				if (!fileHandle.isFile()) {
+					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_not_file(lrFile, comp));
+				}
+				if (LOGGER.isLoggable(Level.FINEST)) {
+					LOGGER.finest("BuildConfiguration.getCustomLoadRules: reading load rule for component '" + comp + "' from '" + lrFile + "'."); //$NON-NLS-1$ //$NON-NLS-2$//$NON-NLS-3$
+				}
+				lRules.put(comp, NonValidatingLoadRuleFactory.getLoadRule(connection, lrFile, null));
+			}
+		}
 		return lRules;
 	}
 
@@ -550,6 +714,20 @@ public class BuildConfiguration {
 	 */
 	public BuildWorkspaceDescriptor getBuildWorkspaceDescriptor() {
 		return workspace;
+	}
+	
+	/**
+	 * @return Descriptor of the build snapshot
+	 */
+	public BuildSnapshotDescriptor getBuildSnapshotDescriptor() {
+		return snapshot;
+	}
+	
+	/**
+	 * @return Descriptor of the build stream
+	 */
+	public BuildStreamDescriptor getBuildStreamDescriptor() {
+		return stream;
 	}
 
 	/**
@@ -627,12 +805,33 @@ public class BuildConfiguration {
 	}
 	
 	/**
+	 * @return The uuid of the snapshot generated. May be <code>null</code>
+	 */
+	public String getSnapshotUUID() {
+		if (snapshot != null) {
+			return snapshot.getSnapshotUUID();
+		}
+		if (stream != null) {
+			return stream.getSnapshotUUID();
+		}
+		return null;
+	}
+	
+	/**
 	 * Returns the build properties.
 	 * 
 	 * @return Map<String, String> of build properties
 	 */
 	public Map<String, String> getBuildProperties() {
 		return buildProperties;
+	}
+	
+	public boolean isSnapshotLoad() {
+		return (snapshot != null && workspace != null);
+	}
+	
+	public boolean isStreamLoad() {
+		return (stream != null && workspace != null);
 	}
 
     /**
