@@ -11,16 +11,9 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.FreeStyleProject;
-import hudson.util.FormValidation;
-import hudson.util.Secret;
-
 import java.io.File;
 import java.io.IOException;
 
-import net.sf.json.JSONObject;
-
-import org.jvnet.hudson.test.HudsonTestCase;
 import org.kohsuke.stapler.StaplerRequest;
 import org.mockito.Mockito;
 
@@ -35,9 +28,15 @@ import com.ibm.team.build.internal.hjplugin.RTCRepositoryBrowser;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+
+import hudson.model.FreeStyleProject;
+import hudson.util.FormValidation;
+import hudson.util.Secret;
+import net.sf.json.JSONObject;
 
 @SuppressWarnings("nls")
-public class RTCScmIT extends HudsonTestCase {
+public class RTCScmIT extends AbstractTestCase {
 
 	private static final String CONFIGURE = "configure";
 	private static final String CONFIG = "config";

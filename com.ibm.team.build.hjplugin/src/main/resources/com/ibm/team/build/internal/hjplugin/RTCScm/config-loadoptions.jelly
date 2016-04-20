@@ -11,22 +11,4 @@
 
         <!-- Create folders for components -->
         <f:optionalBlock name="createFoldersForComponents" title="${%load.createFoldersForComponents}" field="createFoldersForComponents" checked="${instance.createFoldersForComponents}" inline="true" />
-        
-        <f:entry title="${%componentsToExclude.title}" field="componentsToExclude" >
-            <f:textbox name="componentsToExclude"/>
-        </f:entry>        
-        <!-- we do not support validation for snapshots -->
-        <j:if test="${currentBuildTypeStr != 'buildSnapshot'}">
-   			<f:validateButton title="${%validate.title}" progress="${%validate.progress}" 
-				        method="validateComponentsToExclude" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,value,buildWorkspace,buildStream,componentsToExclude" />
-		</j:if>
-        
-        <f:entry title="${%loadRules.title}"  field="loadRules" >
-            <f:textbox name="loadRules" value="${instance.loadRules}" />               
-        </f:entry>        
-        <!-- we do not support validation for snapshots -->
-        <j:if test="${currentBuildTypeStr != 'buildSnapshot'}">
-        	<f:validateButton title="${%validate.title}" progress="${%validate.progress}" 
-				        method="validateLoadRules" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,value,buildWorkspace,buildStream,loadRules" />
-		</j:if>
 </j:jelly>

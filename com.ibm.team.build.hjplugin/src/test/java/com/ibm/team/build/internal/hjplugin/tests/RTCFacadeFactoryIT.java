@@ -22,9 +22,10 @@ import org.jvnet.hudson.test.HudsonTestCase;
 import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 
 @SuppressWarnings("nls")
-public class RTCFacadeFactoryIT extends HudsonTestCase {
+public class RTCFacadeFactoryIT extends AbstractTestCase {
 
 	@Override
 	protected void setUp() throws Exception {

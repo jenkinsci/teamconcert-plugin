@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 import com.ibm.team.build.client.ClientFactory;
@@ -34,10 +33,10 @@ import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConfiguration;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
-import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.Messages;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCConfigurationException;
+import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
 import com.ibm.team.build.internal.scm.ComponentLoadRules;
@@ -54,7 +53,6 @@ import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.IBaselineSet;
-import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IChangeSetHandle;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
@@ -170,7 +168,7 @@ public class BuildConfigurationTests {
 	}
 
 	public Map<String, String> setupNewLoadRules(String workspaceName,
-			String testName, String hjPath, String buildPath) throws Exception {
+			String componentName, String hjPath, String buildPath) throws Exception {
 		// create a build definition with new format load rules
 		// load directory "."
 		// delete directory before loading (dir has other stuff that will be deleted)
@@ -191,7 +189,7 @@ public class BuildConfigurationTests {
 		
 		try {
 			IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
-			Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, testName, new String[] {
+			Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 					"/",
 					"/f/",
 					"/f/a.txt",
@@ -200,11 +198,11 @@ public class BuildConfigurationTests {
 					"/h/",
 					"/h/c.txt",
 					});
-			IComponent component = (IComponent) pathToHandle.get(testName);
+			IComponent component = (IComponent) pathToHandle.get(componentName);
 			IChangeSetHandle cs = buildStream.createChangeSet(component, null);
 			SCMUtil.addVersionables(buildStream, component, cs, pathToHandle,
 					new String[] {"/h/new.loadRule"}, 
-					new String[] {getNewLoadRule(testName, "f")}); // load rule to load f directory
+					new String[] {getNewLoadRule(componentName, "f")}); // load rule to load f directory
 			buildStream.closeChangeSets(Collections.singletonList(cs), null);
 			IFileItemHandle loadRuleFile = (IFileItemHandle) pathToHandle.get("/h/new.loadRule");
 			Map<IComponentHandle, IFileItemHandle> loadRuleFiles = Collections.singletonMap((IComponentHandle) component, loadRuleFile);
@@ -227,7 +225,7 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, componentName, true, artifactIds,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -240,7 +238,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
+			String buildResultItemId = connection.createBuildResult(componentName, null, "my buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -305,7 +303,7 @@ public class BuildConfigurationTests {
 	}
 
 	public Map<String, String> setupOldLoadRules(String workspaceName,
-			String testName, String hjPath) throws Exception {
+			String componentName, String hjPath) throws Exception {
 		// Create build definition with old style load rules
 		// load directory missing
 		// don't delete directory before loading (dir has other stuff that will(not) be deleted)
@@ -325,7 +323,7 @@ public class BuildConfigurationTests {
 		
 		try {
 			IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
-			Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, testName, new String[] {
+			Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 					"/",
 					"/f/",
 					"/f/a.txt",
@@ -334,11 +332,11 @@ public class BuildConfigurationTests {
 					"/h/",
 					"/h/c.txt",
 					});
-			IComponent component = (IComponent) pathToHandle.get(testName);
+			IComponent component = (IComponent) pathToHandle.get(componentName);
 			IChangeSetHandle cs = buildStream.createChangeSet(component, null);
 			SCMUtil.addVersionables(buildStream, component, cs, pathToHandle,
 					new String[] {"/h/new.loadRule"}, 
-					new String[] {getOldLoadRule(testName, "f")}); // load rule to load f directory
+					new String[] {getOldLoadRule(componentName, "f")}); // load rule to load f directory
 			buildStream.closeChangeSets(Collections.singletonList(cs), null);
 			IFileItemHandle loadRuleFile = (IFileItemHandle) pathToHandle.get("/h/new.loadRule");
 			Map<IComponentHandle, IFileItemHandle> loadRuleFiles = Collections.singletonMap((IComponentHandle) component, loadRuleFile);
@@ -361,7 +359,7 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, componentName, true, artifactIds,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "false",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "false",
@@ -373,7 +371,7 @@ public class BuildConfigurationTests {
 			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
 			
 			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
+			String buildResultItemId = connection.createBuildResult(componentName, null, "my buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (failure[0] != null) {
 				throw failure[0];
@@ -773,7 +771,7 @@ public class BuildConfigurationTests {
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
 		IBaselineSet bs = RTCSnapshotUtils.getSnapshot(repo, snapshotName, null, Locale.getDefault());
-		buildConfiguration.initialize(bs, 	repo.loggedInContributor(), workspacePrefix, null);
+		buildConfiguration.initialize(bs, repo.loggedInContributor(), workspacePrefix,listener, Locale.getDefault(), null);
 		if (failure[0] != null) {
 			throw failure[0];
 		}

@@ -9,9 +9,18 @@
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 
-package com.ibm.team.build.internal.hjplugin;
+package com.ibm.team.build.internal.hjplugin.tests.utils;
 
-public class RTCJobProperties {
-	public static final String BUILD_RESULT_UUID = "buildResultUUID";
-	public static final String USE_DYNAMIC_LOAD_RULE = "com.ibm.team.build.useExtension";
+public class LoadOptions {
+	public boolean acceptBeforeLoad = true;
+	public boolean createFoldersForComponents = false;
+	public String componentsToBeExcluded = null;
+	public String loadRules = null;
+	public boolean isDeleteNeeded = false;
+	
+	private static LoadOptions defaultOptions = new LoadOptions();
+	
+	public static LoadOptions getDefault() {
+		return defaultOptions;
+	}
 }

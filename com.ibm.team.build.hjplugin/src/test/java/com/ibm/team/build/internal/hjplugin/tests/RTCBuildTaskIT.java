@@ -32,9 +32,10 @@ import com.ibm.team.build.internal.hjplugin.RTCCheckoutTask;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
 
-public class RTCBuildTaskIT extends HudsonTestCase {
+public class RTCBuildTaskIT extends AbstractTestCase {
 
 	private static final String FAKE_UUID = "_kkmC4NWiEdylmcAI5HeTUQ"; //$NON-NLS-1$
 	private RTCFacadeWrapper testingFacade;
@@ -66,20 +67,6 @@ public class RTCBuildTaskIT extends HudsonTestCase {
 		}
 	}
 
-    /**
-     * generate the name of the project based on the test case
-     * 
-     * @return Name of the project
-     */
-    protected String getTestName() {
-        String name = this.getClass().getName();
-        int posn = name.lastIndexOf('.');
-        if (posn != -1 && posn < name.length()-1) {
-            name = name.substring(posn + 1);
-        }
-        return name + "_" + this.getName();
-    }
-	
     /**
      * Tests that BuildResultSetupTask knows when to setup locally
      * @throws Exception

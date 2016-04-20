@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,8 +12,6 @@
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
 import java.util.Map;
-
-import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
@@ -167,6 +165,14 @@ public class RTCTestingFacade extends RTCFacade {
 		Map<String, String> setup = testClient.setupXMLEncodingTestChangeSets(connectionDetails, workspaceName, componentName, getProgressMonitor());
 		return setup;
 	}
+	
+	public Map<String, String> setupTestBuildSnapshotConfiguration(String serverURL, String userId, String password, int timeout,
+				String workspaceName, String snapshotName, String componentName, String workspacePrefix,
+				String hJPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.setupSnapshot(connectionDetails, workspaceName, componentName, snapshotName, getProgressMonitor());
+	}
 
 	public Map<String, String> testBuildTerminationSetup(String serverURL, String userId, String password,
 			int timeout, String testName) throws Exception {
@@ -222,28 +228,28 @@ public class RTCTestingFacade extends RTCFacade {
 	
 	public Map<String, String> testNewLoadRules(String serverURL,
 			String userId, String password, int timeout,
-			String workspaceName, String testName, String hjPath,
+			String workspaceName, String componentName, String hjPath,
 			String buildPath) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
-		return testClient.testNewLoadRules(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
+		return testClient.testNewLoadRules(connectionDetails, workspaceName, componentName, hjPath, buildPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testOldLoadRules(String serverURL,
 			String userId, String password, int timeout,
-			String workspaceName, String testName, String hjPath) throws Exception {
+			String workspaceName, String componentName, String hjPath) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
-		return testClient.testOldLoadRules(connectionDetails, workspaceName, testName, hjPath, getProgressMonitor());
+		return testClient.testOldLoadRules(connectionDetails, workspaceName, componentName, hjPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testPersonalBuild(String serverURL,
 			String userId, String password, int timeout,
-			String workspaceName, String testName, String hjPath,
+			String workspaceName, String componentName, String hjPath,
 			String buildPath) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
-		return testClient.testPersonalBuild(connectionDetails, workspaceName, testName, hjPath, buildPath, getProgressMonitor());
+		return testClient.testPersonalBuild(connectionDetails, workspaceName, componentName, hjPath, buildPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testGoodFetchLocation(String serverURL,
@@ -274,12 +280,26 @@ public class RTCTestingFacade extends RTCFacade {
 		testsClassObject.testAcceptReportsWithOppositeChangesets();
 		testsClassObject.testNonMatchingAcceptReports();
 	}
-	
-	public Map<String, String> testBuildSnapshotConfiguration(String serverURL, String userId, String password,
-					int timeout, String workspaceName, String snapshotName, String componentName, String workspacePrefix, String hjPath) throws Exception {
+		
+	public Map<String, String> setupBuildSnapshot(String serverURL, String userId, String password,
+					int timeout, String workspaceName, String snapshotName, String componentName, String workspacePrefix ) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
-		return testClient.testBuildSnapshotConfiguration(connectionDetails, workspaceName, snapshotName, componentName,
-				workspacePrefix, hjPath, getProgressMonitor());
+		return testClient.setupBuildSnapshot(connectionDetails, workspaceName, snapshotName, componentName,
+				workspacePrefix, getProgressMonitor());
+	}
+	
+	public void testBuildSnapshotConfiguration(String serverURL, String userId, String password,
+			int timeout, String snapshotName,String workspacePrefix, String hjPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		testClient.testBuildSnapshotConfiguration(connectionDetails, snapshotName,
+				workspacePrefix, hjPath);
+}
+	
+	public void testBuildStreamConfiguration(String serverURL, String userId, String password,
+			int timeout, String workspaceName, String streamName, String componentName, String workspacePrefix, String hjPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 	}
 }

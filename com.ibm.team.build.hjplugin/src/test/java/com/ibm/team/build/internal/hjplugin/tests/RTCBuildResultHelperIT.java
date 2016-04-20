@@ -11,14 +11,9 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.FreeStyleProject;
-import hudson.util.Secret;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-
-import org.jvnet.hudson.test.HudsonTestCase;
 
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
@@ -28,11 +23,15 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildResultHelper;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 
+import hudson.model.FreeStyleProject;
+import hudson.util.Secret;
+
 @SuppressWarnings("unchecked")
-public class RTCBuildResultHelperIT extends HudsonTestCase {
+public class RTCBuildResultHelperIT extends AbstractTestCase {
 
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 
@@ -156,18 +155,4 @@ public class RTCBuildResultHelperIT extends HudsonTestCase {
 			loginInfo.getTimeout(),
 			setupArtifacts);
 	}
-	
-    /**
-     * generate the name of the project based on the test case
-     * 
-     * @return Name of the project
-     */
-    protected String getTestName() {
-        String name = this.getClass().getName();
-        int posn = name.lastIndexOf('.');
-        if (posn != -1 && posn < name.length()-1) {
-            name = name.substring(posn + 1);
-        }
-        return name + "_" + this.getName();
-    }
 }

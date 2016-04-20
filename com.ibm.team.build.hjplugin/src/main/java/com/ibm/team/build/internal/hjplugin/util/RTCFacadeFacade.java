@@ -68,7 +68,6 @@ public class RTCFacadeFacade {
 	private static final String JSON_PROP_RETURN_VALUE = "returnValue"; //$NON-NLS-1$
 	private static final String JSON_PROP_VALUE = "value"; //$NON-NLS-1$
 	private static final String JSON_PROP_WORKSPACES = "workspaces"; //$NON-NLS-1$
-	private static final String JSON_PROP_STREAMS = "streams"; //$NON-NLS-1$
 
 	// JSON fields for validating build definition
 	private static final String JSON_PROP_BUILD_ENGINE = "buildEngine"; //$NON-NLS-1$
@@ -446,6 +445,11 @@ public class RTCFacadeFacade {
 			String serverURI, String userId, String password, int timeout,
 			boolean avoidUsingToolkit, String buildWorkspace) throws Exception {
 		LOGGER.finest("RTCFacadeFacade.testBuildWorkspace : Enter");
+		// Ensure that workspace is non null and not empty
+		buildWorkspace = Util.fixEmptyAndTrim(buildWorkspace);
+		if (buildWorkspace == null) {
+			return Messages.RTCFacadeFacade_invalid_workspace_name();
+		}
 		// ensure only 1 workspace is found.
 		if (avoidUsingToolkit) {
 			String errorMessage = null;
@@ -487,6 +491,12 @@ public class RTCFacadeFacade {
 			String serverURI, String userId, String password, int timeout,
 			boolean avoidUsingToolkit, String buildStream) throws Exception {
 		LOGGER.finest("RTCFacadeFacade.testBuildStream : Enter");
+		
+		buildStream = Util.fixEmptyAndTrim(buildStream);
+		if (buildStream == null) {
+			return Messages.RTCFacadeFacade_invalid_stream_name();
+		}
+		
 		// ensure only 1 stream is found.
 		if (avoidUsingToolkit) { 
 			String errorMessage = null;
@@ -505,12 +515,8 @@ public class RTCFacadeFacade {
 				
 				if (jsonResult instanceof JSONObject) {
 					try {
-						JSONObject jsonResponse = (JSONObject) jsonResult;
-						JSONObject body = jsonResponse.getJSONObject(JSON_PROP_SOAPENV_BODY);
-						JSONObject response = jsonResponse.getJSONObject(JSON_PROP_RESPONSE);
-						JSONObject returnValue = jsonResponse.getJSONObject(JSON_PROP_RETURN_VALUE);
-						JSONObject value = returnValue.getJSONObject(JSON_PROP_VALUE);
-						Object streams = value.get(JSON_PROP_STREAMS);
+						JSONObject value = getValueObjectFromJson((JSONObject)jsonResult);
+						Object streams = value.get(JSON_PROP_WORKSPACES);
 						
 						if (streams == null || !(streams instanceof JSONArray)) {
 							return Messages.RTCFacadeFacade_stream_not_found(buildStream);

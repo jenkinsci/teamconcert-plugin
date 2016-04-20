@@ -170,8 +170,8 @@ public class Messages {
      * 
      */
     
-    public String BuildConfiguration_cannot_delete_workspace(String arg1, String arg2) {
-    	return MessageFormat.format(getString("BuildConfiguration_cannot_delete_workspace"), arg1, arg2);
+    public String RTCWorkspaceUtils_cannot_delete_workspace(String arg1, String arg2) {
+    	return MessageFormat.format(getString("RTCWorkspaceUtils_cannot_delete_workspace"), arg1, arg2);
     }
 
     /**
@@ -880,7 +880,12 @@ public class Messages {
 		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_does_not_exist"), arg1, arg2);
 	}
 
-
+	/**
+	 * The user, {0} ({1}), does not have permissions to access the load rule file for component "{2}".
+	 */
+	public String RepositoryConnection_private_load_rule(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RepositoryConnection_private_load_rule"), arg1, arg2, arg3);
+	}
 
     /**
      * Get the message from the bundle

@@ -28,7 +28,6 @@ import hudson.util.FormValidation;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -51,6 +50,7 @@ public class Helper {
 	public static final String COMPONENT_NAME = "componentName"; //$NON-NLS-1$
 	public static final String FILE_ITEM_ID = "fileItemId"; //$NON-NLS-1$
 	public static final String FILE_PATH = "filePath"; //$NON-NLS-1$
+	
 
 	/** 
 	 * merge two results, if both are errors only one stack trace can be included
@@ -123,6 +123,7 @@ public class Helper {
 	public static String validateAndGetComponentsToExcludeJson(String componentsToExcludefilePath) throws Exception {
 		String componentsToExcludeJsonStr = readJsonFromFile(componentsToExcludefilePath);
 		if (componentsToExcludeJsonStr != null) {
+			LOGGER.finer("Helper.validateAndGetComponentsToExcludeJson: stepping through and validating components to exclude json"); //$NON-NLS-1$
 			JSONObject json = JSONObject.fromObject(componentsToExcludeJsonStr);
 			if (!json.has(COMPONENTS_TO_EXCLUDE)) {
 				throw new IllegalArgumentException(Messages.Helper_components_to_exclude_required());
@@ -156,6 +157,7 @@ public class Helper {
 	public static String validateAndGetLoadRulesJson(String loadRulesFilePath) throws Exception {
 		String loadRulesJsonStr = readJsonFromFile(loadRulesFilePath);
 		if (loadRulesJsonStr != null) {
+			LOGGER.finer("Helper.validateAndGetLoadRulesJson: stepping through and validating load rules json"); //$NON-NLS-1$
 			JSONObject json = JSONObject.fromObject(loadRulesJsonStr);
 			if (!json.has(LOAD_RULES)) {
 				throw new IllegalArgumentException(Messages.Helper_load_rules_required());
@@ -182,7 +184,7 @@ public class Helper {
 
 	private static String getValueFromParametersAction(Run<?, ?> build, String key) {
 		String value = null;
-		LOGGER.finest("Helper.getValueFromParametersAction : Begin");
+		LOGGER.finest("Helper.getValueFromParametersAction : Begin"); //$NON-NLS-1$
 		for (ParametersAction paction : build.getActions(ParametersAction.class)) {
 			List<ParameterValue> pValues = paction.getParameters();
 			if (pValues == null) {
@@ -202,9 +204,9 @@ public class Helper {
 		}
 		if (LOGGER.isLoggable(Level.FINEST)) {
 			if (value == null) {
-				LOGGER.finest("Helper.getValueFromParametersAction : Unable to find a value for key : " + key);
+				LOGGER.finest("Helper.getValueFromParametersAction : Unable to find a value for key : " + key); //$NON-NLS-1$
 			} else {
-				LOGGER.finest("Helper.getValueFromParametersAction : Found value : " + value + " for key : " + key);
+				LOGGER.finest("Helper.getValueFromParametersAction : Found value : " + value + " for key : " + key);  //$NON-NLS-1$//$NON-NLS-2$
 			}
 		}
 		return value;
@@ -293,7 +295,7 @@ public class Helper {
 				return job.getLastBuild();
 			}}, toolkit, loginInfo, buildStream, false, "team_scm_streamChangesData", clientLocale);
 		if (LOGGER.isLoggable(Level.FINEST)) {
-			LOGGER.finest("Helper.getSnapshotUUIDFromPreviousBuild : " + 
+			LOGGER.finest("Helper.getStreamChangesDataFromLastBuild : " + 
 						((streamChangesData == null) ? "No stream changes data found from a previous build" : streamChangesData));
 		}
 		return streamChangesData;

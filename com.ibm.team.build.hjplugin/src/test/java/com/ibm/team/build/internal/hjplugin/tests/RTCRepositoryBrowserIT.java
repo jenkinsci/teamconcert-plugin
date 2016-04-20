@@ -18,8 +18,9 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemD
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCRepositoryBrowser;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 
-public class RTCRepositoryBrowserIT  extends HudsonTestCase {
+public class RTCRepositoryBrowserIT  extends AbstractTestCase {
 	
 	private static final String WORK_ITEM_NUMBER = "2";
 	private static final String BASELINE_SET_ITEMID = "_ds8LYMpYEeOwhrfCswB9SQ";

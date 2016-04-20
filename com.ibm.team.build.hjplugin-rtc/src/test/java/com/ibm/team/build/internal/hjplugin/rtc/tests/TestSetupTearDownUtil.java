@@ -917,14 +917,14 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> testNewLoadRules(ConnectionDetails connectionDetails,
-			String workspaceName, String testName, String hjPath, String buildPath, 
+			String workspaceName, String componentName, String hjPath, String buildPath, 
 			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupNewLoadRules(workspaceName,
-				testName, hjPath, buildPath);
+				componentName, hjPath, buildPath);
 		try {
-			buildConfigurationTests.testNewLoadRules(workspaceName, testName, hjPath, buildPath, artifactIds);
+			buildConfigurationTests.testNewLoadRules(workspaceName, componentName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
 				tearDown(connectionDetails, artifactIds, progress);
@@ -937,13 +937,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> testOldLoadRules(ConnectionDetails connectionDetails,
-			String workspaceName, String testName, String hjPath, IProgressMonitor progress) throws Exception {
+			String workspaceName, String componentName, String hjPath, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupOldLoadRules(workspaceName,
-				testName, hjPath);
+				componentName, hjPath);
 		try {
-			buildConfigurationTests.testOldLoadRules(workspaceName, testName, hjPath, artifactIds);
+			buildConfigurationTests.testOldLoadRules(workspaceName, componentName, hjPath, artifactIds);
 		} catch (Exception e) {
 			try {
 				tearDown(connectionDetails, artifactIds, progress);
@@ -957,13 +957,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	public Map<String, String> testPersonalBuild(
 			ConnectionDetails connectionDetails, String workspaceName,
-			String testName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
+			String componentName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		Map<String, String> artifactIds = buildConfigurationTests.setupPersonalBuild(workspaceName,
-				testName, hjPath, buildPath);
+				componentName, hjPath, buildPath);
 		try {
-			buildConfigurationTests.testPersonalBuild(workspaceName, testName, hjPath, buildPath, artifactIds);
+			buildConfigurationTests.testPersonalBuild(workspaceName, componentName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
 				tearDown(connectionDetails, artifactIds, progress);
@@ -1015,25 +1015,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 	
-	public Map<String, String> testBuildSnapshotConfiguration(
-			ConnectionDetails connectionDetails, String workspaceName, String snapshotName, String componentName,
-			String workspacePrefix, String hjPath, IProgressMonitor progress) throws Exception {
-		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
-		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
-		Map<String, String> artifactIds = setupSnapshot(connectionDetails, workspaceName, componentName, snapshotName, progress);
-		try {
-			buildConfigurationTests.testLoadSnapshotConfiguration(snapshotName, workspacePrefix, hjPath);
-		} catch (Exception e) {
-			try {
-				tearDown(connectionDetails, artifactIds, progress);
-			} catch (Exception e2) {
-				// don't let cleanup exception bury the details of the original failure
-			}
-			throw e;
-		}
-		return artifactIds;
-	}
-
+	
 	@SuppressWarnings("restriction")
 	public Map<String, String> setupTestBuildDefinition(
 			ConnectionDetails connectionDetails, String uniqueName,
@@ -1054,15 +1036,28 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IComponent component = (IComponent) pathToHandle.get(uniqueName);
 		
 		// capture interesting uuids to verify against
-		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
-		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 		
 		BuildUtil.createBuildDefinition(repo, uniqueName, true, artifactIds,
 				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 				IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 				IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
 		return artifactIds;
+	}
+	
+	public Map<String, String> setupBuildSnapshot(
+			ConnectionDetails connectionDetails, String workspaceName, String snapshotName, String componentName,
+			String workspacePrefix, IProgressMonitor progress) throws Exception {
+		Map<String, String> artifactIds = setupSnapshot(connectionDetails, workspaceName, componentName, snapshotName, progress);
+		return artifactIds;
+	}
+
+	public void testBuildSnapshotConfiguration(ConnectionDetails connectionDetails, String snapshotName, String workspacePrefix, String hjPath) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		buildConfigurationTests.testLoadSnapshotConfiguration(snapshotName, workspacePrefix, hjPath);
 	}
 
 	public static IConsoleOutput getListener(final Exception[] failure) {

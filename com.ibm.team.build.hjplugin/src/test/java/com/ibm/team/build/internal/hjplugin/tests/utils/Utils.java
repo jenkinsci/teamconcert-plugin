@@ -13,7 +13,6 @@ package com.ibm.team.build.internal.hjplugin.tests.utils;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -28,6 +27,15 @@ public class Utils {
 			String userId, String password, int timeout, String buildResultUUID,
 				String buildWorkspaceName, String hjWorkspacePath, OutputStream changeLog, 
 				String baselineSetName, TaskListener listener, Locale clientLocale) throws Exception {
+		return acceptAndLoad(testingFacade, serverURI, userId, password, timeout, buildResultUUID, buildWorkspaceName,
+				 null, null, hjWorkspacePath, changeLog, baselineSetName, null, LoadOptions.getDefault(), listener, clientLocale);
+	}
+	
+	public static Map<String, String> acceptAndLoad(RTCFacadeWrapper testingFacade, String serverURI, 
+			String userId, String password, int timeout, String buildResultUUID, String buildWorkspaceName,
+			String buildSnapshotNameOrUUID, String buildStreamName, String hjWorkspacePath, OutputStream changelog,
+			String baselineSetName, String previousSnapshotUUID,
+			LoadOptions options, TaskListener listener, Locale clientLocale) throws Exception {
 		@SuppressWarnings("unchecked")
 		Map<String, Object> acceptMap = (Map<String, Object>) testingFacade.invoke(
 							"accept",
@@ -37,9 +45,12 @@ public class Utils {
 							int.class, // timeout,
 							String.class, // buildResultUUID,
 							String.class, // workspaceName,
+							String.class, // buildsnapshot,
+							String.class, // buildStream,
 							String.class, // hjWorkspacePath,
 							OutputStream.class, // changeLog,
 							String.class, // baselineSetName,
+							String.class, // previousSnapshotUUID
 							Object.class, // listener
 							Locale.class, // locale
 							String.class, // callConnectorTimeout
@@ -49,8 +60,9 @@ public class Utils {
 							password,
 							timeout,
 							buildResultUUID, buildWorkspaceName,
-							hjWorkspacePath, changeLog,
-							baselineSetName, listener, clientLocale, CALLCONNECTOR_TIMEOUT, true);
+							buildSnapshotNameOrUUID, buildStreamName,
+							hjWorkspacePath, changelog,
+							baselineSetName, previousSnapshotUUID, listener, clientLocale, CALLCONNECTOR_TIMEOUT, options.acceptBeforeLoad);
 		
 		// Retrieve connectorId and parentActivityId
 		@SuppressWarnings("unchecked")
@@ -69,6 +81,7 @@ public class Utils {
 					String.class, //buildWorkspace
 					String.class, //buildSnapshot
 					String.class, //buildStream
+					Map.class, // buildStreamData,
 					String.class, // hjWorkspacePath
 					String.class, //baselineSetName
 					Object.class, //listener
@@ -80,7 +93,7 @@ public class Utils {
 					boolean.class, // isDeleteNeeded
 					boolean.class, //createFoldersForComponents
 					String.class, // componentsToBeExcluded
-					List.class, //loadRules
+					String.class, //loadRules
 					boolean.class, // acceptBeforeLoad
 					},
 					serverURI, 
@@ -89,8 +102,9 @@ public class Utils {
 					timeout,
 					buildResultUUID, 
 					buildWorkspaceName,
-					null,
-					null,
+					buildSnapshotNameOrUUID,
+					buildStreamName,
+					acceptMap.get("buildStreamData"),
 					hjWorkspacePath,
 					baselineSetName, 
 					listener,
@@ -99,11 +113,11 @@ public class Utils {
 					callConnectorId, 
 					null, 
 					listener.getLogger(),
-					false, 
-					false, 
-					null, 
-					null, 
-					true);
+					options.isDeleteNeeded, 
+					options.createFoldersForComponents, 
+					options.componentsToBeExcluded, 
+					options.loadRules,
+					options.acceptBeforeLoad);
 		return buildProperties;
 	}
 }

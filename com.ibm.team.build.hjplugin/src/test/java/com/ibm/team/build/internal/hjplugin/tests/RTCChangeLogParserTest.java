@@ -34,9 +34,10 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSetEntry;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 
 @SuppressWarnings("nls")
-public class RTCChangeLogParserTest extends TestCase {
+public class RTCChangeLogParserTest extends AbstractTestCase {
 	//https://issues.jenkins-ci.org/browse/JENKINS-21977
 
 	private static final String EOL = System.getProperty("line.separator", "\n"); 

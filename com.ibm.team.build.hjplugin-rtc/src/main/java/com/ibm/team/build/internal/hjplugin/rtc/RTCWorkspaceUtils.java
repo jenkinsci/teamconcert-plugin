@@ -31,18 +31,18 @@ import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.TeamRepositoryException;
+import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.client.internal.RepositoryItemProvider;
+import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IWorkspaceSearchCriteria;
 import com.ibm.team.scm.common.internal.ChangeHistoryHandle;
 import com.ibm.team.scm.common.internal.ComponentEntry;
 
 /**
- * Provides utility methods to retrieve information on a RTC SCM Stream or Workspace
- * @author lvaikunt
- *
+ * Provides utility methods to retrieve information on a RTC SCM Streams and Workspaces
  */
 @SuppressWarnings("restriction")
 public class RTCWorkspaceUtils {
@@ -59,19 +59,54 @@ public class RTCWorkspaceUtils {
 		
 	}
 	
+	/**
+	 * The singleton
+	 */
 	public static RTCWorkspaceUtils getInstance() {
 		return instance;
 	}
-
+	
 	/**
+	 * Deletes a given {@link IWorkspace}. 
+	 * <br><br>
+	 * <b>Note:</b> Doesn't throw any exception if deletion fails.
 	 * 
-	 * @param buildStream
+	 * @param workspace - the workspace to delete
 	 * @param repository
 	 * @param progress
 	 * @param clientLocale
-	 * @return
-	 * @throws TeamRepositoryException
-	 * @throws RTCConfigurationException
+	 */
+	public void delete(IWorkspace workspace, ITeamRepository repository, IProgressMonitor progress, IConsoleOutput listener, Locale clientLocale) {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		LOGGER.finest("RTCWorkspaceUtils.delete : Enter");
+		try {
+			if (workspace == null) {
+				return;
+			}
+			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
+			workspaceManager.deleteWorkspace(workspace, monitor.newChild(100));
+		} catch (TeamRepositoryException exp) {
+			String logMessage = Messages.get(clientLocale).RTCWorkspaceUtils_cannot_delete_workspace(workspace.getName(), exp.getMessage()); 
+			listener.log(logMessage, exp);
+			if (LOGGER.isLoggable(Level.WARNING)) {
+				LOGGER.warning("RTCWorkspaceUtils.deleteWorkspace : Unable to delete temporary workspace '" + workspace.getName() + "'. Log message is " + logMessage);
+			}
+		}
+		finally {
+			monitor.done();
+		}
+	}
+
+	/**
+	 * Given a build stream name, give the {@link IWorkspaceHandle} to the corresponding stream item in repository.
+	 *
+	 * @param buildStream - the name of the stream
+	 * @param repository - the repository in which the stream is to be found
+	 * @param progress
+	 * @param clientLocale
+	 * @return a {@link IWorkspaceHandle} to the corresponding build stream item, if it is found in the repository.
+	 * @throws TeamRepositoryException - If there is some other error while fetching the build stream 
+	 * @throws RTCConfigurationException - If there is no stream with the given name or multiple streams with the same name 
 	 */
 	public IWorkspaceHandle getBuildStream (String buildStream, ITeamRepository repository, IProgressMonitor progress, 
 											Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException {
@@ -93,26 +128,27 @@ public class RTCWorkspaceUtils {
 	}
 	
 	/**
+	 * Given a build stream name, return its UUID
 	 * 
-	 * @param buildStream
-	 * @param repository
+	 * @param buildStream - the name of the build stream.
+	 * @param repository - the repository in which the stream will be found
 	 * @param progress
 	 * @param clientLocale
-	 * @return
-	 * @throws TeamRepositoryException
-	 * @throws RTCConfigurationException
+	 * @return a {@link String} representation of the build stream's UUID
+	 * @throws TeamRepositoryException - If there is some other error while fetching the build stream 
+	 * @throws RTCConfigurationException - If there is no stream with the given name or multiple streams with the same name 
 	 */
 	public String getBuildStreamUUID (String buildStream, ITeamRepository repository, IProgressMonitor progress,
 										Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException {
-		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
-
 		IWorkspaceHandle workspaceHandle = getBuildStream(buildStream, repository, monitor.newChild(75), clientLocale);
         return workspaceHandle.getItemId().getUuidValue();
 	}
 
 	/**
-	 * 
+	 * Given a workspace handle, returns a {@link BigInteger} representing the overall state of the workspace.
+	 * The overall state of the workspace is a combination of the states of its components.
+	 * This number can be used to compare the overall states of a workspace.
 	 * @param repository
 	 * @param workspaceHandle
 	 * @param progress
@@ -128,6 +164,9 @@ public class RTCWorkspaceUtils {
 	}
 
 	/**
+	 * Given a workspace handle, returns a {@link String} representing the overall state of the workspace.
+	 * The string is a hexadecimal number. The overall state of the workspace is a combination of the states 
+	 * of each component. This number can be used to compare the overall states of a workspace.
 	 * 
 	 * @param repository
 	 * @param workspaceHandle
@@ -152,7 +191,13 @@ public class RTCWorkspaceUtils {
 		return digest;
 	}
 	
-	public BigInteger getDigestNumber(String hexDigest) {
+	/**
+	 * Given a string digest in hexadecimal representation, returns a {@link BigInteger}
+	 * @param hexDigest - the digest in hexadecimal form
+	 * @return a {@link BigInteger} which is a numerical value of string digest
+	 * @throws NumberFormatException if the given string is not in hexadecimal format
+	 */
+	public BigInteger getDigestNumber(String hexDigest) throws NumberFormatException {
 		return new BigInteger(hexDigest, 16);
 	}
 	

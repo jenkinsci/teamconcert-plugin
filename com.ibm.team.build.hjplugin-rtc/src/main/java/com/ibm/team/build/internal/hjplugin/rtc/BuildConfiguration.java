@@ -147,27 +147,35 @@ public class BuildConfiguration {
 	 * @param monitor
 	 * @throws Exception
 	 */
-	public void initialize(IBaselineSet baselineSet, IContributorHandle contributorHandle, String workspacePrefix, IProgressMonitor monitor) throws IOException, TeamRepositoryException{
+	public void initialize(IBaselineSet baselineSet, IContributorHandle contributorHandle, String workspacePrefix, IConsoleOutput listener, Locale clientLocale, IProgressMonitor monitor) throws Exception {
 		LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Enter");
 		SubMonitor progress = SubMonitor.convert(monitor, 10);
 		
-		String workspaceName =  workspacePrefix + "_" + Long.toString(System.currentTimeMillis()) + "_" + Long.toString(System.nanoTime());
-		if (LOGGER.isLoggable(Level.FINER)) {
-			LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Creating workspace '" + workspaceName + "'");
-		}
-
-		IWorkspaceConnection workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributorHandle, workspaceName, null, baselineSet, progress.newChild(5));
-		
-		String snapshotUUID =  baselineSet.getItemId().getUuidValue();
-		this.snapshot = new BuildSnapshotDescriptor(teamRepository, snapshotUUID, baselineSet);
-		this.workspace = new BuildWorkspaceDescriptor(teamRepository, workspaceConnection.getResolvedWorkspace().getItemId().getUuidValue(), workspaceName);
-		this.fetchDestinationFile = new File(hjWorkspace);
-		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
-		this.acceptBeforeFetch = false;
-		this.isPersonalBuild = false;
-
-		if (LOGGER.isLoggable(Level.FINER)) {
-			LOGGER.finer("Loading from snapshot: " + snapshotUUID + "  using temporary workspace '" +  workspaceConnection.getName() + "'");
+		IWorkspaceConnection workspaceConnection = null;
+		try {
+			String workspaceName =  workspacePrefix + "_" + Long.toString(System.currentTimeMillis()) + "_" + Long.toString(System.nanoTime());
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Creating workspace '" + workspaceName + "'");
+			}
+	
+			workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributorHandle, workspaceName, null, baselineSet, progress.newChild(5));
+			
+			String snapshotUUID =  baselineSet.getItemId().getUuidValue();
+			this.snapshot = new BuildSnapshotDescriptor(teamRepository, snapshotUUID, baselineSet);
+			this.workspace = new BuildWorkspaceDescriptor(teamRepository, workspaceConnection.getResolvedWorkspace().getItemId().getUuidValue(), workspaceName);
+			this.fetchDestinationFile = new File(hjWorkspace);
+			this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
+			this.acceptBeforeFetch = false;
+			this.isPersonalBuild = false;
+	
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finer("Loading from snapshot: " + snapshotUUID + "  using temporary workspace '" +  workspaceConnection.getName() + "'");
+			}
+		} catch (Exception exp) {
+			if (workspaceConnection != null) {
+				RTCWorkspaceUtils.getInstance().delete(workspaceConnection.getResolvedWorkspace(), getTeamRepository(), progress, listener, clientLocale);
+			}
+			throw exp;
 		}
 	}
 	
@@ -597,6 +605,7 @@ public class BuildConfiguration {
     
     /**
      * Finalizer for a {@link BuildConfiguration} object
+     * 
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @param listener A listener that will be notified of the progress and errors encountered.
      * @param clientLocale The locale of the requesting client
@@ -610,10 +619,8 @@ public class BuildConfiguration {
 				IWorkspaceConnection workspaceConnection = workspace.getConnection(repositoryManager, false, progress.newChild(2));
 				deleteWorkspace(workspaceConnection, progress, listener, clientLocale);
 			} catch (TeamRepositoryException exp) {
-				String logMessage = Messages.get(clientLocale).BuildConfiguration_cannot_delete_workspace("''", exp.getMessage());
-				listener.log(logMessage, exp);
 				if (LOGGER.isLoggable(Level.WARNING)) {
-					LOGGER.warning("BuildConfiguration.tearDown : Unable to get workspace details. Log message is " + logMessage);
+					LOGGER.warning("BuildConfiguration.tearDown : Unable to get workspace details. Log message is " + exp.getMessage());
 				}
 			}
 		}
@@ -621,19 +628,11 @@ public class BuildConfiguration {
 	
 	private void deleteWorkspace(IWorkspaceConnection workspaceConnection, IProgressMonitor monitor, IConsoleOutput listener, Locale clientLocale) {
 		SubMonitor progress = SubMonitor.convert(monitor, 10);
-		String workspaceName = workspaceConnection.getName();
-		try {
-			if (LOGGER.isLoggable(Level.INFO)) {
-				LOGGER.info("BuildConfiguration.deleteWorkspace : Deleting temporary workspace '" + workspaceName + "'");
-			}
-			SCMPlatform.getWorkspaceManager(getTeamRepository()).deleteWorkspace(workspaceConnection.getResolvedWorkspace(), progress);
+		if (LOGGER.isLoggable(Level.INFO)) {
+			LOGGER.info("BuildConfiguration.deleteWorkspace : Deleting temporary workspace '" + workspaceConnection.getName() + "'");
 		}
-		catch (TeamRepositoryException exp) {
-			String logMessage = Messages.get(clientLocale).BuildConfiguration_cannot_delete_workspace(workspaceName, exp.getMessage()); 
-			listener.log(logMessage, exp);
-			if (LOGGER.isLoggable(Level.WARNING)) {
-				LOGGER.warning("BuildConfiguration.deleteWorkspace : Unable to delete temporary workspace '" + workspaceName + "'. Log message is " + logMessage);
-			}
+		if (workspaceConnection != null) {
+			RTCWorkspaceUtils.getInstance().delete(workspaceConnection.getResolvedWorkspace(), getTeamRepository(), progress.newChild(10), listener, clientLocale);
 		}
 	}
 

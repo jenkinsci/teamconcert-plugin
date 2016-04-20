@@ -18,6 +18,7 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.TaskListener;
 import hudson.model.AbstractProject;
+import hudson.model.Cause;
 import hudson.model.CauseAction;
 import hudson.model.Hudson;
 import hudson.model.Job;
@@ -47,7 +48,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -191,7 +194,6 @@ public class RTCScm extends SCM {
 			return createFoldersForComponents;
 		}
 		
-		@DataBoundSetter
 		public void setComponentsToExclude(String componentsToExclude) {
 			this.componentsToExclude = componentsToExclude;
 		}
@@ -200,7 +202,6 @@ public class RTCScm extends SCM {
 			return componentsToExclude;
 		}
 		
-		@DataBoundSetter
 		public void setLoadRules(String loadRules) {
 			this.loadRules = loadRules;
 		}
@@ -1623,7 +1624,20 @@ public class RTCScm extends SCM {
 					cause = new CauseAction(rtcBuildCause);
 					build.addAction(cause);
 				} else {
-					cause.getCauses().add(rtcBuildCause);
+					try {
+						cause.getCauses().add(rtcBuildCause);
+					} catch (UnsupportedOperationException exception) {
+						// with the changes made in Jenkins Issue 33467 in 1.655, the list of Causes returned by
+						// CauseAction is immutable. So construct a new list with the exiting causes, append
+						// our RTCBuildCause instance to this list and replace the CauseAction instance in the build
+						// Post 1.2.0.0 we should always be replacing the CauseAction, instead of appending to the
+						// existing list of Causes
+						LOGGER.fine("RTCScm.checkout: We should have tried to modify the immutable list of Causes."); //$NON-NLS-1$
+						List<Cause> newCauses = new ArrayList<Cause>(cause.getCauses());
+						newCauses.add(rtcBuildCause);
+						CauseAction newCauseAction = new CauseAction(newCauses);
+						build.replaceAction(newCauseAction);
+					}
 				}
 			}
 			
@@ -1683,6 +1697,15 @@ public class RTCScm extends SCM {
 				}
 				acceptTask.setLinkURLs(rootUrl,  projectUrl, buildUrl);
 			}
+			
+			// NOTE:
+			// For buildStream case, we have created a temporary workspace. Its UUID is stored in streamChangesData.
+			// The temporary workspace will be used in load() and deleted at the end of load. If we do add any 
+			// intermediate steps between accept and load and there is some exception during those tasks (even now,
+			// we can get problems with componentsToExclude ad loadRules), we need to ensure that the temporary workspace
+			// is deleted.
+			// A better option is to create the temporary workspace and snapshot upfront using a separate task from checkout()
+			// That way, if there is any exception after that, we can safely delete the workspace in finally()	
 				
 			Map<String, Object> acceptResult = workspacePath.act(acceptTask);
 			Map<String, String> buildProperties = (Map<String, String>)acceptResult.get("buildProperties"); //$NON-NLS-1$
@@ -1691,17 +1714,18 @@ public class RTCScm extends SCM {
 			connectorId = (String)acceptResult.get("connectorId"); //$NON-NLS-1$
 			streamData = (Map<String, String>)acceptResult.get("buildStreamData"); //$NON-NLS-1$
 			
-			// create componentsToExclude if needed
-			String componentsToExcludeJson = Helper.validateAndGetComponentsToExcludeJson(componentsToExclude);			
-			// create loadrules if needed
-			String loadRulesJson = Helper.validateAndGetLoadRulesJson(loadRules);
+			// Commenting it out for 1.2.0.0
+//			// create componentsToExclude if needed
+//			String componentsToExcludeJson = Helper.validateAndGetComponentsToExcludeJson(componentsToExclude);			
+//			// create loadrules if needed
+//			String loadRulesJson = Helper.validateAndGetLoadRulesJson(loadRules);
 
 			RTCLoadTask loadTask = new RTCLoadTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
 					buildResultUUID, buildWorkspace, buildSnapshot, buildStream, streamData, label, listener,
 					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider, clearLoadDirectory, 
-					createFoldersForComponents, componentsToExcludeJson, loadRulesJson, getAcceptBeforeLoad());
+					createFoldersForComponents, null, null, getAcceptBeforeLoad());
 			if (buildResultUUID != null) {
 				String rootUrl = Hudson.getInstance().getRootUrl();
 				if (rootUrl != null) {
@@ -1863,9 +1887,10 @@ public class RTCScm extends SCM {
     					// This makes the polling reset quiet period
     					// otherwise we will let the quiet period to expire
 	    				BigInteger lastRevisionHash = ((RTCRevisionState)revisionState).getLastRevisionHash();
-	    				LOGGER.finer("LAST REVISION STATE " + lastRevisionHash.toString());
+	    				if (LOGGER.isLoggable(Level.FINER)) {
+	    					LOGGER.finer("LAST REVISION STATE " + lastRevisionHash.toString());
+	    				}
 	    				change = currentRevisionHash.equals(lastRevisionHash) ? Change.NONE : Change.SIGNIFICANT;
-	    				LOGGER.finer("Change is " + change.toString());
     				} else {
     					// we are in quiet period, and previous revisionState is not of RTCRevisionState type...
     					// ideally we should never come here.
@@ -1883,17 +1908,23 @@ public class RTCScm extends SCM {
     							"true".equals(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver"))) {
     						// snapshot has been created, 
     						// hence further changes would not be taken by the running build...
+    						LOGGER.finer("Accept phase is over");
     						change = (currentRevisionHash.equals(BIGINT_ZERO)) ? Change.NONE : Change.SIGNIFICANT;
     					} else {
     						// build is running, but snapshot has not been created yet,
     						// hence any further changes can still be considered by the running build
     						// therefore return no changes to avoid queueing another build
+    						LOGGER.finer("Cannot determine if accept phase is over. Avoiding queuing a new build.");
     						change = Change.NONE;
     					}
     				} else {
         				LOGGER.finer("Project is not in queue nor it is building");
     					change = (currentRevisionHash.equals(BIGINT_ZERO)) ? Change.NONE : Change.SIGNIFICANT;
     				}
+    			}
+    			
+    			if (LOGGER.isLoggable(Level.FINER)) {
+    				LOGGER.finer("Change is " + change.toString());
     			}
     			return new PollingResult(revisionState, currentRevisionState, change);
     		}

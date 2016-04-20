@@ -108,7 +108,7 @@
         
 	    <f:block>
 	    <table width="100%">
-	    	<f:dropdownList name="buildType" title="${%buildConfiguration.title}">
+	    	<f:dropdownList name="buildType" title="${%buildConfiguration.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildConfiguration">
 	    		<!-- Each of the following dropdownListBlocks has an invisibleEntry containing a hidden input.
 	    		The reason for this is to make sure that the structure of underlying config.xml, and
 	    		the java class at back-end does not break.

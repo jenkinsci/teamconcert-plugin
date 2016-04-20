@@ -22,10 +22,11 @@ import org.jvnet.hudson.test.HudsonTestCase;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.MockScm;
 import com.ibm.team.build.internal.hjplugin.util.RTCScmConfigHelper;
 
-public class RTCScmConfigHelperIT extends HudsonTestCase {
+public class RTCScmConfigHelperIT extends AbstractTestCase {
 
 	private static final String DEFN_SERVER_URI = "https://localHost:4321/jazz";
 	private static final String SNAPSHOT_NAME = "AnotherSnapshot";

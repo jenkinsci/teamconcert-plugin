@@ -10,24 +10,23 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.Result;
-import hudson.model.TaskListener;
-import hudson.util.StreamTaskListener;
-
 import java.util.Map;
-
-import org.jvnet.hudson.test.HudsonTestCase;
 
 import com.ibm.team.build.internal.hjplugin.BuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.RTCBuildCause;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildState;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
-public class BuildConnectionIT extends HudsonTestCase {
+import hudson.model.Result;
+import hudson.model.TaskListener;
+import hudson.util.StreamTaskListener;
+
+public class BuildConnectionIT extends AbstractTestCase {
 
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 
@@ -643,18 +642,4 @@ public class BuildConnectionIT extends HudsonTestCase {
 			assertTrue(buildCause.getShortDescription(), buildCause.getShortDescription().contains(loggedInContributorName));
 		}
 	}
-	
-    /**
-     * generate the name of the project based on the test case
-     * 
-     * @return Name of the project
-     */
-    protected String getTestName() {
-        String name = this.getClass().getName();
-        int posn = name.lastIndexOf('.');
-        if (posn != -1 && posn < name.length()-1) {
-            name = name.substring(posn + 1);
-        }
-        return name + "_" + this.getName();
-    }
 }
