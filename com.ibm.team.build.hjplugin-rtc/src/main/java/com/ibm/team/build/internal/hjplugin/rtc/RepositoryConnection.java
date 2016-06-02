@@ -15,7 +15,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,6 +59,12 @@ import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAre
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaListener;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
+import com.ibm.team.process.client.IProcessClientService;
+import com.ibm.team.process.common.IProcessArea;
+import com.ibm.team.process.common.IProjectArea;
+import com.ibm.team.process.common.IProjectAreaHandle;
+import com.ibm.team.process.common.ITeamArea;
+import com.ibm.team.process.common.ITeamAreaHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.ServerVersionCheckException;
@@ -1525,7 +1536,7 @@ public class RepositoryConnection {
 			throw new RTCValidationException(e.getMessage());
 		}
 	}
-
+	
 	/**
 	 * Validate if the specified components/load rule files exist in the repository and included in the given workspace.
 	 * 
@@ -1551,6 +1562,25 @@ public class RepositoryConnection {
 		} catch (RTCConfigurationException e) {
 			throw new RTCValidationException(e.getMessage());
 		} catch (IllegalArgumentException e) {
+			throw new RTCValidationException(e.getMessage());
+		}
+	}
+	
+	
+	/**
+	 * Validate if the given project/team area exists in the repository.
+	 * 
+	 * @param processArea Name of the project area/team area
+	 * @param progress Progress monitor
+	 * @param clientLocale The locale of the requesting client
+	 * @throws Exception
+	 */
+	public void testProcessArea(String processArea, IProgressMonitor progress, Locale clientLocale) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(40));
+		try {
+			getProcessAreaByName(processArea, progress, clientLocale);
+		} catch (RTCConfigurationException e) {
 			throw new RTCValidationException(e.getMessage());
 		}
 	}
@@ -2023,6 +2053,108 @@ public class RepositoryConnection {
 			}
 		}
 		return versionableHandle.getItemId().getUuidValue();
+	}
+
+	/**
+	 * Retrieve the project area/team area instance with the given UUID/name.
+	 * 
+	 * @param processArea Name or UUID of the project area/team area
+	 * @param progress Progress monitor
+	 * @param clientLocale The locale of the requesting client
+	 * @return Project Area/Client Area instance
+	 * @throws RTCConfigurationException
+	 * @throws TeamRepositoryException
+	 * @throws URISyntaxException
+	 * @throws UnsupportedEncodingException
+	 */
+	private IProcessArea getProcessArea(String processArea, IProgressMonitor progress, Locale clientLocale) throws RTCConfigurationException,
+			TeamRepositoryException, URISyntaxException, UnsupportedEncodingException {
+		try {
+			// check if we are provided with an UUID
+			UUID processAreaUUID = UUID.valueOf(processArea);
+			return getProcessAreaByUUID(processAreaUUID, progress, clientLocale);
+		} catch (IllegalArgumentException e) {
+			// if it is not an UUID then fetch by name
+			return getProcessAreaByName(processArea, progress, clientLocale);
+		}
+	}
+
+	/**
+	 * Fetch the project area/team area instance with the given UUID.
+	 * 
+	 * @param processAreaUUID UUID of the project area/team area.
+	 * @param progress Progress monitor
+	 * @param clientLocale The locale of the requesting client
+	 * @return Project Area/Team Area instance
+	 * @throws RTCConfigurationException
+	 * @throws TeamRepositoryException
+	 */
+	private IProcessArea getProcessAreaByUUID(UUID processAreaUUID, IProgressMonitor progress, Locale clientLocale) throws RTCConfigurationException,
+			TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		IProcessArea processArea = null;
+		IProjectAreaHandle projectAreaHandle = (IProjectAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(fRepository, processAreaUUID, null);
+		try {
+			processArea = (IProcessArea)fRepository.itemManager().fetchCompleteItem(projectAreaHandle, IItemManager.DEFAULT, monitor.newChild(50));
+		} catch (ItemNotFoundException e) {
+			// ignore might not be a project area
+		}
+		if (processArea != null) {
+			monitor.worked(50);
+			return processArea;
+		}
+		ITeamAreaHandle teamAreaHandle = (ITeamAreaHandle)ITeamArea.ITEM_TYPE.createItemHandle(fRepository, processAreaUUID, null);
+		try {
+			processArea = (IProcessArea)fRepository.itemManager().fetchCompleteItem(teamAreaHandle, IItemManager.DEFAULT, monitor.newChild(50));
+		} catch (ItemNotFoundException e) {
+			// ignore and throw an exception
+		}
+		if (processArea == null) {
+			throw new RTCConfigurationException(Messages.get(clientLocale)
+					.getRepositoryConnection_process_area_not_found(processAreaUUID.getUuidValue()));
+		}
+		return processArea;
+	}
+
+	/**
+	 * Fetch the project area/team area instance with the given name.
+	 * 
+	 * @param processAreaName Name of the project area or team area. For team area, specify the name of all team areas
+	 *            in the hierarchy, starting with the name of the project area, with each of the names separated by "/".
+	 *            For an instance 'JKE Banking/Development/User Interface' identifies the 'User Interface' team area
+	 *            which is under the 'Development' team area in the 'JKE Banking' project area.
+	 * 
+	 * @param progress Progress monitor
+	 * @param clientLocale The locale of the requesting client
+	 * @return IProcessArea Project Area/Team Area instance
+	 * @throws RTCConfigurationException
+	 * @throws TeamRepositoryException
+	 * @throws URISyntaxException
+	 * @throws UnsupportedEncodingException
+	 */
+	private IProcessArea getProcessAreaByName(String processAreaName, IProgressMonitor progress, Locale clientLocale)
+			throws RTCConfigurationException, TeamRepositoryException, URISyntaxException, UnsupportedEncodingException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		IProcessClientService processClientService = (IProcessClientService)fRepository.getClientLibrary(IProcessClientService.class);
+		// encode the individual name segments and reconstruct the string
+		StringTokenizer tokenizer = new StringTokenizer(processAreaName, Constants.PROCESS_AREA_PATH_SEPARATOR);
+		StringBuilder encodedProcessAreaName = new StringBuilder();
+		while (tokenizer.hasMoreTokens()) {
+			encodedProcessAreaName.append(URLEncoder.encode(tokenizer.nextToken(), Constants.DFLT_ENCODING).replace("+", "%20")); //$NON-NLS-1$ //$NON-NLS-2$
+			if (tokenizer.hasMoreTokens()) {
+				encodedProcessAreaName.append(Constants.PROCESS_AREA_PATH_SEPARATOR);
+			}
+		}
+		IProcessArea processArea = processClientService.findProcessArea(new URI(encodedProcessAreaName.toString()),
+				IProcessClientService.ALL_PROPERTIES, monitor);
+		if (processArea == null) {
+			if (processAreaName.contains(Constants.PROCESS_AREA_PATH_SEPARATOR)) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).getRepositoryConnection_team_area_not_found(processAreaName));
+			} else {
+				throw new RTCConfigurationException(Messages.get(clientLocale).getRepositoryConnection_project_area_not_found(processAreaName));
+			}
+		}
+		return processArea;
 	}
 	
 	/**

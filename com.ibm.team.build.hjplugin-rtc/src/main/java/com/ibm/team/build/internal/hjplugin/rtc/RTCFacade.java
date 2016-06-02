@@ -694,6 +694,39 @@ public class RTCFacade {
 		return errorMessage;
 	}
 
+	/**
+	 * Validate if the project area/team area exists.
+	 * 
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the RTC project area/team area
+	 * @param clientLocale The locale of the requesting client
+	 * @return an error message to display, or null if no problem
+	 * @throws Exception
+	 */
+	public String testProcessArea(String serverURI, String userId, String password, int timeout, String processArea, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor();
+		String errorMessage = null;
+		try {
+			AbstractBuildClient buildClient = getBuildClient(); 
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
+			repoConnection.testConnection(monitor.newChild(50));
+			repoConnection.testProcessArea(processArea, monitor.newChild(50), clientLocale);
+		} catch (RTCValidationException e) {
+			errorMessage = e.getMessage();
+		} catch (RTCConfigurationException e) {
+			errorMessage = e.getMessage();
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+		return errorMessage;
+	}
+	
 	protected SubMonitor getProgressMonitor() {
 		IProgressMonitor progress = new NullProgressMonitor() {
 

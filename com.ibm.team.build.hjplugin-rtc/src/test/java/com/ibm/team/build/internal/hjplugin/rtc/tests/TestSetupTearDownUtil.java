@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -20,10 +20,8 @@ import java.util.Map;
 
 import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.common.model.BuildState;
-import com.ibm.team.build.internal.client.TeamBuildClientFactory;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
@@ -66,6 +64,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_BUILD_DEFINITION_ID = "buildDefinitionId";
 	public static final String ARTIFACT_BUILD_ENGINE_ITEM_ID = "buildEngineItemId";
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
+	public static final String ARTIFACT_PROJECT_AREA_ITEM_ID = "projectAreaItemId";
+	public static final String ARTIFACT_PROCESS_DEFINITION_ITEM_ID = "processDefinitionItemId";
 	
 	public TestSetupTearDownUtil() {
 	}
@@ -313,6 +313,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		// Delete the build defn related artifacts
 		BuildUtil.deleteBuildArtifacts(repo, setupArtifacts);
+		
+		// Delete project area and process definition, if any
+		ProcessUtil.deleteProcessArtifacts(repo, setupArtifacts);
 	}
 
 	public Map<String, String> setupTestBuildWorkspace(ConnectionDetails connectionDetails, String singleWorkspaceName,
@@ -1058,6 +1061,12 @@ public class TestSetupTearDownUtil extends BuildClient {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
 		buildConfigurationTests.testLoadSnapshotConfiguration(snapshotName, workspacePrefix, hjPath);
+	}
+
+	public Map<String, String> setupTestProcessArea_basic(ConnectionDetails connectionDetails, String projectAreaName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		RTCFacadeTests rtcFacadeTests = new RTCFacadeTests(connection);
+		return rtcFacadeTests.setupTestProcessArea_basic(projectAreaName);
 	}
 
 	public static IConsoleOutput getListener(final Exception[] failure) {

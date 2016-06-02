@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -62,20 +62,17 @@ public class Config {
 
 			serverURI = System.getProperty(SERVER_URI);
 			if (serverURI == null) {
-				throw new IllegalStateException(MessageFormat.format(
-						MISSING_PROPERTY, SERVER_URI));
+				serverURI="https://localhost:9443/jazz";
 			}
 
 			userId = System.getProperty(USER_ID);
 			if (userId == null) {
-				throw new IllegalStateException(MessageFormat.format(
-						MISSING_PROPERTY, USER_ID));
+				userId = "ADMIN";
 			}
 			
 			userIDForAuthenticationFailures = System.getProperty(USER_ID_FOR_AUTHENTICATION_FAILURES);
 			if (userIDForAuthenticationFailures == null) {
-				throw new IllegalStateException(MessageFormat.format(
-						MISSING_PROPERTY, USER_ID_FOR_AUTHENTICATION_FAILURES));
+				userIDForAuthenticationFailures = Long.toHexString(System.currentTimeMillis());
 			}
 
 			password = System.getProperty(PASSWORD);
@@ -85,15 +82,10 @@ public class Config {
 			}
 
 			passwordFile = System.getProperty(PASSWORD_FILE);
-			if (passwordFile == null) {
-				throw new IllegalStateException(MessageFormat.format(
-						MISSING_PROPERTY, PASSWORD_FILE));
-			}
 
 			String timeoutString = System.getProperty(TIMEOUT);
 			if (timeoutString == null) {
-				throw new IllegalStateException(MessageFormat.format(
-						MISSING_PROPERTY, TIMEOUT));
+				timeoutString = "480";
 			}
 			timeout = Integer.parseInt(timeoutString);
 			

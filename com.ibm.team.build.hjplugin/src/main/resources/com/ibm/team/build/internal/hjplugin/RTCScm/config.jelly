@@ -160,6 +160,13 @@
 						<input type="hidden" name="value" value="buildSnapshot"/>
 					</f:invisibleEntry>
 					
+				    <!-- Text box to specify project area/team area -->
+					<f:entry title="${%processArea.title}" field="processArea">
+						<f:textbox name="processArea"/>
+					</f:entry>   
+					<f:validateButton title="${%validateProcessArea.title}" progress="${%validateProcessArea.progress}" 
+						method="validateProcessArea" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,processArea" />   
+				    
 					<f:entry title="${%buildSnapshot.title}"  field="buildSnapshot" >
 				        <f:textbox name="buildSnapshot" value="${instance.buildSnapshot}" />
 				    </f:entry>
@@ -174,6 +181,14 @@
 					<f:invisibleEntry field="value" >
 						<input type="hidden" name="value" value="buildStream"/>
 					</f:invisibleEntry>
+					
+					<!-- Text box to specify project area/team area -->
+					<f:entry title="${%processArea.title}" field="processArea">
+						<f:textbox name="processArea"/>
+					</f:entry>   
+					<f:validateButton title="${%validateProcessArea.title}" progress="${%validateProcessArea.progress}" 
+						method="validateProcessArea" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,processArea" />   
+				       
                     <f:entry title="${%buildStream.title}"  field="buildStream" >
                         <f:textbox name="buildStream" clazz="required" checkMessage="${%buildStream.checkMessage}" value="${instance.buildStream}" />
                     </f:entry>

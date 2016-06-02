@@ -140,6 +140,8 @@ public class RTCScm extends SCM {
 	// Available in RTC 5.0 or 4.0.6 + retro-fitted changes
 	private boolean avoidUsingToolkit;
 	
+	private String processArea;
+	
 	/**
 	 * Structure that represents the radio button selection for build workspace/definition
 	 * choice in config.jelly (job configuration) 
@@ -157,6 +159,7 @@ public class RTCScm extends SCM {
 		public String loadRules;
 		private String acceptBeforeLoad = "true";
 		private boolean generateChangelogWithGoodBuild;
+		private String processArea;
 		
 		@DataBoundConstructor
 		public BuildType(String value, String buildDefinition, String buildWorkspace, String buildSnapshot, String buildStream) {
@@ -226,6 +229,15 @@ public class RTCScm extends SCM {
 		@DataBoundSetter
 		public void setGenerateChangelogWithGoodBuild(boolean generateChangelogWithGoodBuild) {
 			this.generateChangelogWithGoodBuild = generateChangelogWithGoodBuild;
+		}
+		
+		@DataBoundSetter
+		public void setProcessArea(String processArea) {
+			this.processArea = processArea;
+		}
+		
+		public String getProcessArea() {
+			return processArea;
 		}
 	}
 	
@@ -1119,6 +1131,65 @@ public class RTCScm extends SCM {
 			return Helper.mergeValidationResults(connectInfoCheck.validationResult, loadRulesCheck);
 		}
 
+		/**
+		 * Validate the project area/team area value. Called from the forms.
+		 * 
+		 * @param project The Job that is going to be run
+		 * @param override Whether to override the global connection settings
+		 * @param buildTool The build tool selected to be used in builds (Job setting)
+		 * @param serverURI The RTC server uri (Job setting)
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
+		 *            credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
+		 *            password if the credentials id was not supplied. (Job setting)
+		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
+		 *            connection. (Job setting)
+		 * @param processArea The project area/team area value to be validated
+		 * 
+		 * @return Whether the build workspace is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doValidateProcessArea(@AncestorInPath Job<?, ?> project, @QueryParameter("overrideGlobal") final String override,
+				@QueryParameter("buildTool") String buildTool, @QueryParameter("serverURI") String serverURI,
+				@QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId, @QueryParameter("password") String password,
+				@QueryParameter("passwordFile") String passwordFile, @QueryParameter("credentialsId") String credId,
+				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit, @QueryParameter("processArea") String processArea) {
+			
+			// Note: validation of process area cannot be done using the REST service. So when avoidUsingBuildtoolkit
+			// is selected in master and the build toolkit is not configured, the validation will fail.
+			LOGGER.finest("DescriptorImpl.doValidateLoadRules: Begin"); //$NON-NLS-1$
+			// verify that a value is specified
+			if (processArea == null || processArea.trim().length() == 0) {
+				return FormValidation.error(Messages.RTCScm_specify_process_area());
+			}
+			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+			boolean avoidUsingToolkit;
+			if (!overrideGlobalSettings) {
+				// use the global settings instead of the ones supplied
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				userId = getGlobalUserId();
+				password = getGlobalPassword();
+				passwordFile = getGlobalPasswordFile();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+			}
+			// validate the info for connecting to the server (including toolkit
+			// & auth info).
+			ValidationResult connectInfoCheck = validateConnectInfo(project, !overrideGlobalSettings, buildTool, serverURI, userId, password,
+					passwordFile, credId, timeout, avoidUsingToolkit);
+			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return connectInfoCheck.validationResult;
+			}
+			FormValidation processAreaValidationResult = checkProcessArea(connectInfoCheck.buildToolkitPath, connectInfoCheck.loginInfo, processArea);
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, processAreaValidationResult);
+		}
+		
 		/** 
 		 * Validate that the build workspace exists and there is just one.
 		 * This is done in the next "layer" below using either the toolkit
@@ -1367,6 +1438,51 @@ public class RTCScm extends SCM {
 
 			return FormValidation.ok(Messages.RTCScm_load_rule_mapping_valid());
 		}
+		
+		/**
+		 * Validate that the project area/team area exists. Validation using REST services is not supported.
+		 * 
+		 * @param buildToolkitPath Path to the build toolkit
+		 * @param loginInfo The login credentials
+		 * @param process The name of the RTC project area or team area
+		 * @return The result of the validation. Never <code>null</code>
+		 */
+		private FormValidation checkProcessArea(String buildToolkitPath, RTCLoginInfo loginInfo, String processArea) {
+			try {
+				String errorMessage = RTCFacadeFacade.testProcessArea(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), processArea);
+				if (errorMessage != null && errorMessage.length() != 0) {
+					return FormValidation.error(errorMessage);
+				}
+			} catch (InvocationTargetException e) {
+				Throwable eToReport = e.getCause();
+				if (eToReport == null) {
+					eToReport = e;
+				}
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkProcessArea attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" processArea=\"" + processArea + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkProcessArea invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
+				}
+				return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
+			} catch (Exception e) {
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkProcessArea attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" processArea=\"" + processArea + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkProcessArea failed " + e.getMessage(), e); //$NON-NLS-1$
+				}
+				return FormValidation.error(e, e.getMessage());
+			}
+			return FormValidation.ok(processArea.contains("/") ? Messages.RTCScm_team_area_exists() : Messages.RTCScm_project_area_exists()); //$NON-NLS-1$
+		}
 	}
 	
 	
@@ -1411,6 +1527,7 @@ public class RTCScm extends SCM {
 			this.loadRules = buildType.loadRules;
 			this.acceptBeforeLoad = buildType.acceptBeforeLoad;
 			this.generateChangelogWithGoodBuild = buildType.generateChangelogWithGoodBuild;
+			this.processArea= buildType.processArea;
 		}
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
@@ -2172,6 +2289,10 @@ public class RTCScm extends SCM {
 	public String getBuildDefinition() {
 		return buildDefinition;
 	}
+    
+    public String getProcessArea() {
+    	return processArea;
+    }
 	
 	@Override
 	@Exported

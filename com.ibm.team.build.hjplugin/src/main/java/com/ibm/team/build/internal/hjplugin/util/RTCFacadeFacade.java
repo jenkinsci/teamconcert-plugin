@@ -411,7 +411,6 @@ public class RTCFacadeFacade {
 		} else {
 	
 			// Use the toolkit to validate the build definition
-			
 			LOGGER.finer("Testing Build Definition using the toolkit"); //$NON-NLS-1$
 			RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
 			String errorMessage = (String) facade.invoke(RTCFacadeWrapper.TEST_BUILD_DEFINITION, //$NON-NLS-1$
@@ -910,6 +909,37 @@ public class RTCFacadeFacade {
 					serverURI, userId, password, timeout, isStreamConfiguration, buildWorkspace, loadRules, LocaleProvider.getLocale());
 			return errorMessage;
 		}
+	}
+	
+	/**
+	 * Validate if the RTC project area/team area exists. Validation using REST service is not supported
+	 * 
+ 	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the RTC project area/team area
+	 * @return an error message to display, or null if no problem
+	 * @throws Exception
+	 */
+	public static String testProcessArea(String buildToolkitPath,
+			String serverURI, String userId, String password, int timeout,
+			String processArea)
+			throws Exception {
+		LOGGER.finer("Testing Process Area using the toolkit"); //$NON-NLS-1$
+		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
+		String errorMessage = (String) facade.invoke(RTCFacadeWrapper.TEST_PROCESS_AREA, //$NON-NLS-1$
+				new Class[] { String.class, // serverURI
+						String.class, // userId
+						String.class, // password
+						int.class, // timeout
+						String.class, // processArea
+						Locale.class}, // clientLocale
+				serverURI, userId, password, timeout,
+				processArea, LocaleProvider.getLocale());
+		return errorMessage;
+
 	}
 
 	/**

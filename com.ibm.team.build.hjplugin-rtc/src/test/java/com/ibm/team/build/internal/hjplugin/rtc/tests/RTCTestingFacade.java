@@ -302,4 +302,11 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 	}
+
+	public Map<String, String> setupTestProcessArea_basic(String serverURL, String userId, String password, int timeout, String projectAreaName)
+			throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.setupTestProcessArea_basic(connectionDetails, projectAreaName);
+	}
 }

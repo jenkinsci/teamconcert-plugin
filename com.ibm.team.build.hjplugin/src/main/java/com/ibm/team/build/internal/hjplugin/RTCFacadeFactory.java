@@ -108,11 +108,12 @@ public class RTCFacadeFactory {
 		/** 
 		 * Method names
 		 */
-		public static final String TEST_BUILD_DEFINITION = "testBuildDefinition";
-		public static final String TEST_BUILD_STREAM = "testBuildStream";
-		public static final String TEST_BUILD_WORKSPACE = "testBuildWorkspace";
-		public static final String LOAD = "load";
-		public static final String ACCEPT = "accept";
+		public static final String TEST_BUILD_DEFINITION = "testBuildDefinition"; //$NON-NLS-1$
+		public static final String TEST_BUILD_STREAM = "testBuildStream"; //$NON-NLS-1$
+		public static final String TEST_BUILD_WORKSPACE = "testBuildWorkspace"; //$NON-NLS-1$
+		public static final String LOAD = "load"; //$NON-NLS-1$
+		public static final String ACCEPT = "accept"; //$NON-NLS-1$
+		public static final String TEST_PROCESS_AREA = "testProcessArea"; //$NON-NLS-1$
 		
 		private Object facade;
 		private ClassLoader newClassLoader;

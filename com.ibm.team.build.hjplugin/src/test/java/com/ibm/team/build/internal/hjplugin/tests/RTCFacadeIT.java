@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -314,6 +314,138 @@ public class RTCFacadeIT extends HudsonTestCase {
 			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 			testingFacade.invoke("testCompareIncomingChanges", null, null);
 			System.out.println("&&&&&& Called testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
+		}
+	}
+
+	/**
+	 * Test validation of an existing project area and team area doesn't fail.
+	 * 
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public void testTestProcessArea_basic() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+		String projectAreaName = "testTestProcessArea_basic" + System.currentTimeMillis();
+		// create a project area with a single team area
+		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_basic", new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class }, // projectAreaName
+				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName);
+
+		try {
+			// validate project area
+			String errorMessage = RTCFacadeFacade.testProcessArea(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+					loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName);
+			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+			// validate team area
+			errorMessage = RTCFacadeFacade.testProcessArea(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+					loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName + "/" + projectAreaName + ".team.area");
+			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+		} finally {
+			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
+					String.class, // userId
+					String.class, // password
+					int.class, // timeout
+					Map.class }, // setupArtifacts
+					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
+		}
+	}
+
+	/**
+	 * Test validation of an existing project area and team area, with special characters in the name, doesn't fail.
+	 * 
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public void testTestProcessArea_specialChars() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+		String projectAreaName = "testTestProcessArea_specialChars`-=[]\\;',.?:\"{}|+_)(*&^%$#@!~)" + System.currentTimeMillis();
+		// create a project area with a single team area. include special characters in the name
+		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_basic", new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class }, // projectAreaName
+				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName);
+
+		try {
+			// validate project area
+			String errorMessage = RTCFacadeFacade.testProcessArea(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+					loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName);
+			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+			// validate team area. also validates that having a trailing "/" is ignored and validation goes through
+			errorMessage = RTCFacadeFacade.testProcessArea(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+					loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName + "/" + projectAreaName + ".team.area/");
+			assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
+		} finally {
+			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
+					String.class, // userId
+					String.class, // password
+					int.class, // timeout
+					Map.class }, // setupArtifacts
+					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
+		}
+	}
+
+	/**
+	 * Test validation of non-existent project area and team area fails.
+	 * 
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public void testTestProcessArea_nonExistent() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+		// create a project area to test that searching for a non-existent team area under an existing team area
+		// hierarchy fails
+		String projectAreaName = "testTestProcessArea_nonExistent" + System.currentTimeMillis();
+		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_basic", new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class }, // projectAreaName
+				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName);
+
+		try {
+			// non-existent project area
+			String errorMessage = RTCFacadeFacade.testProcessArea(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+					loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName + "1");
+			assertTrue(errorMessage, ("A project area with name \"" + projectAreaName + "1\" cannot be found.").equals(errorMessage));
+
+			// non-existent team area under an existing team area hierarchy fails. also validates that we parse multiple
+			// levels in team area hierarchy
+			errorMessage = RTCFacadeFacade.testProcessArea(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+					loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName + "/" + projectAreaName + ".team.area/new.team.area");
+			assertTrue(errorMessage,
+					("A team area at path \"" + projectAreaName + "/" + projectAreaName + ".team.area/new.team.area\" cannot be found.")
+							.equals(errorMessage));
+
+			// non-existent team area under a non-existent project area
+			errorMessage = RTCFacadeFacade.testProcessArea(Config.DEFAULT.getToolkit(), loginInfo.getServerUri(), loginInfo.getUserId(),
+					loginInfo.getPassword(), loginInfo.getTimeout(), projectAreaName + "1/" + projectAreaName + ".team.area1");
+			assertTrue(errorMessage,
+					("A team area at path \"" + projectAreaName + "1/" + projectAreaName + ".team.area1\" cannot be found.").equals(errorMessage));
+
+		} finally {
+			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
+					String.class, // userId
+					String.class, // password
+					int.class, // timeout
+					Map.class }, // setupArtifacts
+					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
 		}
 	}
 }

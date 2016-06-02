@@ -886,7 +886,29 @@ public class Messages {
 	public String RepositoryConnection_private_load_rule(String arg1, String arg2, String arg3) {
 		return MessageFormat.format(getString("RepositoryConnection_private_load_rule"), arg1, arg2, arg3);
 	}
-
+	
+	
+	/**
+	 *  A project area or team area with item ID "{0}" cannot be found.
+	 */
+	public String getRepositoryConnection_process_area_not_found(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection_process_area_not_found"), arg1);
+	}
+			
+	/**
+	 * A project area with name "{0}" cannot be found.
+	 */
+	public String getRepositoryConnection_project_area_not_found(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection_project_area_not_found"), arg1);
+	}
+	
+	/**
+	 * A team area at path "{0}" cannot be found. 
+	 */
+	public String getRepositoryConnection_team_area_not_found(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection_team_area_not_found"), arg1);
+	}
+	
     /**
      * Get the message from the bundle
      * 
