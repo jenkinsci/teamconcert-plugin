@@ -174,6 +174,7 @@ public class RTCFacadeFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
 	 * @param buildDefinition The name (id) of the build definition that describes the build workspace.
 	 * May be <code>null</code> if a buildWorkspace is supplied. Only one of buildWorkspace/buildDefinition
 	 * should be supplied.
@@ -187,21 +188,22 @@ public class RTCFacadeFacade {
 	 */
 	public static BigInteger incomingChangesUsingBuildToolkit(String buildToolkitPath, String serverURI, 
 			String userId, String password,
-			int timeout, boolean useBuildDefinition, String buildDefinitionId,
+			int timeout, String processArea, boolean useBuildDefinition, String buildDefinitionId,
 			String workspaceName, String streamName, String streamChangesData, TaskListener listener, boolean ignoreOutgoingFromBuildWorkspace) throws Exception {
 		listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_toolkit());
 		
 		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, listener.getLogger());
 		BigInteger changesIncoming = null;;
 		if (streamName != null) {
-			changesIncoming = (BigInteger) facade.invoke("computeIncomingChangesForStream", // $NON-NLS-1$
+			changesIncoming = (BigInteger) facade.invoke("computeIncomingChangesForStream",  //$NON-NLS-1$
 					new Class[] { String.class, String.class,
-							String.class, int.class,
+							String.class, int.class, String.class,
 							String.class, String.class, Object.class, Locale.class},
 					serverURI,
 					userId,
 					password,
 					timeout,
+					processArea,
 					streamName,
 					streamChangesData,
 					listener,
@@ -446,9 +448,6 @@ public class RTCFacadeFacade {
 		LOGGER.finest("RTCFacadeFacade.testBuildWorkspace : Enter");
 		// Ensure that workspace is non null and not empty
 		buildWorkspace = Util.fixEmptyAndTrim(buildWorkspace);
-		if (buildWorkspace == null) {
-			return Messages.RTCFacadeFacade_invalid_workspace_name();
-		}
 		// ensure only 1 workspace is found.
 		if (avoidUsingToolkit) {
 			String errorMessage = null;
@@ -488,15 +487,14 @@ public class RTCFacadeFacade {
 	
 	public static String testBuildStream(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
-			boolean avoidUsingToolkit, String buildStream) throws Exception {
+			boolean avoidUsingToolkit, String processArea, String buildStream) throws Exception {
 		LOGGER.finest("RTCFacadeFacade.testBuildStream : Enter");
 		
 		buildStream = Util.fixEmptyAndTrim(buildStream);
-		if (buildStream == null) {
-			return Messages.RTCFacadeFacade_invalid_stream_name();
-		}
 		
 		// ensure only 1 stream is found.
+		// when avoidUsingToolkit is true, processArea is always null
+		// so, need not have to set the processArea when validating using rest service
 		if (avoidUsingToolkit) { 
 			String errorMessage = null;
 			String uri = RTCBuildConstants.URI_COMPATIBILITY_CHECK;
@@ -552,10 +550,11 @@ public class RTCFacadeFacade {
 															String.class, // userId
 															String.class, // password
 															int.class, // timeout
+															String.class, //processArea
 															String.class, // buildStream
 															Locale.class},// clientLocale
-											serverURI, userId, password, timeout, buildStream,
-											LocaleProvider.getLocale());
+											serverURI, userId, password, timeout, processArea, 
+											buildStream, LocaleProvider.getLocale());
 			return errorMessage;
 		}
 	}
@@ -756,6 +755,7 @@ public class RTCFacadeFacade {
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
+	 * @param processArea The name of the project or team area
 	 * @param isStreamConfiguration Flag that determines if <code>buildWorkspace</code> corresponds to a workspace or stream
 	 * @param buildWorkspace The name of the RTC build workspace
 	 * @param componentsToExclude Json string specifying the list of components to exclude
@@ -763,7 +763,7 @@ public class RTCFacadeFacade {
 	 * @throws Exception
 	 */
 	public static String testComponentsToExclude(String buildToolkitPath, String serverURI, String userId, String password, int timeout,
-			boolean avoidUsingToolkit, boolean isStreamConfiguration, String buildWorkspace, String componentsToExclude) throws Exception {
+			boolean avoidUsingToolkit, String processArea, boolean isStreamConfiguration, String buildWorkspace, String componentsToExclude) throws Exception {
 
 		if (avoidUsingToolkit) {
 			String errorMessage = null;
@@ -815,11 +815,12 @@ public class RTCFacadeFacade {
 							String.class, // userId
 							String.class, // password
 							int.class, // timeout
+							String.class, // processArea
 							boolean.class, // isStreamConfiguration
 							String.class, // buildWorkspace
 							String.class, // componentsToExclude
 							Locale.class }, // clientLocale
-					serverURI, userId, password, timeout, isStreamConfiguration, buildWorkspace, componentsToExclude, LocaleProvider.getLocale());
+					serverURI, userId, password, timeout, processArea, isStreamConfiguration, buildWorkspace, componentsToExclude, LocaleProvider.getLocale());
 			return errorMessage;
 		}
 	}
@@ -834,6 +835,7 @@ public class RTCFacadeFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
 	 * @param isStreamConfiguration Flag that determines if <code>buildWorkspace</code> corresponds to a workspace or stream
 	 * @param buildWorkspace The name of the RTC build workspace
 	 * @param loadRules Json string specifying the component-to-load-rule file mapping
@@ -841,8 +843,8 @@ public class RTCFacadeFacade {
 	 * @throws Exception
 	 */
 
-	public static String testLoadRules(String buildToolkitPath, String serverURI, String userId, String password, int timeout,
-			boolean avoidUsingToolkit, boolean isStreamConfiguration, String buildWorkspace, String loadRules) throws Exception {
+	public static String testLoadRules(String buildToolkitPath, String serverURI, String userId, String password, int timeout, 
+			boolean avoidUsingToolkit,  String processArea, boolean isStreamConfiguration, String buildWorkspace, String loadRules) throws Exception {
 
 		if (avoidUsingToolkit) {
 			String errorMessage = null;
@@ -902,44 +904,14 @@ public class RTCFacadeFacade {
 							String.class, // userId
 							String.class, // password
 							int.class, // timeout
+							String.class, // processArea
 							boolean.class, // isStreamConfiguration
 							String.class, // buildWorkspace
 							String.class, // componentsToExclude
 							Locale.class }, // clientLocale
-					serverURI, userId, password, timeout, isStreamConfiguration, buildWorkspace, loadRules, LocaleProvider.getLocale());
+					serverURI, userId, password, timeout, processArea, isStreamConfiguration, buildWorkspace, loadRules, LocaleProvider.getLocale());
 			return errorMessage;
 		}
-	}
-	
-	/**
-	 * Validate if the RTC project area/team area exists. Validation using REST service is not supported
-	 * 
- 	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
-	 * @param serverURI The address of the repository server
-	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server.
-	 * @param timeout The timeout period for requests made to the server
-	 * @param processArea The name of the RTC project area/team area
-	 * @return an error message to display, or null if no problem
-	 * @throws Exception
-	 */
-	public static String testProcessArea(String buildToolkitPath,
-			String serverURI, String userId, String password, int timeout,
-			String processArea)
-			throws Exception {
-		LOGGER.finer("Testing Process Area using the toolkit"); //$NON-NLS-1$
-		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
-		String errorMessage = (String) facade.invoke(RTCFacadeWrapper.TEST_PROCESS_AREA, //$NON-NLS-1$
-				new Class[] { String.class, // serverURI
-						String.class, // userId
-						String.class, // password
-						int.class, // timeout
-						String.class, // processArea
-						Locale.class}, // clientLocale
-				serverURI, userId, password, timeout,
-				processArea, LocaleProvider.getLocale());
-		return errorMessage;
-
 	}
 
 	/**

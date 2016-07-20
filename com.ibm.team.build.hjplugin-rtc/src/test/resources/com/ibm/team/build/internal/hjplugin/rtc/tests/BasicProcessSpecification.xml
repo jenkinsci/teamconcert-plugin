@@ -67,6 +67,16 @@
         </data>
     </project-configuration>
     <team-configuration>
+       <permissions>
+            <role id="default">
+                <operation id="com.ibm.team.scm.server.modifyStream">
+                    <action id="any"/>
+                </operation>
+                <operation id="com.ibm.team.scm.server.modifySnapshot">
+                    <action id="any"/>
+                </operation>
+            </role>
+        </permissions>
         <timeline id="development">
             <iteration id="alpha">
                 <iteration id="m1">

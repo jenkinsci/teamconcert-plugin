@@ -114,6 +114,7 @@ public class RTCFacadeFactory {
 		public static final String LOAD = "load"; //$NON-NLS-1$
 		public static final String ACCEPT = "accept"; //$NON-NLS-1$
 		public static final String TEST_PROCESS_AREA = "testProcessArea"; //$NON-NLS-1$
+		public static final String TEST_BUILD_SNAPSHOT = "testBuildSnapshot"; //$NON-NLS-1$
 		
 		private Object facade;
 		private ClassLoader newClassLoader;

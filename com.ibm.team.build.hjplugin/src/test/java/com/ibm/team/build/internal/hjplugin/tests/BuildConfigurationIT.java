@@ -674,7 +674,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							"HPJ"
 							);
 			
-			testingFacade.invoke("testBuildSnapshot",
+			testingFacade.invoke("testBuildSnapshotConfiguration",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,

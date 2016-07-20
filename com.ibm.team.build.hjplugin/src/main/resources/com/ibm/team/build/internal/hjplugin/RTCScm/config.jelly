@@ -126,8 +126,8 @@
 				        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
 				    </f:entry>
 				    
-				    <f:validateButton title="${%validateBuildDefinition.title}" progress="${%validateBuildDefinition.progress}" 
-				        method="validateBuildDefinition" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
+				    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
+				        method="validateBuildDefinitionConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
 				</f:dropdownListBlock>
 
 	    		<!-- Build Workspace -->
@@ -140,15 +140,15 @@
 				    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
 				        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />
 				    </f:entry>
-	
-				    <f:validateButton title="${%validateBuildWorkspace.title}" progress="${%validateBuildWorkspace.progress}" 
-				        method="validateBuildWorkspace" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
 
                     <st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 
 					<!-- Accept changes before load -->
                     <f:section name="AcceptOptions" title="${%acceptOptions.title}"/>
 			        <f:optionalBlock name="acceptBeforeLoad" title="${%acceptOptions.acceptBeforeLoad}" field="acceptBeforeLoad" checked="${instance == null || (instance != null &amp;&amp; instance.acceptBeforeLoad)}" inline="true" />
+
+				    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
+				        method="validateBuildWorkspaceConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
 		    	                        
 				</f:dropdownListBlock>
 
@@ -160,18 +160,95 @@
 						<input type="hidden" name="value" value="buildSnapshot"/>
 					</f:invisibleEntry>
 					
-				    <!-- Text box to specify project area/team area -->
-					<f:entry title="${%processArea.title}" field="processArea">
-						<f:textbox name="processArea"/>
-					</f:entry>   
-					<f:validateButton title="${%validateProcessArea.title}" progress="${%validateProcessArea.progress}" 
-						method="validateProcessArea" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,processArea" />   
-				    
+					<!-- snapshot context -->
+					<!-- For snapshot context, initially tried the dropdownList:dropdownListBlock combo. The problem with this control is, during validation it is not possible to get the 
+						 current selection from the dropdown. This is because when jenkins expands these custom jelly tags to html, it doesn't include the name attribute on the <select> control; instead
+						 the name that we provide is used on a <table> control, for the sake of data binding. The validation flow collects the value of the form controls specified in the 'with'
+						 attribute and passes the name/value pair to the server, to carry out the validation. So ended up replicating the html replaced by jenkins with the addition of name attribute
+						 to the <select> control.
+						 
+						 The field "currentSnapshotOwnerType" is just used to find the current selection during validation. It is not used to determine the current selection from the config data.
+						 The invisible entry "snapshotOwnerType" under the selection block for each of the options serves this purpose. We duplicate the current selection value across 
+						 "instance.currentSnapshotOwnerType" and "instance.buildSnapshotContext.snapshotOwnerType" to be in sync with how jenkins persists the config data, when using the
+						 dropdownList control, just in case we get this issue (of <select> control not having 'name' attribute') fixed from the jenkins end.
+						 
+						 The downside of using the html from jenkins is we end up using their (internal) css classes, without which the auto hide/show of config UI depending on the dropdown 
+						 selection will not be handled by jenkins neither we will get the same look and feel.
+						 -->
+					<f:entry field="currentSnapshotOwnerType" title="${%currentSnapshotOwnerType.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext">
+						<select name="currentSnapshotOwnerType" class="setting-input dropdownList">
+							<option selected="${(instance == null || instance.buildSnapshotContext.snapshotOwnerType == 'none') ? 'true' : null}" value="none">${%buildSnapshotContextNone.title}</option>
+							<option selected="${(instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'stream') ? 'true' : null}" value="stream">${%buildSnapshotContextStream.title}</option>
+							<option selected="${(instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'workspace') ? 'true' : null}"  value="workspace">${%buildSnapshotContextWorkspace.title}</option>
+  						</select>
+					</f:entry>
+	                <tr class="dropdownList-container">
+				      <td colspan="2"/>
+				      <td colspan="2">
+				        <table width="100%" name="buildSnapshotContext">
+				        	 <tr class="dropdownList-start rowvg-start" />
+				        	 	<f:invisibleEntry field="snapshotOwnerType" >
+									<input type="hidden" name="snapshotOwnerType" value="none"/>
+								</f:invisibleEntry>				        	 	
+				        	 <tr class="dropdownList-end rowvg-end" />
+				        	 <tr class="dropdownList-start rowvg-start" />
+				        	 	<f:invisibleEntry field="snapshotOwnerType" >
+									<input type="hidden" name="snapshotOwnerType" value="stream"/>
+								</f:invisibleEntry>				        	 	
+								<f:entry title="${%processArea.title}" field="processAreaOfOwningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-processAreaOfOwningStream">
+						        	<f:textbox name="processAreaOfOwningStream" value="${instance.buildSnapshotContext.processAreaOfOwningStream}" />
+						    	</f:entry>							
+								<f:entry title="${%buildSnapshotContextStream.title}" field="owningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningStream">
+						        	<f:textbox name="owningStream" value="${instance.buildSnapshotContext.owningStream}" />
+						    	</f:entry>	
+				        	 <tr class="dropdownList-end rowvg-end" />
+				        	 <tr class="dropdownList-start rowvg-start" />
+				        	 	<f:invisibleEntry field="snapshotOwnerType" >
+									<input type="hidden" name="snapshotOwnerType" value="workspace"/>
+								</f:invisibleEntry>				        	 	
+							    <f:entry title="${%buildSnapshotContextWorkspace.title}" field="owningWorkspace"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningWorkspace">
+							        <f:textbox name="owningWorkspace" value="${instance.buildSnapshotContext.owningWorkspace}" />
+							    </f:entry>
+				        	 <tr class="dropdownList-end rowvg-end" />
+				        </table>
+				      </td>
+    				</tr>
+    				<!--
+    				<f:dropdownList name="buildSnapshotContext" title="${%buildSnapshotContext.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext">
+						<f:dropdownListBlock selected="${instance == null || instance.buildSnapshotContext.snapshotOwnerType == 'none'}" title="${%buildSnapshotContextNoOwner.title}">
+							<f:invisibleEntry field="snapshotOwnerType" >
+								<input type="hidden" name="snapshotOwnerType" value="none"/>
+							</f:invisibleEntry>
+						</f:dropdownListBlock>
+						<f:dropdownListBlock selected="${instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'stream'}" title="${%buildSnapshotContextStream.title}">
+							<f:invisibleEntry field="snapshotOwnerType" >
+								<input type="hidden" name="snapshotOwnerType" value="stream"/>
+							</f:invisibleEntry>
+							<f:entry title="${%processArea.title}" field="processAreaOfOwningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-processAreaOfOwningStream">
+					        	<f:textbox name="processAreaOfOwningStream" value="${instance.buildSnapshotContext.processAreaOfOwningStream}" />
+					    	</f:entry>							
+							<f:entry title="${%buildSnapshotContextStream.title}" field="owningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningStream">
+					        	<f:textbox name="owningStream" value="${instance.buildSnapshotContext.owningStream}" />
+					    	</f:entry>					
+						</f:dropdownListBlock>
+						<f:dropdownListBlock selected="${instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'workspace'}" title="${%buildSnapshotContextWorkspace.title}">
+							<f:invisibleEntry field="snapshotOwnerType" >
+								<input type="hidden" name="snapshotOwnerType" value="workspace"/>
+							</f:invisibleEntry>
+						    <f:entry title="${%buildSnapshotContextWorkspace.title}" field="owningWorkspace"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningWorkspace">
+						        <f:textbox name="owningWorkspace" value="${instance.buildSnapshotContext.owningWorkspace}" />
+						    </f:entry>
+						</f:dropdownListBlock>
+					</f:dropdownList>
+					-->
 					<f:entry title="${%buildSnapshot.title}"  field="buildSnapshot" >
 				        <f:textbox name="buildSnapshot" value="${instance.buildSnapshot}" />
 				    </f:entry>
 
 				    <st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+
+					<f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
+						method="validateBuildSnapshotConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,currentSnapshotOwnerType,processAreaOfOwningStream,owningStream,owningWorkspace,buildSnapshot" />   
 				                        
 				</f:dropdownListBlock>
 
@@ -183,23 +260,20 @@
 					</f:invisibleEntry>
 					
 					<!-- Text box to specify project area/team area -->
-					<f:entry title="${%processArea.title}" field="processArea">
+					<f:entry title="${%processArea.title}" field="processArea" help="buildStream-processArea">
 						<f:textbox name="processArea"/>
 					</f:entry>   
-					<f:validateButton title="${%validateProcessArea.title}" progress="${%validateProcessArea.progress}" 
-						method="validateProcessArea" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,processArea" />   
-				       
+
                     <f:entry title="${%buildStream.title}"  field="buildStream" >
                         <f:textbox name="buildStream" clazz="required" checkMessage="${%buildStream.checkMessage}" value="${instance.buildStream}" />
                     </f:entry>
                     
-                    <f:validateButton title="${%validateBuildStream.title}" progress="${%validateBuildStream.progress}" 
-                        method="validateBuildStream" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildStream" />
-                        
 					<st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 					
 				    <f:section name="changelogOptions" title="${%changelogOptions.title}"/>
 					<f:optionalBlock name="generateChangelogWithGoodBuild" title="${%changelog.compareWithGoodBuild}" field="generateChangelogWithGoodBuild" checked="${instance.generateChangelogWithGoodBuild}" inline="true" />
+                    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
+                        method="validateBuildStreamConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,processArea,buildStream" />         
 
 				</f:dropdownListBlock>
 			</f:dropdownList>

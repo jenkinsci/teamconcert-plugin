@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -100,7 +100,13 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	private String baselineSetItemId;
 	private String baselineSetName;
 	private String workspaceItemId;
+	private String workspaceName;
+	private String buildDefinitionName;
+	private String buildDefinitionItemId;
+	private String streamName;
+	private String streamItemId;
 	private boolean isPersonalBuild;
+	private String previousBuildUrl;
 	private List<RTCChangeLogComponentEntry> componentChanges;
 	private Map<String, List<RTCChangeLogChangeSetEntry>> changesAccepted;
 	private Map<String, List<RTCChangeLogChangeSetEntry>> changesDiscarded;
@@ -199,6 +205,16 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		return isPersonalBuild;
 	}
 	
+	public String getPreviousBuildUrl() {
+		LOGGER.finest("RTCChangeLogset getPreviousBuildUrl: Begin");
+		return previousBuildUrl;
+	}
+	
+	public void setPreviousBuildUrl(String previousBuildUrl) {
+		LOGGER.finest("RTCChangeLogset setPreviousBuildUrl: Begin");
+		this.previousBuildUrl = previousBuildUrl;
+	}
+	
 	public void setBaselineSetItemId(String itemId) {
 		LOGGER.finest("RTCChangeLogset setBaselineSetItemId: Begin");
 		this.baselineSetItemId = itemId;
@@ -219,12 +235,52 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		return baselineSetName;
 	}
 
-	public void setWorkspaceItemId(String itemId) {
-		this.workspaceItemId = itemId;
+	public void setWorkspaceItemId(String workspaceItemId) {
+		this.workspaceItemId = workspaceItemId;
 	}
 
 	public String getWorkspaceItemId() {
 		return workspaceItemId;
+	}
+	
+	public void setWorkspaceName(String workspaceName) {
+		this.workspaceName = workspaceName;
+	}
+	
+	public String getWorkspaceName() {
+		return workspaceName;
+	}
+	
+	public void setBuildDefinitionName(String buildDefinitionName) {
+		this.buildDefinitionName = buildDefinitionName;
+	}
+	
+	public String getBuildDefinitionName() {
+		return buildDefinitionName;
+	}
+
+	public String getBuildDefinitionItemId() {
+		return buildDefinitionItemId;
+	}
+
+	public void setBuildDefinitionItemId(String buildDefinitionItemId) {
+		this.buildDefinitionItemId = buildDefinitionItemId;
+	}
+	
+	public String getStreamName() {
+		return streamName;
+	}
+
+	public void setStreamName(String streamName) {
+		this.streamName = streamName;
+	}
+
+	public String getStreamItemId() {
+		return streamItemId;
+	}
+
+	public void setStreamItemId(String streamItemId) {
+		this.streamItemId = streamItemId;
 	}
 
 	public List<RTCChangeLogComponentEntry> getComponentChanges() {

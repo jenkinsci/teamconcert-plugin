@@ -11,10 +11,6 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.TaskListener;
-import hudson.remoting.RemoteOutputStream;
-import hudson.util.StreamTaskListener;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -22,18 +18,23 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.junit.Assert;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 import com.ibm.team.build.internal.hjplugin.BuildResultInfo;
+import com.ibm.team.build.internal.hjplugin.RTCAcceptTask;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultSetupTask;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCCheckoutTask;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCLoadTask;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
+
+import hudson.model.TaskListener;
+import hudson.remoting.RemoteOutputStream;
+import hudson.util.StreamTaskListener;
 
 public class RTCBuildTaskIT extends AbstractTestCase {
 
@@ -134,8 +135,9 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
+			String baselineSetName = "Snapshot_" + getTestName() + "_" + System.currentTimeMillis();
 			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String componentName = getTestName() + System.currentTimeMillis();
 			String buildDefinitionId = getTestName() + System.currentTimeMillis();
 
 			@SuppressWarnings("unchecked")
@@ -187,18 +189,10 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				RemoteOutputStream remoteChangeLog = new RemoteOutputStream(changeLog);
 				
-				// now do the checkout
-				RTCCheckoutTask checkoutTask = new RTCCheckoutTask("Testing " + getTestName(),
-						Config.DEFAULT.getToolkit(),
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(),
-						buildResultInfo.getBuildResultUUID(),
-						null, getTestName(), listener,
-						remoteChangeLog, true, false, Locale.getDefault(), null);
-				
-				checkoutTask.invoke(sandboxDir, null);
+				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), 
+						loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), buildResultInfo.getBuildResultUUID(),
+						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -254,8 +248,9 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
+			String baselineSetName = "Snapshot_" + getTestName() + "_" + System.currentTimeMillis();
 			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String componentName = getTestName() + System.currentTimeMillis();
 			String buildDefinitionId = getTestName() + System.currentTimeMillis();
 
 			@SuppressWarnings("unchecked")
@@ -307,18 +302,10 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				RemoteOutputStream remoteChangeLog = new RemoteOutputStream(changeLog);
 				
-				// now do the checkout
-				RTCCheckoutTask checkoutTask = new RTCCheckoutTask("Testing " + getTestName(),
-						Config.DEFAULT.getToolkit(),
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(),
-						buildResultInfo.getBuildResultUUID(),
-						null, getTestName(), listener,
-						remoteChangeLog, true, false, Locale.getDefault(), null);
-				
-				checkoutTask.invoke(sandboxDir, null);
+				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(), 
+						loginInfo.getPassword(), loginInfo.getTimeout(), buildResultInfo.getBuildResultUUID(),
+						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, listener,
+						Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();

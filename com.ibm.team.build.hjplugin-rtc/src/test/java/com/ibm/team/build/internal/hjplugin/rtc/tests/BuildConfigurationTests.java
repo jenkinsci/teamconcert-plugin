@@ -63,7 +63,7 @@ public class BuildConfigurationTests {
 	private RepositoryConnection connection;
 
 	public BuildConfigurationTests(RepositoryConnection repositoryConnection) {
-		this.connection = repositoryConnection;
+		this.connection = repositoryConnection; 
 	}
 
 	public Map<String, String> setupComponentLoading(String workspaceName,
@@ -770,7 +770,7 @@ public class BuildConfigurationTests {
 		RepositoryManager manager = connection.getRepositoryManager();
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		IBaselineSet bs = RTCSnapshotUtils.getSnapshot(repo, snapshotName, null, Locale.getDefault());
+		IBaselineSet bs = RTCSnapshotUtils.getSnapshot(repo, null, snapshotName, null, Locale.getDefault());
 		buildConfiguration.initialize(bs, repo.loggedInContributor(), workspacePrefix,listener, Locale.getDefault(), null);
 		if (failure[0] != null) {
 			throw failure[0];

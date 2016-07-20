@@ -112,6 +112,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false, 
 						null,
 						workspaceName, null, null, listener, false);
@@ -215,6 +216,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false, 
 						null,
 						workspaceName, null, null, listener, false);
@@ -270,6 +272,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false, 
 						null,
 						workspaceName,  null, null, listener, false);
@@ -339,6 +342,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false, 
 						null,
 						workspaceName,  null, null, listener, false);
@@ -389,6 +393,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false, 
 						null,
 						workspaceName, null, null, listener, false);
@@ -472,6 +477,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						true,
 						testName,
 						null,  null, null, listener, false);
@@ -523,6 +529,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						true,
 						testName,
 						null,  null, null, listener, false);
@@ -702,6 +709,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false,
 						null,
 						workspaceName,  null, null, listener, false);
@@ -799,6 +807,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false,
 						null,
 						workspaceName,  null, null, listener, false);
@@ -893,6 +902,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false,
 						null,
 						workspaceName,  null, null, listener, false);
@@ -985,6 +995,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false,
 						null,
 						workspaceName, null, null, listener, false);
@@ -1057,6 +1068,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false,
 						null,
 						workspaceName, null, null, listener, false);
@@ -1130,6 +1142,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false,
 						null,
 						workspaceName,  null, null, listener, false);
@@ -1226,6 +1239,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
+						null,
 						false,
 						null,
 						workspaceName,  null, null, listener, false);

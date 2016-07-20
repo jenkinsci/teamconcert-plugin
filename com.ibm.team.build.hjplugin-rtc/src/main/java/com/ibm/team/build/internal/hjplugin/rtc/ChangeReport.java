@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -197,11 +197,42 @@ public class ChangeReport {
 		}
 	}
 	
-	public static class BaselineSetReport {
-		private String itemId;
-		private String name;
+	public static class BaselineSetReport extends ItemReport {
 		
 		public BaselineSetReport(String itemId, String name) {
+			super(itemId, name);
+		}
+		
+	}
+	
+	public static class BuildStreamReport extends ItemReport {
+		
+		public BuildStreamReport(String itemId, String name) {
+			super(itemId, name);
+		}
+		
+	}
+	
+	public static class BuildWorkspaceReport extends ItemReport {
+		
+		public BuildWorkspaceReport(String itemId, String name) {
+			super(itemId, name);
+		}
+	}
+	
+	public static class BuildDefinitionReport extends ItemReport {
+		
+		public BuildDefinitionReport(String itemId, String name) {
+			super (itemId, name);
+		}
+
+	}
+	
+	static abstract class ItemReport {
+		protected final String itemId;
+		protected final String name;
+		
+		public ItemReport(String itemId, String name) {
 			this.itemId = itemId;
 			this.name = name;
 		}
@@ -218,9 +249,12 @@ public class ChangeReport {
     private Collection<ComponentReport> componentChanges;
     private List<ChangeSetReport> changeSets;
     private BaselineSetReport baselineSet;
-    private String workspaceItemId;
     private boolean isPersonalBuild;
 	private OutputStream changeLog;
+	private String previousBuildUrl;
+	private BuildDefinitionReport buildDefinition;
+	private BuildWorkspaceReport buildWorkspace;
+	private BuildStreamReport buildStream;
 
     public ChangeReport(OutputStream changeLogFile) {
     	this.changeLog = changeLogFile;
@@ -228,12 +262,12 @@ public class ChangeReport {
     	this.changeSets = new ArrayList<ChangeReport.ChangeSetReport>();
     }
 
-    public void setWorkspaceItemId(String workspaceItemId) {
-    	this.workspaceItemId = workspaceItemId;
-    }
-
     public void setIsPersonalBuild(boolean isPersonalBuild) {
     	this.isPersonalBuild = isPersonalBuild;
+    }
+    
+    public void setPreviousBuildUrl(String previousBuildUrl) {
+    	this.previousBuildUrl = previousBuildUrl;
     }
 
     public void componentChange(ComponentReport component) {
@@ -260,6 +294,33 @@ public class ChangeReport {
 		return baselineSet;
 	}
     
+	public void buildDefinitionCreated(BuildDefinitionReport buildDefinition) {
+		this.buildDefinition = buildDefinition;
+	}
+	
+	public BuildDefinitionReport getBuildDefinition() {
+		return buildDefinition;
+		
+	}
+	
+	public void buildWorkspaceCreated(BuildWorkspaceReport buildWorkspace) {
+		this.buildWorkspace = buildWorkspace;
+	}
+	
+	public BuildWorkspaceReport getBuildWorkspace() {
+		return buildWorkspace;
+		
+	}
+	
+	public void buildStreamCreated(BuildStreamReport buildStream) {
+		this.buildStream = buildStream;
+	}
+	
+	public BuildStreamReport getBuildStream() {
+		return buildStream;
+		
+	}
+
 	public void prepareChangeSetLog() throws IOException {
         CharsetEncoder encoder = Charset.forName("UTF-8").newEncoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT); //$NON-NLS-1$
         OutputStreamWriter osw = new OutputStreamWriter(changeLog, encoder);
@@ -291,15 +352,35 @@ public class ChangeReport {
 
 	private void recordChangelogEntry(PrintWriter writer) {
 		if (baselineSet != null) {
+			StringBuilder str = new StringBuilder();
+			str.append("<changelog")
+				.append(" baselineSetName=\"" +escapeXml(baselineSet.getName()) + "\"") //$NON-NLS-1$
+				.append(" baselineSetItemId=\"" + baselineSet.getItemId() + "\""); //$NON-NLS-1$
+			if (buildWorkspace != null) {
+				str.append(" workspaceName=\"" + escapeXml(buildWorkspace.getName()) + "\"") //$NON-NLS-1$
+				   .append(" workspaceItemId=\"" + buildWorkspace.getItemId() + "\"");
+			}
+			if (buildDefinition != null) {
+				str.append(" buildDefinitionName=\"" + escapeXml(buildDefinition.getName()) + "\"")
+				    .append(" buildDefinitionItemId=\"" + buildDefinition.getItemId() + "\"");
+			}
+			if (buildStream != null) {
+				str.append(" streamName=\"" + escapeXml(buildStream.getName()) + "\"")
+					.append(" streamItemId=\"" + buildStream.getItemId() + "\"");
+			}
+			str.append(" isPersonalBuild=\"" + isPersonalBuild + "\""); //$NON-NLS-1$
+			
+			if (previousBuildUrl != null) {
+			   str.append(" previousBuildUrl=\"" + previousBuildUrl + "\""); //$NON-NLS-1$
+			} else {// To differentiate between absence of data vs absence of a previous build url
+				str.append(" previousBuildUrl=\"\""); //$NON-NLS-1$
+			}
+			str.append(">");
+
+			writer.println(str);
+		} else if (buildWorkspace != null) {
 			writer.println(
-					"<changelog baselineSetName=\"" + escapeXml(baselineSet.name) + //$NON-NLS-1$
-					"\" baselineSetItemId=\"" + baselineSet.itemId +  //$NON-NLS-1$
-					"\" workspaceItemId=\"" + workspaceItemId + //$NON-NLS-1$
-					"\" isPersonalBuild=\"" + isPersonalBuild + //$NON-NLS-1$
-					"\">"); //$NON-NLS-1$
-		} else if (workspaceItemId != null) {
-			writer.println(
-					"<changelog workspaceItemId=\"" + workspaceItemId + //$NON-NLS-1$
+					"<changelog workspaceItemId=\"" + buildWorkspace.getItemId() + //$NON-NLS-1$
 					"\" isPersonalBuild=\"" + isPersonalBuild + //$NON-NLS-1$
 					"\">"); //$NON-NLS-1$
 		} else {

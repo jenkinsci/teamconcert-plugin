@@ -34,8 +34,10 @@ import com.ibm.team.process.common.IProjectAreaHandle;
 import com.ibm.team.process.common.ITeamArea;
 import com.ibm.team.process.common.ITeamAreaHierarchy;
 import com.ibm.team.process.common.ProcessContentKeys;
+import com.ibm.team.process.internal.common.service.IProcessService;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
+import com.ibm.team.repository.client.internal.TeamRepository;
 import com.ibm.team.repository.common.IContent;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
@@ -176,10 +178,11 @@ public class ProcessUtil {
 	 * @return the project area
 	 * @throws Exception Throw all exceptions back to JUnit.
 	 */
-	private static IProjectArea getProjectArea(ITeamRepository repo, IProcessDefinitionHandle processDefinitionHandle, String projectAreaName)
+	private static IProjectArea getProjectArea(ITeamRepository repo, IProcessDefinition processDefinition, String projectAreaName)
 			throws Exception {
 
 		IProcessItemService processService = (IProcessItemService)repo.getClientLibrary(IProcessItemService.class);
+		IProcessService processServerService= (IProcessService)((TeamRepository)repo).getServiceInterface(IProcessService.class);
 
 		IProjectArea projectArea = (IProjectArea)processService.findProcessArea(new URI(encode(projectAreaName)), IProcessItemService.ALL_PROPERTIES,
 				null);
@@ -187,12 +190,20 @@ public class ProcessUtil {
 		if (projectArea == null) {
 			projectArea = (IProjectArea)IProjectArea.ITEM_TYPE.createItem();
 			projectArea.setName(projectAreaName);
-			projectArea.setProcessDefinition(processDefinitionHandle);
+			projectArea.setProcessDefinition(processDefinition);
 			projectArea = (IProjectArea)processService.save(projectArea, null);
 		}
+		
 		if (!projectArea.isInitialized()) {
-			projectArea = processService.initialize(projectArea, null);
+			// invoke the process server service as the client process interface doesn't have some classes pre-6.0.1
+			projectArea= (IProjectArea)processServerService.initializeProjectArea(projectArea, null).getClientItems()[0];
+			projectArea= (IProjectArea)projectArea.getWorkingCopy();
 		}
+//		// by default add the logged in user as a member
+//		projectArea = (IProjectArea)projectArea.getWorkingCopy();
+//		projectArea.addMember(repo.loggedInContributor());
+//		projectArea.addRoleAssignments(repo.loggedInContributor(), processService.getClientProcess(projectArea, null).getRoles(projectArea, null));
+//		projectArea = (IProjectArea)processService.save(projectArea, null);
 
 		return projectArea;
 	}

@@ -42,7 +42,22 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		testClient.tearDown(connectionDetails, setupArtifacts, getProgressMonitor());
+	}	
+
+	public void tearDownTestBuildStream_complete(String serverURL, String userId, String password, int timeout,
+			Map<String, String> setupArtifacts) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		testClient.tearDownTestBuildStream_complete(connectionDetails, setupArtifacts, getProgressMonitor());
 	}
+	
+
+    public void tearDownTestBuildSnapshot_complete(String serverURL, String userId, String password, int timeout,
+            Map<String, String> setupArtifacts) throws Exception {
+        TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+        ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+        testClient.tearDownTestBuildSnapshot_complete(connectionDetails, setupArtifacts, getProgressMonitor());
+    }
 	
 	public Map<String, String> setupAcceptChanges(String serverURL, String userId, String password, int timeout,
 			String name,  String componentName, boolean createBuildDefinition) throws Exception {
@@ -74,6 +89,23 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		Map<String, String> setup = testClient.setupTestBuildDefinition(connectionDetails, buildDefinitionName, getProgressMonitor());
+		return setup;
+	}
+	
+	public Map<String, String> setupTestBuildStream_basic(String serverURL, String userId, String password, int timeout,
+			String projectAreaName, String buildStreamName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupTestBuildStream_basic(connectionDetails, projectAreaName, buildStreamName, getProgressMonitor());
+		return setup;
+	}
+
+	public Map<String, String> setupTestBuildSnapshotUsingStream(String serverURL, String userId, String password, int timeout,
+			String projectAreaName, String buildStreamName, String snapshotName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupTestBuildSnapshotUsingStream(connectionDetails, projectAreaName, buildStreamName, snapshotName,
+				getProgressMonitor());
 		return setup;
 	}
 	
@@ -309,4 +341,33 @@ public class RTCTestingFacade extends RTCFacade {
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		return testClient.setupTestProcessArea_basic(connectionDetails, projectAreaName);
 	}
+
+	public Map<String, String> setupTestProcessArea_archiveProjectArea(String serverURL, String userId, String password, int timeout,
+			String projectAreaName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.setupTestProcessArea_archiveProjectArea(connectionDetails, projectAreaName);
+	}
+
+	public Map<String, String> setupTestProcessArea_archiveTeamArea(String serverURL, String userId, String password, int timeout,
+			String projectAreaName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.setupTestProcessArea_archiveTeamArea(connectionDetails, projectAreaName);
+	}
+
+	public Map<String, String> setupTestBuildStream_complete(String serverURL, String userId, String password, int timeout, String projectAreaName,
+			String streamName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.setupTestBuildStream_complete(connectionDetails, projectAreaName, streamName);
+	}
+
+	public Map<String, String> setupTestBuildSnapshot_complete(String serverURL, String userId, String password, int timeout, String workspaceName,
+			String projectAreaName, String streamName, String snapshotName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.setupTestBuildSnapshot_complete(connectionDetails, workspaceName, projectAreaName, streamName, snapshotName);
+	}
+
 }

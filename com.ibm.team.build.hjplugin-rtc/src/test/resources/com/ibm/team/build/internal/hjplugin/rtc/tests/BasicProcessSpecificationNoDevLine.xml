@@ -12,6 +12,10 @@
  *******************************************************************************/
 -->
 <process-specification xmlns="http://com.ibm.team.process">
+	<role-definitions>
+		<role-definition cardinality="many" description="Contributor" name="Contributor" role-id="contributor"/>
+		<role-definition cardinality="many" description="Lead" name="Lead" role-id="lead"/>
+	</role-definitions>
     <project-configuration>
         <permissions>
             <role id="default">

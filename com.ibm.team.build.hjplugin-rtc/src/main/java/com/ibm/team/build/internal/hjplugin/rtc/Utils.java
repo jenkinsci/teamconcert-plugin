@@ -70,4 +70,13 @@ public class Utils {
 		}
 		return isInterruptedException(e);
 	}
+	
+	/**
+	 * Return null if the string is blank or null if not trim the string and return.
+	 */
+	public static String fixEmptyAndTrim(String s) {
+		if (s == null || s.trim().length() == 0)
+			return null;
+		return s.trim();
+	}
 }

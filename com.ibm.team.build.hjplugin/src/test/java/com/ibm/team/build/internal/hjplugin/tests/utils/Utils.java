@@ -43,8 +43,10 @@ public class Utils {
 							String.class, // userId,
 							String.class, // password,
 							int.class, // timeout,
+							String.class, //process
 							String.class, // buildResultUUID,
 							String.class, // workspaceName,
+							Map.class, //buildSnapshotContextMap
 							String.class, // buildsnapshot,
 							String.class, // buildStream,
 							String.class, // hjWorkspacePath,
@@ -54,15 +56,18 @@ public class Utils {
 							Object.class, // listener
 							Locale.class, // locale
 							String.class, // callConnectorTimeout
-							boolean.class} , // acceptBeforeLoad
+							boolean.class,// acceptBeforeLoad
+							String.class} , // previousBuildUrl
 							serverURI,
 							userId,
 							password,
 							timeout,
-							buildResultUUID, buildWorkspaceName,
+							null, 
+							buildResultUUID, buildWorkspaceName, null,
 							buildSnapshotNameOrUUID, buildStreamName,
 							hjWorkspacePath, changelog,
-							baselineSetName, previousSnapshotUUID, listener, clientLocale, CALLCONNECTOR_TIMEOUT, options.acceptBeforeLoad);
+							baselineSetName, previousSnapshotUUID, listener, clientLocale, CALLCONNECTOR_TIMEOUT, 
+							options.acceptBeforeLoad, null);
 		
 		// Retrieve connectorId and parentActivityId
 		@SuppressWarnings("unchecked")
@@ -77,8 +82,10 @@ public class Utils {
 					String.class, // userId 
 					String.class, // password
 					int.class, // timeout
+					String.class, // processArea
 					String.class, //buildResultUUID
 					String.class, //buildWorkspace
+					Map.class, //buildSnapshotContextMap
 					String.class, //buildSnapshot
 					String.class, //buildStream
 					Map.class, // buildStreamData,
@@ -100,8 +107,10 @@ public class Utils {
 					userId, 
 					password,
 					timeout,
+					null, 
 					buildResultUUID, 
 					buildWorkspaceName,
+					null,
 					buildSnapshotNameOrUUID,
 					buildStreamName,
 					acceptMap.get("buildStreamData"),

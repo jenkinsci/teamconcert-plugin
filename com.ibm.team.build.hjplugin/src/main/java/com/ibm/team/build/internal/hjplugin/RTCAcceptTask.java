@@ -39,8 +39,10 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	private String userId;
 	private Secret password;
 	private int timeout;
+	private String processArea;
 	private String buildWorkspace;
 	private String buildResultUUID;
+	private Map<String, String> buildSnapshotContextMap;
 	private String buildSnapshot;
 	private String buildStream;
 	private TaskListener listener;
@@ -53,6 +55,8 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	private Locale clientLocale;
 	private String callConnectorTimeout;
 	private boolean acceptBeforeLoad;
+	// The relative url of the previous build from which the previous snapshot uuid was obtained
+	private String previousBuildUrl; 
 	
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -65,22 +69,25 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 
 	/**
 	 * Task that performs accept work on the master or the slave
+	 * 
 	 * @param contextStr Context for logging
 	 * @param buildToolkit The build toolkit to use when working with the facade
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
-	 * @param buildDefinition The name (id) of the build definition to use. May be <code>null</code>
-	 * if buildWorkspace is supplied instead.
-	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code>
-	 * if buildDefinition is supplied instead.
-	 * @param buildStream The name of the RTC build stream. May be <code>null</code>
-	 * if buildWorkspace or buildDefinition is supplied instead.
+	 * @param processArea The name of the project or team area
+	 * @param buildDefinition The name (id) of the build definition to use. May be <code>null</code> if buildWorkspace
+	 *            is supplied instead.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if buildDefinition is
+	 *            supplied instead.
+	 * @param buildSnapshotContextMap Name-Value pair representing the snapshot owner details. May be <code>null</code>
+	 * @param buildStream The name of the RTC build stream. May be <code>null</code> if buildWorkspace or
+	 *            buildDefinition is supplied instead.
 	 * @param buildResultUUID The build result to relate build results with.
 	 * @param baselineSetName The name to give the baselineSet created
-	 * @param previousSnapshotUUID The uuid of the previous snapshot. Used for generating changelog in build stream case.
-	 *    May be <code>null</code> if a buildResultUUID or buildWorkspace is supplied.
+	 * @param previousSnapshotUUID The uuid of the previous snapshot. Used for generating changelog in build stream
+	 *            case. May be <code>null</code> if a buildResultUUID or buildWorkspace is supplied.
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param changeLog Output stream to hold the Change log results. May be <code>null</code>.
 	 * @param isRemote Whether this will be executed on the Master or a slave
@@ -88,11 +95,10 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	 * @param clientLocale The locale of the requesting client
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 */
-	public RTCAcceptTask(String contextStr, String buildToolkit,
-			String serverURI, String userId, String password, int timeout,
-			String buildResultUUID, String buildWorkspace, String buildSnapshot,
-			String buildStream, String baselineSetName, String previousSnapshotUUID, TaskListener listener,
-			RemoteOutputStream changeLog, boolean isRemote, boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad) {
+	public RTCAcceptTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
+			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
+			String baselineSetName, String previousSnapshotUUID, TaskListener listener, RemoteOutputStream changeLog, boolean isRemote,
+			boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad, String previousBuildUrl) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -101,8 +107,10 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
     	this.userId = userId;
     	this.password = Secret.fromString(password);
     	this.timeout = timeout;
+    	this.processArea = processArea;
     	this.buildWorkspace = buildWorkspace;
     	this.buildResultUUID = buildResultUUID;
+    	this.buildSnapshotContextMap = buildSnapshotContextMap;
     	this.buildSnapshot = buildSnapshot;
     	this.buildStream = buildStream;
     	this.baselineSetName = baselineSetName;
@@ -114,6 +122,7 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
     	this.clientLocale = clientLocale;
     	this.callConnectorTimeout = strCallConnectorTimeout;
     	this.acceptBeforeLoad = acceptBeforeLoad;
+    	this.previousBuildUrl = previousBuildUrl;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -133,14 +142,16 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 			debug("serverURI " + serverURI); //$NON-NLS-1$
 			debug("userId " + userId); //$NON-NLS-1$
 			debug("timeout " + timeout); //$NON-NLS-1$
+			debug("processArea " + processArea); //$//$NON-NLS-1$
 			debug("buildWorkspace " + (buildWorkspace == null ? "n/a" : buildWorkspace)); //$NON-NLS-1$ //$NON-NLS-2$
 			debug("buildResult " + (buildResultUUID == null ? "n/a" : "defined")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("buildStream " + (buildStream == null ? "n/a" : buildStream)); //$NON-NLS-1$ //$NON-NLS-2$ 
 			debug("buildSnapshot " + (buildSnapshot == null ? "n/a" : buildSnapshot)); //$NON-NLS-1$ //$NON-NLS-2$
-			debug("previousSnapshotUUID" + (previousSnapshotUUID == null ? "n/a" : previousSnapshotUUID)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			debug("previousSnapshotUUID" + (previousSnapshotUUID == null ? "n/a" : previousSnapshotUUID)); //$NON-NLS-1$ //$NON-NLS-2$
 			debug("listener is " + (listener == null ? "null" : "not null")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("Running remote " + isRemote); //$NON-NLS-1$
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
+			debug("prevBuildUrl" + ((previousBuildUrl != null)? previousBuildUrl :"No Url Provided")); //$NON-NLS-1$ //$NON-NLS-2$ 
 		}
 
 		try {
@@ -188,8 +199,10 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 					String.class, // userId,
 					String.class, // password,
 					int.class, // timeout,
+					String.class, //processArea,
 					String.class, // buildResultUUID,
 					String.class, // buildWorkspace,
+					Map.class, // buildSnapshotContext
 					String.class, // buildSnapshot,
 					String.class, // buildStream,
 					String.class, // hjWorkspacePath,
@@ -199,12 +212,13 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 					Object.class, // listener
 					Locale.class, // clientLocale
 					String.class, // callConnectorTimeout
-					boolean.class // acceptBeforeLoad
+					boolean.class, // acceptBeforeLoad
+					String.class, // previousBuildUrl
 			}, serverURI, userId, Secret.toString(password),
-					timeout, buildResultUUID, buildWorkspace, buildSnapshot,
+					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot,
 					buildStream, workspace.getAbsolutePath(),
 					changeLog, baselineSetName, previousSnapshotUUID,
-					listener, clientLocale, callConnectorTimeout, acceptBeforeLoad);
+					listener, clientLocale, callConnectorTimeout, acceptBeforeLoad, previousBuildUrl);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

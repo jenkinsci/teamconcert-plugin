@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -35,8 +35,40 @@
         <a href="${snapshotlink}"> ${snapshotName}</a>
         <br/>
       </j:if>
-
-      <j:choose>
+      
+	<j:set var="buildDefinitionLink" value="${browser.getBuildDefinitionLink(it)}"/>
+	<j:set var="buildDefinitionName" value="${it.getBuildDefinitionName()}"/>
+	<j:if test="${buildDefinitionLink!=null}">
+		<j:if test="${buildDefinitionName!=null}">
+			${%buildDefinition.label} :&#160;
+			<a href="${buildDefinitionLink}">${buildDefinitionName}</a>
+			<br/>
+		</j:if>
+	</j:if>
+	
+	<j:set var="workspaceLink" value="${browser.getWorkspaceLink(it)}"/>
+	<j:set var="workspaceName" value="${it.getWorkspaceName()}"/>
+	<j:if test="${workspaceLink!=null}">
+		<j:if test="${workspaceName}!=null}">
+			<j:if test="${buildDefinitionLink==null}">
+				${%workspace.label} :&#160;
+				<a href="${workspaceLink}">${workspaceName}</a>
+				<br/>
+			</j:if>
+		</j:if>
+	</j:if>
+	
+	<j:set var="streamLink" value="${browser.getStreamLink(it)}"/>
+	<j:set var="streamName" value="${it.getStreamName()}"/>
+	<j:if test="${streamLink!=null}">
+		<j:if test="${streamName!=null}">
+			${%stream.label} :&#160;
+			<a href="${streamLink}">${streamName}</a>
+			<br/>
+		</j:if>
+	</j:if>
+      
+     <j:choose>
         <j:when test="${it.emptySet}">
           <j:choose>
             <j:when test="${it.isPersonalBuild()}">

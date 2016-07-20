@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.build.common.model.IBuildDefinitionHandle;
 import com.ibm.team.build.internal.hjplugin.rtc.ChangeReport.BaselineSetReport;
 import com.ibm.team.build.internal.hjplugin.rtc.ChangeReport.ChangeSetReport;
 import com.ibm.team.build.internal.hjplugin.rtc.ChangeReport.ComponentReport;
@@ -84,23 +85,27 @@ public class ChangeReportBuilder {
 
 	/**
 	 * Populate the contents of an empty ChangeReport with the 
-	 * results of the accept
+	 * results of the accept that happened on a Jazz SCM workspace 
+	 * either through a build definition or a Jazz SCM workspace 
 	 * @param changeReport The change report to be expanded
 	 * @param workspaceHandle The workspace to use for context (usually build workspace)
 	 * @param acceptReport The result of the accept
 	 */
 	public void populateChangeReport(ChangeReport changeReport,
-			IWorkspaceHandle workspaceHandle, 
-			AcceptReport acceptReport, IConsoleOutput listener,
+			IWorkspaceHandle workspaceHandle, String workspaceName, 
+			AcceptReport acceptReport, IBuildDefinitionHandle buildDefinitionH, String buildDefinitionName,  IConsoleOutput listener,
 			IProgressMonitor progress) throws TeamRepositoryException {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
-		// record build workspace
-		changeReport.setWorkspaceItemId(workspaceHandle.getItemId().getUuidValue());
+		// record build workspace id and name
+		fillWorkspace(changeReport, workspaceHandle, workspaceName, listener, monitor.newChild(1));
+
+		// record the build definition item id and name, if one exists
+		fillBuildDefinition(changeReport, buildDefinitionH, buildDefinitionName, listener, monitor.newChild(1));
 		
 		// record snapshot if one was created
-		fillSnapshot(changeReport, acceptReport, listener, monitor.newChild(5));
+		fillSnapshot(changeReport, acceptReport, listener, monitor.newChild(3));
 		
 		// record component additions/removals
 		fillComponentChanges(changeReport, acceptReport, listener, monitor.newChild(10)); 
@@ -108,11 +113,13 @@ public class ChangeReportBuilder {
 		// record change sets accepted/discarded
 		fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener, monitor.newChild(85));
 	}
-	
+
 	/**
 	 * Populates the given {@link ChangeReport} from a {@link IChangeHistorySyncReport}
+	 * This is called in the context of accept from a stream
 	 * @param changeReport - the {@link ChangeReport} to fill in
-	 * @param workspaceHandle - the {@link IWorkspaceHandle} to resolve file paths/names against 
+	 * @param workspaceHandle - the {@link IWorkspaceHandle} of a stream to resolve file paths/names against
+	 * @param streamName - the name of the stream used in the  
 	 * @param snapshot - the snapshot for this {@link ChangeReport}
 	 * @param snapshotName - the name of the snapshot
 	 * @param acceptReport - the {@link IChangeHistorySyncReport} 
@@ -121,15 +128,18 @@ public class ChangeReportBuilder {
 	 * @throws TeamRepositoryException
 	 */
 	public void populateChangeReport(ChangeReport changeReport,
-			IWorkspaceHandle workspaceHandle, IBaselineSetHandle snapshot, String snapshotName,
-			IChangeHistorySyncReport acceptReport, IConsoleOutput listener,
+			IWorkspaceHandle workspaceHandle, String streamName, 
+			IBaselineSetHandle snapshot, String snapshotName, 
+			IChangeHistorySyncReport acceptReport, String previousBuildUrl, IConsoleOutput listener,
 			IProgressMonitor progress) throws TeamRepositoryException {
 		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
-		// record build workspace
-		changeReport.setWorkspaceItemId(workspaceHandle.getItemId().getUuidValue());
+		// record the stream item id and name
+		fillStream(changeReport, workspaceHandle, streamName, listener, monitor.newChild(1));
 		
+		changeReport.setPreviousBuildUrl(previousBuildUrl);
+
 		// record snapshot if one was created
 		fillSnapshot(changeReport, snapshot, snapshotName, listener, monitor.newChild(5));
 		
@@ -139,7 +149,31 @@ public class ChangeReportBuilder {
 		// record change sets accepted/discarded
 		fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener, monitor.newChild(85));
 	}
+	
 
+	private void fillStream(ChangeReport changeReport, IWorkspaceHandle workspaceHandle, 
+				String streamName, IConsoleOutput listener, IProgressMonitor progress) {
+		if (workspaceHandle != null) {
+			ChangeReport.BuildStreamReport report = new ChangeReport.BuildStreamReport(workspaceHandle.getItemId().getUuidValue(), streamName);
+			changeReport.buildStreamCreated(report);
+		}
+	}
+	
+	private void fillBuildDefinition(ChangeReport changeReport, IBuildDefinitionHandle handle, 
+				String buildDefinitionName, IConsoleOutput listener, IProgressMonitor monitor) {
+		if (handle != null) {
+			ChangeReport.BuildDefinitionReport report = new ChangeReport.BuildDefinitionReport(handle.getItemId().getUuidValue(), buildDefinitionName);
+			changeReport.buildDefinitionCreated(report);
+		}
+	}
+	
+	private void fillWorkspace(ChangeReport changeReport, IWorkspaceHandle workspaceHandle,
+				String workspaceName, IConsoleOutput listener, IProgressMonitor monitor) {
+		if(workspaceHandle != null) {
+			ChangeReport.BuildWorkspaceReport report = new ChangeReport.BuildWorkspaceReport(workspaceHandle.getItemId().getUuidValue(), workspaceName);
+			changeReport.buildWorkspaceCreated(report);
+		}
+	}
 	/**
 	 * Populate the contents of an empty ChangeReport with the 
 	 * info related to the personal build
@@ -152,11 +186,26 @@ public class ChangeReportBuilder {
 	}
 	
 	/**
-	 * Populate the contents of empty ChangeReport with only snapshot link
+	 * Populate the contents of empty ChangeReport with stream and snapshot link
+	 */
+	public void populateChangeReport(ChangeReport changeReport, IWorkspaceHandle workspaceHandle, String streamName,
+										IBaselineSetHandle baselineSetHandle, String snapshotName,
+										IConsoleOutput listener, IProgressMonitor progress) {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
+		fillStream(changeReport, workspaceHandle, streamName, listener, monitor.newChild(1));
+
+		// record snapshot if one was created
+		fillSnapshot(changeReport, baselineSetHandle, snapshotName, listener, monitor.newChild(5));
+	}
+	
+	/**
+	 * Populate the contents of empty ChangeReport with stream and snapshot link
 	 */
 	public void populateChangeReport(ChangeReport changeReport, IBaselineSetHandle baselineSetHandle, String snapshotName,
 										IConsoleOutput listener, IProgressMonitor progress) {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		
 		// record snapshot if one was created
 		fillSnapshot(changeReport, baselineSetHandle, snapshotName, listener, monitor.newChild(5));
 	}

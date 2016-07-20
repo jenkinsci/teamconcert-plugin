@@ -1,0 +1,51 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Specify the owner of the snapshot. A snapshot can be owned by either a repository workspace or a stream. 
+	Specifying the owner of the snapshot enables scoped search and hence avoids duplicates in the search result.
+  </p>
+  <p>
+	When you do not have the snapshot owner details or if you are certain that the snapshot name is unique in the repository, then you can choose "- none -" for the snapshot owner. 
+	Snapshot owner details are ignored when you specify the UUID of the snapshot.
+  </p>  
+  <p>
+  	When you choose "- none -" for the snapshot owner, the snapshot search is not scoped and happens across the repository.  
+  </p>
+  <p>
+  	When a owning repository workspace or a stream is specified, the snapshot search is scoped to the snapshots associated with the specified repository workspace or stream.
+  </p>
+  <p>
+  	When the snapshot owner is selected to be a repository workspace but the name of the repository workspace is not specified, 
+  	then the snapshot search is not scoped and happens across the repository.
+  </p>
+  <p>
+  	When the snapshot owner is selected to be a stream but neither the project or team area nor the owning stream is specified, 
+  	then the snapshot search is not scoped and happens across the repository.
+  </p>
+  <p>
+  	When the snapshot owner is selected to be a stream and only the project or team area name is specified, then the snapshot search is scoped 
+  	to the snapshots associated with all streams owned by the specified project or team area.
+  </p>
+  <p>
+  	When the snapshot owner is selected to be a stream and only the stream name is specified, then the snapshot search is scoped to the snapshots 
+  	associated with all streams with the given name, across the repository.
+  </p>
+  <p>
+  	When the snapshot owner is selected to be a stream and the name of the project or team area as well as the name of the owning stream is specified, then the snapshot search 
+  	is scoped to the snapshots associated with all streams with the given name in the specified project or team area.
+  </p>
+</div>

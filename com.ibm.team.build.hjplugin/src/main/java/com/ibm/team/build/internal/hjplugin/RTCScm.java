@@ -77,6 +77,7 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
+import com.ibm.team.build.internal.hjplugin.util.Tuple;
 import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
 
 @ExportedBean(defaultVisibility=999)
@@ -112,6 +113,17 @@ public class RTCScm extends SCM {
 	public static final String BUILD_DEFINITION_TYPE = "buildDefinition"; //$NON-NLS-1$
 	public static final String BUILD_SNAPSHOT_TYPE = "buildSnapshot"; //$NON-NLS-1$
 	public static final String BUILD_STREAM_TYPE = "buildStream"; //$NON-NLS-1$
+	
+	// constants for the possible values for snapshot owner type 
+	public static final String SNAPSHOT_OWNER_TYPE_NONE = "none"; //$NON-NLS-1$
+	public static final String SNAPSHOT_OWNER_TYPE_STREAM = "stream"; //$NON-NLS-1$
+	public static final String SNAPSHOT_OWNER_TYPE_WORKSPACE = "workspace"; //$NON-NLS-1$
+	
+	// constants for the keys that identify various fields in the snapshot context map
+	public static final String SNAPSHOT_OWNER_TYPE_KEY = "snapshotOwnerType"; //$NON-NLS-1$
+	public static final String PROCESS_AREA_OF_OWNING_STREAM_KEY = "processAreaOfOwningStream"; //$NON-NLS-1$
+	public static final String OWNING_STREAM_KEY = "owningStream"; //$NON-NLS-1$
+	public static final String OWNING_WORKSPACE_KEY = "owningWorkspace"; //$NON-NLS-1$
 
 	public static final int DEFAULT_SERVER_TIMEOUT = DescriptorImpl.DEFAULT_SERVER_TIMEOUT;
 
@@ -139,8 +151,58 @@ public class RTCScm extends SCM {
 	// Use rest or whatever services instead of the build toolkit.
 	// Available in RTC 5.0 or 4.0.6 + retro-fitted changes
 	private boolean avoidUsingToolkit;
-	
+	// process area associated with the configuration. Curretly applicable only to stream configuration and it is used
+	// to lookup the stream by name.
 	private String processArea;
+	// see the config file for significance of this field
+	private String currentSnapshotOwnerType;
+	// object containing the snapshot owner details
+	private BuildSnapshotContext buildSnapshotContext;
+	
+	/**
+	 * Class defining the snapshot context configuration data.
+	 */
+	public static class BuildSnapshotContext {
+		public String snapshotOwnerType;
+		public String processAreaOfOwningStream;
+		public String owningStream;
+		public String owningWorkspace;
+		
+		@DataBoundConstructor
+		public BuildSnapshotContext(String snapshotOwnerType, String processAreaOfOwningStream, String owningStream, String owningWorkspace) {
+			this.snapshotOwnerType = snapshotOwnerType;
+			this.processAreaOfOwningStream = processAreaOfOwningStream;
+			this.owningStream = owningStream;
+			this.owningWorkspace = owningWorkspace;
+		}
+		
+		/**
+		 * Construct the map with the current instance.
+		 * 
+		 */
+		public Map<String, String> getContextMap() {
+			return getBuildSnapshotContextMap(snapshotOwnerType, processAreaOfOwningStream, owningStream, owningWorkspace);
+		}
+		
+		/**
+		 * Construct the map with the provided details.
+		 * 
+		 * Snapshot context is a complex datastructure. Since complex datastructures cannot be shared through a data
+		 * model between hjplugin.jar and hjplugin-rtc.jar, the complex data structure is converted to a map of fields
+		 * and values; this map, that is sent by hjplugin.jar, is read and converted to a object by hjplugin-rtc.jar.
+		 * Though this is hacky, it is better than passing individual fields. This class has to be retained until we
+		 * design a permanent solution to pass complex data structures between the two jars.
+		 */
+		public static Map<String, String> getBuildSnapshotContextMap(String snapshotOwnerType, String processAreaOfOwningStream, String owningStream,
+				String owningWorkspace) {
+			Map<String, String> contextMap = new HashMap<String, String>();
+			contextMap.put(SNAPSHOT_OWNER_TYPE_KEY, snapshotOwnerType);
+			contextMap.put(PROCESS_AREA_OF_OWNING_STREAM_KEY, processAreaOfOwningStream);
+			contextMap.put(OWNING_STREAM_KEY, owningStream);
+			contextMap.put(OWNING_WORKSPACE_KEY, owningWorkspace);
+			return contextMap;
+		}
+	}
 	
 	/**
 	 * Structure that represents the radio button selection for build workspace/definition
@@ -160,6 +222,8 @@ public class RTCScm extends SCM {
 		private String acceptBeforeLoad = "true";
 		private boolean generateChangelogWithGoodBuild;
 		private String processArea;
+		private String currentSnapshotOwnerType;
+		private BuildSnapshotContext buildSnapshotContext;
 		
 		@DataBoundConstructor
 		public BuildType(String value, String buildDefinition, String buildWorkspace, String buildSnapshot, String buildStream) {
@@ -238,6 +302,24 @@ public class RTCScm extends SCM {
 		
 		public String getProcessArea() {
 			return processArea;
+		}
+		
+		@DataBoundSetter
+		public void setCurrentSnapshotOwnerType(String currentSnapshotOwnerType) {
+			this.currentSnapshotOwnerType = currentSnapshotOwnerType;
+		}
+		
+		public String getCurrentSnapshotOwnerType() {
+			return currentSnapshotOwnerType;
+		}
+		
+		@DataBoundSetter
+		public void setBuildSnapshotContext(BuildSnapshotContext buildSnapshotContext) {
+			this.buildSnapshotContext = buildSnapshotContext;
+		}
+		
+		public BuildSnapshotContext getBuildSnapshotContext() {
+			return buildSnapshotContext;
 		}
 	}
 	
@@ -808,7 +890,9 @@ public class RTCScm extends SCM {
 	    }
 
 		/**
-		 * Validate the Build workspace is valid. Called by the forms.
+		 * Validates the build workspace configuration. Called by the forms.
+		 * Fields validated apart from connection info - Build Workspace.
+		 * 
 		 * @param project The Job that is going to be run
 		 * @param override Whether to override the global connection settings
 		 * @param buildTool The build tool selected to be used in builds (Job setting)
@@ -822,9 +906,9 @@ public class RTCScm extends SCM {
 		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection. (Job setting)
 		 * @param buildWorkspace The build workspace to validate
-		 * @return Whether the build workspace is valid or not. Never <code>null</code>
+		 * @return Whether the build workspace configuration is valid or not. Never <code>null</code>
 		 */
-		public FormValidation doValidateBuildWorkspace(
+		public FormValidation doValidateBuildWorkspaceConfiguration(
 				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
 				@QueryParameter("buildTool") String buildTool,
@@ -836,7 +920,11 @@ public class RTCScm extends SCM {
 				@QueryParameter("credentialsId") String credId,
 				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit,
 				@QueryParameter("buildWorkspace") String buildWorkspace) {
-			LOGGER.finest("DescriptorImpl.doValidateBuildWorkspace: Begin");
+			LOGGER.finest("DescriptorImpl.doValidateBuildWorkspaceConfiguration: Begin"); //$NON-NLS-1$
+			// validate if required fields are provided
+			if (Util.fixEmptyAndTrim(buildWorkspace) == null) {
+				return FormValidation.error(Messages.RTCScm_build_workspace_empty());
+			}
 			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
 			boolean avoidUsingToolkit;
 			if (!overrideGlobalSettings) {
@@ -858,17 +946,20 @@ public class RTCScm extends SCM {
 					password, passwordFile, credId, timeout, avoidUsingToolkit);
 			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
 				return connectInfoCheck.validationResult;
-			} else {
-				// connection info is good now validate the build workspace
-				FormValidation buildWorkspaceCheck = checkBuildWorkspace(
-						connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
-						connectInfoCheck.loginInfo, buildWorkspace);
+			} 
+			// connection info is good now validate the build workspace
+			FormValidation buildWorkspaceCheck = checkBuildWorkspace(connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
+					connectInfoCheck.loginInfo, buildWorkspace);
+			if (buildWorkspaceCheck.kind.equals(FormValidation.Kind.ERROR)) {
 				return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildWorkspaceCheck);
 			}
+
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
 		}
 
 		/**
-		 * Validate the Build definition is valid. Called by the forms.
+		 * Validates the build definition configuration. Called by the forms.
+		 * Fields validated apart from the connection info - Build Definition.
 		 * @param project The Job that is going to be run
 		 * @param override Whether to override the global connection settings
 		 * @param buildTool The build tool selected to be used in builds (Job setting)
@@ -882,9 +973,9 @@ public class RTCScm extends SCM {
 		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection. (Job setting)
 		 * @param buildDefinition The build definition to validate
-		 * @return Whether the build definition is valid or not. Never <code>null</code>
+		 * @return Whether the build definition configuration is valid or not. Never <code>null</code>
 		 */
-		public FormValidation doValidateBuildDefinition(
+		public FormValidation doValidateBuildDefinitionConfiguration(
 				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
 				@QueryParameter("buildTool") String buildTool,
@@ -896,7 +987,11 @@ public class RTCScm extends SCM {
 				@QueryParameter("credentialsId") String credId,
 				@QueryParameter("avoidUsingToolkit") final String avoidUsingBuildToolkit,
 				@QueryParameter("buildDefinition") final String buildDefinition) {
-			LOGGER.finest("DescriptorImpl.doValidateBuildDefinition: Begin");
+			LOGGER.finest("DescriptorImpl.doValidateBuildDefinitionConfiguration: Begin"); //$NON-NLS-1$
+			// validate if required fields are provided
+			if (Util.fixEmptyAndTrim(buildDefinition) == null) {
+				return FormValidation.error(Messages.RTCScm_build_definition_empty());
+			}
 	    	boolean overrideGlobalSettings = Boolean.parseBoolean(override);
 			boolean avoidUsingToolkit;
 			if (!overrideGlobalSettings) {
@@ -918,16 +1013,39 @@ public class RTCScm extends SCM {
 					password, passwordFile, credId, timeout, avoidUsingToolkit);
 			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
 				return connectInfoCheck.validationResult;
-			} else {
-				// connection info is good now validate the build definition
-				FormValidation buildDefinitionCheck = checkBuildDefinition(
-						connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
-						connectInfoCheck.loginInfo, buildDefinition);
+			} 
+			// connection info is good now validate the build definition
+			FormValidation buildDefinitionCheck = checkBuildDefinition(connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
+					connectInfoCheck.loginInfo, buildDefinition);
+			if (buildDefinitionCheck.kind.equals(FormValidation.Kind.ERROR)) {
 				return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildDefinitionCheck);
 			}
+
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
+
 		}
 		
-		public FormValidation doValidateBuildStream(
+		/**
+		 * Validates the build stream configuration. Called by the forms.
+		 * Fields validated apart from the connection info - Project or Team Area(if specified), Build Stream.
+		 * @param project The Job that is going to be run
+		 * @param override Whether to override the global connection settings
+		 * @param buildTool The build tool selected to be used in builds (Job setting)
+		 * @param serverURI The RTC server uri (Job setting)
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file
+		 * 				if the credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
+		 * 				a password if the credentials id was not supplied. (Job setting)
+		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection. (Job setting)
+		 * @param processArea Project or Team Area owning the stream
+		 * @param buildStream The build stream to validate
+		 * @return Whether the build stream configuration is valid or not. Never <code>null</code>
+		 */
+
+		public FormValidation doValidateBuildStreamConfiguration(
 				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
 				@QueryParameter("buildTool") String buildTool,
@@ -938,8 +1056,13 @@ public class RTCScm extends SCM {
 				@QueryParameter("passwordFile") String passwordFile,
 				@QueryParameter("credentialsId") String credId,
 				@QueryParameter("avoidUsingToolkit") final String avoidUsingBuildToolkit,
+				@QueryParameter("processArea") final String processArea,
 				@QueryParameter("buildStream") final String buildStream) {
-			LOGGER.finest("DescriptorImpl.doValidateBuildStream : Enter");
+			LOGGER.finest("DescriptorImpl.doValidateBuildStreamConfiguration : Enter"); //$NON-NLS-1$
+			// validate if required fields are provided
+			if (Util.fixEmptyAndTrim(buildStream) == null) {
+				return FormValidation.error(Messages.RTCScm_build_stream_empty());
+			}
 			boolean overrideGlobal = Boolean.parseBoolean(override);
 			boolean avoidUsingToolkit;
 			if (!overrideGlobal) {
@@ -952,16 +1075,116 @@ public class RTCScm extends SCM {
 			} else {
 				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
 			}
-			// First do a connection check and then check the stream
-			ValidationResult connectionInfoResult = validateConnectInfo(project, !overrideGlobal, buildTool, serverURI, null, null, null, 
-								credId, timeout, avoidUsingToolkit);
+
+			// First do a connection check, then check the process area and stream
+			ValidationResult connectionInfoResult = validateConnectInfo(project, !overrideGlobal, buildTool, serverURI, userId, password, passwordFile, credId,
+					timeout, avoidUsingToolkit);
 			if (connectionInfoResult.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
 				return connectionInfoResult.validationResult;
-			} else { // no error, proceed to check the stream
-				FormValidation  streamValidationResult = checkBuildStream(connectionInfoResult.buildToolkitPath, avoidUsingToolkit,
-						connectionInfoResult.loginInfo, buildStream);
-				return Helper.mergeValidationResults(connectionInfoResult.validationResult, streamValidationResult);		
-			}					 
+			}
+			// build toolkit is required to validate process area
+			if (avoidUsingToolkit && connectionInfoResult.buildToolkitPath == null && Util.fixEmptyAndTrim(processArea) != null) {
+				return Helper.mergeValidationResults(connectionInfoResult.validationResult,
+						FormValidation.error(Messages.RTCScm_build_toolkit_required_to_validate_process_area()));
+			}
+			// no error, proceed to check the stream. checking the stream in turn validates project area existence
+			FormValidation streamValidationResult = checkBuildStream(connectionInfoResult.buildToolkitPath, avoidUsingToolkit,
+					connectionInfoResult.loginInfo, processArea, buildStream);
+			if (streamValidationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return Helper.mergeValidationResults(connectionInfoResult.validationResult, streamValidationResult);
+			}
+
+			return Helper.mergeValidationResults(connectionInfoResult.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
+
+		}
+
+		/**
+		 * Validates the build snapshot configuration. Called by the forms.
+		 * Fields validated apart from the connection info - Project or Team Area(if specified), Build Snapshot.
+		 * 
+		 * @param project The Job that is going to be run
+		 * @param override Whether to override the global connection settings
+		 * @param buildTool The build tool selected to be used in builds (Job setting)
+		 * @param serverURI The RTC server uri (Job setting)
+		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
+		 *            credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
+		 *            password if the credentials id was not supplied. (Job setting)
+		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
+		 *            connection. (Job setting)
+		 * @param currentSnapshotOwnerType Currently selected snapshot owner type - "none", "stream", or "workspace"
+		 * @param processAreaOfOwningStream Name of the project or team area of the stream owning the snapshot
+		 * @param owningStream Name of the stream owning the snapshot
+		 * @param owningWorkspace Name of the workspace owning the snapshot 
+		 * @param buildSnapshot The build snapshot to validate
+		 * 
+		 * @return Whether the build snapshot configuration is valid or not. Never <code>null</code>
+		 */
+		public FormValidation doValidateBuildSnapshotConfiguration(@AncestorInPath Job<?, ?> project,
+				@QueryParameter("overrideGlobal") final String override, @QueryParameter("buildTool") String buildTool,
+				@QueryParameter("serverURI") String serverURI, @QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId,
+				@QueryParameter("password") String password, @QueryParameter("passwordFile") String passwordFile,
+				@QueryParameter("credentialsId") String credId, @QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit,
+				@QueryParameter("currentSnapshotOwnerType") String currentSnapshotOwnerType,
+				@QueryParameter("processAreaOfOwningStream") String processAreaOfOwningStream, @QueryParameter("owningStream") String owningStream,
+				@QueryParameter("owningWorkspace") String owningWorkspace, @QueryParameter("buildSnapshot") String buildSnapshot) {
+
+			LOGGER.finest("DescriptorImpl.doValidateBuildSnapshotConfiguration: Begin"); //$NON-NLS-1$
+			// Note: validation of process area cannot be done using the REST service. So when avoidUsingBuildtoolkit
+			// is selected in master and the build toolkit is not configured, the validation will fail.
+			// validate if a value is specified for build snapshot
+			if (Util.fixEmptyAndTrim(buildSnapshot) == null) {
+				return FormValidation.error(Messages.RTCScm_build_snapshot_empty());
+			}
+			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+			boolean avoidUsingToolkit;
+			if (!overrideGlobalSettings) {
+				// use the global settings instead of the ones supplied
+				buildTool = getGlobalBuildTool();
+				serverURI = getGlobalServerURI();
+				credId = getGlobalCredentialsId();
+				userId = getGlobalUserId();
+				password = getGlobalPassword();
+				passwordFile = getGlobalPasswordFile();
+				timeout = Integer.toString(getGlobalTimeout());
+				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+			} else {
+				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+			}
+			// validate the info for connecting to the server (including toolkit
+			// & auth info).
+			ValidationResult connectInfoCheck = validateConnectInfo(project, !overrideGlobalSettings, buildTool, serverURI, userId, password,
+					passwordFile, credId, timeout, avoidUsingToolkit);
+			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+				return connectInfoCheck.validationResult;
+			}
+			// build toolkit is required to validate directly provided snapshot value
+			boolean parameterizedSnapshot = Helper.isJobProperty(buildSnapshot);
+			if (avoidUsingToolkit && connectInfoCheck.buildToolkitPath == null && !parameterizedSnapshot) {
+				return Helper.mergeValidationResults(connectInfoCheck.validationResult,
+						FormValidation.error(Messages.RTCScm_build_toolkit_required_to_validate_snapshot()));
+			}
+			// validate snapshot
+			if (!parameterizedSnapshot) {
+				FormValidation buildSnapshotValidationResult = checkBuildSnapshot(connectInfoCheck.buildToolkitPath, connectInfoCheck.loginInfo,
+						BuildSnapshotContext.getBuildSnapshotContextMap(currentSnapshotOwnerType, processAreaOfOwningStream, owningStream,
+								owningWorkspace), buildSnapshot);
+				if (buildSnapshotValidationResult.kind.equals(FormValidation.Kind.ERROR)) {
+					return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildSnapshotValidationResult);
+				}
+			} else {
+				// warn that parameterized values cannot be validated, the configuration is still valid from validation
+				// perspective
+				FormValidation successWithParametrizedSnapshotWarning = Helper.mergeValidationResults(
+						FormValidation.warning(Messages.RTCScm_build_snapshot_not_validated()),
+						FormValidation.ok(Messages.RTCScm_validation_success()));
+				return Helper.mergeValidationResults(connectInfoCheck.validationResult, successWithParametrizedSnapshotWarning);
+			}
+			
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
 		}
 
 		/**
@@ -980,6 +1203,7 @@ public class RTCScm extends SCM {
 		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
 		 *            connection. (Job setting)
+		 * @param processArea The name of the project or team area
 		 * @param buildTypeStr Type of the build configuration
 		 * @param buildWorkspace The workspace to build from
 		 * @param buildStream The stream to build from
@@ -992,8 +1216,9 @@ public class RTCScm extends SCM {
 				@QueryParameter("serverURI") String serverURI, @QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId,
 				@QueryParameter("password") String password, @QueryParameter("passwordFile") String passwordFile,
 				@QueryParameter("credentialsId") String credId, @QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit,
-				@QueryParameter("value") String buildTypeStr, @QueryParameter("buildWorkspace") String buildWorkspace,
-				@QueryParameter("buildStream") String buildStream, @QueryParameter("componentsToExclude") String componentsToExclude) {
+				@QueryParameter("processArea") String processArea, @QueryParameter("value") String buildTypeStr, 
+				@QueryParameter("buildWorkspace") String buildWorkspace, @QueryParameter("buildStream") String buildStream, 
+				@QueryParameter("componentsToExclude") String componentsToExclude) {
 
 			LOGGER.finest("DescriptorImpl.doValidateComponentsToExclude: Begin"); //$NON-NLS-1$
 
@@ -1043,7 +1268,7 @@ public class RTCScm extends SCM {
 				buildWorkspace = buildStream;
 			}
 			FormValidation componentsToExcludeCheck = checkComponentsToExclude(connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
-					connectInfoCheck.loginInfo, isStreamConfiguration, buildWorkspace, componentsToExcludeJson);
+					connectInfoCheck.loginInfo, processArea, isStreamConfiguration, buildWorkspace, componentsToExcludeJson);
 
 			return Helper.mergeValidationResults(connectInfoCheck.validationResult, componentsToExcludeCheck);
 		}
@@ -1064,6 +1289,7 @@ public class RTCScm extends SCM {
 		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
 		 *            connection. (Job setting)
+		 * @param processArea The name of the project or team area
 		 * @param buildTypeStr Type of the build configuration
 		 * @param buildWorkspace The workspace to build from
 		 * @param loadRules Path to the file specifying the component-to-load-rule file mapping
@@ -1074,9 +1300,9 @@ public class RTCScm extends SCM {
 				@QueryParameter("buildTool") String buildTool, @QueryParameter("serverURI") String serverURI,
 				@QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId, @QueryParameter("password") String password,
 				@QueryParameter("passwordFile") String passwordFile, @QueryParameter("credentialsId") String credId,
-				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit, @QueryParameter("value") String buildTypeStr,
-				@QueryParameter("buildWorkspace") String buildWorkspace, @QueryParameter("buildStream") String buildStream,
-				@QueryParameter("loadRules") String loadRules) {
+				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit, @QueryParameter("processArea") String processArea, 
+				@QueryParameter("value") String buildTypeStr, @QueryParameter("buildWorkspace") String buildWorkspace, 
+				@QueryParameter("buildStream") String buildStream, @QueryParameter("loadRules") String loadRules) {
 
 			LOGGER.finest("DescriptorImpl.doValidateLoadRules: Begin"); //$NON-NLS-1$
 
@@ -1126,69 +1352,11 @@ public class RTCScm extends SCM {
 				buildWorkspace = buildStream;
 			}
 			FormValidation loadRulesCheck = checkLoadRules(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
-					isStreamConfiguration, buildWorkspace, loadRulesJson);
+					processArea, isStreamConfiguration, buildWorkspace, loadRulesJson);
 
 			return Helper.mergeValidationResults(connectInfoCheck.validationResult, loadRulesCheck);
 		}
 
-		/**
-		 * Validate the project area/team area value. Called from the forms.
-		 * 
-		 * @param project The Job that is going to be run
-		 * @param override Whether to override the global connection settings
-		 * @param buildTool The build tool selected to be used in builds (Job setting)
-		 * @param serverURI The RTC server uri (Job setting)
-		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
-		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
-		 *            credentials id was not supplied. (Job setting)
-		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
-		 *            password if the credentials id was not supplied. (Job setting)
-		 * @param credId Credential id that will identify the user id and password to use (Job setting)
-		 * @param timeout The timeout period for the connection (Job setting)
-		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
-		 *            connection. (Job setting)
-		 * @param processArea The project area/team area value to be validated
-		 * 
-		 * @return Whether the build workspace is valid or not. Never <code>null</code>
-		 */
-		public FormValidation doValidateProcessArea(@AncestorInPath Job<?, ?> project, @QueryParameter("overrideGlobal") final String override,
-				@QueryParameter("buildTool") String buildTool, @QueryParameter("serverURI") String serverURI,
-				@QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId, @QueryParameter("password") String password,
-				@QueryParameter("passwordFile") String passwordFile, @QueryParameter("credentialsId") String credId,
-				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit, @QueryParameter("processArea") String processArea) {
-			
-			// Note: validation of process area cannot be done using the REST service. So when avoidUsingBuildtoolkit
-			// is selected in master and the build toolkit is not configured, the validation will fail.
-			LOGGER.finest("DescriptorImpl.doValidateLoadRules: Begin"); //$NON-NLS-1$
-			// verify that a value is specified
-			if (processArea == null || processArea.trim().length() == 0) {
-				return FormValidation.error(Messages.RTCScm_specify_process_area());
-			}
-			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
-			boolean avoidUsingToolkit;
-			if (!overrideGlobalSettings) {
-				// use the global settings instead of the ones supplied
-				buildTool = getGlobalBuildTool();
-				serverURI = getGlobalServerURI();
-				credId = getGlobalCredentialsId();
-				userId = getGlobalUserId();
-				password = getGlobalPassword();
-				passwordFile = getGlobalPasswordFile();
-				timeout = Integer.toString(getGlobalTimeout());
-				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
-			} else {
-				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
-			}
-			// validate the info for connecting to the server (including toolkit
-			// & auth info).
-			ValidationResult connectInfoCheck = validateConnectInfo(project, !overrideGlobalSettings, buildTool, serverURI, userId, password,
-					passwordFile, credId, timeout, avoidUsingToolkit);
-			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
-				return connectInfoCheck.validationResult;
-			}
-			FormValidation processAreaValidationResult = checkProcessArea(connectInfoCheck.buildToolkitPath, connectInfoCheck.loginInfo, processArea);
-			return Helper.mergeValidationResults(connectInfoCheck.validationResult, processAreaValidationResult);
-		}
 		
 		/** 
 		 * Validate that the build workspace exists and there is just one.
@@ -1240,11 +1408,11 @@ public class RTCScm extends SCM {
 	    	return FormValidation.ok(Messages.RTCScm_build_workspace_success());
 	    }
 	    
-	    private FormValidation checkBuildStream(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo, String buildStream) {
+	    private FormValidation checkBuildStream(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo, String processArea, String buildStream) {
 	    	try {
 	    		String errorMessage = RTCFacadeFacade.testBuildStream(buildToolkitPath,
 						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
-						avoidUsingToolkit, buildStream);
+						avoidUsingToolkit, processArea, buildStream);
 				errorMessage = Util.fixEmptyAndTrim(errorMessage);
 				if (errorMessage != null) {
 	    			return FormValidation.error(errorMessage);
@@ -1281,8 +1449,67 @@ public class RTCScm extends SCM {
 	    	return FormValidation.ok(Messages.RTCScm_build_stream_success());
 	    
 	    }
+	    
+	    /** 
+		 * Validate that the build snapshot exists and there is just one. Validation using REST service is not supported.
+		 * 
+		 * @param buildToolkitPath Path to the build toolkit
+		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
+		 * @param loginInfo The login credentials 
+		 * @param buildSnapshotContextMap Name-Value pairs representing the snapshot owner details
+		 * @param buildWorkspace The name of the workspace to validate
+		 * @return The result of the validation. Never <code>null</code>
+		 */
+		private FormValidation checkBuildSnapshot(String buildToolkitPath, RTCLoginInfo loginInfo,  Map<String, String> buildSnapshotContextMap, String buildSnapshot) {
+			try {
+				// need not have to route through RTCFacadeFacade as we don't have rest services to validate snapshot
+				RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
+				String errorMessage = (String)facade.invoke(RTCFacadeWrapper.TEST_BUILD_SNAPSHOT,
+						new Class[] { String.class, // serverURI
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								Map.class, //buildSnapshotContextMap
+								String.class, // buildSnapshot
+								Locale.class }, // clientLocale
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildSnapshotContextMap,
+						buildSnapshot, LocaleProvider.getLocale());
+				errorMessage = Util.fixEmptyAndTrim(errorMessage);
+				if (errorMessage != null) {
+					return FormValidation.error(errorMessage);
+				}
+			} catch (InvocationTargetException exp) {
+				Throwable eToReport = exp.getCause();
+				if (eToReport == null) {
+					eToReport = exp;
+				}
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkBuildSnapshot attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildSnapshot=\"" + buildSnapshot + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkBuildSnapshot invocation failure " + eToReport.getMessage(), exp); //$NON-NLS-1$
+				}
+				return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
+			} catch (Exception exp) {
+				if (LOGGER.isLoggable(Level.FINER)) {
+					LOGGER.finer("checkBuildSnapshot attempted with " + //$NON-NLS-1$
+							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildSnapshot=\"" + buildSnapshot + //$NON-NLS-1$
+							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+					LOGGER.log(Level.FINER, "checkBuildSnapshot failed " + exp.getMessage(), exp); //$NON-NLS-1$
+				}
+				return FormValidation.error(exp, exp.getMessage());
+			}
+			return FormValidation.ok(Messages.RTCScm_build_stream_success());
 
-		/**
+		}
+
+	    /**
 		 * Validate the build definition is a H/J definition and usable
 		 * @param buildToolkitPath Path to the build toolkit
 		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
@@ -1337,17 +1564,18 @@ public class RTCScm extends SCM {
 		 * @param buildToolkitPath Path to the build toolkit
 		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
 		 * @param loginInfo The login credentials
+		 * @param processArea The name of the project or team area
 		 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
 		 * @param buildWorkspace The name of the workspace to validate
 		 * @param componentsToExclude Json text spe
 		 * @return The result of the validation. Never <code>null</code>
 		 */
 		private FormValidation checkComponentsToExclude(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo,
-				boolean isStreamConfiguration, String buildWorkspace, String componentsToExclude) {
+				String processArea, boolean isStreamConfiguration, String buildWorkspace, String componentsToExclude) {
 
 			try {
 				String errorMessage = RTCFacadeFacade.testComponentsToExclude(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
-						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, isStreamConfiguration, buildWorkspace,
+						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, processArea, isStreamConfiguration, buildWorkspace,
 						componentsToExclude);
 				if (errorMessage != null && errorMessage.length() != 0) {
 					return FormValidation.error(errorMessage);
@@ -1359,7 +1587,8 @@ public class RTCScm extends SCM {
 				}
 				if (LOGGER.isLoggable(Level.FINER)) {
 					LOGGER.finer("checkComponentsToExclude attempted with " + //$NON-NLS-1$
-							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" processArea=\"" + processArea + ////$NON-NLS-1$
 							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
 							"\" componentsToExclude=\"" + componentsToExclude + //$NON-NLS-1$
 							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
@@ -1371,7 +1600,8 @@ public class RTCScm extends SCM {
 			} catch (Exception e) {
 				if (LOGGER.isLoggable(Level.FINER)) {
 					LOGGER.finer("checkComponentsToExclude attempted with " + //$NON-NLS-1$
-							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" processArea=\"" + processArea + ////$NON-NLS-1$
 							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
 							"\" componentsToExclude=\"" + componentsToExclude + //$NON-NLS-1$
 							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
@@ -1392,17 +1622,18 @@ public class RTCScm extends SCM {
 		 * @param buildToolkitPath Path to the build toolkit
 		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
 		 * @param loginInfo The login credentials
+		 * @param processArea The name of the project or team area
 		 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
 		 * @param buildWorkspace The name of the workspace to validate
 		 * @param componentsToExclude Json text spe
 		 * @return The result of the validation. Never <code>null</code>
 		 */
 		private FormValidation checkLoadRules(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo,
-				boolean isStreamConfiguration, String buildWorkspace, String loadRules) {
+				String processArea, boolean isStreamConfiguration, String buildWorkspace, String loadRules) {
 
 			try {
 				String errorMessage = RTCFacadeFacade.testLoadRules(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
-						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, isStreamConfiguration, buildWorkspace, loadRules);
+						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, processArea, isStreamConfiguration, buildWorkspace, loadRules);
 				if (errorMessage != null && errorMessage.length() != 0) {
 					return FormValidation.error(errorMessage);
 				}
@@ -1414,6 +1645,7 @@ public class RTCScm extends SCM {
 				if (LOGGER.isLoggable(Level.FINER)) {
 					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
 							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" processArea=\"" + processArea + ////$NON-NLS-1$
 							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
 							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
 							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
@@ -1426,6 +1658,7 @@ public class RTCScm extends SCM {
 				if (LOGGER.isLoggable(Level.FINER)) {
 					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
 							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+							"\" processArea=\"" + processArea + ////$NON-NLS-1$
 							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
 							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
 							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
@@ -1449,9 +1682,19 @@ public class RTCScm extends SCM {
 		 */
 		private FormValidation checkProcessArea(String buildToolkitPath, RTCLoginInfo loginInfo, String processArea) {
 			try {
-				String errorMessage = RTCFacadeFacade.testProcessArea(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
-						loginInfo.getPassword(), loginInfo.getTimeout(), processArea);
-				if (errorMessage != null && errorMessage.length() != 0) {
+				// need not have to route through RTCFacadeFacade as we don't have rest services to validate project area
+				RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
+				String errorMessage = (String)facade.invoke(RTCFacadeWrapper.TEST_PROCESS_AREA,
+						new Class[] { String.class, // serverURI
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								String.class, // processArea
+								Locale.class }, // clientLocale
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), processArea,
+						LocaleProvider.getLocale());
+				errorMessage = Util.fixEmptyAndTrim(errorMessage);
+				if (errorMessage != null) {
 					return FormValidation.error(errorMessage);
 				}
 			} catch (InvocationTargetException e) {
@@ -1481,7 +1724,8 @@ public class RTCScm extends SCM {
 				}
 				return FormValidation.error(e, e.getMessage());
 			}
-			return FormValidation.ok(processArea.contains("/") ? Messages.RTCScm_team_area_exists() : Messages.RTCScm_project_area_exists()); //$NON-NLS-1$
+			// since we do collective validation, it is ok not to return any message
+			return FormValidation.ok();
 		}
 	}
 	
@@ -1527,7 +1771,9 @@ public class RTCScm extends SCM {
 			this.loadRules = buildType.loadRules;
 			this.acceptBeforeLoad = buildType.acceptBeforeLoad;
 			this.generateChangelogWithGoodBuild = buildType.generateChangelogWithGoodBuild;
-			this.processArea= buildType.processArea;
+			this.processArea = buildType.processArea;
+			this.currentSnapshotOwnerType = buildType.currentSnapshotOwnerType;
+			this.buildSnapshotContext = buildType.buildSnapshotContext;
 		}
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
@@ -1643,11 +1889,23 @@ public class RTCScm extends SCM {
 		String label = getLabel(build);
 		String localBuildToolkit;
 		String nodeBuildToolkit;
-		String buildWorkspace = Util.fixEmptyAndTrim(getBuildWorkspace());
-		String buildDefinition = Util.fixEmptyAndTrim(getBuildDefinition());
-		String buildSnapshot = parseBuildSnapshot(build, listener);
+		
+		String buildWorkspace = (getBuildTypeStr().equals(BUILD_WORKSPACE_TYPE)) ?
+					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_WORKSPACE, Util.fixEmptyAndTrim(getBuildWorkspace()), false, listener):
+					Util.fixEmptyAndTrim(getBuildWorkspace());
+					
+		String buildDefinition = (getBuildTypeStr().equals(BUILD_DEFINITION_TYPE)) ?
+					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_DEFINITION, Util.fixEmptyAndTrim(getBuildDefinition()), false, listener):
+					Util.fixEmptyAndTrim(getBuildDefinition());
+					
+		String buildSnapshot = (getBuildTypeStr().equals(BUILD_SNAPSHOT_TYPE)) ?
+					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_SNAPSHOT, Util.fixEmptyAndTrim(getBuildSnapshot()), true, listener):
+					Util.fixEmptyAndTrim(getBuildSnapshot());
+					
+		String buildStream = (getBuildTypeStr().equals(BUILD_STREAM_TYPE)) ?
+					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_STREAM, Util.fixEmptyAndTrim(getBuildStream()), false, listener):
+					Util.fixEmptyAndTrim(getBuildStream()); 
 
-		String buildStream = Util.fixEmptyAndTrim(getBuildStream());
 		String buildResultUUID = getBuildResultUUID(build, listener);
 		
 		validateInput(getBuildTypeStr(), buildSnapshot, buildStream);
@@ -1693,7 +1951,8 @@ public class RTCScm extends SCM {
 						" Node Build toolkit=\"" + nodeBuildToolkit + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Server URI=\"" + loginInfo.getServerUri() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Userid=\"" + loginInfo.getUserId() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
-						" BuildType=\"" + buildType + "\"" + //$NON-NLS-1$
+						" BuildType=\"" + buildType + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
+						" ProcessArea=\"" + getProcessArea() + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Build definition=\"" + buildDefinition + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Build workspace=\"" + buildWorkspace + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Build snapshot=\"" + buildSnapshot + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
@@ -1782,21 +2041,34 @@ public class RTCScm extends SCM {
 			}
 			
 
+			String previousSnapshotUUIDForChangeLog = null;
+			Run<?,?> previousBuild = null;
 			// Get previous snapshot UUID for comparison in stream case
-			String previousSnapshotUUIDForChangeLog = Helper.getSnapshotUUIDFromPreviousBuild(build, localBuildToolkit, loginInfo, getBuildStream(), getGenerateChangelogWithGoodBuild(), LocaleProvider.getLocale());
+			Tuple<Run<?,?>, String> previousSnapshotDetails = Helper.getSnapshotUUIDFromPreviousBuild(build, localBuildToolkit, loginInfo, getProcessArea(),
+					buildStream, getGenerateChangelogWithGoodBuild(), LocaleProvider.getLocale());
+			if (previousSnapshotDetails != null) {
+				previousBuild = previousSnapshotDetails.getFirst();
+				previousSnapshotUUIDForChangeLog = previousSnapshotDetails.getSecond();
+			}
 
 			String parentActivityId = "";
 			String connectorId = "";
 			Map<String, String> streamData = new HashMap<String, String>();
+			Map<String, String> buildSnapshotContextMap = buildSnapshotContext != null ? buildSnapshotContext.getContextMap() : null;
 			RTCAcceptTask acceptTask = new RTCAcceptTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
-					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultUUID,
+					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
+					getProcessArea(), 
+					buildResultUUID,
 					buildWorkspace,
+					buildSnapshotContextMap,
 					buildSnapshot,
 					buildStream,
 					label, previousSnapshotUUIDForChangeLog,
 					listener, changeLog,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, getAcceptBeforeLoad());
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, getAcceptBeforeLoad(),
+					// If you are not comparing with any snapshot, no need to put the previous build URL
+					(previousSnapshotUUIDForChangeLog != null) ? previousBuild.getUrl(): null);
 
 			// publish in the build result links to the project and the build
 			if (buildResultUUID != null) {
@@ -1816,6 +2088,7 @@ public class RTCScm extends SCM {
 			}
 			
 			// NOTE:
+			// TODO
 			// For buildStream case, we have created a temporary workspace. Its UUID is stored in streamChangesData.
 			// The temporary workspace will be used in load() and deleted at the end of load. If we do add any 
 			// intermediate steps between accept and load and there is some exception during those tasks (even now,
@@ -1823,6 +2096,9 @@ public class RTCScm extends SCM {
 			// is deleted.
 			// A better option is to create the temporary workspace and snapshot upfront using a separate task from checkout()
 			// That way, if there is any exception after that, we can safely delete the workspace in finally()	
+			// Or another option is to create+delete workpace in accept and then perform a load from snapshot.
+			// Or create and delete workspace in accept and then use load from snapshot (that already creates and deletes a 
+			// workspace). 
 				
 			Map<String, Object> acceptResult = workspacePath.act(acceptTask);
 			Map<String, String> buildProperties = (Map<String, String>)acceptResult.get("buildProperties"); //$NON-NLS-1$
@@ -1840,7 +2116,7 @@ public class RTCScm extends SCM {
 			RTCLoadTask loadTask = new RTCLoadTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
-					buildResultUUID, buildWorkspace, buildSnapshot, buildStream, streamData, label, listener,
+					getProcessArea(), buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot, buildStream, streamData, label, listener,
 					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider, clearLoadDirectory, 
 					createFoldersForComponents, null, null, getAcceptBeforeLoad());
 			if (buildResultUUID != null) {
@@ -1858,7 +2134,7 @@ public class RTCScm extends SCM {
 				}
 				loadTask.setLinkURLs(rootUrl,  projectUrl, buildUrl);
 			}
-			// Build properties from the load task. Merge it with the properties from accept task
+
 			if (Util.fixEmptyAndTrim(loadDirectory) != null) {
 				FilePath newWorkspacePath = workspacePath.child(loadDirectory);
 				newWorkspacePath.act(loadTask);
@@ -1983,11 +2259,11 @@ public class RTCScm extends SCM {
     			String strIgnoreOutgoingFromBuildWorkspace = System.getProperty(IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING);
     			boolean ignoreOutgoingFromBuildWorkspace = "true".equals(strIgnoreOutgoingFromBuildWorkspace); 
     			// Get the previous snapshot for stream case
-    			String streamChangesData = Helper.getStreamChangesDataFromLastBuild(project, masterToolkit, loginInfo, getBuildStream(), LocaleProvider.getLocale());
+    			String streamChangesData = Helper.getStreamChangesDataFromLastBuild(project, masterToolkit, loginInfo, getProcessArea(), getBuildStream(), LocaleProvider.getLocale()).getSecond();
     			
     			BigInteger currentRevisionHash = RTCFacadeFacade.incomingChangesUsingBuildToolkit(masterToolkit,
 	    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
-						loginInfo.getTimeout(), useBuildDefinitionInBuild,
+						loginInfo.getTimeout(), getProcessArea(), useBuildDefinitionInBuild,
 						getBuildDefinition(),
 						getBuildWorkspace(),
 						getBuildStream(),
@@ -2293,6 +2569,14 @@ public class RTCScm extends SCM {
     public String getProcessArea() {
     	return processArea;
     }
+    
+    public String getCurrentSnapshotOwnerType() {
+    	return currentSnapshotOwnerType;
+    }
+    
+    public BuildSnapshotContext getBuildSnapshotContext() {
+    	return buildSnapshotContext;
+    }
 	
 	@Override
 	@Exported
@@ -2339,16 +2623,6 @@ public class RTCScm extends SCM {
 			return true;
 		}
 		return false;
-	}
-	
-	private String parseBuildSnapshot(Run<?,?> build, TaskListener listener) throws IOException, InterruptedException {
-		String property = Util.fixEmptyAndTrim(getBuildSnapshot());
-		// if it is a job property, resolve it otherwise return the property as such
-		if (Helper.isJobProperty(property)) {
-			return Helper.resolveJobProperty(build, property, listener);
-		} else {
-			return property;
-		}
 	}
 	
 	private static void validateInput(String buildType, String buildSnapshotNameOrUUID, String buildStreamName) throws AbortException {

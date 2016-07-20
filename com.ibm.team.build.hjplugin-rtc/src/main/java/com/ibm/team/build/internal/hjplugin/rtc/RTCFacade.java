@@ -28,6 +28,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils.BuildSnapshotContext;
 import com.ibm.team.repository.common.TeamRepositoryException;
 
 /**
@@ -116,7 +117,8 @@ public class RTCFacade {
 		return errorMessage;
 	}
 	
-	public String testBuildStream(String serverURI, String userId, String password, int timeout, String buildStream, Locale clientLocale) throws Exception {
+	public String testBuildStream(String serverURI, String userId, String password, int timeout, String processArea, String buildStream,
+			Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
@@ -124,7 +126,43 @@ public class RTCFacade {
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testBuildStream(buildStream, monitor.newChild(50), clientLocale);
+			repoConnection.testBuildStream(processArea, buildStream, monitor.newChild(50), clientLocale);
+		} catch (RTCConfigurationException exp) {
+			errorMessage = exp.getMessage();
+		} catch (RTCValidationException exp) {
+			errorMessage = exp.getMessage();
+		} catch (OperationCanceledException exp) {
+			throw Utils.checkForCancellation(exp);
+		} catch (TeamRepositoryException exp) {
+			throw Utils.checkForCancellation(exp);
+		}
+		return errorMessage;
+	}
+
+	/**
+	 * Logs into the repository to test the connection and validates the RTC build snapshot
+	 * 
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildSnapshotContextMap Name-Value pairs representing the snapshot owner details
+	 * @param buildSnapshot The name or UUID of the RTC snapshot
+	 * @param clientLocale The locale of the requesting client
+	 * @return an error message to display, or null if no problem
+	 * @throws Exception
+	 */
+	public String testBuildSnapshot(String serverURI, String userId, String password, int timeout, Map<String, String> buildSnapshotContextMap, String buildSnapshot, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor();
+		String errorMessage = null;
+		try {
+			AbstractBuildClient buildClient = getBuildClient();
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
+			repoConnection.testConnection(monitor.newChild(50));
+			// create the BuildSnapshotContext instance from the context map and pass it to testBuildSnapshot
+			repoConnection.testBuildSnapshot(new BuildSnapshotContext(buildSnapshotContextMap), buildSnapshot,
+					monitor.newChild(50), clientLocale);
 		} catch (RTCConfigurationException exp) {
 			errorMessage = exp.getMessage();
 		} catch (RTCValidationException exp) {
@@ -210,17 +248,15 @@ public class RTCFacade {
 		}
 	}
 	
-	public BigInteger computeIncomingChangesForStream(String serverURI, String userId,
-			String password, int timeout,
-			String buildStream, String streamChangesData, Object listener, Locale clientLocale)
-			throws Exception {
+	public BigInteger computeIncomingChangesForStream(String serverURI, String userId, String password, int timeout, String processArea,
+			String buildStream, String streamChangesData, Object listener, Locale clientLocale) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
-			return repoConnection.computeIncomingChangesForStream(buildStream, streamChangesData, clientConsole, monitor, clientLocale);
+			return repoConnection.computeIncomingChangesForStream(processArea, buildStream, streamChangesData, clientConsole, monitor, clientLocale);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -400,12 +436,14 @@ public class RTCFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
 	 * @param buildResultUUID The build result to relate build results with. It also specifies the
 	 * build configuration. May be <code>null</code> if buildWorkspace is supplied. Only one of
 	 * buildWorkspace/buildResultUUID should be supplied.
 	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
 	 * buildResultUUID is supplied. Only one of buildWorkspace/buildResultUUID
 	 * should be supplied.
+	 * @param buildSnapshotContextMap Name-Value pairs representing the snapshot owner details
 	 * @param buildSnapshot the name of the RTC build snapshot. May be <code>null</code>
 	 * @param buildStream The name of the RTC build stream. May be <code>null</code> if a
 	 * buildWorkspace or buildResultUUID is supplied. Only one of buildWorkspace/buildResultUUID/buildStream
@@ -422,14 +460,14 @@ public class RTCFacade {
 	 * @param clientLocale The locale of the requesting client
 	 * @param callConnectorTimeout user defined value for call connector timeout
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
+	 * @param previousBuildUrl - URL to the previous Jenkins build. This is written into the change log.
 	 * @return Map<String, Object> returns a map of objects see RepositoryConnection#accept for more details.
 	 * @throws Exception
 	 */
-	public Map<String, Object> accept(String serverURI, String userId, String password,
-			int timeout, String buildResultUUID, String buildWorkspace, final String buildSnapshot,
-			final String buildStream, String hjWorkspacePath, OutputStream changeLog,
-			String baselineSetName, final String previousSnapshotUUID, final Object listener, 
-			Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad) throws Exception {
+	public Map<String, Object> accept(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
+			String buildWorkspace, Map<String, String> buildSnapshotContextMap, final String buildSnapshot, final String buildStream, String hjWorkspacePath, OutputStream changeLog,
+			String baselineSetName, final String previousSnapshotUUID, final Object listener, Locale clientLocale, String callConnectorTimeout,
+			boolean acceptBeforeLoad, String previousBuildUrl) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -440,9 +478,10 @@ public class RTCFacade {
 			report = new ChangeReport(changeLog);
 		}
 		try	{
-			return repoConnection.accept(buildResultUUID, buildWorkspace, buildSnapshot, buildStream,
-					hjWorkspacePath, report, baselineSetName, previousSnapshotUUID, clientConsole, 
-					monitor, clientLocale, callConnectorTimeout, acceptBeforeLoad);
+			// create the BuildSnaphotContextMap instance from the context map and pass it to accept
+			return repoConnection.accept(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap),
+					buildSnapshot, buildStream, hjWorkspacePath, report, baselineSetName, previousSnapshotUUID, clientConsole, monitor, clientLocale,
+					callConnectorTimeout, acceptBeforeLoad, previousBuildUrl);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -456,12 +495,14 @@ public class RTCFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
 	 * @param buildResultUUID The build result to relate build results with. It also specifies the
 	 * build configuration. May be <code>null</code> if buildWorkspace or buildSnapshot or buildStream is supplied. Only one of
 	 * buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
 	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
 	 * buildResultUUID or buildSnapshot or buildStream is supplied. Only one of buildWorkspace/buildResultUUID/buildSnapshot/buildStream
 	 * should be supplied.
+	 * @param buildSnapshotContextMap Name-Value pairs representing the snapshot owner details
 	 * @param buildSnapshot The name or UUID of the RTC build snapshot. May be <code>null</code> if a
 	 * buildResultUUID or buildWorkspace or buildStream is supplied. Only one of buildWorkspace/buildResultUUID/buildSnapshot/buildStream
 	 * should be supplied.
@@ -484,23 +525,21 @@ public class RTCFacade {
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
-	public void load(String serverURI, String userId, String password,
-			int timeout, String buildResultUUID, String buildWorkspace,
-			String buildSnapshot, String buildStream, Map<String, String> buildStreamData,
-			String hjWorkspacePath,
-			String baselineSetName, final Object listener, Locale clientLocale, 
-			String parentActivityId, String connectorId, Object extProvider, PrintStream logger,
-			boolean isDeleteNeeded, boolean createFoldersForComponents, 
-			String componentsToExclude, String loadRules, boolean acceptBeforeLoad) throws Exception {
+	public void load(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
+			String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjWorkspacePath,
+			String baselineSetName, final Object listener, Locale clientLocale, String parentActivityId, String connectorId, Object extProvider,
+			PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude, String loadRules,
+			boolean acceptBeforeLoad) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try	{
-			repoConnection.load(buildResultUUID, buildWorkspace, buildSnapshot, buildStream, buildStreamData,
-					hjWorkspacePath, baselineSetName, clientConsole, monitor, clientLocale, parentActivityId, 
-					connectorId, extProvider, logger, isDeleteNeeded, createFoldersForComponents, componentsToExclude, loadRules, acceptBeforeLoad);
+			// create the BuildSnapshotContext instance from the Map and pass it to load
+			repoConnection.load(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap), buildSnapshot, buildStream, buildStreamData, hjWorkspacePath,
+					baselineSetName, clientConsole, monitor, clientLocale, parentActivityId, connectorId, extProvider, logger, isDeleteNeeded,
+					createFoldersForComponents, componentsToExclude, loadRules, acceptBeforeLoad);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -629,6 +668,7 @@ public class RTCFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
 	 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
 	 * @param buildWorkspace Name of the workspace configured in the build
 	 * @param componentsToExclude Json text specifying the list of components to exclude during load
@@ -636,8 +676,8 @@ public class RTCFacade {
 	 * @return an error message to display or null if there is no problem
 	 * @throws Exception
 	 */
-	public String testComponentsToExclude(String serverURI, String userId, String password, int timeout, boolean isStreamConfiguration,
-			String buildWorkspace, String componentsToExclude, Locale clientLocale) throws Exception {
+	public String testComponentsToExclude(String serverURI, String userId, String password, int timeout, String processArea,
+			boolean isStreamConfiguration, String buildWorkspace, String componentsToExclude, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
@@ -645,7 +685,8 @@ public class RTCFacade {
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testComponentsToExclude(isStreamConfiguration, buildWorkspace, componentsToExclude, monitor.newChild(50), clientLocale);
+			repoConnection.testComponentsToExclude(processArea, isStreamConfiguration, buildWorkspace, componentsToExclude, monitor.newChild(50),
+					clientLocale);
 		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCValidationException e) {
@@ -665,6 +706,7 @@ public class RTCFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
 	 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or a stream
 	 * @param buildWorkspace Name of the workspace configured in the build
 	 * @param loadRules Json text specifying the component to load rule file mapping
@@ -672,8 +714,8 @@ public class RTCFacade {
 	 * @return an error message to display or null if there is no problem
 	 * @throws Exception
 	 */
-	public String testLoadRules(String serverURI, String userId, String password, int timeout,
-			boolean isStreamConfiguration, String buildWorkspace, String loadRules, Locale clientLocale) throws Exception {
+	public String testLoadRules(String serverURI, String userId, String password, int timeout, String processArea, boolean isStreamConfiguration,
+			String buildWorkspace, String loadRules, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
@@ -681,7 +723,7 @@ public class RTCFacade {
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testLoadRules(isStreamConfiguration, buildWorkspace, loadRules, monitor.newChild(50), clientLocale);
+			repoConnection.testLoadRules(processArea, isStreamConfiguration, buildWorkspace, loadRules, monitor.newChild(50), clientLocale);
 		} catch (RTCConfigurationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCValidationException e) {
@@ -917,21 +959,20 @@ public class RTCFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
 	 * @param buildStream The name of the Build Stream.
 	 * @param clientLocale The locale of the requesting client
 	 * @returns the UUID of the build stream as {@link String}
 	 * @throws Exception
 	 */
-	public String getStreamUUID(String serverURI, String userId,
-			String password, int timeout,
-			String buildStream, Locale clientLocale)
-			throws Exception {
+	public String getStreamUUID(String serverURI, String userId, String password, int timeout, String processArea, String buildStream,
+			Locale clientLocale) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
-			return repoConnection.getBuildStreamUUID(buildStream,  monitor, clientLocale);
+			return repoConnection.getBuildStreamUUID(processArea, buildStream, monitor, clientLocale);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {

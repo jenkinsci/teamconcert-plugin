@@ -50,7 +50,7 @@ public class Helper {
 	public static final String COMPONENT_NAME = "componentName"; //$NON-NLS-1$
 	public static final String FILE_ITEM_ID = "fileItemId"; //$NON-NLS-1$
 	public static final String FILE_PATH = "filePath"; //$NON-NLS-1$
-	
+	private static final String previousSnapshotOwner = "team_scm_snapshotOwner"; //$NON-NLS-1$
 
 	/** 
 	 * merge two results, if both are errors only one stack trace can be included
@@ -213,6 +213,37 @@ public class Helper {
 	}
 	
 	/**
+	 * This method first checks whether the given <param>jobParameter</param> exists and is not null
+	 * If yes, then its value is returned. Otherwise, it checks whether <param>value</param> is actually
+	 * a job property. If yes and <param>resolveValue</param> is true, it is resolved and returned. 
+	 * Otherwise, the <param>value</param> is returned
+	 * @param build
+	 * @param jobParameter
+	 * @param value
+	 * @param listener
+	 * @return the value of the parameter 
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public static String parseConfigurationValue(Run<?, ?> build, String jobParameter, 
+							String value, boolean shouldResolveValue, TaskListener listener) throws IOException, InterruptedException {
+		// If a Job parameter exists and not null, then return it
+		String jobParameterValue = getStringBuildProperty(build, jobParameter, listener);
+		if (jobParameterValue != null) {
+			return jobParameterValue;
+		}
+		
+		// If jobParameterValue is null, check whether value itself is a job parameter and resolveValue is true
+		// First nullify the value if it is empty
+		value = Util.fixEmptyAndTrim(value);
+		if (Helper.isJobProperty(value) && shouldResolveValue) {
+			return Helper.resolveJobProperty(build, value, listener);
+		} else {
+			return value;
+		}
+	}
+	
+	/**
 	 * Checks whether a given string is a property like ${a} 
 	 * @param s The string to check. May be <code>null</code>
 	 * @return <code>true</code> if s is a job property 
@@ -244,7 +275,7 @@ public class Helper {
 	}
 	
 	/**
-	 * Returns the snapshot UUID from the previous build
+	 * Returns the snapshot UUID from the previous build, sometimes only a successful build
 	 * @param build
 	 * @param facade
 	 * @param loginInfo
@@ -253,11 +284,12 @@ public class Helper {
 	 * @return
 	 * @throws Exception
 	 */
-	public static String getSnapshotUUIDFromPreviousBuild(final Run<?,?> build, String toolkit, RTCLoginInfo loginInfo, String buildStream, final boolean onlyGoodBuild, Locale clientLocale) throws Exception {
+	public static Tuple<Run<?,?>, String> getSnapshotUUIDFromPreviousBuild(final Run<?,?> build, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, final boolean onlyGoodBuild, Locale clientLocale) throws Exception {
+		Tuple<Run<?,?>, String> snapshotDetails = new Tuple<Run<?,?>, String>(null, null);
 		if (buildStream == null) {
-			return null;
+			return snapshotDetails;
 		}
-		String snapshotUUID = getValueForBuildStream(new IJenkinsBuildIterator() {
+		snapshotDetails = getValueForBuildStream(new IJenkinsBuildIterator() {
 			
 			@Override
 			public Run<?,?> nextBuild(Run<?, ?> build) {
@@ -272,19 +304,31 @@ public class Helper {
 			public Run<?, ?> firstBuild() {
 				return build;
 			}
-		}, toolkit, loginInfo, buildStream, onlyGoodBuild, "team_scm_snapshotUUID", clientLocale);
+		}, toolkit, loginInfo, processArea, buildStream, onlyGoodBuild, "team_scm_snapshotUUID", clientLocale);
 		if (LOGGER.isLoggable(Level.FINEST)) {
 			LOGGER.finest("Helper.getSnapshotUUIDFromPreviousBuild : " + 
-						((snapshotUUID == null) ? "No snapshotUUID found from a previous build" : snapshotUUID));
+						((snapshotDetails.getSecond() == null) ? "No snapshotUUID found from a previous build" : snapshotDetails.getSecond()));
 		}
-		return snapshotUUID;
+		return snapshotDetails;
 	}
 	
-	public static String getStreamChangesDataFromLastBuild(final Job<?,?> job, String toolkit, RTCLoginInfo loginInfo, String buildStream, Locale clientLocale) throws Exception {
+	/**
+	 * Returns the stream change data from the previous build irrespective of its status
+	 * @param job
+	 * @param toolkit
+	 * @param loginInfo
+	 * @param processArea
+	 * @param buildStream
+	 * @param clientLocale
+	 * @return
+	 * @throws Exception
+	 */
+	public static Tuple<Run<?,?>, String> getStreamChangesDataFromLastBuild(final Job<?,?> job, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, Locale clientLocale) throws Exception {
+		Tuple<Run<?,?>, String> streamChangesData = new Tuple<Run<?,?>, String>(null, null);
 		if (buildStream == null) {
-			return null;
+			return streamChangesData;
 		}
-		String streamChangesData = getValueForBuildStream(new IJenkinsBuildIterator() {
+		streamChangesData = getValueForBuildStream(new IJenkinsBuildIterator() {
 			@Override
 			public Run<?,?> nextBuild(Run<?, ?> build) {
 				return build.getPreviousBuild();
@@ -293,59 +337,65 @@ public class Helper {
 			@Override
 			public Run<?, ?> firstBuild() {
 				return job.getLastBuild();
-			}}, toolkit, loginInfo, buildStream, false, "team_scm_streamChangesData", clientLocale);
+			}}, toolkit, loginInfo, processArea, buildStream, false, "team_scm_streamChangesData", clientLocale);
 		if (LOGGER.isLoggable(Level.FINEST)) {
 			LOGGER.finest("Helper.getStreamChangesDataFromLastBuild : " + 
-						((streamChangesData == null) ? "No stream changes data found from a previous build" : streamChangesData));
+						((streamChangesData.getSecond() == null) ? "No stream changes data found from a previous build" : streamChangesData.getSecond()));
 		}
 		return streamChangesData;
 	}
 
-	private static String getValueForBuildStream(IJenkinsBuildIterator iterator, String toolkit, RTCLoginInfo loginInfo, String buildStream, boolean onlyGoodBuild, String key, Locale clientLocale) throws Exception {
+	private static Tuple<Run<?,?>, String> getValueForBuildStream(IJenkinsBuildIterator iterator, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, boolean onlyGoodBuild, String key, Locale clientLocale) throws Exception {
 		if (buildStream == null) {
 			return null;
 		}
 		Run <?,?> build = iterator.firstBuild();
 		String value = null;
+		Run <?, ?> previousBuild = null;
 		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(toolkit, null);
-		String streamUUID = null;
+		String streamUUID =
+				// Resolve the stream and get stream UUID
+				(String) facade.invoke("getStreamUUID", new Class[] { //$NON-NLS-1$
+						String.class, // serverURI,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						String.class, // processArea
+						String.class, // buildStream,
+						Locale.class // clientLocale
+				}, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), processArea, buildStream, clientLocale);
 		while (build != null && value == null) {
 			List<RTCBuildResultAction> rtcBuildResultActions = build.getActions(RTCBuildResultAction.class);
 			if (rtcBuildResultActions.size() == 1) { // the usual case for freestyle builds (without multiple SCM) and workflow build with only one invocation of RTCScm
 				RTCBuildResultAction rtcBuildResultAction = rtcBuildResultActions.get(0);
 				if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null)) {
-					value = rtcBuildResultAction.getBuildProperties().get(key);
+					Map <String, String> buildProperties = rtcBuildResultAction.getBuildProperties();
+					String owningStreamUUID = Util.fixEmptyAndTrim(buildProperties.get(previousSnapshotOwner));
+					if (owningStreamUUID != null && owningStreamUUID.equals(streamUUID)) {
+						value = buildProperties.get(key);
+						previousBuild = build;
+					}
 				}
 			}
-			else {
-				if (streamUUID == null) {
-					// Resolve the stream and get stream UUID
-					streamUUID = (String) facade.invoke("getStreamUUID", new Class[] { //$NON-NLS-1$
-							String.class, // serverURI,
-							String.class, // userId,
-							String.class, // password,
-							int.class, // timeout,
-							String.class, // buildStream,
-							Locale.class // clientLocale
-					}, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
-							loginInfo.getTimeout(), buildStream, clientLocale);
-				}
+			else if (rtcBuildResultActions.size() > 1) {				
 				for (RTCBuildResultAction rtcBuildResultAction : rtcBuildResultActions) {
 					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null)) {
 						Map<String,String> buildProperties = rtcBuildResultAction.getBuildProperties();
-						String owningStreamUUID = Util.fixEmptyAndTrim(buildProperties.get("team_scm_snapshotOwner"));
-						if (owningStreamUUID == null) {
-							continue;
-						}
-						if (owningStreamUUID.equals(streamUUID)) {
+						String owningStreamUUID = Util.fixEmptyAndTrim(buildProperties.get(previousSnapshotOwner));
+						if (owningStreamUUID != null && owningStreamUUID.equals(streamUUID)) {
 							value = buildProperties.get(key);
+							previousBuild = build;
+							// We don't we break here to maintain the following behavior for pipeline jobs
+							// if we load the same stream multiple times, we get the the value from the last
+							// RTCBuildResultAction
 						}
 					}
 				}
 			}
 			build = iterator.nextBuild(build);
 		}
-		return value;
+		return new Tuple<Run<?,?>, String>(previousBuild, value);
 	}
 
 	/**

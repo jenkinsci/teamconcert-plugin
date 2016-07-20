@@ -30,10 +30,13 @@ import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
+import com.ibm.team.process.common.IProcessAreaHandle;
+import com.ibm.team.process.common.IProjectArea;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
+import com.ibm.team.repository.common.UUID;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceConnection.IConfigurationOp;
 import com.ibm.team.scm.client.IWorkspaceConnection.IMarkAsMergedOp;
@@ -64,6 +67,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_BUILD_DEFINITION_ID = "buildDefinitionId";
 	public static final String ARTIFACT_BUILD_ENGINE_ITEM_ID = "buildEngineItemId";
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
+	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_1= "buildResultItemId1";
+	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_2 = "buildResultItemId2";
 	public static final String ARTIFACT_PROJECT_AREA_ITEM_ID = "projectAreaItemId";
 	public static final String ARTIFACT_PROCESS_DEFINITION_ITEM_ID = "processDefinitionItemId";
 	
@@ -316,6 +321,24 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		// Delete project area and process definition, if any
 		ProcessUtil.deleteProcessArtifacts(repo, setupArtifacts);
+	}
+	
+	public void tearDownTestBuildStream_complete(ConnectionDetails connectionDetails,
+			Map<String, String> setupArtifacts, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository(); 
+		RTCFacadeTests.tearDownTestBuildStream_complete(repo, setupArtifacts);
+		tearDown(connectionDetails, setupArtifacts, progress);
+	}
+	
+	public void tearDownTestBuildSnapshot_complete(ConnectionDetails connectionDetails,
+			Map<String, String> setupArtifacts, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository(); 
+		RTCFacadeTests.tearDownTestBuildSnapshot_complete(repo, setupArtifacts);
+		tearDown(connectionDetails, setupArtifacts, progress);
 	}
 
 	public Map<String, String> setupTestBuildWorkspace(ConnectionDetails connectionDetails, String singleWorkspaceName,
@@ -1050,6 +1073,53 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 	
+	@SuppressWarnings("restriction")
+	public Map<String, String> setupTestBuildStream_basic(ConnectionDetails connectionDetails, String projectAreaName, String streamName,
+			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+
+		Map<String, String> artifactIds = setupTestProcessArea_basic(connectionDetails, projectAreaName);
+		String projectAreaId = artifactIds.get(ARTIFACT_PROJECT_AREA_ITEM_ID);
+		IProcessAreaHandle projectAreaHandle = (IProcessAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(UUID.valueOf(projectAreaId), null);
+
+		IWorkspaceConnection buildStream = SCMUtil.createStream(workspaceManager, projectAreaHandle, streamName);
+
+		// capture interesting uuids to verify against
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+
+		return artifactIds;
+	}
+	
+	public Map<String, String> setupTestBuildSnapshotUsingStream(ConnectionDetails connectionDetails, String projectAreaName, String streamName, String snapshotName,
+			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+
+		Map<String, String> artifactIds = setupTestProcessArea_basic(connectionDetails, projectAreaName);
+		String projectAreaId = artifactIds.get(ARTIFACT_PROJECT_AREA_ITEM_ID);
+		IProcessAreaHandle projectAreaHandle = (IProcessAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(UUID.valueOf(projectAreaId), null);
+
+		IWorkspaceConnection buildStream = SCMUtil.createStream(workspaceManager, projectAreaHandle, streamName);
+		
+		String componentName = buildStream + "Default Component";
+		
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, null);
+		IComponentHandle component = (IComponentHandle) pathToHandle.get(componentName);
+		IBaselineSetHandle buildSnapshot = SCMUtil.createSnapshot(buildStream, snapshotName);
+
+		// capture interesting uuids to verify against
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());		
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BASELINE_SET_ITEM_ID, buildSnapshot.getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+
+		return artifactIds;
+	}
+	
 	public Map<String, String> setupBuildSnapshot(
 			ConnectionDetails connectionDetails, String workspaceName, String snapshotName, String componentName,
 			String workspacePrefix, IProgressMonitor progress) throws Exception {
@@ -1068,7 +1138,33 @@ public class TestSetupTearDownUtil extends BuildClient {
 		RTCFacadeTests rtcFacadeTests = new RTCFacadeTests(connection);
 		return rtcFacadeTests.setupTestProcessArea_basic(projectAreaName);
 	}
+	
+	public Map<String, String> setupTestProcessArea_archiveProjectArea(ConnectionDetails connectionDetails, String projectAreaName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		RTCFacadeTests rtcFacadeTests = new RTCFacadeTests(connection);
+		return rtcFacadeTests.setupTestProcessArea_archiveProjectArea(projectAreaName);
+	}
+	
+	public Map<String, String> setupTestProcessArea_archiveTeamArea(ConnectionDetails connectionDetails, String projectAreaName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		RTCFacadeTests rtcFacadeTests = new RTCFacadeTests(connection);
+		return rtcFacadeTests.setupTestProcessArea_archiveTeamArea(projectAreaName);
+	}
 
+	public Map<String, String> setupTestBuildStream_complete(ConnectionDetails connectionDetails, String projectAreaName, String streamName)
+			throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		RTCFacadeTests rtcFacadeTests = new RTCFacadeTests(connection);
+		return rtcFacadeTests.setupTestBuildStream_complete(projectAreaName, streamName);
+	}
+
+	public Map<String, String> setupTestBuildSnapshot_complete(ConnectionDetails connectionDetails, String workspaceName, String projectAreaName,
+			String streamName, String snapshotName) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		RTCFacadeTests rtcFacadeTests = new RTCFacadeTests(connection);
+		return rtcFacadeTests.setupTestBuildSnapshot_complete(workspaceName, projectAreaName, streamName, snapshotName);
+	}
+	
 	public static IConsoleOutput getListener(final Exception[] failure) {
 		IConsoleOutput listener = new IConsoleOutput() {
 			

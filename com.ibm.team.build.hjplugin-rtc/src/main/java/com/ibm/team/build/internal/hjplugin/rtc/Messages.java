@@ -144,10 +144,35 @@ public class Messages {
     public String RepositoryConnection_build_definition_not_found(String arg1) {
     	return MessageFormat.format(getString("RepositoryConnection_build_definition_not_found"), arg1);
     }
-    
-    public String RepositoryConnection_snapshot_not_found(Object arg1) {
-        return MessageFormat.format(getString("RepositoryConnection.snapshot_not_found"), arg1);
+
+    public String RTCSnapshotUtils_snapshot_not_found(String arg1) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found"), arg1);
     }
+    
+    public String RTCSnapshotUtils_snapshot_not_found_ws(String arg1, String arg2) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found_ws"), arg1, arg2);
+    }
+
+    public String RTCSnapshotUtils_snapshot_not_found_st_pa(String arg1, String arg2, String arg3) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found_st_pa"), arg1, arg2, arg3);
+    }
+
+    public String RTCSnapshotUtils_snapshot_not_found_st_ta(String arg1, String arg2, String arg3) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found_st_ta"), arg1, arg2, arg3);
+    }
+
+    public String RTCSnapshotUtils_snapshot_not_found_pa(String arg1, String arg2) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found_pa"), arg1, arg2);
+    }
+
+    public String RTCSnapshotUtils_snapshot_not_found_ta(String arg1, String arg2) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found_ta"), arg1, arg2);
+    }
+
+    public String RTCSnapshotUtils_snapshot_not_found_st(String arg1, String arg2) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found_st"), arg1, arg2);
+    }
+
 
     /**
      * &lt;unknown>
@@ -255,7 +280,7 @@ public class Messages {
     }
 
     /**
-     * More than 1 repository workspace has the name {0}
+     * More than one repository workspace has the name {0}
      * 
      */
     public String RepositoryConnection_name_not_unique(Object arg1) {
@@ -278,13 +303,33 @@ public class Messages {
     	return MessageFormat.format(getString("RepositoryConnection.stream_not_found"), arg1);
     }
     
-    /**
-     * More than 1 Jazz SCM snapshot  has the name {0}
-     * 
-     */
-    public String RepositoryConnection_snapshot_name_not_unique(Object arg1) {
-        return MessageFormat.format(getString("RepositoryConnection.snapshot_name_not_unique"), arg1);
-    }
+	public String RTCSnapshotUtils_snapshot_name_not_unique(String arg1) {
+		return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_name_not_unique"), arg1);
+	}
+
+	public String RTCSnapshotUtils_snapshot_name_not_unique_ws(String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_name_not_unique_ws"), arg1, arg2);
+	}
+
+	public String RTCSnapshotUtils_snapshot_name_not_unique_st_pa(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_name_not_unique_st_pa"), arg1, arg2, arg3);
+	}
+
+	public String RTCSnapshotUtils_snapshot_name_not_unique_st_ta(String arg1, String arg2, String arg3) {
+		return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_name_not_unique_st_ta"), arg1, arg2, arg3);
+	}
+
+	public String RTCSnapshotUtils_snapshot_name_not_unique_pa(String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_name_not_unique_pa"), arg1, arg2);
+	}
+
+	public String RTCSnapshotUtils_snapshot_name_not_unique_ta(String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_name_not_unique_ta"), arg1, arg2);
+	}
+
+	public String RTCSnapshotUtils_snapshot_name_not_unique_st(String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_name_not_unique_st"), arg1, arg2);
+	}
     
     /**
      * CRRTC3531E: Unspecified IO error listing files for directory: "{0}"
@@ -889,27 +934,69 @@ public class Messages {
 	
 	
 	/**
-	 *  A project area or team area with item ID "{0}" cannot be found.
+	 *  A project or team area with item ID "{0}" cannot be found.
 	 */
-	public String getRepositoryConnection_process_area_not_found(String arg1) {
+	public String RepositoryConnection_process_area_not_found(String arg1) {
 		return MessageFormat.format(getString("RepositoryConnection_process_area_not_found"), arg1);
 	}
 			
 	/**
 	 * A project area with name "{0}" cannot be found.
 	 */
-	public String getRepositoryConnection_project_area_not_found(String arg1) {
+	public String RepositoryConnection_project_area_not_found(String arg1) {
 		return MessageFormat.format(getString("RepositoryConnection_project_area_not_found"), arg1);
 	}
 	
 	/**
 	 * A team area at path "{0}" cannot be found. 
 	 */
-	public String getRepositoryConnection_team_area_not_found(String arg1) {
+	public String RepositoryConnection_team_area_not_found(String arg1) {
 		return MessageFormat.format(getString("RepositoryConnection_team_area_not_found"), arg1);
 	}
 	
-    /**
+	/**
+	 * The project area "{0}" is archived.
+	 */
+	public String RepositoryConnection_project_area_archived(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection_project_area_archived"), arg1);
+	}
+	
+	/**
+	 * The team area "{0}" is archived.
+	 */
+	public String RepositoryConnection_team_area_archived(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection_team_area_archived"), arg1);
+	}
+	
+	/**
+	 * A stream with name "{0}" cannot be found in the project area "{1}".
+	 */
+	public String RepositoryConnection_stream_not_found_pa(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection_stream_not_found_pa"), arg1, arg2);
+	}
+	
+	/**
+	 * A stream with name "{0}" cannot be found in the team area "{1}".
+	 */
+	public String RepositoryConnection_stream_not_found_ta(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection_stream_not_found_ta"), arg1, arg2);
+	}
+	
+	/**
+	 * More than one stream with name "{0}" found in the project area "{1}".
+	 */
+	public String RepositoryConnection_stream_name_not_unique_pa(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection_stream_name_not_unique_pa"), arg1, arg2);
+	}
+	
+	/**
+	 * More than one stream with name "{0}" found in the team area "{1}".
+	 */
+	public String RepositoryConnection_stream_name_not_unique_ta(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection_stream_name_not_unique_ta"), arg1, arg2);
+	}
+
+	/**
      * Get the message from the bundle
      * 
      * @param key

@@ -66,7 +66,13 @@ public class RTCChangeLogParser extends ChangeLogParser {
 			digester.addBeanPropertySetter("*/baselineSetItemId"); //$NON-NLS-1$
 			digester.addBeanPropertySetter("*/baselineSetName"); //$NON-NLS-1$
 			digester.addBeanPropertySetter("*/workspaceItemId"); //$NON-NLS-1$
+			digester.addBeanPropertySetter("*/workspaceName"); //$NON-NLS-1$
+			digester.addBeanPropertySetter("*/buildDefinitionName"); //$NON-NLS-1$
+			digester.addBeanPropertySetter("*/buildDefinitionItemId"); //$NON-NLS-1$
+			digester.addBeanPropertySetter("*/streamName"); //$NON-NLS-1$
+			digester.addBeanPropertySetter("*/streamItemId"); //$NON-NLS-1$
 			digester.addBeanPropertySetter("*/isPersonalBuild"); //$NON-NLS-1$
+			digester.addBeanPropertySetter("*/previousBuildUrl"); //$NON-NLS-1$
 			
 			// When digester reads a {{<changeset>}} node it will create a {{RTCChangeLogChangeSetEntry}} object
 			digester.addObjectCreate("*/changeset", RTCChangeLogChangeSetEntry.class); //$NON-NLS-1$

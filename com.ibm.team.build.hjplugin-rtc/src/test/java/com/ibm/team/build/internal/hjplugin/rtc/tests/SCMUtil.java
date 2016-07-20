@@ -32,6 +32,7 @@ import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.internal.FileContent;
 import com.ibm.team.filesystem.common.internal.FileItem;
 import com.ibm.team.filesystem.common.internal.FilesystemFactory;
+import com.ibm.team.process.common.IProcessAreaHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
@@ -75,6 +76,15 @@ public class SCMUtil {
 		return workspaceManager.createWorkspace(workspaceManager.teamRepository().loggedInContributor(), workspaceName, "Build workspace", buildStream, buildStream, null);
 	}
 	
+	public static IWorkspaceConnection createWorkspace(IWorkspaceManager workspaceManager, String workspaceName, String description) throws TeamRepositoryException {
+		return workspaceManager.createWorkspace(workspaceManager.teamRepository().loggedInContributor(), workspaceName , description, null);
+	}
+	
+	public static IWorkspaceConnection createStream(IWorkspaceManager workspaceManager, IProcessAreaHandle processAreaHandle, String streamName)
+			throws TeamRepositoryException {
+		return workspaceManager.createStream(processAreaHandle, streamName, "The stream for the build", null);
+	}
+	
 	public static Map<String, IItemHandle> addComponent(IWorkspaceManager workspaceManager, IWorkspaceConnection workspace,
 			String componentName, String[] contents) throws TeamRepositoryException {
 		List<IComponentHandle> searchResult = workspaceManager.findComponents(IComponentSearchCriteria.FACTORY.newInstance().setExactName(componentName), 1, null);
@@ -91,6 +101,24 @@ public class SCMUtil {
 		workspace.applyComponentOperations(Collections.singletonList(componentOp), null);
 		
 		addVersionables(workspace, component, null, artifacts, contents);
+		return artifacts;
+	}
+	
+	public static Map<String, IItemHandle> addComponent(IWorkspaceManager workspaceManager, IWorkspaceConnection workspace,
+			String componentName) throws TeamRepositoryException {
+		List<IComponentHandle> searchResult = workspaceManager.findComponents(IComponentSearchCriteria.FACTORY.newInstance().setExactName(componentName), 1, null);
+		IComponent component;
+		if (searchResult.isEmpty()) {
+			component = workspaceManager.createComponent(componentName, workspaceManager.teamRepository().loggedInContributor(), null);
+		} else {
+			component = (IComponent) workspaceManager.teamRepository().itemManager().fetchCompleteItem(searchResult.get(0), IItemManager.DEFAULT, null);
+		}
+		Map<String, IItemHandle> artifacts = new HashMap<String, IItemHandle>();
+		artifacts.put(componentName, component);
+		
+		IComponentAdditionOp componentOp = workspace.componentOpFactory().addComponent(component, false);
+		workspace.applyComponentOperations(Collections.singletonList(componentOp), null);
+		
 		return artifacts;
 	}
 	
@@ -400,6 +428,22 @@ public class SCMUtil {
 		if (uuidValue != null) {
 			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 			IWorkspaceHandle toDelete = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(uuidValue), null);
+			workspaceManager.deleteWorkspace(toDelete, null);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	public static void deleteWorkspaceAndAssociatedSnapshots(ITeamRepository repo, String uuidValue) throws TeamRepositoryException {
+		if (uuidValue != null) {
+			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+			IWorkspaceHandle toDelete = (IWorkspaceHandle)IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(uuidValue), null);
+			IWorkspaceConnection wsConnection = workspaceManager.getWorkspaceConnection(toDelete, null);
+			if (wsConnection != null) {
+				List<IBaselineSetHandle> associatedSnapshots = wsConnection.getBaselineSets(null);
+				for (IBaselineSetHandle snapshot : associatedSnapshots) {
+					wsConnection.removeBaselineSet(snapshot, null);
+				}
+			}
 			workspaceManager.deleteWorkspace(toDelete, null);
 		}
 	}

@@ -58,6 +58,32 @@
     				<a href="${snapshotlink}">${snapshotName}</a>
     				<br/>
     			</j:if>
+    			
+    			<j:set var="noPreviousBuildMarker" value=""/>
+    			<j:set var="streamLink" value="${browser.getStreamLink(rtcChangeLog)}"/>
+    			<!-- Shown only for stream case -->
+    			<j:if test="${streamLink!=null}">
+			    	<j:choose>
+			    		<j:when test="${it.getPreviousBuildUrl()==null}">
+			      			${%noPreviousBuildAvailable}
+			    		</j:when>
+			   		   	<j:otherwise>
+			      			<j:choose>
+					      		<j:when test="${it.getPreviousBuildUrl()==noPreviousBuildMarker}">
+					      			${%notComparingWithPreviousBuild}							        
+					      		</j:when>
+				      			<j:otherwise>
+									<j:set var="browser" value="${it.browser}"/>
+							        <j:set var="previousUrl" value="${it.getPreviousBuildUrl()}"/>
+							      	${%comparedWithBuild} :&#160;
+							      	<a href="${browser.getFullBuildLink(previousUrl)}">${browser.getBuildNumber(previousUrl)}</a>
+			      				</j:otherwise>
+			      			</j:choose>
+	                	</j:otherwise>
+			       </j:choose>
+                   <br />
+			   </j:if>
+    			
     
     			<j:choose>
     				<j:when test="${rtcChangeLog.emptySet}">

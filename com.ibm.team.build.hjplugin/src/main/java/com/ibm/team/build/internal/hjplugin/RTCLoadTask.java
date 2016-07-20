@@ -40,7 +40,9 @@ public class RTCLoadTask extends RTCTask<Void> {
 	private String userId;
 	private Secret password;
 	private int timeout;
+	private String processArea;
 	private String buildStream;
+	private Map<String, String> buildSnapshotContextMap;
 	private String buildSnapshot;
 	private String buildWorkspace;
 	private String buildResultUUID;
@@ -71,40 +73,39 @@ public class RTCLoadTask extends RTCTask<Void> {
 	
 	/**
 	 * Task that performs accept work on the master or the slave
+	 * 
 	 * @param contextStr Context for logging
 	 * @param buildToolkit The build toolkit to use when working with the facade
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
- 	 * @param buildResultUUID The build result to relate build results with.
-	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code>
-	 * if buildDefinition or buildSnapshot or buildStream is supplied instead
-	 * @param buildSnapshot the name/uuid of the RTC build snapshot. May be <code>null</code>
-	 * if buildDefinition or buildWorkspace or buildStream is supplied instead
-	 * @param buildStream The name of the RTC build stream. May be <code>null</code> if one of 
-	 * buildDefinition or buildWorkspace or buildSnapshot is supplied instead
-	 * @param buildStreamData the additional data from stream load obtained from {@link RTCAcceptTask} 
+	 * @param processArea The name of the project or team area
+	 * @param buildResultUUID The build result to relate build results with.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if buildDefinition or
+	 *            buildSnapshot or buildStream is supplied instead
+	 * @param buildSnapshotContextMap Name-Value pair representing the snapshot owner details. May be <code>null</code>
+	 * @param buildSnapshot the name/uuid of the RTC build snapshot. May be <code>null</code> if buildDefinition or
+	 *            buildWorkspace or buildStream is supplied instead
+	 * @param buildStream The name of the RTC build stream. May be <code>null</code> if one of buildDefinition or
+	 *            buildWorkspace or buildSnapshot is supplied instead
+	 * @param buildStreamData the additional data from stream load obtained from {@link RTCAcceptTask}
 	 * @param baselineSetName The name to give the baselineSet created
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param isRemote Whether this will be executed on the Master or a slave
 	 * @param debug Whether to report debugging messages to the listener
 	 * @param clientLocale The locale of the requesting client
-	 * @param extProvider The extension provider can be <code>null</code> 
+	 * @param extProvider The extension provider can be <code>null</code>
 	 * @param isDeleteNeeded true if Jenkins job is configured to delete load directory before fetching
 	 * @param createFoldersForComponents create folders for components if true
 	 * @param componentsToExclude json text representing the list of components to exclude during load
 	 * @param loadRules json text representing the component to load rule file mapping
-	 * @throws Exception 
+	 * @throws Exception
 	 */
-	public RTCLoadTask(String contextStr, String buildToolkit,
-			String serverURI, String userId, String password, int timeout,
-			String buildResultUUID, String buildWorkspace,
-			String buildSnapshot, String buildStream,
-			Map<String, String> buildStreamData,
-			String baselineSetName, TaskListener listener,
-			boolean isRemote, boolean debug, Locale clientLocale, 
-			String parentActivityId, String connectorId, RtcExtensionProvider extProvider, boolean isDeleteNeeded, 
+	public RTCLoadTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
+			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
+			Map<String, String> buildStreamData, String baselineSetName, TaskListener listener, boolean isRemote, boolean debug, Locale clientLocale,
+			String parentActivityId, String connectorId, RtcExtensionProvider extProvider, boolean isDeleteNeeded,
 			boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad) {
     	
 		super(debug, listener);
@@ -114,7 +115,9 @@ public class RTCLoadTask extends RTCTask<Void> {
     	this.userId = userId;
     	this.password = Secret.fromString(password);
     	this.timeout = timeout;
+    	this.processArea = processArea;
     	this.buildWorkspace = buildWorkspace;
+    	this.buildSnapshotContextMap = buildSnapshotContextMap;
     	this.buildSnapshot = buildSnapshot;
     	this.buildStream = buildStream;
     	this.buildResultUUID = buildResultUUID;
@@ -151,6 +154,7 @@ public class RTCLoadTask extends RTCTask<Void> {
 			debug("serverURI " + serverURI); //$NON-NLS-1$
 			debug("userId " + userId); //$NON-NLS-1$
 			debug("timeout " + timeout); //$NON-NLS-1$
+			debug("processArea " + processArea); ////$NON-NLS-1$
 			debug("buildWorkspace " + (buildWorkspace == null ? "n/a" : buildWorkspace)); //$NON-NLS-1$ //$NON-NLS-2$
 			debug("buildSnapshot " + (buildSnapshot == null ? "n/a" : buildSnapshot)); //$NON-NLS-1$ //$NON-NLS-2$
 			debug("buildStream " + (buildStream == null ? "n/a" : buildStream)); //$NON-NLS-1$ //$NON-NLS-2$
@@ -174,8 +178,10 @@ public class RTCLoadTask extends RTCTask<Void> {
 					String.class, // userId,
 					String.class, // password,
 					int.class, // timeout,
+					String.class, //processArea,
 					String.class, // buildResultUUID,
 					String.class, // buildWorkspace,
+					Map.class, // buildSnapshotContext
 					String.class, // buildSnapshot,
 					String.class, // buildStream,
 					Map.class, // buildStreamData,
@@ -193,7 +199,7 @@ public class RTCLoadTask extends RTCTask<Void> {
 					String.class, // loadRules
 					boolean.class // acceptBeforeLoad
 			}, serverURI, userId, Secret.toString(password),
-					timeout, buildResultUUID, buildWorkspace,
+					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap,
 					buildSnapshot, buildStream, buildStreamData,
 					workspace.getAbsolutePath(),
 					baselineSetName,

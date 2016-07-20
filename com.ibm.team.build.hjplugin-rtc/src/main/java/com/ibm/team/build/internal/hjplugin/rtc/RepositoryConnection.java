@@ -15,19 +15,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,6 +40,7 @@ import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
+import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils.BuildSnapshotContext;
 import com.ibm.team.build.internal.publishing.WorkItemPublisher;
 import com.ibm.team.build.internal.scm.AcceptReport;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
@@ -59,18 +56,11 @@ import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAre
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaListener;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
-import com.ibm.team.process.client.IProcessClientService;
-import com.ibm.team.process.common.IProcessArea;
-import com.ibm.team.process.common.IProjectArea;
-import com.ibm.team.process.common.IProjectAreaHandle;
-import com.ibm.team.process.common.ITeamArea;
-import com.ibm.team.process.common.ITeamAreaHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.ServerVersionCheckException;
 import com.ibm.team.repository.client.internal.ItemManager;
 import com.ibm.team.repository.common.IContributor;
-import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
@@ -78,7 +68,6 @@ import com.ibm.team.repository.common.json.JSONArray;
 import com.ibm.team.repository.common.json.JSONObject;
 import com.ibm.team.repository.transport.client.AuthenticationException;
 import com.ibm.team.scm.client.IWorkspaceConnection;
-import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.BaselineSetFlags;
 import com.ibm.team.scm.common.IBaselineSet;
@@ -92,7 +81,6 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.VersionablePermissionDeniedException;
 import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 import com.ibm.team.scm.common.dto.IComponentSearchCriteria;
-import com.ibm.team.scm.common.dto.IWorkspaceSearchCriteria;
 
 /**
  * A connection to the Jazz repository.
@@ -201,106 +189,87 @@ public class RepositoryConnection {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(50));
 		try {
-			getWorkspace(workspaceName, monitor.newChild(50), clientLocale);
+			RTCWorkspaceUtils.getInstance().getWorkspace(workspaceName, getTeamRepository(), monitor.newChild(50), clientLocale);
 		} catch (RTCConfigurationException e) {
 			throw new RTCValidationException(e.getMessage());
 		}
 	}
 
 	/**
-	 * Returns the repository workspace with the given name. The workspace connection can
-	 * be to a workspace or a stream. If there is more than 1 repository workspace with the name
-	 * it is an error.  If there are no repository workspaces with the name it is an error.
-	 * 
-	 * @param workspaceName The name of the workspace. Never <code>null</code>
-	 * @param progress A progress monitor to check for cancellation with (and mark progress).
-	 * @param clientLocale The locale of the requesting client
-	 * @return The workspace connection for the workspace. Never <code>null</code>
-	 * @throws Exception if an error occurs
-	 */
-	protected IWorkspaceHandle getWorkspace(String workspaceName, IProgressMonitor progress, Locale clientLocale) throws Exception {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		
-		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(getTeamRepository());
-		
-		IWorkspaceSearchCriteria searchCriteria = IWorkspaceSearchCriteria.FACTORY
-				.newInstance().setExactName(workspaceName)
-				.setKind(IWorkspaceSearchCriteria.WORKSPACES);
-		List<IWorkspaceHandle> workspaceHandles = workspaceManager.findWorkspaces(searchCriteria, 2, monitor);
-		if (workspaceHandles.size() > 1) {
-			throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_name_not_unique(workspaceName));
-		}
-		if (workspaceHandles.size() == 0) {
-			throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_workspace_not_found(workspaceName));
-		}
-		return workspaceHandles.get(0);
-	}
-	
-    /**
-     * Returns a {@link IWorkspace} for a given workspaceUUID 
-     * @param repository - the Jazz repository connection
-     * @param workspaceUUID - the UUID of the workspace
-     * @param progress - progress monitor
-     * @param clientLocale - locale of the client
-     * @return a {@link IWorkspace}
-     * @throws TeamRepositoryException
-     */
-	public static IWorkspace getWorkspace(ITeamRepository repository, UUID workspaceUUID, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException  {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		IItemHandle itemHandle = IBaselineSet.ITEM_TYPE.createItemHandle(workspaceUUID, null);
-		IWorkspace workspace = (IWorkspace) repository.itemManager().fetchCompleteItem(itemHandle, ItemManager.REFRESH, monitor);
-		return workspace;
-	}
-	
-	/**
 	 * Tests that the specified stream is a valid build stream.
 	 * 
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param streamName The name of the stream. Never <code>null</code>.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
-	 * @throw RTCValidationException if validation fails 
+	 * @throw RTCValidationException if validation fails
 	 * @throw {@link TeamRepositoryException} if there is an exception when communicating with the repository
+	 * @throws Exception if an error occurs
 	 */
-	public void testBuildStream(String streamName, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException, RTCValidationException {
+	public void testBuildStream(String processAreaName, String streamName, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(50));
 		try {
-			getBuildStream(streamName, monitor.newChild(50), clientLocale);
+			getBuildStream(processAreaName, streamName, monitor.newChild(50), clientLocale);
 		} catch (RTCConfigurationException e) {
 			throw new RTCValidationException(e.getMessage());
 		}
 	}
+
+	/**
+	 * Tests that the specified snapshot is valid
+	 * 
+	 * @param buildSnapshotContext Object containing the snapshot owner details
+	 * @param snapshotNameUUID The name or UUID of the snapshot. Never <code>null</code>
+	 * @param progress A progress monitor to check for cancellation and mark progress
+	 * @param clientLocale The locale of the requesting client
+	 * @throws Exception 
+	 */
+	public void testBuildSnapshot(BuildSnapshotContext buildSnapshotContext, String snapshotNameUUID, IProgressMonitor progress, Locale clientLocale)
+			throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(50));
+		try {
+			RTCSnapshotUtils.getSnapshot(fRepository, buildSnapshotContext, snapshotNameUUID, monitor.newChild(50), clientLocale);
+		} catch (RTCConfigurationException e) {
+			throw new RTCValidationException(e.getMessage());
+		}
+	}	
 	
 	/**
 	 * Returns the repository stream with the given streams name. If there is more than 1 repository stream with the name
 	 * it is an error.  If there are no repository streams with the name it is an error.
 	 * 
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param streamName The name of the stream. Never <code>null</code>
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
 	 * @return The workspace connection for the workspace. Never <code>null</code>
 	 * @throws Exception if an error occurs
 	 */
-	public IWorkspaceHandle getBuildStream(String buildStream, IProgressMonitor progress, Locale clientLocale) throws RTCConfigurationException, TeamRepositoryException{
+	public IWorkspaceHandle getBuildStream(String processAreaName, String buildStream, IProgressMonitor progress, Locale clientLocale)
+			throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(25));
-		return RTCWorkspaceUtils.getInstance().getBuildStream(buildStream, getTeamRepository(), monitor.newChild(75), clientLocale);
+		return RTCWorkspaceUtils.getInstance().getStream(processAreaName, buildStream, getTeamRepository(), monitor.newChild(75), clientLocale);
 	}
 	
 	/**
 	 * Returns streamUUID corresponding to a build stream.
 	 * 
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param streamName - the name of the RTC stream
 	 * @param progress - a progress monitor
 	 * @param clientLocale - the locale of the client
 	 * @returns the UUID of the stream as {@link String}
 	 * @throws RTCConfigurationException if no stream is found or more than one stream with the same name is found
 	 * @throws TeamRepositoryException if there is an exception when communicating with the Jazz repository
+	 * @throws Exception if an error occurs
 	 */
-	public String getBuildStreamUUID(String buildStream, IProgressMonitor progress, Locale clientLocale) throws RTCConfigurationException, TeamRepositoryException {
+	public String getBuildStreamUUID(String processAreaName, String buildStream, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(25));
-        return RTCWorkspaceUtils.getInstance().getBuildStreamUUID(buildStream, getTeamRepository(), progress, clientLocale);
+		return RTCWorkspaceUtils.getInstance().getStreamUUID(processAreaName, buildStream, getTeamRepository(), progress, clientLocale);
 	}
 
 	/**
@@ -359,7 +328,7 @@ public class RepositoryConnection {
             	throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_build_definition_no_workspace(buildDefinitionId));
             }
 		} else {
-			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(10), clientLocale);
+			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(), monitor.newChild(10), clientLocale);
 			workspace = new BuildWorkspaceDescriptor(fRepository, workspaceHandle.getItemId().getUuidValue(), buildWorkspaceName);
 		}
 
@@ -401,12 +370,14 @@ public class RepositoryConnection {
 	 * report on the changes made to it. Update the build result with information about the build.
 	 * A call to this method should be followed by call to load method.
 	 * 
+	 * @param processAreaName - the name of the owning project or team area. May be <code>null</code>
 	 * @param buildResultUUID The id of the build result (which also contains the build request & build definition instance)
 	 * May be <code>null</code> if buildWorkspaceName is supplied. Only one of buildResultUUID/buildWorkspaceName/buildStream should be
 	 * supplied
 	 * @param buildWorkspaceName Name of the RTC build workspace (changes will be accepted into it)
 	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName/buildStream should be
 	 * supplied
+	 * @param buildSnapshotContext Object containing the snapshot owner details. May be <code>null<code>
 	 * @param buildSnapshot Name of the RTC buildsnapshot. An empty changelog with snapshot link will be created. May be <code>null</code>
 	 * @param buildStream Name of the RTC build stream
 	 * May be <code>null</code> if buildResultUUID or buildWorkspace is supplied. Only one of buildResultUUID/buildWorkspaceName/buildStream should be
@@ -420,22 +391,27 @@ public class RepositoryConnection {
 	 * @param clientLocale The locale of the requesting client
 	 * @param callConnectorTimeout user defined call connector timeout
 	 * @param acceptBeforeLoad Accept latest changes before loading if true
+	 * @param previousBuildUrl The url of the previous Jenkins build used for comparison. The url is persisted into the changelog
 	 * @return <code>Map<String, Object></code> containing build properties, and CallConnector details
 	 * @throws Exception Thrown if anything goes wrong
 	 */
-	public Map<String, Object> accept(String buildResultUUID, String buildWorkspaceName, String buildSnapshot, String buildStream, String hjFetchDestination, ChangeReport changeReport,
-			String defaultSnapshotName, final String previousSnapshotUUID, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale,
-			String callConnectorTimeout, boolean acceptBeforeLoad) throws Exception {
+	public Map<String, Object> accept(String processAreaName, String buildResultUUID, String buildWorkspaceName,
+			BuildSnapshotContext buildSnapshotContext, String buildSnapshot, String buildStream, String hjFetchDestination,
+			ChangeReport changeReport, String defaultSnapshotName, final String previousSnapshotUUID, final IConsoleOutput listener,
+			IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad,
+			String previousBuildUrl)
+			throws Exception {
 		LOGGER.finest("RepositoryConnection.accept : Enter");
 
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(1));
 		
 		if (buildStream != null) {
-			return acceptForBuildStream(buildStream, changeReport, defaultSnapshotName, previousSnapshotUUID, listener, monitor, clientLocale);
+			return acceptForBuildStream(processAreaName, buildStream, changeReport, defaultSnapshotName, previousSnapshotUUID, previousBuildUrl, 
+					listener, monitor, clientLocale);
 		}
 		else if (buildSnapshot != null) {
-			return acceptForBuildSnapshot(buildSnapshot, changeReport, listener, progress, clientLocale);
+			return acceptForBuildSnapshot(buildSnapshotContext, buildSnapshot, changeReport, listener, progress, clientLocale);
 		}
 		
 		BuildWorkspaceDescriptor workspace;
@@ -450,7 +426,7 @@ public class RepositoryConnection {
 	        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
 
 		} else {
-			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(1), clientLocale);
+			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(), monitor.newChild(1), clientLocale);
 			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName, acceptBeforeLoad);
 		}
 
@@ -514,10 +490,17 @@ public class RepositoryConnection {
             	throw new InterruptedException();
             }
             if (changeReport != null) {
+	            	IBuildDefinition definition = null;
+	        		if (buildResultHandle != null) {
+	        			IBuildResult result = (IBuildResult) fRepository.itemManager().fetchPartialItem(buildResultHandle, ItemManager.REFRESH, Arrays.asList(new String[] {IBuildResult.PROPERTY_BUILD_DEFINITION}), monitor.newChild(1) );
+	        			definition = (IBuildDefinition) fRepository.itemManager().fetchPartialItem(result.getBuildDefinition(), ItemManager.REFRESH, Arrays.asList(new String[] {IBuildDefinition.PROPERTY_ID}), monitor.newChild(1));
+	        		}
 		            // build change report
 		            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
 		            changeReportBuilder.populateChangeReport(changeReport,
-		            		workspaceConnection.getResolvedWorkspace(), acceptReport,
+		            		workspaceConnection.getResolvedWorkspace(), workspaceConnection.getName(),
+		            		acceptReport,
+		            		(definition != null) ? definition : null, (definition != null) ? definition.getId() : null,
 		            		listener, monitor.newChild(2));
             }
             
@@ -525,7 +508,7 @@ public class RepositoryConnection {
         	if (changeReport != null) {
 	            // build change report
 	            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-	            changeReportBuilder.populateChangeReport(changeReport,
+	            changeReportBuilder.populateChangeReport(changeReport, 
 	            		buildConfiguration.isPersonalBuild(),
 	            		listener);
         	}
@@ -567,12 +550,14 @@ public class RepositoryConnection {
 	/**
 	 * Load the build workspace. This call is expected to follow a call to accept method.
 	 * 
+	 * @param processAreaName - the name of the owning project or team area. May be <code>null</code>
 	 * @param buildResultUUID The id of the build result (which also contains the build request & build definition instance)
 	 * May be <code>null</code> if buildWorkspaceName is supplied. Only one of buildResultUUID/buildWorkspaceName should be
 	 * supplied
 	 * @param buildWorkspaceName Name of the RTC build workspace (changes will be accepted into it)
 	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName should be
 	 * supplied
+	 * @param buildSnapshotContext Object containing the snapshot owner details. May be <code>null</code>
 	 * @param buildSnapshot The name or UUID of the RTC build snapshot.
 	 * @param buildStream The name or UUID of the RTC build stream.
 	 * @param buildStreamData The additional stream data for stream load.
@@ -592,10 +577,11 @@ public class RepositoryConnection {
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 * @throws Exception Thrown if anything goes wrong
 	 */
-	public void load(String buildResultUUID, String buildWorkspaceName, String buildSnapshot, String buildStream,
-			Map<String, String> buildStreamData, String hjFetchDestination, String defaultSnapshotName, final IConsoleOutput listener,
-		    IProgressMonitor progress, Locale clientLocale, String parentActivityId, String connectorId, Object extProvider, final PrintStream logger, 
-			boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad) throws Exception {
+	public void load(String processAreaName, String buildResultUUID, String buildWorkspaceName, BuildSnapshotContext buildSnapshotContext,
+			String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjFetchDestination, String defaultSnapshotName,
+			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String parentActivityId, String connectorId,
+			Object extProvider, final PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude,
+			String loadRules, boolean acceptBeforeLoad) throws Exception {
 		 LOGGER.finest("RepositoryConnection.load : Enter");
 		
         // Lets get same workspaceConnection as created by accept call so that if 
@@ -620,12 +606,13 @@ public class RepositoryConnection {
                         buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
 		} else if (buildWorkspaceName != null && buildWorkspaceName.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_workspace_configuration());
-			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(1), clientLocale);
+			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
+					monitor.newChild(1), clientLocale);
 			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName, acceptBeforeLoad);
 		} else if (buildSnapshot != null && buildSnapshot.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_snapshot_configuration());
 			String workspaceNamePrefix = getWorkspaceNamePrefix();
-			IBaselineSet baselineSet = RTCSnapshotUtils.getSnapshot(getTeamRepository(), buildSnapshot, monitor.newChild(1), clientLocale);
+			IBaselineSet baselineSet = RTCSnapshotUtils.getSnapshot(getTeamRepository(), buildSnapshotContext, buildSnapshot, monitor.newChild(1), clientLocale);
 			IContributor contributor = fRepository.loggedInContributor();
 			buildConfiguration.initialize(baselineSet, contributor, workspaceNamePrefix, listener, clientLocale, monitor.newChild(3));
 		} else if (buildStream != null && buildStream.length() > 0) {
@@ -641,9 +628,9 @@ public class RepositoryConnection {
 			IWorkspace workspace = null;
 			try {
 				IBaselineSet baselineSet = RTCSnapshotUtils.getSnapshotByUUID(getTeamRepository(), snapshotUUID, monitor.newChild(1), clientLocale);
-				workspace = getWorkspace(getTeamRepository(), UUID.valueOf(workspaceUUID), monitor.newChild(3), clientLocale);
+				workspace = RTCWorkspaceUtils.getInstance().getWorkspace(UUID.valueOf(workspaceUUID), getTeamRepository(), monitor.newChild(3), clientLocale);
 				IContributor contributor = fRepository.loggedInContributor();
-		    	IWorkspaceHandle streamHandle = getBuildStream(buildStream, monitor.newChild(1), clientLocale);
+				IWorkspaceHandle streamHandle = getBuildStream(processAreaName, buildStream, monitor.newChild(1), clientLocale);
 				buildConfiguration.initialize(streamHandle, buildStream, workspace, baselineSet, contributor, monitor.newChild(3));
 			} catch (Exception exp) {
 				if (workspace != null) {
@@ -903,7 +890,8 @@ public class RepositoryConnection {
 	        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
 
 		} else {
-			IWorkspaceHandle workspaceHandle = getWorkspace(buildWorkspaceName, monitor.newChild(1), clientLocale);
+			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
+					monitor.newChild(1), clientLocale);
 			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName);
 		}
 		
@@ -971,7 +959,9 @@ public class RepositoryConnection {
 		            // build change report
 		            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
 		            changeReportBuilder.populateChangeReport(changeReport,
-		            		workspaceConnection.getResolvedWorkspace(), acceptReport,
+		            		workspaceConnection.getResolvedWorkspace(), workspaceConnection.getName(),
+		            		acceptReport,
+		            		null, null,
 		            		listener, monitor.newChild(2));
             }
             
@@ -1168,7 +1158,8 @@ public class RepositoryConnection {
 		
 		IWorkspaceHandle personalBuildWorkspace = null;
 		if (personalBuildWorkspaceName != null && personalBuildWorkspaceName.length() > 0) {
-			personalBuildWorkspace = getWorkspace(personalBuildWorkspaceName, monitor.newChild(25), clientLocale);
+			personalBuildWorkspace = RTCWorkspaceUtils.getInstance().getWorkspace(personalBuildWorkspaceName, getTeamRepository(),
+					monitor.newChild(25), clientLocale);
 		}
 		BuildConnection buildConnection = new BuildConnection(getTeamRepository());
 		IBuildResultHandle buildResult = buildConnection.createBuildResult(buildDefinition,
@@ -1321,6 +1312,7 @@ public class RepositoryConnection {
 	 * Given a build stream, find whether the stream has new changes when compared to some previous state 
 	 * by first computing the state of the stream and subtracting it from the previous state.
 	 *  
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param buildStream - the stream name
 	 * @param streamChangesData - the previous state of the stream.
 	 * @param clientConsole
@@ -1331,9 +1323,10 @@ public class RepositoryConnection {
 	 * @throws RTCConfigurationException - if there is no stream with the given name or more than one stream with the same name. 
 	 * @throws IOException - if there is an error computing stream state.
 	 * @throws NoSuchAlgorithmException - if there is an error computing stream state. 
+	 * @throws Exception if an error occurs
 	 */
-	public BigInteger computeIncomingChangesForStream(String buildStream, String streamChangesData,
-			IConsoleOutput clientConsole, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException, IOException, NoSuchAlgorithmException {		
+	public BigInteger computeIncomingChangesForStream(String processAreaName, String buildStream, String streamChangesData,
+			IConsoleOutput clientConsole, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		if (buildStream == null) {
 			throw new RTCConfigurationException("Stream name cannot be null");
@@ -1346,7 +1339,7 @@ public class RepositoryConnection {
 		
 		// Get component entries for all components in the stream and compute the digest from concatenating 
 		// item ids of ChangeHistory of each component 
-		IWorkspaceHandle streamHandle = getBuildStream(buildStream, monitor.newChild(30), clientLocale);
+		IWorkspaceHandle streamHandle = getBuildStream(processAreaName, buildStream, monitor.newChild(30), clientLocale);
 		BigInteger streamDataHash = RTCWorkspaceUtils.getInstance().getDigestNumber(getTeamRepository(), streamHandle, monitor.newChild(10));
 
 		return (streamDataHash.subtract(previousStreamHash));
@@ -1363,25 +1356,27 @@ public class RepositoryConnection {
 	 * <li>Write the change report into change log</li>
 	 * <li>Add some properties to build properties and store it in the map (which is the return value) </li>
 	 * </ol>
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param buildStream - the name of the RTC stream
 	 * @param changeReport - the change report to which the change log has to be written into
 	 * @param defaultSnapshotName - the default name for the snapshot that is to be created 
 	 * @param previousSnapshotUUID - the UUID of the previous snapshot
+	 * @param previousBuildUrl - the url of the previous Jenkins build from which the previous snapshot uuid was taken
 	 * @param listener
 	 * @param progress
 	 * @param clientLocale
 	 * @return a {@link Map} of String to {@link Object}s
 	 * @throws {@link Exception} - if there is any error during the operation
 	 */
-	private Map<String, Object> acceptForBuildStream(final String buildStream, final ChangeReport changeReport, final String defaultSnapshotName, 
-						final String previousSnapshotUUID, final IConsoleOutput listener, final IProgressMonitor progress,
-						final Locale clientLocale) throws Exception {
+	private Map<String, Object> acceptForBuildStream(final String processAreaName, final String buildStream, final ChangeReport changeReport,
+			final String defaultSnapshotName, final String previousSnapshotUUID, final String previousBuildUrl,
+			final IConsoleOutput listener, final IProgressMonitor progress, final Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
         Map<String, Object> result = new HashMap<String, Object>();
 
 		IContributor contributor = fRepository.loggedInContributor();
-    	IWorkspaceHandle streamHandle = getBuildStream(buildStream, monitor.newChild(1), clientLocale);
+		IWorkspaceHandle streamHandle = getBuildStream(processAreaName, buildStream, monitor.newChild(1), clientLocale);
     	
     	String workspaceName = getWorkspaceNamePrefix() + "_" + Long.toString(System.currentTimeMillis());
     	String snapshotName = defaultSnapshotName;
@@ -1412,7 +1407,7 @@ public class RepositoryConnection {
 			
 			// Build the change report
 			if (previousSnapshotUUID != null) {
-				IBaselineSetHandle previousSnapshot = RTCSnapshotUtils.getSnapshot(getTeamRepository(), previousSnapshotUUID, monitor.newChild(1), clientLocale);
+				IBaselineSetHandle previousSnapshot = RTCSnapshotUtils.getSnapshotByUUID(getTeamRepository(), previousSnapshotUUID, monitor.newChild(1), clientLocale);
 				// TODO do we need to exclude components from components to exclude
 				// Create the changeReport
 				IChangeHistorySyncReport compareReport = SCMPlatform.getWorkspaceManager(getTeamRepository()).compareBaselineSets(baselineSet, previousSnapshot, null, monitor.newChild(2));
@@ -1420,13 +1415,14 @@ public class RepositoryConnection {
 		            // build change report
 		            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
 		            changeReportBuilder.populateChangeReport(changeReport,
-		            		streamConnection.getResolvedWorkspace(), baselineSet, snapshotName, compareReport,
-		            		listener, monitor.newChild(2));
+		            		streamConnection.getResolvedWorkspace(), streamConnection.getName(), 
+		            		baselineSet, snapshotName, compareReport,
+		            		previousBuildUrl, listener, monitor.newChild(2));
 		        	changeReport.prepareChangeSetLog();
 				}
 			} else { // Fill in just the snapshot UUID in the change log
 				ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-				changeReportBuilder.populateChangeReport(changeReport, baselineSet, snapshotName, listener, monitor.newChild(10));
+				changeReportBuilder.populateChangeReport(changeReport, streamConnection.getResolvedWorkspace(), streamConnection.getName(), baselineSet, snapshotName, listener, monitor.newChild(10));
 				changeReport.prepareChangeSetLog();
 			}
 			
@@ -1465,25 +1461,27 @@ public class RepositoryConnection {
 	 * Since a snapshot is an immutable object, there are no changes to accept/discard.
 	 * A change report containing the snapshot link is created and written to the changelog file.
 	 * Build properties is populated with team_scm_snapshotUUD value. 
+	 * @param buildSnapshotContext Object containing the snapshot owner details
 	 * @param buildSnapshot  the name or itemid of the RTC snapshot.
 	 * @param changeReport - the change report to which the changelog has to be written into.
 	 * @param listener
 	 * @param progress
 	 * @param clientLocale
 	 * @return {@link Map} from keys to {@link Object}
+	 * @throws Exception 
 	 * @throws {@link RTCConfigurationException} - if there is no snapshot with the given name or UUID or more than snapshot with the same name 
 	 * @throws {@link TeamRepositoryException} - if there is any other error when communicating with RTC repository
 	 * @throws {@link IOException} - if there any error when writing the changelog.
 	 */
-	private Map<String, Object> acceptForBuildSnapshot(final String buildSnapshot, final ChangeReport changeReport, 
+	private Map<String, Object> acceptForBuildSnapshot(BuildSnapshotContext buildSnapshotContext, final String buildSnapshot, final ChangeReport changeReport, 
 									final IConsoleOutput listener, final IProgressMonitor progress, 
-									final Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException, IOException {
+									final Locale clientLocale) throws Exception {
 
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
         Map<String, Object> result = new HashMap<String, Object>();
 
 		// Fetch the build snapshot
-		IBaselineSet baselineSet = RTCSnapshotUtils.getSnapshot(getTeamRepository(), buildSnapshot, monitor.newChild(40), clientLocale);
+		IBaselineSet baselineSet = RTCSnapshotUtils.getSnapshot(getTeamRepository(), buildSnapshotContext, buildSnapshot, monitor.newChild(40), clientLocale);
 
 		// build change report
 		if (changeReport != null) {
@@ -1510,6 +1508,7 @@ public class RepositoryConnection {
 	/**
 	 * Validate if the specified components exist in the repository and included in the given workspace.
 	 * 
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param isStreamConfiguration Flag that determines if the <code>workspaceName</code> corresponds to a workspace or a stream
 	 * @param workspaceName Name of the workspace specified in the build configuration
 	 * @param componentsToExclude Json text specifying the list of components to exclude
@@ -1517,13 +1516,15 @@ public class RepositoryConnection {
 	 * @param clientLocale The locale of the requesting client
 	 * @throws Exception
 	 */
-	public void testComponentsToExclude(boolean isStreamConfiguration, String workspaceName, String componentsToExclude, IProgressMonitor progress,
+	public void testComponentsToExclude(String processAreaName, boolean isStreamConfiguration, String workspaceName, String componentsToExclude,
+			IProgressMonitor progress,
 			Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(40));
 		try {
-			IWorkspaceHandle workspaceHandle = isStreamConfiguration ? getBuildStream(workspaceName, monitor.newChild(40), clientLocale)
-					: getWorkspace(workspaceName, monitor.newChild(40), clientLocale);
+			IWorkspaceHandle workspaceHandle = isStreamConfiguration ? getBuildStream(processAreaName, workspaceName, monitor.newChild(40),
+					clientLocale)
+					: RTCWorkspaceUtils.getInstance().getWorkspace(workspaceName, getTeamRepository(), monitor.newChild(40), clientLocale);
 			BuildWorkspaceDescriptor wsDescriptor = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(),
 					workspaceName);
 			IWorkspaceConnection wsConnection = wsDescriptor.getConnection(fRepositoryManager, false, monitor.newChild(5));
@@ -1540,6 +1541,7 @@ public class RepositoryConnection {
 	/**
 	 * Validate if the specified components/load rule files exist in the repository and included in the given workspace.
 	 * 
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param isStreamConfiguration Flag that determines if the <code>workspaceName</code> corresponds to a workspace or a stream
 	 * @param workspaceName Name of the workspace specified in the build configuration
 	 * @param loadRules Json text specifying the component-to-load-rule file mapping
@@ -1547,12 +1549,14 @@ public class RepositoryConnection {
 	 * @param clientLocale The locale of the requesting client
 	 * @throws Exception
 	 */
-	public void testLoadRules(boolean isStreamConfiguration, String workspaceName, String loadRules, IProgressMonitor progress, Locale clientLocale) throws Exception {
+	public void testLoadRules(String processAreaName, boolean isStreamConfiguration, String workspaceName, String loadRules,
+			IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(40));
 		try {
-			IWorkspaceHandle workspaceHandle = isStreamConfiguration ? getBuildStream(workspaceName, monitor.newChild(40), clientLocale)
-					: getWorkspace(workspaceName, monitor.newChild(40), clientLocale);
+			IWorkspaceHandle workspaceHandle = isStreamConfiguration ? getBuildStream(processAreaName, workspaceName, monitor.newChild(40),
+					clientLocale)
+					: RTCWorkspaceUtils.getInstance().getWorkspace(workspaceName, getTeamRepository(), monitor.newChild(40), clientLocale);
 			BuildWorkspaceDescriptor wsDescriptor = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(),
 					workspaceName);
 			IWorkspaceConnection wsConnection = wsDescriptor.getConnection(fRepositoryManager, false, monitor.newChild(5));
@@ -1570,16 +1574,16 @@ public class RepositoryConnection {
 	/**
 	 * Validate if the given project/team area exists in the repository.
 	 * 
-	 * @param processArea Name of the project area/team area
+	 * @param processAreaName - the name of the owning project or team area
 	 * @param progress Progress monitor
 	 * @param clientLocale The locale of the requesting client
 	 * @throws Exception
 	 */
-	public void testProcessArea(String processArea, IProgressMonitor progress, Locale clientLocale) throws Exception {
+	public void testProcessArea(String processAreaName, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(40));
 		try {
-			getProcessAreaByName(processArea, progress, clientLocale);
+			RTCWorkspaceUtils.getInstance().getProcessAreaByName(processAreaName, fRepository, progress, clientLocale);
 		} catch (RTCConfigurationException e) {
 			throw new RTCValidationException(e.getMessage());
 		}
@@ -2055,108 +2059,6 @@ public class RepositoryConnection {
 		return versionableHandle.getItemId().getUuidValue();
 	}
 
-	/**
-	 * Retrieve the project area/team area instance with the given UUID/name.
-	 * 
-	 * @param processArea Name or UUID of the project area/team area
-	 * @param progress Progress monitor
-	 * @param clientLocale The locale of the requesting client
-	 * @return Project Area/Client Area instance
-	 * @throws RTCConfigurationException
-	 * @throws TeamRepositoryException
-	 * @throws URISyntaxException
-	 * @throws UnsupportedEncodingException
-	 */
-	private IProcessArea getProcessArea(String processArea, IProgressMonitor progress, Locale clientLocale) throws RTCConfigurationException,
-			TeamRepositoryException, URISyntaxException, UnsupportedEncodingException {
-		try {
-			// check if we are provided with an UUID
-			UUID processAreaUUID = UUID.valueOf(processArea);
-			return getProcessAreaByUUID(processAreaUUID, progress, clientLocale);
-		} catch (IllegalArgumentException e) {
-			// if it is not an UUID then fetch by name
-			return getProcessAreaByName(processArea, progress, clientLocale);
-		}
-	}
-
-	/**
-	 * Fetch the project area/team area instance with the given UUID.
-	 * 
-	 * @param processAreaUUID UUID of the project area/team area.
-	 * @param progress Progress monitor
-	 * @param clientLocale The locale of the requesting client
-	 * @return Project Area/Team Area instance
-	 * @throws RTCConfigurationException
-	 * @throws TeamRepositoryException
-	 */
-	private IProcessArea getProcessAreaByUUID(UUID processAreaUUID, IProgressMonitor progress, Locale clientLocale) throws RTCConfigurationException,
-			TeamRepositoryException {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		IProcessArea processArea = null;
-		IProjectAreaHandle projectAreaHandle = (IProjectAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(fRepository, processAreaUUID, null);
-		try {
-			processArea = (IProcessArea)fRepository.itemManager().fetchCompleteItem(projectAreaHandle, IItemManager.DEFAULT, monitor.newChild(50));
-		} catch (ItemNotFoundException e) {
-			// ignore might not be a project area
-		}
-		if (processArea != null) {
-			monitor.worked(50);
-			return processArea;
-		}
-		ITeamAreaHandle teamAreaHandle = (ITeamAreaHandle)ITeamArea.ITEM_TYPE.createItemHandle(fRepository, processAreaUUID, null);
-		try {
-			processArea = (IProcessArea)fRepository.itemManager().fetchCompleteItem(teamAreaHandle, IItemManager.DEFAULT, monitor.newChild(50));
-		} catch (ItemNotFoundException e) {
-			// ignore and throw an exception
-		}
-		if (processArea == null) {
-			throw new RTCConfigurationException(Messages.get(clientLocale)
-					.getRepositoryConnection_process_area_not_found(processAreaUUID.getUuidValue()));
-		}
-		return processArea;
-	}
-
-	/**
-	 * Fetch the project area/team area instance with the given name.
-	 * 
-	 * @param processAreaName Name of the project area or team area. For team area, specify the name of all team areas
-	 *            in the hierarchy, starting with the name of the project area, with each of the names separated by "/".
-	 *            For an instance 'JKE Banking/Development/User Interface' identifies the 'User Interface' team area
-	 *            which is under the 'Development' team area in the 'JKE Banking' project area.
-	 * 
-	 * @param progress Progress monitor
-	 * @param clientLocale The locale of the requesting client
-	 * @return IProcessArea Project Area/Team Area instance
-	 * @throws RTCConfigurationException
-	 * @throws TeamRepositoryException
-	 * @throws URISyntaxException
-	 * @throws UnsupportedEncodingException
-	 */
-	private IProcessArea getProcessAreaByName(String processAreaName, IProgressMonitor progress, Locale clientLocale)
-			throws RTCConfigurationException, TeamRepositoryException, URISyntaxException, UnsupportedEncodingException {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		IProcessClientService processClientService = (IProcessClientService)fRepository.getClientLibrary(IProcessClientService.class);
-		// encode the individual name segments and reconstruct the string
-		StringTokenizer tokenizer = new StringTokenizer(processAreaName, Constants.PROCESS_AREA_PATH_SEPARATOR);
-		StringBuilder encodedProcessAreaName = new StringBuilder();
-		while (tokenizer.hasMoreTokens()) {
-			encodedProcessAreaName.append(URLEncoder.encode(tokenizer.nextToken(), Constants.DFLT_ENCODING).replace("+", "%20")); //$NON-NLS-1$ //$NON-NLS-2$
-			if (tokenizer.hasMoreTokens()) {
-				encodedProcessAreaName.append(Constants.PROCESS_AREA_PATH_SEPARATOR);
-			}
-		}
-		IProcessArea processArea = processClientService.findProcessArea(new URI(encodedProcessAreaName.toString()),
-				IProcessClientService.ALL_PROPERTIES, monitor);
-		if (processArea == null) {
-			if (processAreaName.contains(Constants.PROCESS_AREA_PATH_SEPARATOR)) {
-				throw new RTCConfigurationException(Messages.get(clientLocale).getRepositoryConnection_team_area_not_found(processAreaName));
-			} else {
-				throw new RTCConfigurationException(Messages.get(clientLocale).getRepositoryConnection_project_area_not_found(processAreaName));
-			}
-		}
-		return processArea;
-	}
-	
 	/**
 	 * Inner class is used to represent the type of load configured in the build in both the build execution and field
 	 * validation scenarios. We use different parameters to determine the load configuration across these two scenarios.
