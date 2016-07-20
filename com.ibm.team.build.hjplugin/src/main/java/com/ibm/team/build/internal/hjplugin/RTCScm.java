@@ -16,6 +16,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.model.Saveable;
 import hudson.model.TaskListener;
 import hudson.model.AbstractProject;
 import hudson.model.Cause;
@@ -35,6 +36,7 @@ import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
 import hudson.scm.SCM;
 import hudson.security.ACL;
+import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
 import hudson.util.ListBoxModel;
@@ -75,6 +77,9 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
+import com.ibm.team.build.internal.hjplugin.loadrule.LoadRuleEntry;
+import com.ibm.team.build.internal.hjplugin.loadrule.LoadRuleUtils;
+import com.ibm.team.build.internal.hjplugin.loadrule.LoadRuleEntry.LoadRuleEntryDescriptor;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.Tuple;
@@ -139,7 +144,8 @@ public class RTCScm extends SCM {
 	private boolean clearLoadDirectory;
 	private boolean createFoldersForComponents;
 	private String componentsToExclude; // file having details on components to be excluded during load
-	private String loadRules; // file having details on mapping between components and their load rules
+	private boolean useLoadRules;
+	private List<LoadRuleEntry> loadRules; // file having details on mapping between components and their load rules
 	private String acceptBeforeLoad;
 	private boolean generateChangelogWithGoodBuild;
 	
@@ -218,7 +224,8 @@ public class RTCScm extends SCM {
 		public boolean clearLoadDirectory;
 		public boolean createFoldersForComponents;
 		public String componentsToExclude;
-		public String loadRules;
+		public boolean useLoadRules;
+		public List<LoadRuleEntry> loadRules;
 		private String acceptBeforeLoad = "true";
 		private boolean generateChangelogWithGoodBuild;
 		private String processArea;
@@ -268,12 +275,20 @@ public class RTCScm extends SCM {
 		public String getComponentsToExclude() {
 			return componentsToExclude;
 		}
+		@DataBoundSetter
+		public void setUseLoadRules(boolean useLoadRules) {
+		    this.useLoadRules = useLoadRules;
+		}
 		
-		public void setLoadRules(String loadRules) {
+		public boolean isUseLoadRules() {
+		    return useLoadRules;
+		}
+		@DataBoundSetter
+		public void setLoadRules(List<LoadRuleEntry> loadRules) {
 			this.loadRules = loadRules;
 		}
 		
-		public String getLoadRules() {
+		public List<LoadRuleEntry> getLoadRules() {
 			return loadRules;
 		}
 		
@@ -515,6 +530,9 @@ public class RTCScm extends SCM {
 			return getBuildToolkit(buildTool, Hudson.getInstance(), listener);
 		}
 		
+        	public List<LoadRuleEntryDescriptor> getLoadRuleEntryDescriptors() {
+        	    return LoadRuleEntryDescriptor.all();
+        	}
 		@Override
 		public boolean isApplicable(Job project) {
 			return true;
@@ -1273,89 +1291,91 @@ public class RTCScm extends SCM {
 			return Helper.mergeValidationResults(connectInfoCheck.validationResult, componentsToExcludeCheck);
 		}
 
-		/**
-		 * Validate the component-to-load-rule file mapping.
-		 * 
-		 * @param project The Job that is going to be run
-		 * @param override Whether to override the global connection settings
-		 * @param buildTool The build tool selected to be used in builds (Job setting)
-		 * @param serverURI The RTC server uri (Job setting)
-		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
-		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
-		 *            credentials id was not supplied. (Job setting)
-		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
-		 *            password if the credentials id was not supplied. (Job setting)
-		 * @param credId Credential id that will identify the user id and password to use (Job setting)
-		 * @param timeout The timeout period for the connection (Job setting)
-		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
-		 *            connection. (Job setting)
-		 * @param processArea The name of the project or team area
-		 * @param buildTypeStr Type of the build configuration
-		 * @param buildWorkspace The workspace to build from
-		 * @param loadRules Path to the file specifying the component-to-load-rule file mapping
-		 * 
-		 * @return Whether the component-to-load-rule file mapping is valid or not. Never <code>null</code>
-		 */
-		public FormValidation doValidateLoadRules(@AncestorInPath Job<?, ?> project, @QueryParameter("overrideGlobal") final String override,
-				@QueryParameter("buildTool") String buildTool, @QueryParameter("serverURI") String serverURI,
-				@QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId, @QueryParameter("password") String password,
-				@QueryParameter("passwordFile") String passwordFile, @QueryParameter("credentialsId") String credId,
-				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit, @QueryParameter("processArea") String processArea, 
-				@QueryParameter("value") String buildTypeStr, @QueryParameter("buildWorkspace") String buildWorkspace, 
-				@QueryParameter("buildStream") String buildStream, @QueryParameter("loadRules") String loadRules) {
-
-			LOGGER.finest("DescriptorImpl.doValidateLoadRules: Begin"); //$NON-NLS-1$
-
-			// first validate if the user has specified the
-			// component-to-load-rule mapping file path
-			if (loadRules == null || loadRules.trim().length() == 0) {
-				return FormValidation.error(Messages.RTCScm_load_rule_mapping_specify_file_path());
-			}
-
-			// validate if the required fields are provided
-			// this validation does not require any server call, so it is better
-			// to fail upright than failing after validating other details like
-			// workspace which requires a server call
-			String loadRulesJson = null;
-			try {
-				loadRulesJson = Helper.validateAndGetLoadRulesJson(loadRules);
-			} catch (Exception e) {
-				return FormValidation.error(e, e.getMessage());
-			}
-			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
-			boolean avoidUsingToolkit;
-			if (!overrideGlobalSettings) {
-				// use the global settings instead of the ones supplied
-				buildTool = getGlobalBuildTool();
-				serverURI = getGlobalServerURI();
-				credId = getGlobalCredentialsId();
-				userId = getGlobalUserId();
-				password = getGlobalPassword();
-				passwordFile = getGlobalPasswordFile();
-				timeout = Integer.toString(getGlobalTimeout());
-				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
-			} else {
-				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
-			}
-			// validate the info for connecting to the server (including toolkit
-			// & auth info).
-			ValidationResult connectInfoCheck = validateConnectInfo(project, !overrideGlobalSettings, buildTool, serverURI, userId, password, passwordFile,
-					credId, timeout, avoidUsingToolkit);
-			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
-				return connectInfoCheck.validationResult;
-			}
-
-			// conenct info is good, now validate the component-to-load-rule
-			// file mapping entries
-			boolean isStreamConfiguration = BUILD_STREAM_TYPE.equals(buildTypeStr);
-			if (isStreamConfiguration) {
-				buildWorkspace = buildStream;
-			}
-			FormValidation loadRulesCheck = checkLoadRules(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
-					processArea, isStreamConfiguration, buildWorkspace, loadRulesJson);
-
-			return Helper.mergeValidationResults(connectInfoCheck.validationResult, loadRulesCheck);
-		}
+//		//This validation is too expensive. If any validation has to be done, it may be better to do so in the LoadRuleEntryDescriptor instead.
+//		
+//		/**
+//		 * Validate the component-to-load-rule file mapping.
+//		 * 
+//		 * @param project The Job that is going to be run
+//		 * @param override Whether to override the global connection settings
+//		 * @param buildTool The build tool selected to be used in builds (Job setting)
+//		 * @param serverURI The RTC server uri (Job setting)
+//		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
+//		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
+//		 *            credentials id was not supplied. (Job setting)
+//		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
+//		 *            password if the credentials id was not supplied. (Job setting)
+//		 * @param credId Credential id that will identify the user id and password to use (Job setting)
+//		 * @param timeout The timeout period for the connection (Job setting)
+//		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
+//		 *            connection. (Job setting)
+//		 * @param processArea The name of the project or team area
+//		 * @param buildTypeStr Type of the build configuration
+//		 * @param buildWorkspace The workspace to build from
+//		 * @param loadRules Path to the file specifying the component-to-load-rule file mapping
+//		 * 
+//		 * @return Whether the component-to-load-rule file mapping is valid or not. Never <code>null</code>
+//		 */
+//		public FormValidation doValidateLoadRules(@AncestorInPath Job<?, ?> project, @QueryParameter("overrideGlobal") final String override,
+//				@QueryParameter("buildTool") String buildTool, @QueryParameter("serverURI") String serverURI,
+//				@QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId, @QueryParameter("password") String password,
+//				@QueryParameter("passwordFile") String passwordFile, @QueryParameter("credentialsId") String credId,
+//				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit, @QueryParameter("processArea") String processArea, 
+//				@QueryParameter("value") String buildTypeStr, @QueryParameter("buildWorkspace") String buildWorkspace, 
+//				@QueryParameter("buildStream") String buildStream, @QueryParameter("loadRules") String loadRules) {
+//
+//			LOGGER.finest("DescriptorImpl.doValidateLoadRules: Begin"); //$NON-NLS-1$
+//
+//			// first validate if the user has specified the
+//			// component-to-load-rule mapping file path
+//			if (loadRules == null || loadRules.trim().length() == 0) {
+//				return FormValidation.error(Messages.RTCScm_load_rule_mapping_specify_file_path());
+//			}
+//
+//			// validate if the required fields are provided
+//			// this validation does not require any server call, so it is better
+//			// to fail upright than failing after validating other details like
+//			// workspace which requires a server call
+//			String loadRulesJson = null;
+//			try {
+//				loadRulesJson = Helper.validateAndGetLoadRulesJson(loadRules);
+//			} catch (Exception e) {
+//				return FormValidation.error(e, e.getMessage());
+//			}
+//			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
+//			boolean avoidUsingToolkit;
+//			if (!overrideGlobalSettings) {
+//				// use the global settings instead of the ones supplied
+//				buildTool = getGlobalBuildTool();
+//				serverURI = getGlobalServerURI();
+//				credId = getGlobalCredentialsId();
+//				userId = getGlobalUserId();
+//				password = getGlobalPassword();
+//				passwordFile = getGlobalPasswordFile();
+//				timeout = Integer.toString(getGlobalTimeout());
+//				avoidUsingToolkit = getGlobalAvoidUsingToolkit();
+//			} else {
+//				avoidUsingToolkit = Boolean.parseBoolean(avoidUsingBuildToolkit);
+//			}
+//			// validate the info for connecting to the server (including toolkit
+//			// & auth info).
+//			ValidationResult connectInfoCheck = validateConnectInfo(project, !overrideGlobalSettings, buildTool, serverURI, userId, password, passwordFile,
+//					credId, timeout, avoidUsingToolkit);
+//			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
+//				return connectInfoCheck.validationResult;
+//			}
+//
+//			// conenct info is good, now validate the component-to-load-rule
+//			// file mapping entries
+//			boolean isStreamConfiguration = BUILD_STREAM_TYPE.equals(buildTypeStr);
+//			if (isStreamConfiguration) {
+//				buildWorkspace = buildStream;
+//			}
+//			FormValidation loadRulesCheck = checkLoadRules(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
+//					processArea, isStreamConfiguration, buildWorkspace, loadRulesJson);
+//
+//			return Helper.mergeValidationResults(connectInfoCheck.validationResult, loadRulesCheck);
+//		}
 
 		
 		/** 
@@ -1615,62 +1635,64 @@ public class RTCScm extends SCM {
 			return FormValidation.ok(Messages.RTCScm_components_to_exclude_valid());
 		}
 
-		/**
-		 * Validate if the specified components/load rule files exist in the repository and included in the given
-		 * workspace.
-		 * 
-		 * @param buildToolkitPath Path to the build toolkit
-		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
-		 * @param loginInfo The login credentials
-		 * @param processArea The name of the project or team area
-		 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
-		 * @param buildWorkspace The name of the workspace to validate
-		 * @param componentsToExclude Json text spe
-		 * @return The result of the validation. Never <code>null</code>
-		 */
-		private FormValidation checkLoadRules(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo,
-				String processArea, boolean isStreamConfiguration, String buildWorkspace, String loadRules) {
-
-			try {
-				String errorMessage = RTCFacadeFacade.testLoadRules(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
-						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, processArea, isStreamConfiguration, buildWorkspace, loadRules);
-				if (errorMessage != null && errorMessage.length() != 0) {
-					return FormValidation.error(errorMessage);
-				}
-			} catch (InvocationTargetException e) {
-				Throwable eToReport = e.getCause();
-				if (eToReport == null) {
-					eToReport = e;
-				}
-				if (LOGGER.isLoggable(Level.FINER)) {
-					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
-							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
-							"\" processArea=\"" + processArea + ////$NON-NLS-1$
-							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
-							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
-							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
-							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
-							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-					LOGGER.log(Level.FINER, "checkLoadRules invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
-				}
-				return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
-			} catch (Exception e) {
-				if (LOGGER.isLoggable(Level.FINER)) {
-					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
-							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
-							"\" processArea=\"" + processArea + ////$NON-NLS-1$
-							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
-							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
-							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
-							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
-							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-					LOGGER.log(Level.FINER, "checkLoadRules failed " + e.getMessage(), e); //$NON-NLS-1$
-				}
-				return FormValidation.error(e, e.getMessage());
-			}
-
-			return FormValidation.ok(Messages.RTCScm_load_rule_mapping_valid());
-		}
+//        // SEE comment on top of doCheckLoadRules method.
+//
+//		/**
+//		 * Validate if the specified components/load rule files exist in the repository and included in the given
+//		 * workspace.
+//		 * 
+//		 * @param buildToolkitPath Path to the build toolkit
+//		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
+//		 * @param loginInfo The login credentials
+//		 * @param processArea The name of the project or team area
+//		 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
+//		 * @param buildWorkspace The name of the workspace to validate
+//		 * @param componentsToExclude Json text spe
+//		 * @return The result of the validation. Never <code>null</code>
+//		 */
+//		private FormValidation checkLoadRules(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo,
+//				String processArea, boolean isStreamConfiguration, String buildWorkspace, String loadRules) {
+//
+//			try {
+//				String errorMessage = RTCFacadeFacade.testLoadRules(buildToolkitPath, loginInfo.getServerUri(), loginInfo.getUserId(),
+//						loginInfo.getPassword(), loginInfo.getTimeout(), avoidUsingToolkit, processArea, isStreamConfiguration, buildWorkspace, loadRules);
+//				if (errorMessage != null && errorMessage.length() != 0) {
+//					return FormValidation.error(errorMessage);
+//				}
+//			} catch (InvocationTargetException e) {
+//				Throwable eToReport = e.getCause();
+//				if (eToReport == null) {
+//					eToReport = e;
+//				}
+//				if (LOGGER.isLoggable(Level.FINER)) {
+//					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
+//							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+//							"\" processArea=\"" + processArea + ////$NON-NLS-1$
+//							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
+//							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
+//							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+//							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+//							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+//					LOGGER.log(Level.FINER, "checkLoadRules invocation failure " + eToReport.getMessage(), e); //$NON-NLS-1$
+//				}
+//				return FormValidation.error(eToReport, Messages.RTCScm_failed_to_connect(eToReport.getMessage()));
+//			} catch (Exception e) {
+//				if (LOGGER.isLoggable(Level.FINER)) {
+//					LOGGER.finer("checkLoadRules attempted with " + //$NON-NLS-1$
+//							" buildToolkitPath=\"" + buildToolkitPath + //$NON-NLS-1$
+//							"\" processArea=\"" + processArea + ////$NON-NLS-1$
+//							"\" buildWorkspace=\"" + buildWorkspace + //$NON-NLS-1$
+//							"\" loadRules=\"" + loadRules + //$NON-NLS-1$
+//							"\" serverURI=\"" + loginInfo.getServerUri() + //$NON-NLS-1$
+//							"\" userId=\"" + loginInfo.getUserId() + //$NON-NLS-1$
+//							"\" timeout=\"" + loginInfo.getTimeout() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
+//					LOGGER.log(Level.FINER, "checkLoadRules failed " + e.getMessage(), e); //$NON-NLS-1$
+//				}
+//				return FormValidation.error(e, e.getMessage());
+//			}
+//
+//			return FormValidation.ok(Messages.RTCScm_load_rule_mapping_valid());
+//		}
 		
 		/**
 		 * Validate that the project area/team area exists. Validation using REST services is not supported.
@@ -1727,6 +1749,7 @@ public class RTCScm extends SCM {
 			// since we do collective validation, it is ok not to return any message
 			return FormValidation.ok();
 		}
+		
 	}
 	
 	
@@ -1768,6 +1791,7 @@ public class RTCScm extends SCM {
 			this.clearLoadDirectory = buildType.clearLoadDirectory;
 			this.createFoldersForComponents = buildType.createFoldersForComponents;
 			this.componentsToExclude = buildType.componentsToExclude;
+			this.useLoadRules = buildType.useLoadRules;
 			this.loadRules = buildType.loadRules;
 			this.acceptBeforeLoad = buildType.acceptBeforeLoad;
 			this.generateChangelogWithGoodBuild = buildType.generateChangelogWithGoodBuild;
@@ -1795,6 +1819,7 @@ public class RTCScm extends SCM {
 					"\" clearLoadDirectory=\"" + this.clearLoadDirectory + //$NON-NLS-1$  
 					"\" createFoldersForComponents=\"" + this.createFoldersForComponents + //$NON-NLS-1$  
 					"\" componentsToExclude=\"" + this.componentsToExclude + //$NON-NLS-1$
+					"\" useLoadRules=\"" + this.useLoadRules + //$NON-NLS-1$
 					"\" loadRules=\"" + this.loadRules + //$NON-NLS-1$
 					"\" acceptBeforeLoad=\"" + this.acceptBeforeLoad + 
 					"\" generateChangelogWithGoodBuild=\"" + this.generateChangelogWithGoodBuild); //$NON-NLS-1$ //$NON-NLS-2$
@@ -2111,14 +2136,14 @@ public class RTCScm extends SCM {
 //			// create componentsToExclude if needed
 //			String componentsToExcludeJson = Helper.validateAndGetComponentsToExcludeJson(componentsToExclude);			
 //			// create loadrules if needed
-//			String loadRulesJson = Helper.validateAndGetLoadRulesJson(loadRules);
+			String loadRulesJson = loadRules != null ? LoadRuleUtils.generateLoadRulesJson(loadRules) : null;
 
 			RTCLoadTask loadTask = new RTCLoadTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
 					getProcessArea(), buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot, buildStream, streamData, label, listener,
 					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider, clearLoadDirectory, 
-					createFoldersForComponents, null, null, getAcceptBeforeLoad());
+					createFoldersForComponents, null, loadRulesJson, getAcceptBeforeLoad());
 			if (buildResultUUID != null) {
 				String rootUrl = Hudson.getInstance().getRootUrl();
 				if (rootUrl != null) {
@@ -2552,7 +2577,10 @@ public class RTCScm extends SCM {
 		return componentsToExclude;
 	}
 	
-	public String getLoadRules() {
+	public boolean isUseLoadRules() {
+	    return useLoadRules;
+	}
+	public List<LoadRuleEntry> getLoadRules() {
 		return loadRules;
 	}
 	
