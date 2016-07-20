@@ -11,4 +11,10 @@
 
         <!-- Create folders for components -->
         <f:optionalBlock name="createFoldersForComponents" title="${%load.createFoldersForComponents}" field="createFoldersForComponents" checked="${instance.createFoldersForComponents}" inline="true" />
+        <!-- Use Load Rules -->
+        <f:optionalBlock name="useLoadRules" title="${%load.useLoadRules}" field="useLoadRules" checked="${instance.useLoadRules}" inline="true">
+        <f:entry>
+                <f:hetero-list name="loadRules" items="${instance.loadRules}" descriptors="${descriptor.getLoadRuleEntryDescriptors()}" hasHeader="true" />
+            </f:entry>
+        </f:optionalBlock>
 </j:jelly>
