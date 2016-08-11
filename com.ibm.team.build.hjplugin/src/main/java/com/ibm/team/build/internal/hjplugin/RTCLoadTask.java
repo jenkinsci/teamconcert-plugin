@@ -61,7 +61,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 	private String loadRules;
 	private boolean acceptBeforeLoad;
 	private Map<String,String> buildStreamData;
-	
+	private String temporaryWorkspaceComment;
+
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
 	 */
@@ -100,13 +101,15 @@ public class RTCLoadTask extends RTCTask<Void> {
 	 * @param createFoldersForComponents create folders for components if true
 	 * @param componentsToExclude json text representing the list of components to exclude during load
 	 * @param loadRules json text representing the component to load rule file mapping
+	 * @param temporaryWorkspaceComment
 	 * @throws Exception
 	 */
 	public RTCLoadTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
 			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
 			Map<String, String> buildStreamData, String baselineSetName, TaskListener listener, boolean isRemote, boolean debug, Locale clientLocale,
 			String parentActivityId, String connectorId, RtcExtensionProvider extProvider, boolean isDeleteNeeded,
-			boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad) {
+			boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad,
+			String temporaryWorkspaceComment) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -135,6 +138,7 @@ public class RTCLoadTask extends RTCTask<Void> {
     	this.componentsToExclude = componentsToExclude;
     	this.loadRules = loadRules;
     	this.acceptBeforeLoad = acceptBeforeLoad;
+    	this.temporaryWorkspaceComment = temporaryWorkspaceComment;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -163,7 +167,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 			debug("listener is " + (listener == null ? "null" : "not null")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("Running remote " + isRemote); //$NON-NLS-1$
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
-			debug("parentActivityId " + parentActivityId);
+			debug("parentActivityId " + parentActivityId); // $NON-NLS-1$
+			debug("temporaryWorkspaceComment " + temporaryWorkspaceComment); // $NON-NLS-1$
 		}
 
 		try {
@@ -197,7 +202,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 					boolean.class, // createFoldersForComponents
 					String.class, // componentsToBeExcluded
 					String.class, // loadRules
-					boolean.class // acceptBeforeLoad
+					boolean.class, // acceptBeforeLoad
+					String.class, // temporaryWorkspaceComment
 			}, serverURI, userId, Secret.toString(password),
 					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap,
 					buildSnapshot, buildStream, buildStreamData,
@@ -205,7 +211,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 					baselineSetName,
 					listener, clientLocale, parentActivityId, connectorId,
 					extProvider, listener.getLogger(), isDeleteNeeded, 
-					createFoldersForComponents, componentsToExclude, loadRules, acceptBeforeLoad);
+					createFoldersForComponents, componentsToExclude, loadRules,
+					acceptBeforeLoad, temporaryWorkspaceComment);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

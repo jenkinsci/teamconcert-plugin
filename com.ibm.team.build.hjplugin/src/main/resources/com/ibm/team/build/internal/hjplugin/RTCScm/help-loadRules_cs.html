@@ -15,9 +15,11 @@
 
 <div>
   <p>
-   Vyberte soubor pravidel načtení k určení způsobu načítání pracovního prostoru sestavení. Jestliže byla dynamická pravidla načtení určena pomocí rozšíření, mají tato pravidla přednost před zde určenými.  </p>
+   Vyberte soubor pravidel načtení k určení způsobu načítání pracovního prostoru úložiště. Jestliže byla dynamická pravidla načtení určena pomocí rozšíření, mají tato pravidla přednost před zde určenými.
+  </p>
   <p>
-  	Chcete-li použít pravidla načtení, vypište je v následujícím formátu JSON, uložte seznam do souboru na disku a určete v tomto poli cestu k souboru.  </p>
+  	Chcete-li použít pravidla načtení, vypište je v následujícím formátu JSON, uložte seznam do souboru na disku a určete v tomto poli cestu k souboru.
+  </p>
   <p>
   <pre>
   {
@@ -35,11 +37,13 @@
   </pre>
   </p>
   <p>
-	Rovněž můžete určit "componentId" namísto "componentName." Hodnota "componentId" je ID položky (UUID) komponenty.
+	Rovněž můžete určit "componentId" namísto "componentName." Hodnota "componentId" je ID položky (UUID) komponenty. 
 	Určíte-li obě hodnoty "componentName" a "componentId", dojde k vyhledání pouze podle "componentId."
   </p>
   <p>
-  	Hodnota "filePath" je úplná cesta k souboru pravidel načtení v úložišti; např. vzdálená cesta.  	Rovněž můžete určit "fileItemId" namísto "filePath." Hodnota "fileItemId" je ID položky (UUID) souboru pravidel načtení.  	Když určíte cestu k souboru, použijte k oddělení segmentů cesty dopředná lomítka (/). Určíte-li obě hodnoty "filePath" a "fileItemId", je vyhledávání provedeno pouze podle "fileItemId."
+  	Hodnota "filePath" je úplná cesta k souboru pravidel načtení v úložišti; např. vzdálená cesta. 
+  	Rovněž můžete určit "fileItemId" namísto "filePath." Hodnota "fileItemId" je ID položky (UUID) souboru pravidel načtení. 
+  	Když určíte cestu k souboru, použijte k oddělení segmentů cesty dopředná lomítka (/). Určíte-li obě hodnoty "filePath" a "fileItemId", je vyhledávání provedeno pouze podle "fileItemId."
   </p>
 
 </div>

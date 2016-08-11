@@ -948,13 +948,21 @@ public class RTCScm extends SCM {
 				return connectInfoCheck.validationResult;
 			} 
 			// connection info is good now validate the build workspace
-			FormValidation buildWorkspaceCheck = checkBuildWorkspace(connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
-					connectInfoCheck.loginInfo, buildWorkspace);
-			if (buildWorkspaceCheck.kind.equals(FormValidation.Kind.ERROR)) {
-				return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildWorkspaceCheck);
-			}
+			boolean parameterizedWorkspace = Helper.isAParameter(buildWorkspace);
+			FormValidation buildWorkspaceCheck = null;
+			if (parameterizedWorkspace) {
+				buildWorkspaceCheck = FormValidation.warning(Messages.RTCScm_repository_workspace_not_validated());
+			} else {
 
-			return Helper.mergeValidationResults(connectInfoCheck.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
+				buildWorkspaceCheck = checkBuildWorkspace(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
+						buildWorkspace);
+			}
+			// If the build workspace validation completed with OK then recreate the result with a configuration valid
+			// message
+			if(buildWorkspaceCheck.kind.equals(FormValidation.Kind.OK)) {
+				buildWorkspaceCheck = FormValidation.ok(Messages.RTCScm_validation_success());
+			}
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildWorkspaceCheck);
 		}
 
 		/**
@@ -1015,31 +1023,39 @@ public class RTCScm extends SCM {
 				return connectInfoCheck.validationResult;
 			} 
 			// connection info is good now validate the build definition
-			FormValidation buildDefinitionCheck = checkBuildDefinition(connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
-					connectInfoCheck.loginInfo, buildDefinition);
-			if (buildDefinitionCheck.kind.equals(FormValidation.Kind.ERROR)) {
-				return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildDefinitionCheck);
+			boolean parameterizedBuildDefinition = Helper.isAParameter(buildDefinition);
+			FormValidation buildDefinitionCheck = null;
+			if (parameterizedBuildDefinition) {
+				buildDefinitionCheck = FormValidation.warning(Messages.RTCScm_build_definition_not_validated());
+			} else {
+				buildDefinitionCheck = checkBuildDefinition(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
+						buildDefinition);
 			}
-
-			return Helper.mergeValidationResults(connectInfoCheck.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
-
+			// If the build definition validation completed with OK then recreate the result with a configuration valid
+			// message
+			if (buildDefinitionCheck.kind.equals(FormValidation.Kind.OK)) {
+				buildDefinitionCheck = FormValidation.ok(Messages.RTCScm_validation_success());
+			}
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildDefinitionCheck);
 		}
-		
+
 		/**
-		 * Validates the build stream configuration. Called by the forms.
-		 * Fields validated apart from the connection info - Project or Team Area(if specified), Build Stream.
+		 * Validates the build stream configuration. Called by the forms. Fields validated apart from the connection
+		 * info - Project or Team Area(if specified), Build Stream.
+		 * 
 		 * @param project The Job that is going to be run
 		 * @param override Whether to override the global connection settings
 		 * @param buildTool The build tool selected to be used in builds (Job setting)
 		 * @param serverURI The RTC server uri (Job setting)
 		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
-		 * @param password The password to use when logging in to RTC. Must supply this or a password file
-		 * 				if the credentials id was not supplied. (Job setting)
-		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
-		 * 				a password if the credentials id was not supplied. (Job setting)
+		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
+		 *            credentials id was not supplied. (Job setting)
+		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
+		 *            password if the credentials id was not supplied. (Job setting)
 		 * @param credId Credential id that will identify the user id and password to use (Job setting)
 		 * @param timeout The timeout period for the connection (Job setting)
-		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection. (Job setting)
+		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
+		 *            connection. (Job setting)
 		 * @param processArea Project or Team Area owning the stream
 		 * @param buildStream The build stream to validate
 		 * @return Whether the build stream configuration is valid or not. Never <code>null</code>
@@ -1077,8 +1093,8 @@ public class RTCScm extends SCM {
 			}
 
 			// First do a connection check, then check the process area and stream
-			ValidationResult connectionInfoResult = validateConnectInfo(project, !overrideGlobal, buildTool, serverURI, userId, password, passwordFile, credId,
-					timeout, avoidUsingToolkit);
+			ValidationResult connectionInfoResult = validateConnectInfo(project, !overrideGlobal, buildTool, serverURI, userId, password,
+					passwordFile, credId, timeout, avoidUsingToolkit);
 			if (connectionInfoResult.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
 				return connectionInfoResult.validationResult;
 			}
@@ -1087,20 +1103,40 @@ public class RTCScm extends SCM {
 				return Helper.mergeValidationResults(connectionInfoResult.validationResult,
 						FormValidation.error(Messages.RTCScm_build_toolkit_required_to_validate_process_area()));
 			}
+			
 			// no error, proceed to check the stream. checking the stream in turn validates project area existence
-			FormValidation streamValidationResult = checkBuildStream(connectionInfoResult.buildToolkitPath, avoidUsingToolkit,
-					connectionInfoResult.loginInfo, processArea, buildStream);
-			if (streamValidationResult.kind.equals(FormValidation.Kind.ERROR)) {
-				return Helper.mergeValidationResults(connectionInfoResult.validationResult, streamValidationResult);
+			boolean parameterizedStream = Helper.isAParameter(buildStream);
+			FormValidation streamValidationResult = null;
+			if (parameterizedStream) {
+				// validate owner details for parameterized stream
+				FormValidation ownerValidationResult = FormValidation.ok();
+				if (Util.fixEmptyAndTrim(processArea) != null) {
+					ownerValidationResult = checkProcessArea(connectionInfoResult.buildToolkitPath, connectionInfoResult.loginInfo, processArea);
+				}
+				// error fail right away
+				if (ownerValidationResult.kind.equals(FormValidation.Kind.ERROR)) {
+					return Helper.mergeValidationResults(connectionInfoResult.validationResult, ownerValidationResult);
+				}
+				// warn that parameterized values cannot be validated, the configuration is still valid from validation
+				// perspective
+				streamValidationResult = Helper.mergeValidationResults(ownerValidationResult,
+						FormValidation.warning(Messages.RTCScm_stream_not_validated()));
+			} else {
+				streamValidationResult = checkBuildStream(connectionInfoResult.buildToolkitPath, avoidUsingToolkit, connectionInfoResult.loginInfo,
+						processArea, buildStream);
 			}
-
-			return Helper.mergeValidationResults(connectionInfoResult.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
+			// If the build stream validation completed with OK then recreate the result with a configuration valid
+			// message
+			if (streamValidationResult.kind.equals(FormValidation.Kind.OK)) {
+				streamValidationResult = FormValidation.ok(Messages.RTCScm_validation_success());
+			}
+			return Helper.mergeValidationResults(connectionInfoResult.validationResult, streamValidationResult);
 
 		}
 
 		/**
-		 * Validates the build snapshot configuration. Called by the forms.
-		 * Fields validated apart from the connection info - Project or Team Area(if specified), Build Snapshot.
+		 * Validates the build snapshot configuration. Called by the forms. Fields validated apart from the connection
+		 * info - Project or Team Area(if specified), Build Snapshot.
 		 * 
 		 * @param project The Job that is going to be run
 		 * @param override Whether to override the global connection settings
@@ -1118,7 +1154,7 @@ public class RTCScm extends SCM {
 		 * @param currentSnapshotOwnerType Currently selected snapshot owner type - "none", "stream", or "workspace"
 		 * @param processAreaOfOwningStream Name of the project or team area of the stream owning the snapshot
 		 * @param owningStream Name of the stream owning the snapshot
-		 * @param owningWorkspace Name of the workspace owning the snapshot 
+		 * @param owningWorkspace Name of the workspace owning the snapshot
 		 * @param buildSnapshot The build snapshot to validate
 		 * 
 		 * @return Whether the build snapshot configuration is valid or not. Never <code>null</code>
@@ -1133,8 +1169,6 @@ public class RTCScm extends SCM {
 				@QueryParameter("owningWorkspace") String owningWorkspace, @QueryParameter("buildSnapshot") String buildSnapshot) {
 
 			LOGGER.finest("DescriptorImpl.doValidateBuildSnapshotConfiguration: Begin"); //$NON-NLS-1$
-			// Note: validation of process area cannot be done using the REST service. So when avoidUsingBuildtoolkit
-			// is selected in master and the build toolkit is not configured, the validation will fail.
 			// validate if a value is specified for build snapshot
 			if (Util.fixEmptyAndTrim(buildSnapshot) == null) {
 				return FormValidation.error(Messages.RTCScm_build_snapshot_empty());
@@ -1161,30 +1195,51 @@ public class RTCScm extends SCM {
 			if (connectInfoCheck.validationResult.kind.equals(FormValidation.Kind.ERROR)) {
 				return connectInfoCheck.validationResult;
 			}
-			// build toolkit is required to validate directly provided snapshot value
-			boolean parameterizedSnapshot = Helper.isJobProperty(buildSnapshot);
-			if (avoidUsingToolkit && connectInfoCheck.buildToolkitPath == null && !parameterizedSnapshot) {
+			// build toolkit is required to validate the snapshot configuration
+			if (avoidUsingToolkit && connectInfoCheck.buildToolkitPath == null) {
 				return Helper.mergeValidationResults(connectInfoCheck.validationResult,
 						FormValidation.error(Messages.RTCScm_build_toolkit_required_to_validate_snapshot()));
 			}
 			// validate snapshot
-			if (!parameterizedSnapshot) {
-				FormValidation buildSnapshotValidationResult = checkBuildSnapshot(connectInfoCheck.buildToolkitPath, connectInfoCheck.loginInfo,
-						BuildSnapshotContext.getBuildSnapshotContextMap(currentSnapshotOwnerType, processAreaOfOwningStream, owningStream,
-								owningWorkspace), buildSnapshot);
-				if (buildSnapshotValidationResult.kind.equals(FormValidation.Kind.ERROR)) {
-					return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildSnapshotValidationResult);
+			boolean parameterizedSnapshot = Helper.isAParameter(buildSnapshot);
+			FormValidation buildSnapshotValidationResult = null;
+			if (parameterizedSnapshot) {
+				// validate snapshot owner details for parameterized snapshot
+				FormValidation ownerValidationResult = FormValidation.ok();
+				if (Util.fixEmptyAndTrim(currentSnapshotOwnerType) != null) {
+					if (SNAPSHOT_OWNER_TYPE_WORKSPACE.equals(currentSnapshotOwnerType) && Util.fixEmptyAndTrim(owningWorkspace) != null) {
+						ownerValidationResult = checkBuildWorkspace(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
+								owningWorkspace);
+					} else if (SNAPSHOT_OWNER_TYPE_STREAM.equals(currentSnapshotOwnerType)) {
+						if (Util.fixEmptyAndTrim(owningStream) != null) {
+							ownerValidationResult = checkBuildStream(connectInfoCheck.buildToolkitPath, avoidUsingToolkit,
+									connectInfoCheck.loginInfo, processAreaOfOwningStream, owningStream);
+						} else if (Util.fixEmptyAndTrim(processAreaOfOwningStream) != null) {
+							ownerValidationResult = checkProcessArea(connectInfoCheck.buildToolkitPath, connectInfoCheck.loginInfo,
+									processAreaOfOwningStream);
+						}
+					}
 				}
-			} else {
+				// error fail right away
+				if (ownerValidationResult.kind.equals(FormValidation.Kind.ERROR)) {
+					return Helper.mergeValidationResults(connectInfoCheck.validationResult, ownerValidationResult);
+				}
 				// warn that parameterized values cannot be validated, the configuration is still valid from validation
 				// perspective
-				FormValidation successWithParametrizedSnapshotWarning = Helper.mergeValidationResults(
-						FormValidation.warning(Messages.RTCScm_build_snapshot_not_validated()),
-						FormValidation.ok(Messages.RTCScm_validation_success()));
-				return Helper.mergeValidationResults(connectInfoCheck.validationResult, successWithParametrizedSnapshotWarning);
+				buildSnapshotValidationResult = Helper.mergeValidationResults(ownerValidationResult,
+						FormValidation.warning(Messages.RTCScm_build_snapshot_not_validated()));
+			} else {
+				buildSnapshotValidationResult = checkBuildSnapshot(connectInfoCheck.buildToolkitPath, connectInfoCheck.loginInfo,
+						BuildSnapshotContext.getBuildSnapshotContextMap(currentSnapshotOwnerType, processAreaOfOwningStream, owningStream,
+								owningWorkspace), buildSnapshot);
+
 			}
-			
-			return Helper.mergeValidationResults(connectInfoCheck.validationResult, FormValidation.ok(Messages.RTCScm_validation_success()));
+			// If the build snapshot validation completed with OK then recreate the result with a configuration valid
+			// message
+			if (buildSnapshotValidationResult.kind.equals(FormValidation.Kind.OK)) {
+				buildSnapshotValidationResult = FormValidation.ok(Messages.RTCScm_validation_success());
+			}
+			return Helper.mergeValidationResults(connectInfoCheck.validationResult, buildSnapshotValidationResult);
 		}
 
 		/**
@@ -1891,19 +1946,19 @@ public class RTCScm extends SCM {
 		String nodeBuildToolkit;
 		
 		String buildWorkspace = (getBuildTypeStr().equals(BUILD_WORKSPACE_TYPE)) ?
-					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_WORKSPACE, Util.fixEmptyAndTrim(getBuildWorkspace()), false, listener):
+					Helper.parseConfigurationValue(build, null, Util.fixEmptyAndTrim(getBuildWorkspace()), listener):
 					Util.fixEmptyAndTrim(getBuildWorkspace());
 					
 		String buildDefinition = (getBuildTypeStr().equals(BUILD_DEFINITION_TYPE)) ?
-					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_DEFINITION, Util.fixEmptyAndTrim(getBuildDefinition()), false, listener):
+					Helper.parseConfigurationValue(build, null, Util.fixEmptyAndTrim(getBuildDefinition()), listener):
 					Util.fixEmptyAndTrim(getBuildDefinition());
 					
 		String buildSnapshot = (getBuildTypeStr().equals(BUILD_SNAPSHOT_TYPE)) ?
-					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_SNAPSHOT, Util.fixEmptyAndTrim(getBuildSnapshot()), true, listener):
+					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_SNAPSHOT, Util.fixEmptyAndTrim(getBuildSnapshot()), listener):
 					Util.fixEmptyAndTrim(getBuildSnapshot());
 					
 		String buildStream = (getBuildTypeStr().equals(BUILD_STREAM_TYPE)) ?
-					Helper.parseConfigurationValue(build, RTCJobProperties.RTC_BUILD_STREAM, Util.fixEmptyAndTrim(getBuildStream()), false, listener):
+					Helper.parseConfigurationValue(build, null, Util.fixEmptyAndTrim(getBuildStream()), listener):
 					Util.fixEmptyAndTrim(getBuildStream()); 
 
 		String buildResultUUID = getBuildResultUUID(build, listener);
@@ -1915,7 +1970,7 @@ public class RTCScm extends SCM {
 		// Get the build toolkit on the node where the checkout is happening.
 		nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
 
-		boolean debug = Boolean.parseBoolean(build.getEnvironment(listener).get(DEBUG_PROPERTY));
+		boolean debug = Boolean.parseBoolean(Helper.getStringBuildParameter(build, DEBUG_PROPERTY, listener));
 
 		RTCLoginInfo loginInfo;
 		try {
@@ -2056,7 +2111,7 @@ public class RTCScm extends SCM {
 			Map<String, String> streamData = new HashMap<String, String>();
 			Map<String, String> buildSnapshotContextMap = buildSnapshotContext != null ? buildSnapshotContext.getContextMap() : null;
 			RTCAcceptTask acceptTask = new RTCAcceptTask(
-					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
+					build.getNumber() + " " + build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
 					getProcessArea(), 
 					buildResultUUID,
@@ -2068,7 +2123,8 @@ public class RTCScm extends SCM {
 					listener, changeLog,
 					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, getAcceptBeforeLoad(),
 					// If you are not comparing with any snapshot, no need to put the previous build URL
-					(previousSnapshotUUIDForChangeLog != null) ? previousBuild.getUrl(): null);
+					(previousSnapshotUUIDForChangeLog != null && previousBuild != null) ? Util.fixEmptyAndTrim(previousBuild.getUrl()): null,
+					Helper.getTemporaryWorkspaceComment(build));
 
 			// publish in the build result links to the project and the build
 			if (buildResultUUID != null) {
@@ -2118,7 +2174,7 @@ public class RTCScm extends SCM {
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
 					getProcessArea(), buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot, buildStream, streamData, label, listener,
 					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider, clearLoadDirectory, 
-					createFoldersForComponents, null, null, getAcceptBeforeLoad());
+					createFoldersForComponents, null, null, getAcceptBeforeLoad(), Helper.getTemporaryWorkspaceComment(build));
 			if (buildResultUUID != null) {
 				String rootUrl = Hudson.getInstance().getRootUrl();
 				if (rootUrl != null) {
@@ -2210,6 +2266,19 @@ public class RTCScm extends SCM {
 		LOGGER.finest("RTCScm.compareRemoteRevisionWith : Begin");
 		
 		listener.getLogger().println(Messages.RTCScm_checking_for_changes());
+		
+		// Get values for jazz scm stream, jazz scm workspace and build definition from default values of 
+		// job parameters if any
+		String buildType = getBuildTypeStr();
+		String buildDefinition = (BUILD_DEFINITION_TYPE.equals(buildType)) ? Helper.parseConfigurationValue(project, Util.fixEmptyAndTrim(getBuildDefinition()), listener)
+																		: Util.fixEmptyAndTrim(getBuildDefinition());
+		String buildWorkspace = (BUILD_WORKSPACE_TYPE.equals(buildType)) ? Helper.parseConfigurationValue(project, Util.fixEmptyAndTrim(getBuildWorkspace()), listener)
+																		: Util.fixEmptyAndTrim(getBuildWorkspace());
+		String buildStream = (BUILD_STREAM_TYPE.equals(buildType)) ? Helper.parseConfigurationValue(project, Util.fixEmptyAndTrim(getBuildStream()), listener):
+																		 Util.fixEmptyAndTrim(getBuildStream());
+		
+		// Validate given buildType and buildStream, that buildStream is non empty
+		validateInput(getBuildTypeStr(), null, buildStream);
 
 		// check to see if there are incoming changes
     	try {
@@ -2225,6 +2294,7 @@ public class RTCScm extends SCM {
     		String masterToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
     		RTCLoginInfo loginInfo = getLoginInfo(project, masterToolkit);
     		boolean useBuildDefinitionInBuild = BUILD_DEFINITION_TYPE.equals(getBuildTypeStr());
+    		
     		if (useBuildDefinitionInBuild && bAvoidUsingToolkit) {
     			//if toolkit is not to be used, and
 	    		//if the build is in queue then their are changes, avoid a recheck and resetting the Quiet period
@@ -2239,8 +2309,8 @@ public class RTCScm extends SCM {
 	    		Boolean changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(masterToolkit,
 	    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						getBuildDefinition(),
-						getBuildWorkspace(),
+						buildDefinition,
+						buildWorkspace,
 						listener);
 	
 	    		if (changesIncoming.equals(Boolean.TRUE)) {
@@ -2259,14 +2329,14 @@ public class RTCScm extends SCM {
     			String strIgnoreOutgoingFromBuildWorkspace = System.getProperty(IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING);
     			boolean ignoreOutgoingFromBuildWorkspace = "true".equals(strIgnoreOutgoingFromBuildWorkspace); 
     			// Get the previous snapshot for stream case
-    			String streamChangesData = Helper.getStreamChangesDataFromLastBuild(project, masterToolkit, loginInfo, getProcessArea(), getBuildStream(), LocaleProvider.getLocale()).getSecond();
+    			String streamChangesData = Helper.getStreamChangesDataFromLastBuild(project, masterToolkit, loginInfo, getProcessArea(), buildStream, LocaleProvider.getLocale()).getSecond();
     			
     			BigInteger currentRevisionHash = RTCFacadeFacade.incomingChangesUsingBuildToolkit(masterToolkit,
 	    				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
 						loginInfo.getTimeout(), getProcessArea(), useBuildDefinitionInBuild,
-						getBuildDefinition(),
-						getBuildWorkspace(),
-						getBuildStream(),
+						buildDefinition,
+						buildWorkspace,
+						buildStream,
 						streamChangesData,
 						listener, ignoreOutgoingFromBuildWorkspace);
     			LOGGER.finer("currentRevisionHash is " + currentRevisionHash.toString());
@@ -2318,6 +2388,11 @@ public class RTCScm extends SCM {
     			
     			if (LOGGER.isLoggable(Level.FINER)) {
     				LOGGER.finer("Change is " + change.toString());
+    			}
+    			if (change != Change.NONE) {
+	    			listener.getLogger().println(Messages.RTCScm_changes_found());
+    			} else {
+	    			listener.getLogger().println(Messages.RTCScm_no_changes_found());
     			}
     			return new PollingResult(revisionState, currentRevisionState, change);
     		}
@@ -2614,7 +2689,7 @@ public class RTCScm extends SCM {
 	
 	private static String getBuildResultUUID(Run<?,?> build, TaskListener listener) throws IOException, InterruptedException {
 		 LOGGER.finest("RTCScm.getBuildResultUUID : Begin");
-		 return Helper.getStringBuildProperty(build, RTCJobProperties.BUILD_RESULT_UUID, listener);
+		 return Helper.getStringBuildParameter(build, RTCJobProperties.BUILD_RESULT_UUID, listener);
 	}
 
 	private boolean isConfigSupportsPolling(String buildType) {
@@ -2625,7 +2700,7 @@ public class RTCScm extends SCM {
 		return false;
 	}
 	
-	private static void validateInput(String buildType, String buildSnapshotNameOrUUID, String buildStreamName) throws AbortException {
+	private static void validateInput(String buildType,	String buildSnapshotNameOrUUID, String buildStreamName) throws AbortException {
 		// If  snapshot UUID is null, we cannot proceed with checkout 
 		if (BUILD_SNAPSHOT_TYPE.equals(buildType) && buildSnapshotNameOrUUID == null) {
 			throw new AbortException(Messages.RTCScm_checkout_failure4(Messages.RTCScm_snapshot_not_provided()));
@@ -2633,7 +2708,6 @@ public class RTCScm extends SCM {
 		
 		if (BUILD_STREAM_TYPE.equals(buildType) && buildStreamName == null) {
 			throw new AbortException(Messages.RTCScm_checkout_failure4(Messages.RTCScm_stream_not_provided()));
-		}
-		
+		}	
 	}
 }

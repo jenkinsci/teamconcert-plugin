@@ -1,0 +1,47 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Geben Sie den Eigner der Momentaufnahme an. Der Eigner einer Momentaufnahme kann entweder ein Repository-Arbeitsbereich oder ein Datenstrom sein.
+	Durch Angabe des Eigners der Momentaufnahme ermöglichen Sie eine bereichsorientierte Suche und vermeiden somit doppelte Werte im Suchergebnis.
+  </p>
+  <p>
+	Wenn Ihnen die Details zum Momentaufnahmeneigner nicht bekannt sind oder wenn sie sicher sind, dass der Momentaufnahmenname im Repository eindeutig ist, können Sie für den Momentaufnahmeneigner "- Keiner -" auswählen.
+	Wenn Sie die UUID der Momentaufnahme angeben werden die Details zum Momentaufnahmeneigner ignoriert.
+  </p>  
+  <p>
+  	Wenn Sie "- Keiner -" für den Momentaufnahmeneigner auswählen, wird die Momentaufnahmensuche nicht auf einen Bereich begrenzt, sondern im ganzen Repository durchgeführt.
+  </p>
+  <p>
+  	Wenn ein Repository-Arbeitsbereich oder ein Datenstrom als Eigner angegeben ist, wird der Bereich der Momentaufnahmensuche auf die Momentaufnahmen eingegrenzt, die dem angegebenen Repository-Arbeitsbereich oder Datenstrom zugeordnet sind.
+  </p>
+  <p>
+  	Wenn als Momentaufnahmeneigener ein Repository-Arbeitsbereich ausgewählt wird, aber der Name des Repository-Arbeitsbereichs nicht angegeben wird, wird die Momentaufnahmensuche
+	nicht auf einen Bereich eingegrenzt, sondern im ganzen Repository durchgeführt. </p>
+  <p>
+  	Wenn als Momentaufnahmeneigener ein Datenstrom ausgewählt wird, aber weder der Name des Projekt- noch des Teambereichs noch des Datenstroms, der der Eigner ist, angegeben wird, wird die Momentaufnahmensuche
+	nicht auf einen Bereich eingegrenzt, sondern im ganzen Repository durchgeführt. </p>
+  <p>
+  	Wenn ausgewählt wird, dass der Momentaufnahmeneigner ein Datenstrom ist und wenn nur der Projekt- oder Teambereich angegeben wird, wird die Momentaufnahmensuche auf den Bereich
+  	der Momentaufnahmen begrenzt, die allen Datenströmen zugeordnet sind, deren Eigner der angegebene Projekt- oder Teambereich ist.
+  </p>
+  <p>
+  	Wenn als Momentaufnahmeneigener ein Datenstrom ausgewählt wird und wenn nur der Datenstromname angegeben wird, wird der Bereich der Momentaufnahmensuche
+	auf die Momentaufnahmen begrenzt, die allen Datenströmen mit dem angegebenen Namen im Repository zugeordnet sind. </p>
+  <p>
+  	Wenn ausgewählt wird, dass der Momentaufnahmeneigner ein Datenstrom ist und wenn der Name des Projekt- oder Teambereichs sowie der Namen des Eignerdatenstroms angegeben ist, wird die Momentaufnahmensuche auf den Bereich
+  	der Momentaufnahmen begrenzt, die allen Datenströmen mit dem angegebenen Namen in dem angegebenen Projekt- oder Teambereich zugeordnet sind. </p>
+</div>

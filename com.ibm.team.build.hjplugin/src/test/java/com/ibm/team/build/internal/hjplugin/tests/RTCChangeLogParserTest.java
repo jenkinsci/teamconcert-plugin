@@ -11,8 +11,6 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.scm.EditType;
-
 import java.io.File;
 import java.io.Reader;
 import java.io.StringReader;
@@ -20,8 +18,6 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-
-import junit.framework.TestCase;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,6 +31,8 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSetEntry;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+
+import hudson.scm.EditType;
 
 @SuppressWarnings("nls")
 public class RTCChangeLogParserTest extends AbstractTestCase {
@@ -299,4 +297,177 @@ public class RTCChangeLogParserTest extends AbstractTestCase {
 		Assert.assertTrue("Should be a personal build", result.isPersonalBuild());
 	}
 
+    @Test
+    public void testWorkspaceNameItemIdPair() throws Exception {
+    	
+    	String workspaceName = "TestWorkspaceName";
+    	String workspaceItemId = "_9O6uoqjcEeGldOeoQAxwFA";
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+    			 "<changelog baselineSetName=\"Jenkins RTC Plugin Selfhost Build #31\""
+    			+ " baselineSetItemId=\"_MIYgw4gaEeKBi6C3NnsqSw\" workspaceItemId=\"" +workspaceItemId + "\" workspaceName=\"" + workspaceName + "\"/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	
+    	// Assert
+    	assertEquals(workspaceName, changelogSet.getWorkspaceName());
+    	assertEquals(workspaceItemId, changelogSet.getWorkspaceItemId());
+    	assertEquals(0, changelogSet.getChangeSetsAcceptedCount());
+    	assertEquals(0, changelogSet.getChangeSetsDiscardedCount());
+    	
+    }
+    
+    @Test
+    public void testWorkspaceNameMissingNoError() throws Exception {
+    	String workspaceItemId = "_9O6uoqjcEeGldOeoQAxwFA";
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+    			 "<changelog baselineSetName=\"Jenkins RTC Plugin Selfhost Build #31\""
+    			+ " baselineSetItemId=\"_MIYgw4gaEeKBi6C3NnsqSw\" workspaceItemId=\"" +workspaceItemId + "\"/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	
+    	// Assert
+    	assertEquals("Expecting a null workspace name", null, changelogSet.getWorkspaceName());
+    	assertEquals(workspaceItemId, changelogSet.getWorkspaceItemId());
+    	assertEquals(0, changelogSet.getChangeSetsAcceptedCount());
+    	assertEquals(0, changelogSet.getChangeSetsDiscardedCount());
+    }
+    
+    @Test
+    public void testBuildDefinitionIdItemIdPair() throws Exception {
+    	String buildDefinitionItemId = "_9O6uoqjcEeGldOeoQAxwFA";
+    	String buildDefinitionName = "TestBuildDefinition";
+    	String baselineSetItemId = "_MIYgw4gaEeKBi6C3NnsqSw";
+    	String baselineSetName = "Jenkins RTC Plugin Selfhost Build #31";
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+    			 "<changelog baselineSetName=\"" + baselineSetName + "\"" + EOL +
+    			 " baselineSetItemId=\""+ baselineSetItemId + "\"" + EOL +
+    			 " buildDefinitionItemId=\"" + buildDefinitionItemId + "\"" + EOL +
+    			 " buildDefinitionName=\"" + buildDefinitionName + "\"" + EOL + 
+    			 "/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	
+    	// Assert
+    	assertEquals(buildDefinitionItemId, changelogSet.getBuildDefinitionItemId());
+    	assertEquals(buildDefinitionName, changelogSet.getBuildDefinitionName());
+    	assertEquals(baselineSetItemId, changelogSet.getBaselineSetItemId());
+    	assertEquals(baselineSetName, changelogSet.getBaselineSetName());
+    	assertEquals(0, changelogSet.getChangeSetsAcceptedCount());
+    	assertEquals(0, changelogSet.getChangeSetsDiscardedCount());
+    }
+    
+    @Test
+    public void testBuildStreamNameItemIdPair() throws Exception {
+    	String streamItemId = "_9O6uoqjcEeGldOeoQAxwFA";
+    	String streamName = "TestBuildDefinition";
+    	String baselineSetItemId = "_MIYgw4gaEeKBi6C3NnsqSw";
+    	String baselineSetName = "Jenkins RTC Plugin Selfhost Build #31";
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+    			 "<changelog baselineSetName=\"" + baselineSetName + "\"" + EOL +
+    			 " baselineSetItemId=\""+ baselineSetItemId + "\"" + EOL +
+    			 " streamName=\"" + streamName + "\"" + EOL +
+    			 " streamItemId=\"" + streamItemId + "\"" + EOL + 
+    			 "/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+
+    	// Assert
+    	assertEquals(streamItemId, changelogSet.getStreamItemId());
+    	assertEquals(streamName, changelogSet.getStreamName());
+    	assertEquals(baselineSetItemId, changelogSet.getBaselineSetItemId());
+    	assertEquals(baselineSetName, changelogSet.getBaselineSetName());
+    	assertEquals(0, changelogSet.getChangeSetsAcceptedCount());
+    	assertEquals(0, changelogSet.getChangeSetsDiscardedCount());
+    }
+    
+    @Test
+    public void testMultipleArtifactNameItemIdPair() throws Exception {
+    	String streamItemId = "_9O6uoqjcEeGldOeoQAxwFA";
+    	String streamName = "TestBuildDefinition";
+    	String workspaceName = "TestWorkspaceName";
+    	String workspaceItemId = "_9O6uoqjcEeGldOeoQAxwFA";
+    	String buildDefinitionItemId = "_9O6uoqjcEeGldOeoQAxwFA";
+    	String buildDefinitionName = "TestBuildDefinition";
+    	String baselineSetItemId = "_MIYgw4gaEeKBi6C3NnsqSw";
+    	String baselineSetName = "Jenkins RTC Plugin Selfhost Build #31";
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+    			 "<changelog baselineSetName=\"" + baselineSetName + "\"" + EOL +
+    			 " baselineSetItemId=\""+ baselineSetItemId + "\"" + EOL +
+    			 " streamName=\"" + streamName + "\"" + EOL +
+    			 " streamItemId=\"" + streamItemId + "\"" + EOL + 
+    			 " buildDefinitionName=\"" + buildDefinitionName + "\"" + EOL +
+    			 " buildDefinitionItemId=\"" + buildDefinitionItemId + "\"" + EOL + 
+    			 " workspaceName=\"" + workspaceName + "\"" + EOL  +
+    			 " workspaceItemId=\"" + workspaceItemId + "\"" + EOL +
+    			 "/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	
+    	// Assert
+    	assertEquals(streamItemId, changelogSet.getStreamItemId());
+    	assertEquals(streamName, changelogSet.getStreamName());
+    	assertEquals(buildDefinitionItemId, changelogSet.getBuildDefinitionItemId());
+    	assertEquals(buildDefinitionName, changelogSet.getBuildDefinitionName());
+    	assertEquals(baselineSetItemId, changelogSet.getBaselineSetItemId());
+    	assertEquals(baselineSetName, changelogSet.getBaselineSetName());
+    	assertEquals(workspaceName, changelogSet.getWorkspaceName());
+    	assertEquals(workspaceItemId, changelogSet.getWorkspaceItemId());
+    	assertEquals(0, changelogSet.getChangeSetsAcceptedCount());
+    	assertEquals(0, changelogSet.getChangeSetsDiscardedCount());
+    }
+    
+    @Test 
+    public void testNonExistentPreviousBuildUrlIsNull() throws Exception {
+    	
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+   			 "<changelog " + EOL +
+   			 "/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	
+    	// Assert
+    	assertEquals(null, changelogSet.getPreviousBuildUrl());
+    }
+    
+    @Test 
+    public void testEmptyPreviousBuildUrlIsEmpty() throws Exception {
+    	
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+   			 "<changelog " + EOL +
+   			 " previousBuildUrl=\"" + "\"" + EOL + 
+   			 "/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	
+    	// Assert
+    	assertEquals("", changelogSet.getPreviousBuildUrl());
+    }
+    
+    @Test 
+    public void testPreviousBuildUrl() throws Exception {
+    	String previousBuildUrl = "/build/21";
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+   			 "<changelog " + EOL +
+   			 " previousBuildUrl=\"" + previousBuildUrl + "\"" + EOL + 
+   			 "/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	// Assert
+    	assertEquals(previousBuildUrl, changelogSet.getPreviousBuildUrl());
+    }
+    
+    @Test
+    public void testPreviousBuildUrlRetainsWhitespace() throws Exception {
+    	// RTCChangeLogParser does not handle whitespaces
+    	String previousBuildUrl = "  /build/21  ";
+    	Reader changelogReader = new StringReader("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EOL +
+   			 "<changelog " + EOL +
+   			 " previousBuildUrl=\"" + previousBuildUrl + "\"" + EOL + 
+   			 "/>");
+    	RTCChangeLogParser parser = new RTCChangeLogParser();
+    	RTCChangeLogSet changelogSet = (RTCChangeLogSet) parser.parse(null, null, changelogReader);
+    	
+    	// Assert
+    	assertEquals(previousBuildUrl, changelogSet.getPreviousBuildUrl());
+    }
 }

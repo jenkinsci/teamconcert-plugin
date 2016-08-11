@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Spécifiez le propriétaire de l'image instantanée. Une image instantanée peut appartenir à un espace de travail de référentiel ou à un flux. 
+	La spécification du propriétaire de l'image instantanée active la recherche sectorisée et, par conséquent, évite les doublons dans le résultat de la recherche.
+  </p>
+  <p>
+	Lorsque vous ne disposez pas des détails du propriétaire de l'image instantanée, ou si vous êtes certain que le nom de l'image instantanée est unique dans le référentiel, vous pouvez choisir "- aucun -" pour le propriétaire de l'image instantanée. 
+	Les détails du propriétaire de l'image instantanée sont ignorés lorsque vous indiquez l'UUID de l'image instantanée.
+  </p>  
+  <p>
+  	Lorsque vous choisissez "- aucun -" pour le propriétaire de l'image instantanée, la recherche d'image instantanée n'est pas sectorisée et s'effectue dans l'ensemble du référentiel.  
+  </p>
+  <p>
+  	Lorsqu'un espace de travail ou un flux de référentiel est spécifié, la recherche d'image instantanée se limite aux images instantanées associées à l'espace de travail ou au flux de référentiel spécifié.
+  </p>
+  <p>
+  	Lorsque le propriétaire de l'image instantanée est sélectionné comme étant un espace de travail de référentiel, mais que le nom de ce dernier n'est pas spécifié, la recherche d'image instantanée n'est pas sectorisée et s'effectue dans l'ensemble du référentiel.
+  </p>
+  <p>
+  	Lorsque le propriétaire de l'image instantanée est sélectionné comme étant un flux, mais que ni la zone de projet ou d'équipe, ni le flux propriétaire n'est spécifié, la recherche d'image instantanée n'est pas sectorisée et s'effectue dans l'ensemble du référentiel.
+  </p>
+  <p>
+  	Lorsque le propriétaire de l'image instantanée est sélectionné comme étant un flux, et que seul le nom de la zone de projet ou d'équipe est spécifié, la recherche d'image instantanée se limite aux images instantanées associées à tous les flux appartenant à la zone de projet ou d'équipe spécifiée.
+  </p>
+  <p>
+  	Lorsque le propriétaire de l'image instantanée est sélectionné comme étant un flux, et que seul le nom du flux est spécifié, la recherche d'image instantanée se limite
+   aux images instantanées associées à tous les flux ayant le nom donné dans l'ensemble du référentiel.</p>
+  <p>
+  	Lorsque le propriétaire de l'image instantanée est sélectionné comme étant un flux, et que le nom de la zone de projet ou d'équipe et celui du flux propriétaire sont tous deux spécifiés, la recherche d'image instantanée se limite aux images instantanées associées à tous les flux ayant le nom donné de la zone de projet ou d'équipe spécifiée.
+</p>
+</div>

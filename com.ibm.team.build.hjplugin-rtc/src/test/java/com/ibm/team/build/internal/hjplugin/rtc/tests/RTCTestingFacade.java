@@ -16,6 +16,8 @@ import java.util.Map;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCFacade;
+import com.ibm.team.build.internal.hjplugin.rtc.RTCWorkspaceUtils;
+import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 
 
 public class RTCTestingFacade extends RTCFacade {
@@ -99,13 +101,20 @@ public class RTCTestingFacade extends RTCFacade {
 		Map<String, String> setup = testClient.setupTestBuildStream_basic(connectionDetails, projectAreaName, buildStreamName, getProgressMonitor());
 		return setup;
 	}
+	
+	public Map<String, String> setupTestBuildStream_basic(String serverURL, String userId, String password, int timeout, String buildStreamName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupTestBuildStream_basic(connectionDetails, buildStreamName, getProgressMonitor());
+		return setup;
+	}
 
-	public Map<String, String> setupTestBuildSnapshotUsingStream(String serverURL, String userId, String password, int timeout,
-			String projectAreaName, String buildStreamName, String snapshotName) throws Exception {
+	public Map<String, String> setupTestBuildSnapshot_basic(String serverURL, String userId, String password, int timeout, String projectAreaName,
+			String streamName, String workspaceName, String snapshotName) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
-		Map<String, String> setup = testClient.setupTestBuildSnapshotUsingStream(connectionDetails, projectAreaName, buildStreamName, snapshotName,
-				getProgressMonitor());
+		Map<String, String> setup = testClient.setupTestBuildSnapshot_basic(connectionDetails, projectAreaName, streamName, workspaceName,
+				snapshotName, getProgressMonitor());
 		return setup;
 	}
 	
@@ -370,4 +379,10 @@ public class RTCTestingFacade extends RTCFacade {
 		return testClient.setupTestBuildSnapshot_complete(connectionDetails, workspaceName, projectAreaName, streamName, snapshotName);
 	}
 
+	public void deleteSnapshot(String serverURL, String userId, String password, int timeout, 
+							String streamName, String snapshotUUID) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		testClient.deleteSnapshot(connectionDetails, streamName, snapshotUUID, getProgressMonitor());
+	}
 }

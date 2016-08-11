@@ -147,7 +147,8 @@ public class BuildConfiguration {
 	 * @param monitor
 	 * @throws Exception
 	 */
-	public void initialize(IBaselineSet baselineSet, IContributorHandle contributorHandle, String workspacePrefix, IConsoleOutput listener, Locale clientLocale, IProgressMonitor monitor) throws Exception {
+	public void initialize(IBaselineSet baselineSet, IContributorHandle contributorHandle, String workspacePrefix, String workspaceComment,
+								IConsoleOutput listener, Locale clientLocale, IProgressMonitor monitor) throws Exception {
 		LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Enter");
 		SubMonitor progress = SubMonitor.convert(monitor, 10);
 		
@@ -158,7 +159,7 @@ public class BuildConfiguration {
 				LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Creating workspace '" + workspaceName + "'");
 			}
 	
-			workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributorHandle, workspaceName, null, baselineSet, progress.newChild(5));
+			workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributorHandle, workspaceName, workspaceComment, baselineSet, progress.newChild(5));
 			
 			String snapshotUUID =  baselineSet.getItemId().getUuidValue();
 			this.snapshot = new BuildSnapshotDescriptor(teamRepository, snapshotUUID, baselineSet);

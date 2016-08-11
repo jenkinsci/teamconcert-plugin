@@ -250,6 +250,11 @@ public class RTCFacade {
 	
 	public BigInteger computeIncomingChangesForStream(String serverURI, String userId, String password, int timeout, String processArea,
 			String buildStream, String streamChangesData, Object listener, Locale clientLocale) throws Exception {
+		LOGGER.finest("RTCFacade.computeIncomingChangesForStream : Enter");
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finer("RTCFacade.computeIncomingChangesForStream : Computing incoming changes for Stream '" 
+						 + buildStream + "'");
+		}
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -461,13 +466,14 @@ public class RTCFacade {
 	 * @param callConnectorTimeout user defined value for call connector timeout
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 * @param previousBuildUrl - URL to the previous Jenkins build. This is written into the change log.
+	 * @param temporaryWorkspaceComment 
 	 * @return Map<String, Object> returns a map of objects see RepositoryConnection#accept for more details.
 	 * @throws Exception
 	 */
 	public Map<String, Object> accept(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
 			String buildWorkspace, Map<String, String> buildSnapshotContextMap, final String buildSnapshot, final String buildStream, String hjWorkspacePath, OutputStream changeLog,
 			String baselineSetName, final String previousSnapshotUUID, final Object listener, Locale clientLocale, String callConnectorTimeout,
-			boolean acceptBeforeLoad, String previousBuildUrl) throws Exception {
+			boolean acceptBeforeLoad, String previousBuildUrl, String temporaryWorkspaceComment) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -481,7 +487,7 @@ public class RTCFacade {
 			// create the BuildSnaphotContextMap instance from the context map and pass it to accept
 			return repoConnection.accept(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap),
 					buildSnapshot, buildStream, hjWorkspacePath, report, baselineSetName, previousSnapshotUUID, clientConsole, monitor, clientLocale,
-					callConnectorTimeout, acceptBeforeLoad, previousBuildUrl);
+					callConnectorTimeout, acceptBeforeLoad, previousBuildUrl, temporaryWorkspaceComment);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -523,13 +529,14 @@ public class RTCFacade {
 	 * @param componentsToExclude json text representing the list of components to exclude during load
 	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
+	 * @param temporaryWorkpsaceComment
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
 	public void load(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
 			String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjWorkspacePath,
 			String baselineSetName, final Object listener, Locale clientLocale, String parentActivityId, String connectorId, Object extProvider,
 			PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude, String loadRules,
-			boolean acceptBeforeLoad) throws Exception {
+			boolean acceptBeforeLoad, String temporaryWorkpsaceComment) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -539,7 +546,8 @@ public class RTCFacade {
 			// create the BuildSnapshotContext instance from the Map and pass it to load
 			repoConnection.load(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap), buildSnapshot, buildStream, buildStreamData, hjWorkspacePath,
 					baselineSetName, clientConsole, monitor, clientLocale, parentActivityId, connectorId, extProvider, logger, isDeleteNeeded,
-					createFoldersForComponents, componentsToExclude, loadRules, acceptBeforeLoad);
+					createFoldersForComponents, componentsToExclude, loadRules,
+					acceptBeforeLoad, temporaryWorkpsaceComment);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {

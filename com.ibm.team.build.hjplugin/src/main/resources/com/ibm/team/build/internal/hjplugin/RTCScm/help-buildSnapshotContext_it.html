@@ -1,0 +1,51 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Specificare il proprietario dell'istantanea. Il proprietario dell'istantanea può essere uno stream o uno spazio di lavoro del repository. 
+	Specificando il proprietario dell'istantanea, viene abilitata la ricerca con ambito e quindi vengono evitati duplicati nei risultati della ricerca.
+  </p>
+  <p>
+	Quando non si conoscono i dettagli del proprietario dell'istantanea o se non si è sicuri che il nome dell'istantanea sia univoco nel repository, è possibile scegliere "- nessuno -" come proprietario dell'istantanea. 
+	I dettagli del proprietario dell'istantanea vengono ignorati quando viene specificato l'UUID dell'istantanea.
+  </p>  
+  <p>
+  	Quando si seleziona "- nessuno -" come proprietario dell'istantanea, la ricerca dell'istantanea è senza ambito e viene eseguita nel repository.  
+  </p>
+  <p>
+  	Quando vengono specificati uno stream o uno spazio di lavoro del repository proprietari, la ricerca dell'istantanea è limitata all'ambito delle istantanee associate allo stream o allo spazio di lavoro del repository specificato.
+  </p>
+  <p>
+  	Quando il proprietario dell'istantanea selezionato è uno spazio di lavoro del repository ma il nome dello spazio di lavoro del repository non viene specificato,
+  	la ricerca dell'istantanea è senza ambito e viene eseguita nel repository.
+  </p>
+  <p>
+  	Quando il proprietario dell'istantanea selezionato è uno stream ma non vengono specificati l'area progetto o team oppure lo stream proprietario,
+  	la ricerca dell'istantanea è senza ambito e viene eseguita nel repository.
+  </p>
+  <p>
+  	Quando il proprietario dell'istantanea selezionato è uno stream e viene specificato solo il nome dell'area progetto o team, la ricerca dell'istantanea è limitata
+  	all'ambito delle istantanee associate a tutti gli stream di proprietà dell'area progetto o team specificata.
+  </p>
+  <p>
+  	Quando il proprietario dell'istantanea selezionato è uno stream e viene specificato solo il nome dello stream, la ricerca dell'istantanea è limitata all'ambito delle
+   istantanee associate a tutti gli stream con il nome fornito nel repository.
+  </p>
+  <p>
+  	Quando il proprietario dell'istantanea selezionato è uno stream sono specificati il nome dell'area progetto o team ed il nome dello stream proprietario, la ricerca dell'istantanea
+  	è limitata all'ambito delle istantanee associate a tutti gli stream con il nome fornito nell'area progetto o team specificata.
+  </p>
+</div>

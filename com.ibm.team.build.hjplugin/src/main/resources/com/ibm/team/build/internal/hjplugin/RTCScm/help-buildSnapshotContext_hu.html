@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Adja meg a pillanatkép tulajdonosát. Egy pillanatkép tulajdonosa egy lerakat munkaterület vagy egy folyam lehet. 
+	A pillanatkép tulajdonosának megadása lehetővé teszi a hatókörös keresést, és így a másodpéldányok elkerülését a keresési eredményekben.
+  </p>
+  <p>
+	Ha nem rendelkezik a pillanatkép tulajdonosának részleteivel, vagy ha biztos benne, hogy a pillanatkép neve egyedi a lerakatban, akkor a pillanatkép tulajdonosához választhatja a "- nincs -" beállítást. 
+	A pillanatkép tulajdonosának részletei figyelmen kívül maradnak a pillanatkép UUID azonosítójának megadásakor.
+  </p>  
+  <p>
+  	Ha a pillanatkép tulajdonosához a "- nincs -" beállítást választja, akkor a pillanatkép keresés nem lesz hatókörös, és a teljes lerakatra vonatkozóan kerül végrehajtásra.  
+  </p>
+  <p>
+  	Amikor meg van adva egy tulajdonos lerakat munkaterület vagy folyam, a pillanatkép keresés hatóköre a megadott munkaterülettel vagy folyammal társított pillanatképekre korlátozódik. </p>
+  <p>
+  	Amikor a pillanatkép tulajdonosaként lerakat munkaterület van kiválasztva, de a lerakat munkaterület neve nincs megadva,
+  	a pillanatkép keresésnek nem lesz hatóköre, és a teljes lerakaton kerül végrehajtásra.
+  </p>
+  <p>
+  	Amikor a pillanatkép tulajdonosaként folyam van kiválasztva, de sem a projekt- vagy csapatterület, sem a tulajdonos folyam nincs megadva,
+  	a pillanatkép keresésnek nem lesz hatóköre, és a teljes lerakaton kerül végrehajtásra.
+  </p>
+  <p>
+  	Amikor a pillanatkép tulajdonosaként folyam van kiválasztva és csak a projekt- vagy csapatterület neve van megadva, a pillanatkép keresés hatóköre
+  	az összes olyan folyammal társított pillanatkép lesz, amelyeknek tulajdonosa a megadott projekt- vagy csapatterület.
+  </p>
+  <p>
+  	Amikor a pillanatkép tulajdonosaként folyam van kiválasztva és csak a folyam neve van megadva, a pillanatkép keresés hatóköre
+  	a teljes lerakatban az összes adott nevű folyammal társított pillanatkép lesz. </p>
+  <p>
+  	Amikor a pillanatkép tulajdonosaként folyam van kiválasztva, és a projekt- vagy csapatterület neve, valamint tulajdonos folyam neve is meg van adva, a pillanatkép keresés hatóköre
+  	a megadott projekt- vagy csapatterületen lévő, adott nevű összes folyammal társított pillanatkép lesz.
+  </p>
+</div>

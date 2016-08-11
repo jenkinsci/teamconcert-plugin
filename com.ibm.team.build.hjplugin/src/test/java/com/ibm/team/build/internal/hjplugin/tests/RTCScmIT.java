@@ -11,29 +11,35 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.FreeStyleProject;
-import hudson.util.FormValidation;
-import hudson.util.Secret;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 
-import net.sf.json.JSONObject;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.recipes.WithTimeout;
 
-import org.kohsuke.stapler.StaplerRequest;
-import org.mockito.Mockito;
-
-import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.Messages;
+import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemDesc;
+import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
@@ -41,32 +47,29 @@ import com.ibm.team.build.internal.hjplugin.RTCRepositoryBrowser;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
-import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
+
+import hudson.model.Cause;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParametersAction;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.queue.QueueTaskFuture;
+import hudson.tools.ToolProperty;
+import hudson.util.FormValidation;
+import hudson.util.Secret;
 
 @SuppressWarnings("nls")
-public class RTCScmIT extends AbstractTestCase {
+public class RTCScmIT {
 
-	private static final String CONFIGURE = "configure";
-	private static final String CONFIG = "config";
 	private static final String BUILD_TOOLKIT = "buildToolkit";
-	private static final String OVERRIDE_GLOBAL = "overrideGlobal";
-	private static final String SERVER_URI = "serverURI";
+	
 	private static final String USER_ID = "userId";
 	private static final String PASSWORD = "password";
 	private static final String PASSWORD_FILE = "passwordFile";
 	private static final String CREDENTIALS_ID = "_.credentialsId";
-	private static final String AVOID_USING_TOOLKIT = "avoidUsingToolkit";
 	private static final String TIMEOUT = "timeout";
-	private static final String BUILD_DEFINITION = "buildDefinition";
-	private static final String BUILD_TYPE = "buildType";
-
-	private static final String TEST_GLOBAL_BUILD_TOOLKIT = "C:\\buildtoolkit";
-	private static final String TEST_GLOBAL_SERVER_URI = "https://localhost:9443/ccm";
-	private static final String TEST_GLOBAL_USER_ID = "ADMIN";
-	private static final String TEST_GLOBAL_PASSWORD = "ADMIN";
-	private static final String TEST_GLOBAL_PASSWORD_FILE = "C:/Users/ADMIN/ADMIN-password";
-	private static final String TEST_GLOBAL_CRED_ID = "1234";
-	private static final String TEST_GLOBAL_TIMEOUT = "480";
 
 	private static final String TEST_SERVER_URI = "https://localhost:9443/jazz";
 	private static final String TEST_TIMEOUT = "480";
@@ -80,7 +83,8 @@ public class RTCScmIT extends AbstractTestCase {
 	private static final String TEST_BUILD_STREAM = "compile-and-test-stream";
 	
 	private static final String CONFIG_TOOLKIT_NAME = "config_toolkit";
-	
+	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
+
 	private String buildTool;
 	private String serverURI;
 	private String timeout;
@@ -94,7 +98,7 @@ public class RTCScmIT extends AbstractTestCase {
 	}
 
 	private RTCScm getRTCScm(BuildType buildType) throws InvalidCredentialsException {
-		RTCBuildToolInstallation tool = new RTCBuildToolInstallation(CONFIG_TOOLKIT_NAME, Config.DEFAULT.getToolkit(), Collections.EMPTY_LIST);
+		RTCBuildToolInstallation tool = new RTCBuildToolInstallation(CONFIG_TOOLKIT_NAME, Config.DEFAULT.getToolkit(), Collections.<ToolProperty<?>> emptyList());
 		tool.getDescriptor().setInstallations(tool);
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		RTCScm scm = new RTCScm(true, "config_toolkit", loginInfo.getServerUri(), loginInfo.getTimeout(), loginInfo.getUserId(),
@@ -108,10 +112,9 @@ public class RTCScmIT extends AbstractTestCase {
 				useCreds ? TEST_CRED_ID : null, buildSource, false);
 	}
 
-	@Override
-	protected void setUp() throws Exception {
+	@Before
+	public void setUp() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			super.setUp();
 			Config config = Config.DEFAULT;
 			buildTool = CONFIG_TOOLKIT_NAME;
 			serverURI = config.getServerURI();
@@ -122,13 +125,9 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 
-	@Override
-	protected void tearDown() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			super.tearDown();
-		}
-	}
+	@Rule public JenkinsRule r = new JenkinsRule();
 
+	@Test
 	public void testRTCScmConstructor() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCScm scm = createTestOverrideGlobalRTCScm(true);
@@ -168,9 +167,9 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 
-	public void testDoCheckBuildTool() throws IOException {
+	@Test public void testDoCheckBuildTool() throws IOException {
 		if (Config.DEFAULT.isConfigured()) {
-			DescriptorImpl descriptor = (DescriptorImpl) hudson.getDescriptor(RTCScm.class);
+			DescriptorImpl descriptor = (DescriptorImpl) r.getInstance().getDescriptor(RTCScm.class);
 	
 			// null is not a build toolkit
 			assertDoCheckBuildTool(descriptor, FormValidation.Kind.ERROR, null);
@@ -225,9 +224,9 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals("Expected toolkit validation " + kind + ": " + BUILD_TOOLKIT + "=\"" + buildToolkit + "\"", kind, validation.kind);
 	}
 
-	public void testDoCheckCredentials() throws Exception {
+	@Test public void testDoCheckCredentials() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = r.createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			project.setScm(rtcScm);
 	
@@ -243,9 +242,9 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 
-	public void testDoCheckUserId() throws Exception {
+	@Test public void testDoCheckUserId() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = r.createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			project.setScm(rtcScm);
 	
@@ -275,9 +274,9 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 
-	public void testDoCheckPassword() throws Exception {
+	@Test public void testDoCheckPassword() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = r.createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			project.setScm(rtcScm);
 	
@@ -305,12 +304,12 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 
-	public void testDoCheckPasswordFile() throws Exception {
+	@Test public void testDoCheckPasswordFile() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			File testPasswordFileFile = File.createTempFile("ADMIN-password", null);
 			String testPasswordFile = testPasswordFileFile.getAbsolutePath();
 	
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = r.createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			project.setScm(rtcScm);
 	
@@ -374,9 +373,9 @@ public class RTCScmIT extends AbstractTestCase {
 	}
 	
 
-	public void testDoCheckTimeout() throws Exception {
+	@Test public void testDoCheckTimeout() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = r.createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			project.setScm(rtcScm);
 	
@@ -396,136 +395,12 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals("Expected timeout validation " + kind + ": " + TIMEOUT + "=\"" + timeout + "\"", kind, validation.kind);
 	}
 
-	// TODO : Uncomment this test once fixed
-/*	public void testJobConfigRoundtripOverrideGlobal() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
-			RTCScm rtcScm = createTestOverrideGlobalRTCScm(false);
-			project.setScm(rtcScm);
-	
-			submit(createWebClient().getPage(project, CONFIGURE).getFormByName(CONFIG));
-	
-			RTCScm newRtcScm = (RTCScm) project.getScm();
-	
-			assertEqualBeans(rtcScm, newRtcScm, OVERRIDE_GLOBAL + "," + SERVER_URI + "," + USER_ID + "," + PASSWORD + "," + PASSWORD_FILE + ","
-					+ BUILD_TYPE + "," + BUILD_DEFINITION);
-		}
-	}*/
-
-	// TODO Uncomment when test is fixed
-	/*public void testJobConfigRoundtripWithCredentials() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
-			RTCScm rtcScm = createEmptyRTCScm();
-			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
-			project.setScm(rtcScm);
-	
-			StaplerRequest mockedReq = Mockito.mock(StaplerRequest.class);
-			Mockito.when(mockedReq.getParameter(BUILD_TOOLKIT)).thenReturn(TEST_GLOBAL_BUILD_TOOLKIT);
-			Mockito.when(mockedReq.getParameter(SERVER_URI)).thenReturn(TEST_GLOBAL_SERVER_URI);
-			Mockito.when(mockedReq.getParameter(USER_ID)).thenReturn(TEST_GLOBAL_USER_ID);
-			Mockito.when(mockedReq.getParameter(TIMEOUT)).thenReturn(TEST_GLOBAL_TIMEOUT);
-			Mockito.when(mockedReq.getParameter(PASSWORD)).thenReturn(TEST_GLOBAL_PASSWORD);
-			Mockito.when(mockedReq.getParameter(PASSWORD_FILE)).thenReturn(TEST_GLOBAL_PASSWORD_FILE);
-			Mockito.when(mockedReq.getParameter(CREDENTIALS_ID)).thenReturn(TEST_GLOBAL_CRED_ID);
-			JSONObject mockJSON = new JSONObject();
-			mockJSON.element(AVOID_USING_TOOLKIT, new JSONObject());
-			mockJSON.element(CREDENTIALS_ID, TEST_GLOBAL_CRED_ID);
-			mockJSON.element(SERVER_URI, TEST_GLOBAL_SERVER_URI);
-			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
-			descriptor.configure(mockedReq, mockJSON);
-	
-			descriptor.configure(mockedReq, mockJSON);
-	
-			WebClient webClient = new WebClient();
-	
-			// Get the page to configure the project
-			HtmlPage page = webClient.getPage(project, CONFIGURE);
-	
-			// Get the config form
-			HtmlForm form = page.getFormByName(CONFIG);
-	
-			// Get the inputs
-			HtmlCheckBoxInput overrideGlobalInput = form.getInputByName(OVERRIDE_GLOBAL);
-	
-			// Set the input values
-			overrideGlobalInput.setChecked(false);
-	
-			// Submit the config form
-			submit(form);
-	
-			// check submitted SCM result
-			RTCScm newRtcScm = (RTCScm) project.getScm();
-			assertEquals(false, newRtcScm.getOverrideGlobal());
-			assertEquals(TEST_GLOBAL_SERVER_URI, newRtcScm.getServerURI());
-			assertEquals(TEST_GLOBAL_TIMEOUT, String.valueOf(newRtcScm.getTimeout()));
-			assertEquals(null, newRtcScm.getUserId());
-			assertEquals(null, newRtcScm.getPassword());
-			assertEquals(null, newRtcScm.getPasswordFile());
-			assertEquals(TEST_GLOBAL_CRED_ID, newRtcScm.getCredentialsId());
-			assertTrue(newRtcScm.getAvoidUsingToolkit());
-		}
-	}*/
-
-	// TODO Uncomment when test is fixed
-	/*public void testJobConfigRoundtripWithoutCredentials() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
-			RTCScm rtcScm = createEmptyRTCScm();
-			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
-			project.setScm(rtcScm);
-	
-			StaplerRequest mockedReq = Mockito.mock(StaplerRequest.class);
-			Mockito.when(mockedReq.getParameter(BUILD_TOOLKIT)).thenReturn(TEST_GLOBAL_BUILD_TOOLKIT);
-			Mockito.when(mockedReq.getParameter(SERVER_URI)).thenReturn(TEST_GLOBAL_SERVER_URI);
-			Mockito.when(mockedReq.getParameter(USER_ID)).thenReturn(TEST_GLOBAL_USER_ID);
-			Mockito.when(mockedReq.getParameter(TIMEOUT)).thenReturn(TEST_GLOBAL_TIMEOUT);
-			Mockito.when(mockedReq.getParameter(PASSWORD)).thenReturn(TEST_GLOBAL_PASSWORD);
-			Mockito.when(mockedReq.getParameter(PASSWORD_FILE)).thenReturn(TEST_GLOBAL_PASSWORD_FILE);
-			Mockito.when(mockedReq.getParameter(CREDENTIALS_ID)).thenReturn(null);
-			JSONObject mockJSON = new JSONObject();
-			mockJSON.element(AVOID_USING_TOOLKIT, new JSONObject());
-			mockJSON.element(SERVER_URI, TEST_GLOBAL_SERVER_URI);
-			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
-			descriptor.configure(mockedReq, mockJSON);
-	
-			WebClient webClient = new WebClient();
-	
-			// Get the page to configure the project
-			HtmlPage page = webClient.getPage(project, CONFIGURE);
-	
-			// Get the config form
-			HtmlForm form = page.getFormByName(CONFIG);
-	
-			// Get the inputs
-			HtmlCheckBoxInput overrideGlobalInput = form.getInputByName(OVERRIDE_GLOBAL);
-	
-			// Set the input values
-			overrideGlobalInput.setChecked(false);
-	
-			// Submit the config form
-			submit(form);
-	
-			// check submitted SCM result
-			RTCScm newRtcScm = (RTCScm) project.getScm();
-			assertEquals(false, newRtcScm.getOverrideGlobal());
-			assertEquals(TEST_GLOBAL_SERVER_URI, newRtcScm.getServerURI());
-			assertEquals(TEST_GLOBAL_TIMEOUT, String.valueOf(newRtcScm.getTimeout()));
-			assertEquals(TEST_GLOBAL_USER_ID, newRtcScm.getUserId());
-			assertEquals(TEST_GLOBAL_PASSWORD, newRtcScm.getPassword());
-			assertEquals(TEST_GLOBAL_PASSWORD_FILE, newRtcScm.getPasswordFile());
-			assertEquals(null, newRtcScm.getCredentialsId());
-			assertTrue(newRtcScm.getAvoidUsingToolkit());
-		}
-	}*/
-	
-
 	@SuppressWarnings("unchecked")
-	public void testDoValidateBuildWorkspaceConfiguration() throws Exception {
+	@Test public void testDoValidateBuildWorkspaceConfiguration() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		FreeStyleProject project = createFreeStyleProject();
+		FreeStyleProject project = r.createFreeStyleProject();
 		// that build type that we set here is just for creation, it is not significant for the following validation
 		// we manually pass the values to the validation method
 		BuildType buildType = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "SomeBuildWorkspace", null, null, "");
@@ -574,38 +449,50 @@ public class RTCScmIT extends AbstractTestCase {
 				serverURI, userId, password, timeoutInt, "Singly Occuring=WS", "Multiple Occurrence=WS");
 		try {
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid workspace - multiple workspace
+			// warning connect info and error workspace - only error should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", "Multiple Occurrence=WS");
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>More than 1 repository workspace has the name &quot;Multiple Occurrence=WS&quot;", result.renderHtml());
+			assertEquals("More than 1 repository workspace has the name &quot;Multiple Occurrence=WS&quot;", result.renderHtml());
 			
+			// valid connect info - using build toolkit and warning workspace (parameterized values) 
+			// only warning should be displayed
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "${rtcRepositoryWorkspace}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_repository_workspace_not_validated(), result.renderHtml());
+
+			// warning connect info - avoidUsingBuildToolkit and warning workspace (parameterized values) 
+			// both the warnings should be displayed
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
+					"true", "${rtcRepositoryWorkspace}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_tool_needed_for_job() + "<br/>" + Messages.RTCScm_repository_workspace_not_validated(),
+					result.renderHtml());
+
 			// valid connect info - using build toolkit and valid workspace
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
 					"false", "Singly Occuring=WS");
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
-			// valid conenct info - avoidUsingBuildToolkit and buildTool is null, valid workspace
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid workspace
+			// warning connect info and valid workspace - only warning should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", "Singly Occuring=WS");
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>" + Messages.RTCScm_validation_success(), result.renderHtml());
-
+			assertEquals(Messages.RTCScm_build_tool_needed_for_job(), result.renderHtml());
+			
 		} finally {
-			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
-					String.class, // userId
-					String.class, // password
-					int.class, // timeout
-					Map.class }, // setupArtifacts
-					serverURI, userId, password, timeoutInt, setupArtifacts);
+			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
 		}
 	}
 
-	public void testDoValidateBuildDefinitionConfiguration() throws Exception {
+	@Test public void testDoValidateBuildDefinitionConfiguration() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		FreeStyleProject project = createFreeStyleProject();
+		FreeStyleProject project = r.createFreeStyleProject();
 		// that build type that we set here is just for creation, it is not significant for the following validation
 		// we manually pass the values to the validation method
 		BuildType buildType = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "SomeBuildDefinition", null, null, "");
@@ -644,10 +531,11 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals("Unable to find a build definition with ID: &quot;test&quot;", result.renderHtml());
 		
 		// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid build definition
+		// warning connect info and error build definition - only error should be displayed
 		result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 				"true", "test");
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
-		assertEquals("A build toolkit is needed to perform builds<br/>Unable to find a build definition with name &quot;test&quot;", result.renderHtml());
+		assertEquals("Unable to find a build definition with name &quot;test&quot;", result.renderHtml());
 		
 		// create buildDefinition
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
@@ -662,6 +550,19 @@ public class RTCScmIT extends AbstractTestCase {
 						String.class}, // Build Definition Name,
 						serverURI, userId, password, timeoutInt, buildDefinitionName);
 		try {
+			// valid connect info - using build toolkit and warning build definition (parameterized value)
+			// only warning should be displayed
+			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "${rtcBuildDefinition}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_definition_not_validated(), result.renderHtml());
+
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null, warning build definition (parameterized value)
+			// both the warning messages should be displayed
+			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
+					"true", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_tool_needed_for_job() + "<br/>" + Messages.RTCScm_build_definition_not_validated(), result.renderHtml());
 			// valid connect info - using build toolkit and valid build definition
 			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
 					"false", buildDefinitionName);
@@ -669,27 +570,23 @@ public class RTCScmIT extends AbstractTestCase {
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid build definition
+			// only warning message should be displayed
 			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", buildDefinitionName);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>" + Messages.RTCScm_validation_success(), result.renderHtml());
+			assertEquals(Messages.RTCScm_build_tool_needed_for_job(), result.renderHtml());
 
 		} finally {
-			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
-					String.class, // userId
-					String.class, // password
-					int.class, // timeout
-					Map.class }, // setupArtifacts
-					serverURI, userId, password, timeoutInt, setupArtifacts);
+			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void testDoValidateBuildStreamConfiguration() throws Exception {
+	@Test public void testDoValidateBuildStreamConfiguration() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		FreeStyleProject project = createFreeStyleProject();
+		FreeStyleProject project = r.createFreeStyleProject();
 		// that build type that we set here is just for creation, it is not significant for the following validation
 		// we manually pass the values to the validation method
 		BuildType buildType = new BuildType(RTCScm.BUILD_STREAM_TYPE, "SomeBuildStream", null, null, "");
@@ -741,29 +638,119 @@ public class RTCScmIT extends AbstractTestCase {
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
 			
+			// valid connect info - avoidUsingBuildToolkiit and build toolkit is provided and non-null invalid process area, valid stream
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", "testProject", streamName);
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
+			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, non-null invalid process area, valid stream
+			// warning connect info and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", "testProject", streamName);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>A build toolkit is required to validate the project or team area value.", result.renderHtml());
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 			
-			// valid connect info -using build tool kit, valid process area, invalid stream value
+			// valid connect info - using build toolkit and non-null invalid process area, warning stream (parameterized value)
+			// only error message should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "testProject", "${rtcStream}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
+
+			// valid connect info - avoidUsingBuildToolkiit and build toolkit is provided and non-null invalid process area, warning stream (parameterized value)
+			// only error message should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", "testProject", "${rtcStream}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
+			
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null, non-null invalid process area, warning stream (parameterized value)
+			// warning connect info, warning stream and error project area - only error should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
+					"true", "testProject", "${rtcStream}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
+
+			// valid connect info - using build tool kit, valid process area, invalid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
 					"false", projectAreaName, "testStream");
 			assertEquals(FormValidation.Kind.ERROR, result.kind);			
 			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the project area &quot;" + projectAreaName + "&quot;.", result.renderHtml());
 			
+			// valid connect info - avoidUsingBuildToolkit and buildTool is provided, valid process area, invalid stream value
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", projectAreaName, "testStream");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);			
+			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the project area &quot;" + projectAreaName + "&quot;.", result.renderHtml());
+			
+			// valid connect info - using build tool kit, valid process area(null), invalid stream value
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", null, "testStream");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);			
+			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the repository.", result.renderHtml());
+			
+			// valid connect info - avoidUsingBuildToolkit and buildTool is provided, valid process area(empty), invalid stream value
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", "   ", "testStream");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);			
+			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the repository.", result.renderHtml());
+			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid process area, invalid stream value
+			// warning connect info and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", projectAreaName, "testStream");
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>A build toolkit is required to validate the project or team area value.", result.renderHtml());
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 			
 			// warning connect info avoidUsingBuildToolkit and buildTool is invalid, valid(null) process area, invalid stream value
+			// warning connect info and error stream - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", "test", serverURI, timeout, userId, password, null, null,
 					"true", null, "testStream");
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("Build toolkit directory is required<br/>Unable to find a stream with name &quot;testStream&quot;", result.renderHtml());
+			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the repository.", result.renderHtml());
+			
+			// valid connectinfo - using build toolkit, valid process area, warning stream value (parameterized value)
+			// only warning message should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", projectAreaName, "${rtcStream}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());
+				
+			// valid connectinfo - avoidUsingBuildToolkit and buildTool is provided, valid process area, warning stream value (parameterized value)
+			// only warning message should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", projectAreaName, "${rtcStream}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());			
+
+			// valid connectinfo - using build toolkit, valid process area (null), warning stream value (parameterized value)
+			// only warning message should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", null, "${rtcStream}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());
+
+			// valid connectinfo - avoidUsingBuildToolkit and a buildTool is provided, valid process area (null), warning stream value (parameterized value)
+			// only warning message should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", null, "${rtcStream}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());
+			
+			// warning connect info - avoidUsingBuildToolkit and buildTool, valid process area, warning stream value (parameterized value)
+			// warning connect info, warning stream value and error project area - only error should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
+					"true", projectAreaName, "${rtcStream}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
+			
+			// warning connect info - avoidUsingBuildToolkit and buildTool, valid (null) process area, warning stream value (parameterized value)
+			// warning connect info, warning stream value and validation success - both the warning messages should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
+					"true", null, "${rtcStream}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_tool_needed_for_job() + "<br/>" + Messages.RTCScm_stream_not_validated(), result.renderHtml());
 			
 			// valid connectinfo - using build toolkit, valid process area, valid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
@@ -771,25 +758,40 @@ public class RTCScmIT extends AbstractTestCase {
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
+			// valid connectinfo - avoidUsingBuildToolkit and buildTool is provided, valid process area, valid stream value
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", projectAreaName, streamName);
+			assertEquals(FormValidation.Kind.OK, result.kind);
+			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
+
+			// valid connectinfo - using build toolkit, valid process area (null), valid stream value
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", null, streamName);
+			assertEquals(FormValidation.Kind.OK, result.kind);
+			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
+			
+			// valid connectinfo - avoidUsingBuildToolkit and a buildTool is provided, valid process area (null), valid stream value
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"true", null, streamName);
+			assertEquals(FormValidation.Kind.OK, result.kind);
+			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
+
 			// warning connect info - avoidUsingBuildToolkit and buildTool, valid process area, valid stream value
+			// warning connect info and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", projectAreaName, streamName);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>A build toolkit is required to validate the project or team area value.", result.renderHtml());
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool, valid (null) process area, valid stream value
+			// warning connect info and validation success - only warning should be displayed 
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", null, streamName);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>" + Messages.RTCScm_validation_success(), result.renderHtml());
+			assertEquals(Messages.RTCScm_build_tool_needed_for_job(), result.renderHtml());
 
 		} finally {
-			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
-					String.class, // userId
-					String.class, // password
-					int.class, // timeout
-					Map.class }, // setupArtifacts
-					serverURI, userId, password, timeoutInt, setupArtifacts);
+			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
 		}		
 	}
 
@@ -798,7 +800,7 @@ public class RTCScmIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		FreeStyleProject project = createFreeStyleProject();
+		FreeStyleProject project = r.createFreeStyleProject();
 		// that build type that we set here is just for creation, it is not significant for the following validation
 		// we manually pass the values to the validation method
 		BuildType buildType = new BuildType(RTCScm.BUILD_SNAPSHOT_TYPE, "SomeBuildSnapshot", null, null, "");
@@ -834,30 +836,49 @@ public class RTCScmIT extends AbstractTestCase {
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 		String projectAreaName = "testDoValidateBuildSnapshotConfiguration" + System.currentTimeMillis();
 		String streamName = "testDoValidateBuildSnapshotConfigurationStream" + System.currentTimeMillis();
+		String workspaceName = "testDoValidateBuildSnapshotConfigurationWorkspace" + System.currentTimeMillis();
 		String snapshotName = "testDoValidateBuildSnapshotConfigurationSnapshot" + System.currentTimeMillis();
+		String wsSnapshotName = "ws" + snapshotName;
 		// create a project area with a single team area
-		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildSnapshotUsingStream", new Class[] {
+		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildSnapshot_basic", new Class[] {
 				String.class, // serverURL,
 				String.class, // userId,
 				String.class, // password,
 				int.class, // timeout,
 				String.class, // projectAreaName
 				String.class, // streamName
+				String.class,
 				String.class }, // snapshotName
-				serverURI, userId, password, timeoutInt, projectAreaName, streamName, snapshotName);
+				serverURI, userId, password, timeoutInt, projectAreaName, streamName, workspaceName, snapshotName);
 		try {
+
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid snapshot value
+			// warning connect info and cannot validate snapshot error - only error should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
+					"", "", "", "", snapshotName);
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_snapshot(), result.renderHtml());
+
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null, warning snapshot value (job
+			// property)
+			// warning connect info and cannot validate snapshot error - only error should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
+					"", "", "", "", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_snapshot(), result.renderHtml());
+
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid snapshot value
+			// warning connect info and error snapshot - only error should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
+					"", "", "", "", "testSnapshot");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_snapshot(), result.renderHtml());
+
 			// valid connect info, invalid snapshot value
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
 					"false", "", "", "", "", "testSnapshot");
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A snapshot with name &quot;testSnapshot&quot; cannot be found in the repository.", result.renderHtml());
-
-			// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid snapshot value
-			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
-					"", "", "", "", "testSnapshot");
-			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>A build toolkit is required to validate the snapshot value.",
-					result.renderHtml());
 
 			// valid connectinfo, valid snapshot value
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
@@ -870,39 +891,141 @@ public class RTCScmIT extends AbstractTestCase {
 					"false", "none", "", "", "", snapshotName);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
-
-			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to stream without specifying project area
+			
+			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to workspace
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", "", streamName, projectAreaName, snapshotName);
+					"false", "workspace", "", "", workspaceName, wsSnapshotName);
+			assertEquals(FormValidation.Kind.OK, result.kind);
+			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
+
+			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to stream without specifying project
+			// area, but having a workspace name
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", "", streamName, "ignoreWorkspaceName", snapshotName);
+			assertEquals(FormValidation.Kind.OK, result.kind);
+			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
+
+			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to stream with specifying project
+			// area
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", projectAreaName, streamName, "", snapshotName);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
-			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to stream with specifying project area
+			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to workspace
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", "", streamName, "", snapshotName);
-			assertEquals(FormValidation.Kind.OK, result.kind);
-			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
-
-			// valid connectinfo, valid snapshot value(job property)
-			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "", "", "", "", "${rtcBuildSnapshot}");
-			assertEquals(FormValidation.Kind.WARNING, result.kind);
-			assertEquals("Cannot validate the parameterized value for snapshot.<br/>" + Messages.RTCScm_validation_success(),
-					result.renderHtml());
-
-			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid snapshot value
-			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
-					"", "", "", "", snapshotName);
+					"false", "workspace", "", "", workspaceName + "invalid", wsSnapshotName);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("A build toolkit is needed to perform builds<br/>A build toolkit is required to validate the snapshot value.",
-					result.renderHtml());
+			assertEquals("Unable to find a workspace with name &quot;" + workspaceName + "invalid&quot;", result.renderHtml());
 
-			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid snapshot value (job property)
+			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream without specifying
+			// project area, but having a workspace name
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", "", "", "", "", "${rtcBuildSnapshot}");
+					"false", "stream", "", streamName + "invalid", "ignoreWorkspaceName", snapshotName);
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the repository.", result.renderHtml());
+
+			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream with specifying project
+			// area
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", projectAreaName, streamName + "invalid", "", snapshotName);
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the project area &quot;" + projectAreaName
+					+ "&quot;.", result.renderHtml());
+
+			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream with specifying project
+			// area
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", projectAreaName + "invalid", streamName + "invalid", "", snapshotName);
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A project area with name &quot;" + projectAreaName + "invalid&quot; cannot be found.", result.renderHtml());
+			
+			// valid connectinfo, warning snapshot value(job property)
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", null, "", "", "", "${rtcBuildSnapshot}");
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
-			assertEquals("Cannot validate the parameterized value for snapshot.<br/>" + Messages.RTCScm_validation_success(),
-					result.renderHtml());
+			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
+
+			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to none
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "none", "", "", "", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
+
+			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to workspace
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "workspace", "", "", workspaceName, "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
+			
+			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to workspace no workspaceName
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "workspace", "", "", "", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
+
+
+			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to stream without
+			// specifying project area, but having a workspace name
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", "", streamName, "ignoreWorkspaceName", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
+			
+
+			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to stream without
+			// specifying project area and stream name
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", "", "", "", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
+
+			// valid connectinfo, valid snapshot value, valid snapshotOwnerType set to stream with specifying project
+			// area
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", projectAreaName, streamName, "", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
+
+			// valid connectinfo, warning snapshot value(job property), invalid snapshotOwnerType set to workspace
+			// only error should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "workspace", "", "", workspaceName + "invalid", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("Unable to find a workspace with name &quot;" + workspaceName + "invalid&quot;", result.renderHtml());
+
+			// valid connectinfo, warning snapshot value(job property), invalid snapshotOwnerType set to stream without
+			// specifying project area, but having a workspace name
+			// only error should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", "", streamName + "invalid", "ignoreWorkspaceName", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the repository.", result.renderHtml());
+
+			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream with specifying project
+			// area
+			// only error should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", projectAreaName, streamName + "invalid", "", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the project area &quot;" + projectAreaName
+					+ "&quot;.", result.renderHtml());
+
+			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream with specifying project
+			// area
+			// only error should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", projectAreaName + "invalid", streamName + "invalid", "", "${rtcBuildSnapshot}");
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			assertEquals("A project area with name &quot;" + projectAreaName + "invalid&quot; cannot be found.", result.renderHtml());
+
 		} finally {
 			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
 					String.class, // userId
@@ -912,5 +1035,269 @@ public class RTCScmIT extends AbstractTestCase {
 					serverURI, userId, password, timeoutInt, setupArtifacts);
 
 		}
+	}
+
+	
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(600)
+	@Test 
+	public void buildDefinitionNameItemIdPairFoundInChangeLogSet() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+
+		Config defaultC = Config.DEFAULT;
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		String workspaceName = getTestName() + System.currentTimeMillis();
+		String componentName = getTestName() + System.currentTimeMillis();
+		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+				.invoke("setupBuildResultContributions",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // workspaceName,
+								String.class, // componentName
+								String.class}, // buildDefinitionId
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), workspaceName,
+						componentName, buildDefinitionId);
+		String buildDefinitionItemId = setupArtifacts.get(Utils.ARTIFACT_BUILDDEFINITION_ITEM_ID);
+
+		try {
+			// Setup a build with build definition configuration
+			FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(buildDefinitionId);
+			
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			
+			// Get the buildresultUUID from actions and insert it into setupArtifacts
+			List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
+			assertEquals(1, rtcActions.size());
+			RTCBuildResultAction action = rtcActions.get(0);
+			
+			// Verify build result getting created
+			assertNotNull(action.getBuildResultUUID());
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID, action.getBuildResultUUID());
+
+			RTCChangeLogSet changelog = (RTCChangeLogSet) build.getChangeSet();
+			
+			assertEquals(buildDefinitionItemId, changelog.getBuildDefinitionItemId());
+			assertEquals(buildDefinitionId, changelog.getBuildDefinitionName());
+			
+			// No previous build url is written for build definition builds
+			assertEquals("", changelog.getPreviousBuildUrl());
+	
+			
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(600)
+	@Test 
+	public void repositoryWorkspaceNameItemIdPairFoundInChangeLogSet() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		String streamName = getTestName() + System.currentTimeMillis();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		String workspaceUUID = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_ITEM_ID);
+		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
+		
+		try {
+			FreeStyleProject prj = setupFreeStyleJobForWorkspace(workspaceName);
+			
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			RTCChangeLogSet changelog = (RTCChangeLogSet) build.getChangeSet();
+
+			// Verify name and itemId pair inside changelogset
+			assertEquals(workspaceName, changelog.getWorkspaceName());
+			assertEquals(workspaceUUID, changelog.getWorkspaceItemId());
+			// Since this is the first build, prevBuildUrl is null
+			assertEquals("", changelog.getPreviousBuildUrl());		
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(600)
+	@Test 
+	public void buildDefinitionNameItemIdPairFoundInChangeLogFile() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+
+		Config defaultC = Config.DEFAULT;
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		String workspaceName = getTestName() + System.currentTimeMillis();
+		String componentName = getTestName() + System.currentTimeMillis();
+		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+				.invoke("setupBuildResultContributions",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // workspaceName,
+								String.class, // componentName
+								String.class}, // buildDefinitionId
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), workspaceName,
+						componentName, buildDefinitionId);
+		String buildDefinitionItemId = setupArtifacts.get(Utils.ARTIFACT_BUILDDEFINITION_ITEM_ID);
+
+		try {
+			// Setup a build with build definition configuration
+			FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(buildDefinitionId);
+			
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			File changelogFile = new File(build.getRootDir(), "changelog.xml");
+
+			// Get the buildresultUUID from actions and insert it into setupArtifacts
+			List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
+			assertEquals(1, rtcActions.size());
+			RTCBuildResultAction action = rtcActions.get(0);
+			
+			// Verify build result getting created
+			assertNotNull(action.getBuildResultUUID());
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID, action.getBuildResultUUID());
+
+			// Verify name and itemId pair inside changelog file
+			assertNotNull("Expecting buildDefinition Id tag", Utils.getMatch(changelogFile, ".*buildDefinitionName=\"" + buildDefinitionId +"\".*"));
+			assertNotNull("Expecting buildDefinition ItemId tag", Utils.getMatch(changelogFile, ".*buildDefinitionItemId=\"" + buildDefinitionItemId +"\".*"));
+			assertNotNull("Expecting previousBuildUrl tag", Utils.getMatch(changelogFile, ".*previousBuildUrl=\"\".*"));
+			
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(600)
+	@Test 
+	public void repositoryWorkspaceNameItemIdPairFoundInChangeLogFile() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		String streamName = getTestName() + System.currentTimeMillis();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC,
+							streamName);
+		String workspaceItemId = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_ITEM_ID);
+		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
+		
+		try {
+			FreeStyleProject prj = setupFreeStyleJobForWorkspace(workspaceName);
+			
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			File changelogFile = new File(build.getRootDir(), "changelog.xml");
+			
+			// Verify name and itemId pair inside changelog file
+			assertNotNull("Expecting workspaceName tag", Utils.getMatch(changelogFile, ".*workspaceName=\"" + workspaceName +"\".*"));
+			assertNotNull("Expecting workspaceItemId tag", Utils.getMatch(changelogFile, ".*workspaceItemId=\"" + workspaceItemId +"\".*"));
+			assertNotNull("Expecting previousBuildUrl tag", Utils.getMatch(changelogFile, ".*previousBuildUrl=\"\".*"));
+		} finally {
+			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+		}
+	}
+	
+	
+	//public void streamNameItemIdPairWithPreviousBuildUrlFoundInBuildResultPage() throws Exception	
+	
+	//public void buildDefinitionNameItemIdPairFoundInBuildResultPage() throws Exception
+	
+	//public void repositoryWorkspaceNameItemIdPairFoundInBuildResultPage() throws Exception
+	
+	static void verifyStreamBuild(FreeStyleBuild build, String streamUUID, String url) throws IOException {
+		assertNotNull(build);
+		assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+
+		// Verify whether RTCScm ran successfully
+		List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
+		assertEquals(1, rtcActions.size());
+		RTCBuildResultAction action = rtcActions.get(0);
+		assertNotNull(action);
+		
+		// Verify that we have the stream UUID as the snapshot owner field
+		assertEquals(streamUUID, action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOT_OWNER));
+		
+		// Verify that we have stored stream's state inside the build result action
+		assertTrue(action.getBuildProperties().get(Utils.TEAM_SCM_STREAM_CHANGES_DATA).length() > 0);
+		
+		// Verify previous build Url
+		RTCChangeLogSet changeLogSet = (RTCChangeLogSet) build.getChangeSet();
+		assertEquals("Expected a proper previousBuildUrl", url, changeLogSet.getPreviousBuildUrl());
+		
+	}
+	
+
+	
+	private FreeStyleProject setupFreeStyleJobForWorkspace(String workspaceName) throws Exception {
+		Config defaultC = Config.DEFAULT;
+		// Set the toolkit
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
+				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildWorkspace", null, workspaceName, null, null), false);
+		
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject();
+		prj.setScm(rtcScm);
+		
+		return prj;
+	}
+	
+	private FreeStyleProject setupFreeStyleJobForBuildDefinition(String buildDefinitionId) throws Exception{
+		Config defaultC = Config.DEFAULT;
+		// Set the toolkit
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		
+		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()), 
+				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", buildDefinitionId, null, null, null), false);
+
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject();
+		prj.setScm(rtcScm);
+		
+		return prj;
+	}
+
+	private String getTestName() {
+		return this.getClass().getName();
 	}
 }

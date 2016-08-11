@@ -19,12 +19,16 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 
 import hudson.Util;
 import hudson.model.Job;
+import hudson.model.ParameterDefinition;
 import hudson.model.ParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,8 +62,25 @@ public class Helper {
 	 * @param secondCheck The second validaiton done
 	 * @return The merge of the 2 validations with a concatenated message and the highest severity
 	 */
-	public static FormValidation mergeValidationResults(
-			FormValidation firstCheck, FormValidation secondCheck) {
+	public static FormValidation mergeValidationResults(FormValidation firstCheck, FormValidation secondCheck) {
+		// we do not want to merge validation results of different kinds
+		// so, return only the validation result that is more inclined towards validation failures
+		// i.e. if you have combination of error, warning and ok return the validation result which is an error, if
+		// no error then return the warning
+		// error warning - return firstCheck //
+		// error OK - return firstCheck //
+		// warning OK - return firstCheck //
+		// warning error - return secondCheck//
+		// OK error - return secondCheck
+		// OK warning - return secondCheck //
+		if (!firstCheck.kind.equals(secondCheck.kind)) {
+			if (firstCheck.kind.equals(FormValidation.Kind.ERROR)
+					|| (firstCheck.kind.equals(FormValidation.Kind.WARNING) && secondCheck.kind.equals(FormValidation.Kind.OK))) {
+				return firstCheck;
+			} else {
+				return secondCheck;
+			}
+		}
 		Throwable errorCause = secondCheck.getCause();
 		if (errorCause == null) {
 			errorCause = firstCheck.getCause();
@@ -88,7 +109,7 @@ public class Helper {
 		return FormValidation.respond(kind, message);
 	}
 	
-	public static String getStringBuildProperty(Run<?,?> build, String property, TaskListener listener) throws IOException, InterruptedException {
+	public static String getStringBuildParameter(Run<?,?> build, String property, TaskListener listener) throws IOException, InterruptedException {
 		 LOGGER.finest("Helper.getStringBuildProperty : Begin"); //$NON-NLS-1$
 		 if (LOGGER.isLoggable(Level.FINEST)) {
 			 LOGGER.finest("Helper.getStringBuildProperty: Finding value for property '" + property + "' in the build environment variables.");	  //$NON-NLS-1$ //$NON-NLS-2$
@@ -183,8 +204,8 @@ public class Helper {
 	}
 
 	private static String getValueFromParametersAction(Run<?, ?> build, String key) {
-		String value = null;
 		LOGGER.finest("Helper.getValueFromParametersAction : Begin"); //$NON-NLS-1$
+		String value = null;
 		for (ParametersAction paction : build.getActions(ParametersAction.class)) {
 			List<ParameterValue> pValues = paction.getParameters();
 			if (pValues == null) {
@@ -213,12 +234,45 @@ public class Helper {
 	}
 	
 	/**
+	 * Given a value that may be a parameter, resolve the parameter to its default value while trimming for whitespace.
+	 * If the resolved value of the parameter is <code>null</null>, then the value is returned as such, 
+	 * after trimming for whitespace.
+	 * If the given value is not a parameter, then trim whitespace and return it.
+	 * @param job
+	 * @param value - the value which could be a parameter. May be <code>null</code>
+	 * @param listener
+	 * @return a {@link String} which is the value to the parameter resolves to or the value itself, after trimming for whitespace
+	 */
+	public static String parseConfigurationValue(Job<?,?> job, String value, TaskListener listener) {
+		LOGGER.finest("Helper.parseConfigurationValue for Job: Enter");
+		// First nullify the value if it is empty
+		value = Util.fixEmptyAndTrim(value);
+		if (value == null) {
+			return null;
+		}
+		String paramValue = value;
+		// Check whether value itself is a job parameter
+		if (Helper.isAParameter(value)) {
+			paramValue = Helper.resolveJobParameter(job, value, listener);
+			if (paramValue != null) {
+				if (LOGGER.isLoggable(Level.FINEST)) {
+					LOGGER.finest("Found value for job parameter '" + value + "' : " + paramValue);
+				}
+				return paramValue;
+			} else {
+				paramValue = value;
+			}
+		}
+		return paramValue;
+	}
+	
+	/**
 	 * This method first checks whether the given <param>jobParameter</param> exists and is not null
 	 * If yes, then its value is returned. Otherwise, it checks whether <param>value</param> is actually
 	 * a job property. If yes and <param>resolveValue</param> is true, it is resolved and returned. 
 	 * Otherwise, the <param>value</param> is returned
 	 * @param build
-	 * @param jobParameter
+	 * @param jobParameter the job parameter to look for the value first. may be <code>null</code>
 	 * @param value
 	 * @param listener
 	 * @return the value of the parameter 
@@ -226,21 +280,37 @@ public class Helper {
 	 * @throws InterruptedException
 	 */
 	public static String parseConfigurationValue(Run<?, ?> build, String jobParameter, 
-							String value, boolean shouldResolveValue, TaskListener listener) throws IOException, InterruptedException {
+							String value, TaskListener listener) throws IOException, InterruptedException {
 		// If a Job parameter exists and not null, then return it
-		String jobParameterValue = getStringBuildProperty(build, jobParameter, listener);
-		if (jobParameterValue != null) {
-			return jobParameterValue;
+		if (jobParameter != null) {
+			String jobParameterValue = getStringBuildParameter(build, jobParameter, listener);
+			if (jobParameterValue != null) {
+				return jobParameterValue;
+			}
 		}
 		
-		// If jobParameterValue is null, check whether value itself is a job parameter and resolveValue is true
-		// First nullify the value if it is empty
+		// First trim the value
 		value = Util.fixEmptyAndTrim(value);
-		if (Helper.isJobProperty(value) && shouldResolveValue) {
-			return Helper.resolveJobProperty(build, value, listener);
-		} else {
-			return value;
+		if (value == null) {
+			return null;
 		}
+
+		// If jobParameterValue is null, check whether value itself is a job parameter
+		// if it is and paramValue is not null, then return paramValue
+		// otherwise just return the value provided in the job configuration as is.
+		String paramValue = value;
+		if (Helper.isAParameter(value)) {
+			paramValue = Helper.resolveBuildParameter(build, value, listener);
+			if (paramValue != null) {
+				if (LOGGER.isLoggable(Level.FINEST)) {
+					LOGGER.finest("Found value for job parameter '" + value + "' : " + paramValue);
+				}
+			} else {
+				paramValue = value;
+			}
+		}
+		// Our value is not a parameter, return it trimmed (see above where we have trimmed 'value')
+		return paramValue;
 	}
 	
 	/**
@@ -248,7 +318,7 @@ public class Helper {
 	 * @param s The string to check. May be <code>null</code>
 	 * @return <code>true</code> if s is a job property 
 	 */
-	public static boolean isJobProperty(String s) {
+	public static boolean isAParameter(String s) {
 		if (s == null) {
 			return false;
 		}
@@ -259,19 +329,36 @@ public class Helper {
 	}
 	
 	/**
-	 * Resolve a given job property to its value
+	 * Resolve a given build parameter to its value
 	 * @param build - the Jenkins build. Never <code>null</code>
-	 * @param property - the job property. Never <code>null</code>
+	 * @param parameter - the job parameter. Never <code>null</code>
 	 * @param listener - task listener. Never <code>null</code>
-	 * @return the value of the job property or <code>property</code> if the job property is not defined or 
-	 * if the given property is not a job property 
+	 * @return the value of the job parameter or <code>property</code> if the job parameter is not defined or 
+	 * if the given property is not a job parameter 
 	 * @throws InterruptedException 
 	 * @throws IOException 
 	 */
-	public static String resolveJobProperty(Run<?,?> build, String property, TaskListener listener) throws IOException, InterruptedException {
-		String propertyStripped = property.substring(2);
-		propertyStripped = propertyStripped.substring(0, propertyStripped.length() - 1);
-		return getStringBuildProperty(build, propertyStripped, listener);
+	public static String resolveBuildParameter(Run<?,?> build, String parameter, TaskListener listener) throws IOException, InterruptedException {
+		if (parameter == null) {
+			return null;
+		}
+		String parameterStripped = extractParameterFromValue(parameter);
+		return getStringBuildParameter(build, parameterStripped, listener);
+	}
+
+	/**
+	 * 
+	 * @param job
+	 * @param jobParameter
+	 * @param listener
+	 * @return
+	 */
+	public static String resolveJobParameter(Job <?,?> job, String jobParameter, TaskListener listener) {
+		if (jobParameter == null) {
+			return null;
+		}
+		String parameterStripped = extractParameterFromValue(jobParameter);
+		return getStringBuildParameter(job, parameterStripped, listener);
 	}
 	
 	/**
@@ -344,6 +431,15 @@ public class Helper {
 		}
 		return streamChangesData;
 	}
+	
+	/**
+	 * Returns the comment string for the temporary workspace to be created.
+	 * @param build - The Jenkins {@link Run} from which some details are obtained. Never <code>null</code>
+	 * @return - A {@link String} that is the comment for the temporary workspace
+	 */
+	public static String getTemporaryWorkspaceComment(Run<?,?> build) {
+		return Messages.RTCScm_temporary_workspace_comment(build.getParent().getName(), Jenkins.getInstance().getRootUrl());
+	}
 
 	private static Tuple<Run<?,?>, String> getValueForBuildStream(IJenkinsBuildIterator iterator, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, boolean onlyGoodBuild, String key, Locale clientLocale) throws Exception {
 		if (buildStream == null) {
@@ -397,6 +493,47 @@ public class Helper {
 		}
 		return new Tuple<Run<?,?>, String>(previousBuild, value);
 	}
+
+	/**
+	 * 
+	 * @param parameter
+	 * @return
+	 */
+	private static String extractParameterFromValue(String parameter) {
+		parameter = Util.fixEmptyAndTrim(parameter);
+		if (parameter == null) {
+			return null;
+		}
+		String parameterStripped = parameter.substring(2);
+		parameterStripped = parameterStripped.substring(0, parameterStripped.length() - 1);
+		
+		return parameterStripped;
+	}
+	
+	/**
+	 * 
+	 **/
+	private static String getStringBuildParameter(Job<?,?> job, String parameter, TaskListener listener) {
+
+		ParametersDefinitionProperty prop = job.getProperty(ParametersDefinitionProperty.class);
+		String paramValue = null;
+		if (prop != null) {
+			List<ParameterDefinition> definitions = prop.getParameterDefinitions();
+			for (ParameterDefinition definition : definitions) {
+				if (definition == null) {
+					continue;
+				}
+				if (definition.getName().equals(parameter) && definition.getClass().equals(StringParameterDefinition.class)) {
+					ParameterValue defaultParamValue = definition.getDefaultParameterValue();
+					if (defaultParamValue != null) {
+						paramValue = Util.fixEmptyAndTrim((String)defaultParamValue.getValue());
+					}
+				}
+			}
+		}
+		return paramValue;
+	}
+
 
 	/**
 	 * Reads and returns the json text from the specified file

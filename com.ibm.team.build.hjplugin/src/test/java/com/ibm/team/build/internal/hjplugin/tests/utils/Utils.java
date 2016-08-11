@@ -11,17 +11,44 @@
 
 package com.ibm.team.build.internal.hjplugin.tests.utils;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
 
+import org.jvnet.hudson.test.JenkinsRule;
+
+import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
+import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.tests.Config;
 
+import hudson.model.Cause;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParametersAction;
 import hudson.model.TaskListener;
+import hudson.model.queue.QueueTaskFuture;
+import hudson.util.Secret;
 
 public class Utils {
 	private static final String CALLCONNECTOR_TIMEOUT = "30";
+	public static final String ARTIFACT_WORKSPACE_NAME = "workspaceName";
+	public static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
+	public static final String ARTIFACT_STREAM_NAME = "streamName";
+	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
+	public static final String TEAM_SCM_SNAPSHOTUUID = "team_scm_snapshotUUID";
+	public static final String TEAM_SCM_STREAM_CHANGES_DATA = "team_scm_streamChangesData";
+	public static final String TEAM_SCM_SNAPSHOT_OWNER = "team_scm_snapshotOwner";
+	public static final String ARTIFACT_BUILDDEFINITION_ITEM_ID = "buildDefinitionItemId";
+	public static final String ARTIFACT_BUILDRESULT_ITEM_ID = "buildResultItemId";
+	public static final String ARTIFACT_BASELINE_ITEM_ID = "baselineSetItemId";
 
 	public static Map<String,String> acceptAndLoad(RTCFacadeWrapper testingFacade, String serverURI,
 			String userId, String password, int timeout, String buildResultUUID,
@@ -57,7 +84,8 @@ public class Utils {
 							Locale.class, // locale
 							String.class, // callConnectorTimeout
 							boolean.class,// acceptBeforeLoad
-							String.class} , // previousBuildUrl
+							String.class,// previousBuildUrl
+							String.class} , // workspaceComment
 							serverURI,
 							userId,
 							password,
@@ -67,7 +95,7 @@ public class Utils {
 							buildSnapshotNameOrUUID, buildStreamName,
 							hjWorkspacePath, changelog,
 							baselineSetName, previousSnapshotUUID, listener, clientLocale, CALLCONNECTOR_TIMEOUT, 
-							options.acceptBeforeLoad, null);
+							options.acceptBeforeLoad, null, null);
 		
 		// Retrieve connectorId and parentActivityId
 		@SuppressWarnings("unchecked")
@@ -102,6 +130,7 @@ public class Utils {
 					String.class, // componentsToBeExcluded
 					String.class, //loadRules
 					boolean.class, // acceptBeforeLoad
+					String.class, // workspaceComment
 					},
 					serverURI, 
 					userId, 
@@ -126,7 +155,81 @@ public class Utils {
 					options.createFoldersForComponents, 
 					options.componentsToBeExcluded, 
 					options.loadRules,
-					options.acceptBeforeLoad);
+					options.acceptBeforeLoad,
+					null);
 		return buildProperties;
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public static Map<String,String> setUpBuildStream(RTCFacadeWrapper testingFacade, 
+									Config c,
+									String streamName) throws Exception {
+		// Setup a build stream with a component
+		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildStream_basic", new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class }, //streamName
+				c.getServerURI(), c.getUserID(), c.getPassword(), c.getTimeout(), streamName);
+		
+		return setupArtifacts;
+	}
+	
+	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, String buildtoolkitName, String streamName) throws Exception {
+		Config defaultC = c;
+		// Set the toolkit
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(buildtoolkitName, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		RTCScm rtcScm = new RTCScm(true, buildtoolkitName, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
+				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildStream", null, null, null, streamName), false);
+		
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject();
+		prj.setScm(rtcScm);
+		
+		return prj;
+	}
+	
+	public static FreeStyleBuild runBuild(FreeStyleProject prj, List<ParametersAction> actions) throws InterruptedException, ExecutionException  {
+		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, actions == null ? new ArrayList<ParametersAction>() : actions);
+		while(!future.isDone());
+		return future.get();
+	}
+	
+	
+	public static void tearDown(RTCFacadeWrapper testingFacade, Config c, Map<String, String> setupArtifacts) throws Exception {
+		testingFacade.invoke(
+				"tearDown",
+				new Class[] { String.class, // serverURL,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						Map.class}, // setupArtifacts
+				c.getServerURI(),
+				c.getUserID(),
+				c.getPassword(),
+				c.getTimeout(), setupArtifacts);
+	}
+	
+	public static String getMatch(File file, String pattern) throws FileNotFoundException {
+        Scanner scanner = null;
+        String match = null;
+        try {
+        	scanner = new Scanner(file, "UTF-8");
+        	scanner.useDelimiter(System.getProperty("line.separator"));
+            while(scanner.hasNext()) {
+                    String token = scanner.next();
+                    if (token.matches(pattern)) {
+                    	match = token;
+                            break;
+                    }
+            }
+        } finally {
+        	if (scanner != null) {
+        		scanner.close();
+        	}
+        }
+        return match;
 	}
 }

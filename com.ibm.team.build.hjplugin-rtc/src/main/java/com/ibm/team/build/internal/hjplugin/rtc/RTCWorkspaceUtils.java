@@ -225,6 +225,7 @@ public class RTCWorkspaceUtils {
 	 */
 	public String getStreamUUID(String processAreaName, String streamName, ITeamRepository repository, IProgressMonitor progress, 
 			Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException, UnsupportedEncodingException, URISyntaxException {
+		LOGGER.finest("RTCWorkspaceUtils.getStreamUUID: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IWorkspaceHandle workspaceHandle = getStream(processAreaName, streamName, repository, monitor.newChild(75), clientLocale);
 		return workspaceHandle.getItemId().getUuidValue();
@@ -243,6 +244,7 @@ public class RTCWorkspaceUtils {
 	 */
 	public IWorkspaceHandle getWorkspace(String workspaceName, ITeamRepository repository, IProgressMonitor progress, Locale clientLocale)
 			throws Exception {
+		LOGGER.finest("RTCWorkspaceUtils.getWorkspace from workspaceName: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
@@ -271,6 +273,7 @@ public class RTCWorkspaceUtils {
 	 */
 	public IWorkspace getWorkspace(UUID workspaceUUID, ITeamRepository repository, IProgressMonitor progress, Locale clientLocale)
 			throws TeamRepositoryException {
+		LOGGER.finest("RTCWorkspaceUtils.getWorkspace from UUID: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IItemHandle itemHandle = IBaselineSet.ITEM_TYPE.createItemHandle(workspaceUUID, null);
 		IWorkspace workspace = (IWorkspace)repository.itemManager().fetchCompleteItem(itemHandle, ItemManager.REFRESH, monitor);
@@ -292,6 +295,7 @@ public class RTCWorkspaceUtils {
 	 * @throws IOException
 	 */
 	public BigInteger getDigestNumber(ITeamRepository repository, IWorkspaceHandle workspaceHandle, IProgressMonitor progress) throws TeamRepositoryException, NoSuchAlgorithmException, IOException {
+		LOGGER.finest("RTCWorkspaceUtils.getDigestNumber: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		String digest = getDigest(repository, workspaceHandle, monitor);
 		return getDigestNumber(digest);
@@ -311,6 +315,7 @@ public class RTCWorkspaceUtils {
 	 * @throws IOException
 	 */
 	public String getDigest(ITeamRepository repository, IWorkspaceHandle workspaceHandle, IProgressMonitor progress) throws TeamRepositoryException, NoSuchAlgorithmException, IOException {
+		LOGGER.finest("RTCWorkspaceUtils.getDigest: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		long timeBegin = System.currentTimeMillis();
 		RepositoryItemProvider provider = new RepositoryItemProvider(repository);
@@ -324,7 +329,7 @@ public class RTCWorkspaceUtils {
 		}
 		return digest;
 	}
-	
+
 	/**
 	 * Given a string digest in hexadecimal representation, returns a {@link BigInteger}
 	 * @param hexDigest - the digest in hexadecimal form
@@ -332,6 +337,7 @@ public class RTCWorkspaceUtils {
 	 * @throws NumberFormatException if the given string is not in hexadecimal format
 	 */
 	public BigInteger getDigestNumber(String hexDigest) throws NumberFormatException {
+		LOGGER.finest("RTCWorkspaceUtils.getDigestNumber: Enter");
 		return new BigInteger(hexDigest, 16);
 	}
 	
@@ -393,6 +399,7 @@ public class RTCWorkspaceUtils {
 
 	
 	private String getDigest(final ArrayList<ComponentEntry> compEntries) throws IOException, NoSuchAlgorithmException {
+		LOGGER.finest("RTCWorkspaceUtils.getDigest for component Entries : Begin");
 		MessageDigest d = MessageDigest.getInstance(MD5_ALG);
 		InputStream s = new InputStream() {
 			Stack<Byte> currentItem = new Stack<Byte>();
@@ -434,7 +441,9 @@ public class RTCWorkspaceUtils {
 			streamDataHashS.append(hexToStringMap[upperByte]);
 			streamDataHashS.append(hexToStringMap[lowerByte]);
 	    }
-		LOGGER.finer("Stream's data hash in polling is " +  streamDataHashS.toString());
+		if (LOGGER.isLoggable(Level.FINER)) {
+			LOGGER.finer("Stream's digest number is " +  streamDataHashS.toString());
+		}
 		return streamDataHashS.toString();
 	}
 

@@ -150,7 +150,9 @@ public class RTCFacadeFacade {
 		
 		// Attempt to use Rest api if this is for a build definition
 		listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_rest());
-
+		logCheckIncomingChangesMessage(buildDefinitionId, listener);
+		logCheckIncomingChangesMessage(workspaceName, listener);
+		
 		String uri = RTCBuildConstants.URI_INCOMING_CHANGES + "?"; //$NON-NLS-1$
 		uri += RTCBuildConstants.QUERY_PARAM_BUILD_DEFINITION + "=" + Util.encode(buildDefinitionId); //$NON-NLS-1$
 		JSON json = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, listener).getJson();
@@ -191,7 +193,10 @@ public class RTCFacadeFacade {
 			int timeout, String processArea, boolean useBuildDefinition, String buildDefinitionId,
 			String workspaceName, String streamName, String streamChangesData, TaskListener listener, boolean ignoreOutgoingFromBuildWorkspace) throws Exception {
 		listener.getLogger().println(Messages.RTCFacadeFacade_check_incoming_with_toolkit());
-		
+		logCheckIncomingChangesMessage(buildDefinitionId, listener);
+		logCheckIncomingChangesMessage(workspaceName, listener);
+		logCheckIncomingChangesMessage(streamName, listener);
+
 		RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, listener.getLogger());
 		BigInteger changesIncoming = null;;
 		if (streamName != null) {
@@ -493,9 +498,12 @@ public class RTCFacadeFacade {
 		buildStream = Util.fixEmptyAndTrim(buildStream);
 		
 		// ensure only 1 stream is found.
-		// when avoidUsingToolkit is true, processArea is always null
-		// so, need not have to set the processArea when validating using rest service
-		if (avoidUsingToolkit) { 
+		// when avoidUsingToolkit is true and processArea is null use the rest service
+		// process area is not validated by the rest service, so we always use the buildToolkit when a process area is
+		// specified
+		// a build toolkit is always available when a process area is specified. The validation for buildToolkit is
+		// performed upstream in RTCScm.doValidateBuildStreamConfiguration.
+		if (avoidUsingToolkit && Util.fixEmptyAndTrim(processArea) == null) {
 			String errorMessage = null;
 			String uri = RTCBuildConstants.URI_COMPATIBILITY_CHECK;
 			
@@ -1429,6 +1437,12 @@ public class RTCFacadeFacade {
 
 		public String getName() {
 			return this.name;
+		}
+	}
+
+	private static void logCheckIncomingChangesMessage(String item, TaskListener listener) {
+		if (item != null) {
+			listener.getLogger().println(Messages.RTCFacadeFacade_checking_incoming_changes_for(item));
 		}
 	}
 

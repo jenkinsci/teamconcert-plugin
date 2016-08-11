@@ -49,7 +49,7 @@
 	<j:set var="workspaceLink" value="${browser.getWorkspaceLink(it)}"/>
 	<j:set var="workspaceName" value="${it.getWorkspaceName()}"/>
 	<j:if test="${workspaceLink!=null}">
-		<j:if test="${workspaceName}!=null}">
+		<j:if test="${workspaceName!=null}">
 			<j:if test="${buildDefinitionLink==null}">
 				${%workspace.label} :&#160;
 				<a href="${workspaceLink}">${workspaceName}</a>

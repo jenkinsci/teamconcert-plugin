@@ -771,7 +771,7 @@ public class BuildConfigurationTests {
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
 		IBaselineSet bs = RTCSnapshotUtils.getSnapshot(repo, null, snapshotName, null, Locale.getDefault());
-		buildConfiguration.initialize(bs, repo.loggedInContributor(), workspacePrefix,listener, Locale.getDefault(), null);
+		buildConfiguration.initialize(bs, repo.loggedInContributor(), workspacePrefix, null, listener, Locale.getDefault(), null);
 		if (failure[0] != null) {
 			throw failure[0];
 		}

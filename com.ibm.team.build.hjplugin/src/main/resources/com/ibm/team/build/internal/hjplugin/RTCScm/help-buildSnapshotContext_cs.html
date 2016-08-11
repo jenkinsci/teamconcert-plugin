@@ -1,0 +1,51 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Zadejte vlastníka snímku. Vlastníkem snímku může být buď pracovní prostor úložiště, nebo proud. 
+	Zadáním vlastníka snímku umožníte vymezené vyhledávání, a tím se vyhnete duplikátům ve výsledcích hledání.
+  </p>
+  <p>
+	Pokud nemáte podrobnosti vlastníka snímku nebo jste si jisti, že název snímku je v úložišti jedinečný, pak můžete u vlastníka snímku vybrat hodnotu "- žádný -". 
+	Podrobnosti vlastníka snímku se budou při zadání UUID snímku ignorovat.
+  </p>  
+  <p>
+  	Zvolíte-li u vlastníka snímku hodnotu "- žádný -", nebude vyhledávání snímku vymezené a bude se provádět v celém úložišti.  
+  </p>
+  <p>
+  	Zadáte-li vlastnící pracovní prostor úložiště nebo proud, bude vyhledávání snímku omezeno na snímek přidružený k uvedenému pracovnímu prostoru úložiště nebo proudu.
+  </p>
+  <p>
+  	Je-li jako vlastník snímku označen pracovní prostor úložiště, ale není-li název tohoto pracovního prostoru úložiště uveden, nebude
+  	vyhledávání snímku vymezeno a bude se provádět v celém úložišti.
+  </p>
+  <p>
+  	Je-li jako vlastník snímku označen proud bez zadání oblasti projektu či oblasti týmu, případně bez zadání vlastnění proudu, nebude
+  	vyhledávání snímku vymezeno a provede se přes celé úložiště.
+  </p>
+  <p>
+  	Je-li jako vlastník snímku označen proud a zadán pouze název oblasti projektu nebo týmu, bude vyhledávání snímku omezeno na
+  	snímky přidružené ke všem proudům, které vlastní uvedená oblast projektu nebo týmu.
+  </p>
+  <p>
+  	Je-li jako vlastník snímku označen proud a uveden pouze název proudu, bude vyhledávání snímku omezeno na snímky přidružené ke všem proudům
+  	s uvedeným názvem v celém úložišti.
+  </p>
+  <p>
+  	Je-li jako vlastník snímku označen proud a zadán jak název oblasti projektu nebo týmu, tak i název proudu, bude vyhledávání snímku omezeno
+  	na snímky přidružené ke všem proudům s daným názvem v uvedené oblasti projektu nebo týmu.
+  </p>
+</div>

@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Określ właściciela obrazu stanu. Obraz stanu może należeć do obszaru roboczego repozytorium lub strumienia. 
+	Określenie właściciela obrazu stanu umożliwia przeprowadzanie wyszukiwania o określonym zasięgu, dzięki czemu w wynikach wyszukiwania nie ma duplikatów.
+  </p>
+  <p>
+	Jeśli użytkownik nie ma szczegółowych informacji o właścicielu lub jeśli nazwa obrazu stanu jest na pewno unikalna w ramach repozytorium, wtedy można wybrać dla właściciela obrazu stanu wartość - brak -. 
+	Szczegółowe informacje o właścicielu obrazu stanu są ignorowane, jeśli zostanie podany identyfikator UUID obrazu stanu.
+  </p>  
+  <p>
+  	Jeśli dla właściciela obrazu stanu zostanie wybrana wartość - brak -, wyszukiwanie obrazów stanu nie będzie uwzględniało zasięgu i będzie dotyczyło całego repozytorium.  
+  </p>
+  <p>
+  	Jeśli zostanie podany obszar roboczy repozytorium lub strumień będący właścicielem, wyszukiwanie obrazów stanu będzie miało określony zasięg - tylko obrazy stanu powiązane z określonym obszarem roboczym repozytorium lub strumieniem.
+  </p>
+  <p>
+  	Jeśli jako właściciel obrazu stanu zostanie wybrany obszar roboczy repozytorium, ale nie zostanie podana jego nazwa, wtedy wyszukiwanie obrazów stanu nie zostanie ograniczone zasięgiem i będzie dotyczyło całego repozytorium.
+  </p>
+  <p>
+  	Jeśli jako właściciel obrazu stanu zostanie wybrany strumień, ale nie zostanie podany obszar projektu, obszar zespołu ani nazwa strumienia, wtedy wyszukiwanie obrazów stanu nie zostanie ograniczone zasięgiem i będzie dotyczyło całego repozytorium.
+  </p>
+  <p>
+  	Jeśli jako właściciel obrazu stanu zostanie wybrany strumień i zostanie podana tylko nazwa obszaru projektu lub obszaru zespołu, wtedy wyszukiwanie obrazów stanu zostanie ograniczone do obrazów stanu powiązanych ze wszystkimi strumieniami należącymi do określonego obszaru projektu lub obszaru zespołu.
+  </p>
+  <p>
+  	Jeśli jako właściciel obrazu stanu zostanie wybrany strumień i zostanie podana tylko nazwa strumienia, wtedy wyszukiwanie obrazów stanu zostanie ograniczone do wszystkich strumieni o danej nazwie w całym repozytorium.
+  </p>
+  <p>
+  	Jeśli jako właściciel obrazu stanu zostanie wybrany strumień i zostanie podana nazwa obszaru projektu lub obszaru zespołu, jak również nazwa strumienia, wtedy wyszukiwanie obrazów stanu zostanie ograniczone do obrazów stanu powiązanych ze wszystkimi strumieniami o określonej nazwie w określonym obszarze projektu lub obszarze zespołu.
+  </p>
+</div>

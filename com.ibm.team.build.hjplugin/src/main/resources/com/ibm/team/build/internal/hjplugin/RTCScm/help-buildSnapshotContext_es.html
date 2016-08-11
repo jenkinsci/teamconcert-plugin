@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Especifique el propietario de la instantánea. Una instantánea puede ser propiedad de un espacio de trabajo de repositorio o de una corriente. 
+	La especificación del propietario de la instantánea habilita la búsqueda con ámbito y, por lo tanto, evita duplicados en el resultado de la búsqueda.
+  </p>
+  <p>
+	Si no tiene los detalles del propietario de la instantánea o si está seguro de que el nombre de la instantánea es único en el repositorio, puede elegir "- ninguno -" para el propietario de la instantánea. 
+	Los detalles del propietario de la instantánea se ignoran cuando se especifica el UUID de la instantánea.
+  </p>  
+  <p>
+  	Al elegir "- ninguno -" para el propietario de la instantánea, la búsqueda de la instantánea no tiene ámbitos y se produce en el repositorio.  
+  </p>
+  <p>
+  	Cuando se especifica una corriente o un espacio de repositorio propietario, la búsqueda de la instantánea tiene como ámbito las instantáneas asociadas a la corriente o al espacio de trabajo de repositorio especificado. </p>
+  <p>
+  	Cuando el propietario de la instantánea está seleccionada para ser un espacio de trabajo de repositorio, pero no se ha especificado el espacio de trabajo de repositorio,
+  	la búsqueda de la instantánea no tiene ámbitos y se produce en el repositorio.
+  </p>
+  <p>
+  	Cuando el propietario de la instantánea está seleccionado para ser una corriente, pero no se ha especificado ni área de proyecto o equipo, ni una corriente propietaria,
+  	la búsqueda de instantánea no tiene ámbitos y se produce en el repositorio.
+  </p>
+  <p>
+  	Cuando el propietario de la instantánea está seleccionado para ser una corriente y solo se ha especificado el nombre del área de proyecto o equipo, la búsqueda de instantánea
+  	tiene ámbitos en las instantáneas asociadas a todas las corrientes que son propiedad del área de proyecto o equipo especificada.
+  </p>
+  <p>
+  	Cuando el propietario de la instantánea está seleccionado para ser una corriente y solo se especifica el nombre de la corriente, la búsqueda de instantánea tiene como ámbito
+  	las instantáneas asociadas a todas las corrientes con el nombre determinado, en el repositorio.
+  </p>
+  <p>
+  	Cuando el propietario de la instantánea está seleccionado para ser una corriente y el nombre del área de proyecto o equipo, así como también se ha especificado el nombre de la corriente propietaria,
+  	la búsqueda de la instantánea tiene como ámbito las instantáneas asociadas a todas las corrientes con el nombre determinado en el área de proyecto o equipo especificada. </p>
+</div>

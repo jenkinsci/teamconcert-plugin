@@ -51,7 +51,7 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 		LOGGER.finest("LoadRuleProvider.isEnabled : Begin"); //$NON-NLS-1$
 		boolean enabled = false;
 		try {
-			enabled = Boolean.parseBoolean(Helper.getStringBuildProperty(build, RTCJobProperties.USE_DYNAMIC_LOAD_RULE, listener));
+			enabled = Boolean.parseBoolean(Helper.getStringBuildParameter(build, RTCJobProperties.USE_DYNAMIC_LOAD_RULE, listener));
 		} catch (Exception e) {
 			LOGGER.finer("LoadRuleProvider.isEnabled : Error reading property for dynamic load rules."); //$NON-NLS-1$
 			enabled = false;

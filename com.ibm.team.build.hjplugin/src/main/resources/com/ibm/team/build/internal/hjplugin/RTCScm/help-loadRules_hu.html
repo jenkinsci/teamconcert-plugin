@@ -15,9 +15,11 @@
 
 <div>
   <p>
-   Válasszon ki egy betöltési szabály fájlt annak megadásához, hogy az összeépítési munkaterület hogyan legyen betöltve. Ha Dinamikus összeépítési szabályok lettek megadva egy kiterjesztés használatával, akkor ezek a szabályok előnyt élveznek az itt megadottakkal szemben. </p>
+   Válasszon ki egy betöltési szabályfájlt a lerakat munkaterület betöltési módjának megadásához. Ha a Dinamikus betöltési szabályok beállítás van megadva egy kiterjesztés használatával, akkor azok előnyt élveznek az itt megadottakkal szemben.
+</p>
   <p>
-  	A betöltési szabályok alkalmazásához sorolja fel azokat a következő JSON formátumban, mentse a listát egy fájlba a lemezen, és adja meg a fájl útvonalát ebben a mezőben. </p>
+  	A betöltési szabályok alkalmazásához sorolja fel azokat a következő JSON formátumban, mentse a listát egy fájlba a lemezen, és adja meg a fájl útvonalát ebben a mezőben.
+  </p>
   <p>
   <pre>
   {
@@ -35,11 +37,13 @@
   </pre>
   </p>
   <p>
-	A "componentName" helyett megadhatja a "componentId" tulajdonságot is. A "componentId" a komponens elemazonosítója (UUID).
- Ha a "componentName" és a "componentId" egyaránt meg van adva, akkor a kikeresés csak a "componentId" alapján történik. </p>
+	A "componentName" helyett megadhat egy "componentId"  elemet. A "componentId" a komponens elemazonosítója (UUID).
+ Ha a "componentName" és a "componentId" elemet egyaránt megadja, akkor a kikeresés csak a "componentId" alapján történik.
+  </p>
   <p>
-  	A "filePath" érték a betöltési szabály fájl teljes útvonala a lerakatban; vagyis a távoli útvonal.
-  	A "filePath" helyett megadható a "fileItemId" is. A "fileItemId" a betöltési szabály fájl elemazonosítója (UUID).
-   A fájlútvonal megadásakor a fájlszegmensek elválasztásához használjon törtvonalakat (/). Ha a "filePath" és a "fileItemId" egyaránt meg van adva, akkor a kikeresés csak a "fileItemId" alapján történik. </p>
+  	A "filePath" érték a betöltési szabályfájl teljes útvonala a lerakatban; vagyis a távoli útvonal.
+  	A "filePath" helyett megadhat egy "fileItemId" elemet. A "fileItemId" a betöltési szabály fájl elemazonosítója (UUID).
+   A fájlútvonal megadásakor használjon törtvonalakat (/) az útvonalszegmensek elválasztásához. Ha a "filePath" és a "fileItemId" elemet egyaránt megadja, akkor a kikeresés csak a "fileItemId" alapján történik.
+  </p>
 
 </div>

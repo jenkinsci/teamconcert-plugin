@@ -177,7 +177,7 @@
 						 -->
 					<f:entry field="currentSnapshotOwnerType" title="${%currentSnapshotOwnerType.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext">
 						<select name="currentSnapshotOwnerType" class="setting-input dropdownList">
-							<option selected="${(instance == null || instance.buildSnapshotContext.snapshotOwnerType == 'none') ? 'true' : null}" value="none">${%buildSnapshotContextNone.title}</option>
+							<option selected="${(instance == null || instance.buildSnapshotContext == null || instance.buildSnapshotContext.snapshotOwnerType == 'none') ? 'true' : null}" value="none">${%buildSnapshotContextNone.title}</option>
 							<option selected="${(instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'stream') ? 'true' : null}" value="stream">${%buildSnapshotContextStream.title}</option>
 							<option selected="${(instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'workspace') ? 'true' : null}"  value="workspace">${%buildSnapshotContextWorkspace.title}</option>
   						</select>
@@ -213,34 +213,6 @@
 				        </table>
 				      </td>
     				</tr>
-    				<!--
-    				<f:dropdownList name="buildSnapshotContext" title="${%buildSnapshotContext.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext">
-						<f:dropdownListBlock selected="${instance == null || instance.buildSnapshotContext.snapshotOwnerType == 'none'}" title="${%buildSnapshotContextNoOwner.title}">
-							<f:invisibleEntry field="snapshotOwnerType" >
-								<input type="hidden" name="snapshotOwnerType" value="none"/>
-							</f:invisibleEntry>
-						</f:dropdownListBlock>
-						<f:dropdownListBlock selected="${instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'stream'}" title="${%buildSnapshotContextStream.title}">
-							<f:invisibleEntry field="snapshotOwnerType" >
-								<input type="hidden" name="snapshotOwnerType" value="stream"/>
-							</f:invisibleEntry>
-							<f:entry title="${%processArea.title}" field="processAreaOfOwningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-processAreaOfOwningStream">
-					        	<f:textbox name="processAreaOfOwningStream" value="${instance.buildSnapshotContext.processAreaOfOwningStream}" />
-					    	</f:entry>							
-							<f:entry title="${%buildSnapshotContextStream.title}" field="owningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningStream">
-					        	<f:textbox name="owningStream" value="${instance.buildSnapshotContext.owningStream}" />
-					    	</f:entry>					
-						</f:dropdownListBlock>
-						<f:dropdownListBlock selected="${instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'workspace'}" title="${%buildSnapshotContextWorkspace.title}">
-							<f:invisibleEntry field="snapshotOwnerType" >
-								<input type="hidden" name="snapshotOwnerType" value="workspace"/>
-							</f:invisibleEntry>
-						    <f:entry title="${%buildSnapshotContextWorkspace.title}" field="owningWorkspace"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningWorkspace">
-						        <f:textbox name="owningWorkspace" value="${instance.buildSnapshotContext.owningWorkspace}" />
-						    </f:entry>
-						</f:dropdownListBlock>
-					</f:dropdownList>
-					-->
 					<f:entry title="${%buildSnapshot.title}"  field="buildSnapshot" >
 				        <f:textbox name="buildSnapshot" value="${instance.buildSnapshot}" />
 				    </f:entry>
@@ -260,7 +232,7 @@
 					</f:invisibleEntry>
 					
 					<!-- Text box to specify project area/team area -->
-					<f:entry title="${%processArea.title}" field="processArea" help="buildStream-processArea">
+					<f:entry title="${%processArea.title}" field="processArea" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildStream-processArea">
 						<f:textbox name="processArea"/>
 					</f:entry>   
 

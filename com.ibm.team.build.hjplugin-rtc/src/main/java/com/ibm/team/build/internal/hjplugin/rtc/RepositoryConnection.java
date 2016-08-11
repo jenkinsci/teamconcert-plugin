@@ -310,10 +310,14 @@ public class RepositoryConnection {
 	 */
 	public int incomingChanges(String buildDefinitionId, String buildWorkspaceName, IConsoleOutput listener,
 			IProgressMonitor progress, Locale clientLocale, boolean ignoreOutgoingFromBuildWorkspace) throws Exception {
+		LOGGER.finest("RepositoryConnection.incomingChanges: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(10));
 		BuildWorkspaceDescriptor workspace;
 		if (buildDefinitionId != null && buildDefinitionId.length() > 0) {
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finer("RepositoryConnection.incomingChanges: Computing incoming changes for buildDefinition '" + buildDefinitionId + "'");
+			}
 			BuildConnection buildConnection = getBuildConnection();
 			IBuildDefinition buildDefinition = buildConnection.getBuildDefinition(buildDefinitionId, monitor.newChild(10));
 			if (buildDefinition == null) {
@@ -328,6 +332,10 @@ public class RepositoryConnection {
             	throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_build_definition_no_workspace(buildDefinitionId));
             }
 		} else {
+			if (LOGGER.isLoggable(Level.FINER) && buildWorkspaceName != null) {
+				LOGGER.finer("RepositoryConnection.incomingChanges: Computing incoming changes for buildWorkspace '"
+								+ buildWorkspaceName + "'");
+			}
 			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(), monitor.newChild(10), clientLocale);
 			workspace = new BuildWorkspaceDescriptor(fRepository, workspaceHandle.getItemId().getUuidValue(), buildWorkspaceName);
 		}
@@ -392,6 +400,7 @@ public class RepositoryConnection {
 	 * @param callConnectorTimeout user defined call connector timeout
 	 * @param acceptBeforeLoad Accept latest changes before loading if true
 	 * @param previousBuildUrl The url of the previous Jenkins build used for comparison. The url is persisted into the changelog
+	 * @param temporaryWorkspaceComment
 	 * @return <code>Map<String, Object></code> containing build properties, and CallConnector details
 	 * @throws Exception Thrown if anything goes wrong
 	 */
@@ -399,7 +408,7 @@ public class RepositoryConnection {
 			BuildSnapshotContext buildSnapshotContext, String buildSnapshot, String buildStream, String hjFetchDestination,
 			ChangeReport changeReport, String defaultSnapshotName, final String previousSnapshotUUID, final IConsoleOutput listener,
 			IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad,
-			String previousBuildUrl)
+			String previousBuildUrl, String temporaryWorkspaceComment)
 			throws Exception {
 		LOGGER.finest("RepositoryConnection.accept : Enter");
 
@@ -407,8 +416,8 @@ public class RepositoryConnection {
 		ensureLoggedIn(monitor.newChild(1));
 		
 		if (buildStream != null) {
-			return acceptForBuildStream(processAreaName, buildStream, changeReport, defaultSnapshotName, previousSnapshotUUID, previousBuildUrl, 
-					listener, monitor, clientLocale);
+			return acceptForBuildStream(processAreaName, buildStream, changeReport, defaultSnapshotName, previousSnapshotUUID, previousBuildUrl,
+					temporaryWorkspaceComment, listener, monitor, clientLocale);
 		}
 		else if (buildSnapshot != null) {
 			return acceptForBuildSnapshot(buildSnapshotContext, buildSnapshot, changeReport, listener, progress, clientLocale);
@@ -575,13 +584,14 @@ public class RepositoryConnection {
 	 * @param componentsToExclude json text representing the list of components to exclude during load
 	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
+	 * @param temporaryWorkspaceComment 
 	 * @throws Exception Thrown if anything goes wrong
 	 */
 	public void load(String processAreaName, String buildResultUUID, String buildWorkspaceName, BuildSnapshotContext buildSnapshotContext,
 			String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjFetchDestination, String defaultSnapshotName,
 			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String parentActivityId, String connectorId,
 			Object extProvider, final PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude,
-			String loadRules, boolean acceptBeforeLoad) throws Exception {
+			String loadRules, boolean acceptBeforeLoad, String temporaryWorkspaceComment) throws Exception {
 		 LOGGER.finest("RepositoryConnection.load : Enter");
 		
         // Lets get same workspaceConnection as created by accept call so that if 
@@ -614,7 +624,7 @@ public class RepositoryConnection {
 			String workspaceNamePrefix = getWorkspaceNamePrefix();
 			IBaselineSet baselineSet = RTCSnapshotUtils.getSnapshot(getTeamRepository(), buildSnapshotContext, buildSnapshot, monitor.newChild(1), clientLocale);
 			IContributor contributor = fRepository.loggedInContributor();
-			buildConfiguration.initialize(baselineSet, contributor, workspaceNamePrefix, listener, clientLocale, monitor.newChild(3));
+			buildConfiguration.initialize(baselineSet, contributor, workspaceNamePrefix, temporaryWorkspaceComment, listener, clientLocale, monitor.newChild(3));
 		} else if (buildStream != null && buildStream.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_stream_configuration());
 			String workspaceUUID = buildStreamData.get(Constants.STREAM_DATA_WORKSPACEUUID);
@@ -1362,6 +1372,7 @@ public class RepositoryConnection {
 	 * @param defaultSnapshotName - the default name for the snapshot that is to be created 
 	 * @param previousSnapshotUUID - the UUID of the previous snapshot
 	 * @param previousBuildUrl - the url of the previous Jenkins build from which the previous snapshot uuid was taken
+	 * @param temporaryWorkspaceComment -
 	 * @param listener
 	 * @param progress
 	 * @param clientLocale
@@ -1369,7 +1380,7 @@ public class RepositoryConnection {
 	 * @throws {@link Exception} - if there is any error during the operation
 	 */
 	private Map<String, Object> acceptForBuildStream(final String processAreaName, final String buildStream, final ChangeReport changeReport,
-			final String defaultSnapshotName, final String previousSnapshotUUID, final String previousBuildUrl,
+			final String defaultSnapshotName, final String previousSnapshotUUID, final String previousBuildUrl, String temporaryWorkspaceComment,
 			final IConsoleOutput listener, final IProgressMonitor progress, final Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
@@ -1381,19 +1392,24 @@ public class RepositoryConnection {
     	String workspaceName = getWorkspaceNamePrefix() + "_" + Long.toString(System.currentTimeMillis());
     	String snapshotName = defaultSnapshotName;
 
-		// Take a snapshot on the stream and prepare changesetLog
-		// Get the workspace connection for the stream
+		/*
+		 *  Create a workspace from the stream
+		 *  Take a snapshot on the workspace
+		 *  Change the snapshot owner to the stream 
+		 */
+
+    	// Get the workspace connection for the stream
 		IWorkspaceConnection streamConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).getWorkspaceConnection(streamHandle, monitor.newChild(1));
 		
 		IWorkspaceConnection workspaceConnection = null;
 		try {
 			// Create a workspace from the stream
-			workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributor, workspaceName, null, null, streamConnection, monitor.newChild(5));
+			workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributor, workspaceName, temporaryWorkspaceComment, null, streamConnection, monitor.newChild(5));
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finest("RepositoryConnection.accept for stream : Created temporary workspace '" + workspaceName + "'");
 			}
 	
-			// Create a baselineset for the workspace
+			// Create a baseline set for the workspace
 			IBaselineSetHandle baselineSet = workspaceConnection.createBaselineSet(null, snapshotName, null, BaselineSetFlags.DEFAULT, monitor.newChild(3));
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finest("RepositoryConnection.accep for stream : Created snapshot '" + snapshotName + "'.");
@@ -1405,9 +1421,21 @@ public class RepositoryConnection {
 				LOGGER.finest("RepositoryConnection.accep for stream : Changed owner of snapshot '" + snapshotName + "' to stream '" + buildStream +"'.");
 			}
 			
-			// Build the change report
+			// Get the {@IBaselineHandle} of the previous snapshot
+			IBaselineSetHandle previousSnapshot = null;
 			if (previousSnapshotUUID != null) {
-				IBaselineSetHandle previousSnapshot = RTCSnapshotUtils.getSnapshotByUUID(getTeamRepository(), previousSnapshotUUID, monitor.newChild(1), clientLocale);
+				try {
+					previousSnapshot = RTCSnapshotUtils.getSnapshotByUUID(getTeamRepository(), previousSnapshotUUID, monitor.newChild(1), clientLocale);
+				} catch (Exception exp) {
+					if (LOGGER.isLoggable(Level.WARNING)) {
+						LOGGER.warning("Unable to locate snapshot with UUID : " + previousSnapshotUUID + ". The exception text is " + exp.getMessage());
+					}					
+				}
+			}
+			// Build the change report
+			// If the previousSnapshot is not null, then compare 
+			// Otherwise skip the compare put the link to the current snapshot in the change report
+			if (previousSnapshot != null) {
 				// TODO do we need to exclude components from components to exclude
 				// Create the changeReport
 				IChangeHistorySyncReport compareReport = SCMPlatform.getWorkspaceManager(getTeamRepository()).compareBaselineSets(baselineSet, previousSnapshot, null, monitor.newChild(2));
@@ -1430,7 +1458,7 @@ public class RepositoryConnection {
 	       
 			// Create streamChangesData and add it to build properties
 			String streamDataHashS = RTCWorkspaceUtils.getInstance().getDigest(getTeamRepository(), workspaceConnection.getResolvedWorkspace(), monitor.newChild(10)); 
-			LOGGER.finer("Stream's data hash in polling is " +  streamDataHashS.toString());
+			LOGGER.finer("Stream's data hash during accept is " +  streamDataHashS.toString());
 			buildProperties.put(Constants.TEAM_SCM_STREAM_DATA_HASH, streamDataHashS.toString());
 			
 			// Put the snapshotUUID in the buildProperties and add it to result

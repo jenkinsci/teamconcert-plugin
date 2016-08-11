@@ -57,6 +57,7 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	private boolean acceptBeforeLoad;
 	// The relative url of the previous build from which the previous snapshot uuid was obtained
 	private String previousBuildUrl; 
+	private String temporaryWorkspaceComment;
 	
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -94,11 +95,14 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	 * @param debug Whether to report debugging messages to the listener
 	 * @param clientLocale The locale of the requesting client
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
+	 * @param previousBuildUrl 
+	 * @param temporaryWorkspaceComment
 	 */
 	public RTCAcceptTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
 			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
 			String baselineSetName, String previousSnapshotUUID, TaskListener listener, RemoteOutputStream changeLog, boolean isRemote,
-			boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad, String previousBuildUrl) {
+			boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad, String previousBuildUrl,
+			String temporaryWorkspaceComment) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -123,6 +127,7 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
     	this.callConnectorTimeout = strCallConnectorTimeout;
     	this.acceptBeforeLoad = acceptBeforeLoad;
     	this.previousBuildUrl = previousBuildUrl;
+    	this.temporaryWorkspaceComment = temporaryWorkspaceComment;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -151,7 +156,8 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 			debug("listener is " + (listener == null ? "null" : "not null")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			debug("Running remote " + isRemote); //$NON-NLS-1$
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
-			debug("prevBuildUrl" + ((previousBuildUrl != null)? previousBuildUrl :"No Url Provided")); //$NON-NLS-1$ //$NON-NLS-2$ 
+			debug("prevBuildUrl" + ((previousBuildUrl != null)? previousBuildUrl :"No Url Provided")); //$NON-NLS-1$ //$NON-NLS-2$
+			debug("temporaryWorkspacComment"+ temporaryWorkspaceComment); //$NON-NLS-1$
 		}
 
 		try {
@@ -214,11 +220,13 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 					String.class, // callConnectorTimeout
 					boolean.class, // acceptBeforeLoad
 					String.class, // previousBuildUrl
+					String.class // temporaryWorkspaceComment
 			}, serverURI, userId, Secret.toString(password),
 					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot,
 					buildStream, workspace.getAbsolutePath(),
 					changeLog, baselineSetName, previousSnapshotUUID,
-					listener, clientLocale, callConnectorTimeout, acceptBeforeLoad, previousBuildUrl);
+					listener, clientLocale, callConnectorTimeout, acceptBeforeLoad, 
+					previousBuildUrl, temporaryWorkspaceComment);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

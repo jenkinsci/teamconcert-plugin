@@ -1,0 +1,69 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	Especifique o proprietário da captura instantânea. Uma captura
+instantânea pode pertencer a uma área de trabalho do repositório ou a
+um fluxo. 
+	A especificação do proprietário da captura instantânea
+permite definir o escopo da procura e, portanto, evita duplicatas no
+resultado da procura.
+  </p>
+  <p>
+	Quando você não possui os detalhes do proprietário da captura
+instantânea ou se você tem certeza de que o nome da captura
+instantânea é exclusivo no repositório, é possível escolher "- nenhum
+-" para o proprietário da captura instantânea. 
+	Os detalhes do
+proprietário da captura instantânea são ignorados quando você
+especifica o UUID da captura instantânea.
+  </p>  
+  <p>
+  	Ao escolher "- nenhum -" para o proprietário da captura
+instantânea, a procura da captura instantânea não tem escopo definido
+e ocorre no repositório.  
+  </p>
+  <p>
+  	Quando uma área de trabalho do repositório ou um fluxo proprietário é especificado, o escopo da procura de captura instantânea será definido para as capturas instantâneas associadas à área de trabalho do repositório ou ao fluxo especificado.
+  </p>
+  <p>
+  	Quando o proprietário da captura instantânea é selecionado para
+ser uma área de trabalho do repositório mas o nome da área de
+trabalho do repositório não é especificado,
+  	a procura da captura instantânea não tem o escopo definido e
+ocorre no repositório.
+  </p>
+  <p>
+  	Quando o proprietário da captura instantânea é selecionado para
+ser um fluxo mas nem a área do projeto ou da equipe, nem o fluxo
+pertencente são especificados,
+  	a procura da captura instantânea não tem o escopo definido e
+ocorre no repositório.
+  </p>
+  <p>
+  	Quando o proprietário da captura instantânea é selecionado para
+ser um fluxo e somente o nome da área do projeto ou da equipe é
+especificado, a procura da captura instantânea tem o escopo
+  	definido para as capturas instantâneas associadas a todos os
+fluxos pertencentes à área do projeto ou da equipe especificada.
+  </p>
+  <p>
+  	Quando o proprietário da captura instantânea é selecionado para ser um fluxo e somente o nome do fluxo é especificado, o escopo da procura de captura instantânea é definido para as capturas instantâneas associadas a todos os fluxos com o nome fornecido, em todo o repositório.
+  </p>
+  <p>
+  	Quando o proprietário da captura instantânea é selecionado para ser um fluxo e o nome da área do projeto ou da equipe são especificados, bem como o nome do fluxo proprietário, o escopo da procura de captura instantânea é definido para as capturas instantâneas associadas a todos os fluxos com o nome fornecido na área do projeto ou da equipe especificada.
+  </p>
+</div>

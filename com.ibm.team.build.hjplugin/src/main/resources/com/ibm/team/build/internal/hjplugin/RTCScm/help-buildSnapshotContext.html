@@ -42,10 +42,11 @@
   </p>
   <p>
   	When the snapshot owner is selected to be a stream and only the stream name is specified, then the snapshot search is scoped to the snapshots 
-  	associated with all streams with the given name, across the repository.
+  	associated with the stream with the given name in the repository. If there are multiple streams with the same name in the repository then the search would fail.
   </p>
   <p>
   	When the snapshot owner is selected to be a stream and the name of the project or team area as well as the name of the owning stream is specified, then the snapshot search 
-  	is scoped to the snapshots associated with all streams with the given name in the specified project or team area.
+  	is scoped to the snapshots associated with the stream with the given name in the specified project or team area. 
+  	If there are multiple streams with the same name in the specified project or team area then the search would fail.
   </p>
 </div>

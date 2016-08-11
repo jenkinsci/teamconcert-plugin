@@ -16,7 +16,4 @@ public class RTCJobProperties {
 	public static final String USE_DYNAMIC_LOAD_RULE = "com.ibm.team.build.useExtension";
 	
 	public static final String RTC_BUILD_SNAPSHOT = "rtcBuildSnapshot";
-	public static final String RTC_BUILD_STREAM = "rtcBuildStream";
-	public static final String RTC_BUILD_DEFINITION = "rtcBuildDefinition";
-	public static final String RTC_BUILD_WORKSPACE = "rtcBuildWorkspace";
 }

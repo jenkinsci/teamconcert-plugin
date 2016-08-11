@@ -1,0 +1,51 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+	指定 Snapshot 的擁有者。Snapshot 的擁有者可以是儲存庫工作區或串流。
+	指定 Snapshot 的擁有者時，會啟用範圍搜尋，因而可避免搜尋結果中出現重複項目。
+  </p>
+  <p>
+	如果您沒有 Snapshot 擁有者詳細資料，或者您確定該 Snapshot 名稱在儲存庫中是唯一的，在 Snapshot 擁有者方面，您可以選擇 "- none -"。
+	當您指定 Snapshot UUID 時，會忽略 Snapshot 擁有者詳細資料。
+  </p>  
+  <p>
+  	在 Snapshot 擁有者方面，如果您選擇 "- none -"，就不會設定 Snapshot 搜尋範圍，而會對整個儲存庫進行搜尋。
+  </p>
+  <p>
+  	當指定擁有端儲存庫工作區或串流時，會將 Snapshot 搜尋範圍設為指定工作區或串流的相關聯 Snapshot。
+  </p>
+  <p>
+  	當選取儲存庫工作區作為 Snapshot 擁有者，但卻沒有指定儲存庫工作區的名稱時，
+  	則不會設定 Snapshot 搜尋範圍，而會對整個儲存庫進行搜尋。
+  </p>
+  <p>
+  	當選取串流作為 Snapshot 擁有者，但既沒有指定專案或團隊區域，也沒有指定擁有端串流時，
+  	則不會設定 Snapshot 搜尋範圍，而會對整個儲存庫進行搜尋。
+  </p>
+  <p>
+  	當選取串流作為 Snapshot 擁有者，且只指定專案或團隊區域名稱時，
+  	則會將 Snapshot 搜尋範圍設為指定專案或團隊區域所擁有之所有串流的相關聯 Snapshot。
+  </p>
+  <p>
+  	當選取串流作為 Snapshot 擁有者，且只指定串流名稱時，
+  	則會將 Snapshot 搜尋範圍設為整個儲存庫中具有該給定名稱之所有串流的相關聯 Snapshot。
+  </p>
+  <p>
+  	當選取串流作為 Snapshot 擁有者，且除了指定專案或團隊區域的名稱，還指定擁有端串流的名稱時，
+  	則會將 Snapshot 搜尋範圍設為指定專案或團隊區域中具有該給定名稱之所有串流的相關聯 Snapshot。
+  </p>
+</div>

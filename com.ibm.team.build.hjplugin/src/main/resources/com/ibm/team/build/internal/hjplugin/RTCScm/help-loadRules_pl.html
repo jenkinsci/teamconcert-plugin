@@ -15,7 +15,7 @@
 
 <div>
   <p>
-   Wybierz plik reguł ładowania określający sposób ładowania obszaru roboczego budowania. Jeśli za pomocą rozszerzenia określono dynamiczne reguły ładowania, te reguły będą miały pierwszeństwo przed regułami określonymi w tym miejscu.
+   Wybierz plik reguł ładowania określający sposób ładowania obszaru roboczego repozytorium. Jeśli za pomocą rozszerzenia określono dynamiczne reguły ładowania, te reguły będą miały pierwszeństwo przed regułami określonymi w tym miejscu.
   </p>
   <p>
   	Aby zastosować reguły ładowania, należy utworzyć ich listę w następującym formacie JSON, zapisać tę listę w pliku na dysku i podać w tym miejscu ścieżkę do tego pliku.
@@ -37,12 +37,12 @@
   </pre>
   </p>
   <p>
-	Element componentName można zastąpić elementem componentId. Element componentId jest identyfikatorem UUID komponentu.
+	Element componentName można zastąpić elementem componentId. Element componentId jest identyfikatorem UUID komponentu. 
 	Jeśli zostaną określone oba elementy - componentName i componentId, komponent zostanie wyszukany tylko według elementu componentId.
   </p>
   <p>
-  	Wartością elementu filePath jest pełna ścieżka do pliku reguł ładowania w repozytorium, czyli ścieżka zdalna.
-  	Element filePath można zastąpić elementem fileItemId. Element fileItemId jest identyfikatorem UUID pliku reguł ładowania.
+  	Wartością elementu filePath jest pełna ścieżka do pliku reguł ładowania w repozytorium, czyli ścieżka zdalna. 
+  	Element filePath można zastąpić elementem fileItemId. Element fileItemId jest identyfikatorem UUID pliku reguł ładowania. 
   	Podczas podawania ścieżki do pliku w celu oddzielania segmentów ścieżki używaj ukośników (/). Jeśli zostaną określone oba elementy - filePath i fileItemId, komponent zostanie wyszukany tylko według elementu fileItemId.
   </p>
 
