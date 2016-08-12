@@ -452,7 +452,7 @@ public class HelperIT {
 			assertNotNull(action.getBuildResultUUID());
 			setupArtifacts.put("buildResultItemId", action.getBuildResultUUID());
 
-			File pollingFile = File.createTempFile("tmp", ".log");
+			File pollingFile = Utils.getTemporaryFile();
 			PollingResult pollResult = prj.poll(new StreamTaskListener(pollingFile, Charset.forName("ASCII")));
 
 			// If there is any error during polling, it can be seen in the log file
@@ -537,7 +537,7 @@ public class HelperIT {
 			assertNotNull(action.getBuildResultUUID());
 			setupArtifacts.put("buildResultItemId", action.getBuildResultUUID());
 			
-			File pollingFile = File.createTempFile("tmp", ".log");
+			File pollingFile = Utils.getTemporaryFile();
 			PollingResult pollResult = prj.poll(new StreamTaskListener(pollingFile, Charset.forName("UTF-8")));
 			
 			// If there is any error during polling, it can be seen in the log file
@@ -790,23 +790,12 @@ public class HelperIT {
 		while(!future.isDone());
 		FreeStyleBuild build = future.get();
 		
-		// Verify the build status
-		assertNotNull(build);
-		assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
-		
 		// Verify whether RTCScm ran successfully
-		List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
-		assertEquals(1, rtcActions.size());
-		RTCBuildResultAction action = rtcActions.get(0);
-		
-		// Verify build result getting created
-		assertNotNull(action.getBuildResultUUID());
-		result[0] = action.getBuildResultUUID();
+		Utils.verifyRTCScmInBuild(build, true);
 
-		// Verify snapshot getting created
-		String baselineSetItemId = action.getBuildProperties().get("team_scm_snapshotUUID");
-		assertNotNull(baselineSetItemId);
-		result[1] = baselineSetItemId;
+		RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
+		result[0] = action.getBuildResultUUID();
+		result[1] =  action.getBuildProperties().get("team_scm_snapshotUUID");
 		
 		// Verify that build ran with the same definition Id
 		RTCChangeLogSet changelog = (RTCChangeLogSet) build.getChangeSet();

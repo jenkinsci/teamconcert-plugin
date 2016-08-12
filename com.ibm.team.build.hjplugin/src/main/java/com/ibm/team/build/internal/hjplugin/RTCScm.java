@@ -2277,8 +2277,10 @@ public class RTCScm extends SCM {
 		String buildStream = (BUILD_STREAM_TYPE.equals(buildType)) ? Helper.parseConfigurationValue(project, Util.fixEmptyAndTrim(getBuildStream()), listener):
 																		 Util.fixEmptyAndTrim(getBuildStream());
 		
-		// Validate given buildType and buildStream, that buildStream is non empty
-		validateInput(getBuildTypeStr(), null, buildStream);
+		// Validate that given buildType is build from stream, buildStream is non empty
+		if (BUILD_STREAM_TYPE.equals(buildType) && buildStream == null) {
+			throw new AbortException(Messages.RTCScm_checking_for_changes_failure(Messages.RTCScm_build_stream_empty()));
+		}
 
 		// check to see if there are incoming changes
     	try {

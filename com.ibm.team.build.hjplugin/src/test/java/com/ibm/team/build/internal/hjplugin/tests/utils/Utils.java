@@ -11,10 +11,15 @@
 
 package com.ibm.team.build.internal.hjplugin.tests.utils;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -24,18 +29,25 @@ import java.util.concurrent.ExecutionException;
 
 import org.jvnet.hudson.test.JenkinsRule;
 
+import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
-import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
+import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.tests.Config;
 
 import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
+import hudson.model.Result;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
 import hudson.util.Secret;
+import hudson.util.StreamTaskListener;
 
 public class Utils {
 	private static final String CALLCONNECTOR_TIMEOUT = "30";
@@ -48,6 +60,7 @@ public class Utils {
 	public static final String TEAM_SCM_SNAPSHOT_OWNER = "team_scm_snapshotOwner";
 	public static final String ARTIFACT_BUILDDEFINITION_ITEM_ID = "buildDefinitionItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_ID = "buildResultItemId";
+	public static final String ARTIFACT_BUILDRESULT_ITEM_1_ID = "buildResultItemId1";
 	public static final String ARTIFACT_BASELINE_ITEM_ID = "baselineSetItemId";
 
 	public static Map<String,String> acceptAndLoad(RTCFacadeWrapper testingFacade, String serverURI,
@@ -176,6 +189,27 @@ public class Utils {
 		return setupArtifacts;
 	}
 	
+	public static Map<String, String> setupBuildDefinition(RTCFacadeWrapper testingFacade, Config c,
+				String buildDefinitionId, String workspaceName, String componentName) throws Exception {
+		RTCLoginInfo loginInfo = c.getLoginInfo();
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+				.invoke("setupBuildResultContributions",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // workspaceName,
+								String.class, // componentName
+								String.class}, // buildDefinitionId
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), workspaceName,
+						componentName, buildDefinitionId);
+		return setupArtifacts;
+	}
+	
 	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, String buildtoolkitName, String streamName) throws Exception {
 		Config defaultC = c;
 		// Set the toolkit
@@ -231,5 +265,61 @@ public class Utils {
         	}
         }
         return match;
+	}
+	
+	public  static void verifyRTCScmInBuild(Run<?,?> build, boolean isBuildDefinitionBuild) throws Exception {
+		// Verify the build status
+		assertNotNull(build);
+		assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+		
+		// Verify whether RTCScm ran successfully
+		List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
+		assertEquals(1, rtcActions.size());
+		RTCBuildResultAction action = rtcActions.get(0);
+		
+		// Verify build result getting created
+		if (isBuildDefinitionBuild) {
+			assertNotNull(action.getBuildResultUUID());
+		}
+
+		// Verify snapshot getting created
+		String baselineSetItemId = action.getBuildProperties().get("team_scm_snapshotUUID");
+		assertNotNull(baselineSetItemId);
+	}
+	
+	public static PollingResult pollProject(FreeStyleProject prj, File pollingFile) throws Exception {
+		return prj.poll(new StreamTaskListener(pollingFile, Charset.forName("UTF-8")));
+	}
+	
+	public static File getTemporaryFile() throws Exception {
+		File f = File.createTempFile("tmp", "log");
+		f.deleteOnExit();
+		return f;
+	}
+	
+	public static void assertPollingMessagesWhenNoChanges(PollingResult pollingResult, 
+				File pollingFile, String item) throws Exception {
+		assertEquals(Change.NONE, pollingResult.change);
+		assertCheckForIncomingChangesMessage(pollingFile, item);
+		assertNoChangesMessage(pollingFile);
+	}
+	
+	public static void assertPollingMessagesWhenChangesDetected(PollingResult pollingResult, 
+			File pollingFile, String item) throws Exception {
+		assertEquals(Change.SIGNIFICANT, pollingResult.change);
+		assertCheckForIncomingChangesMessage(pollingFile, item);
+		assertChangesMessage(pollingFile);		
+	}
+	
+	public static void assertCheckForIncomingChangesMessage(File pollingFile, String item) throws Exception {
+		assertNotNull("Expected message about checking incoming changes", getMatch(pollingFile, "Checking incoming changes for \"" + item + "\""));
+	}
+	
+	public static void assertNoChangesMessage(File pollingFile) throws Exception {
+		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : No changes detected"));
+	}
+	
+	public static void assertChangesMessage(File pollingFile) throws Exception {
+		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : Changes detected"));
 	}
 }

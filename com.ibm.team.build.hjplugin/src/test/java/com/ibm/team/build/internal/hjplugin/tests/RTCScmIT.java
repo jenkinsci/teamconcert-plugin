@@ -17,14 +17,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.concurrent.ExecutionException;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,13 +45,11 @@ import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
-import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.model.ParametersAction;
 import hudson.model.Result;
-import hudson.model.Run;
-import hudson.model.queue.QueueTaskFuture;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
 import hudson.tools.ToolProperty;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
@@ -796,7 +790,7 @@ public class RTCScmIT {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void testDoValidateBuildSnapshotConfiguration() throws Exception {
+	@Test public void testDoValidateBuildSnapshotConfiguration() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
@@ -1242,30 +1236,212 @@ public class RTCScmIT {
 	
 	//public void repositoryWorkspaceNameItemIdPairFoundInBuildResultPage() throws Exception
 	
-	static void verifyStreamBuild(FreeStyleBuild build, String streamUUID, String url) throws IOException {
-		assertNotNull(build);
-		assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+	
+	/**
+	 * Build definition, normal checkout + polling through Build toolkit
+	 * 1) Positive case when name is provided
+	 * 2) Negative case when name is empty
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test 
+	public void buildDefinitionCheckoutAndPollingWithBuildtoolkit() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		String workspaceName = getTestName() + System.currentTimeMillis();
+		String componentName = getTestName() + System.currentTimeMillis();
+		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		Map<String, String> setupArtifacts = Utils.setupBuildDefinition(testingFacade, defaultC, 
+					buildDefinitionId, workspaceName, componentName);		
+		try {
+			// positive case when there is a valid build definition Id
+			{
+				FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(buildDefinitionId);
+				// Run a build
+				FreeStyleBuild build = Utils.runBuild(prj, null);
+				
+				// Verify
+				Utils.verifyRTCScmInBuild(build, true);
+				RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
+				setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID, action.getBuildResultUUID());
 
-		// Verify whether RTCScm ran successfully
-		List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
-		assertEquals(1, rtcActions.size());
-		RTCBuildResultAction action = rtcActions.get(0);
-		assertNotNull(action);
-		
-		// Verify that we have the stream UUID as the snapshot owner field
-		assertEquals(streamUUID, action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOT_OWNER));
-		
-		// Verify that we have stored stream's state inside the build result action
-		assertTrue(action.getBuildProperties().get(Utils.TEAM_SCM_STREAM_CHANGES_DATA).length() > 0);
-		
-		// Verify previous build Url
-		RTCChangeLogSet changeLogSet = (RTCChangeLogSet) build.getChangeSet();
-		assertEquals("Expected a proper previousBuildUrl", url, changeLogSet.getPreviousBuildUrl());
-		
+				// Run polling and check the log file
+				File pollingFile = Utils.getTemporaryFile();
+				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
+				
+				// Ensure that there are no changes and polling happened successfully
+				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, buildDefinitionId);
+			}
+			// negative case when build definition id is empty
+			{
+				FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(null);
+				// Run a build
+				FreeStyleBuild build = Utils.runBuild(prj, null);
+				
+				// Verify that build failed and there is a check ut failure message
+				assertEquals(Result.FAILURE, build.getResult());
+				Utils.getMatch(build.getLogFile(), "RTC : checkout failure: The parameter \"buildDefinitionId\" must not be null");
+				
+				// Run polling and check the log file
+				File pollingFile = Utils.getTemporaryFile();
+				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
+				
+				// Ensure that there are no changes and polling happened successfully
+				assertEquals(Change.NONE, pollingResult.change);
+				Utils.getMatch(pollingFile, "RTC : checking for changes failure: More than one repository workspace has the name \"\"");
+			}
+		} finally {
+			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+		}
 	}
-	
 
+	/**
+	 * Repository Workspace, normal checkout + polling through build toolkit
+	 * 1) Positive case when name is provided
+	 * 2) Negative case when name is empty
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test 
+	public void repositoryWorkspaceCheckoutAndPollingWithBuildtoolkit() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		String streamName = getTestName() + System.currentTimeMillis();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC,
+							streamName);
+		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
+		
+		try {
+			{ // positive case - when workspaceName is not null
+				FreeStyleProject prj = setupFreeStyleJobForWorkspace(workspaceName);
+				
+				// Run a build
+				FreeStyleBuild build = Utils.runBuild(prj, null);
+				
+				// Verify
+				Utils.verifyRTCScmInBuild(build, false);
+				
+				// Start polling and check whether there are no changes and polling ran successfully
+				// Run polling and check the log file
+				File pollingFile = Utils.getTemporaryFile();
+				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
+				
+				// Verify
+				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, workspaceName);
+			}
+			{ // negative case - when workspaceName is null
+				FreeStyleProject prj = setupFreeStyleJobForWorkspace(null);
+				
+				// Run a build
+				FreeStyleBuild build = Utils.runBuild(prj, null);
+				
+				// Verify that build failed and there is a checkout failure message
+				assertEquals(Result.FAILURE, build.getResult());
+				Utils.getMatch(build.getLogFile(), "RTC : checkout failure: More than one repository workspace has the name \"null\"");
+				
+				// Run polling and check the log file
+				File pollingFile = Utils.getTemporaryFile();
+				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
+				
+				// Ensure that there are no changes and polling happened successfully
+				assertEquals(Change.NONE, pollingResult.change);
+				Utils.getMatch(pollingFile, "RTC : checking for changes failure: More than one repository workspace has the name \"null\"");
+			}
+		} finally {
+			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+		}
+	}
+
+	/**
+	 * Snapshot, normal checkout + polling through build toolkit
+	 * 1) Positive case when name is provided
+	 * 2) Negative case when name is empty
+	 * Note that in both cases, polling should say that it is not a supported configuration.
+	 * Checkout should succeed for the positive case and fail in the negative case.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void snapshotCheckoutAndPollingWithBuildtoolkit() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+
+		Config defaultC = Config.DEFAULT;
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		String workspaceName = getTestName() + System.currentTimeMillis();
+		String snapshotName = getTestName() + System.currentTimeMillis();
+		String componentName = getTestName() + System.currentTimeMillis();
+
+		
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+				.invoke("setupBuildSnapshot",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // workspaceName,
+								String.class, // snapshotName
+								String.class, // componentName
+								String.class}, // workspacePrefix
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), workspaceName,
+						snapshotName, componentName, "HJP");
+		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINE_ITEM_ID);
+		try {
+			{ // valid snapshot UUID - checkout and polling
+				FreeStyleProject prj = setupFreeStyleJobForSnapshot(snapshotUUID);
+				FreeStyleBuild build = Utils.runBuild(prj, null);
 	
+				// Verify the build status
+				assertNotNull(build);
+				assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+				
+				// Get the build snapshot UUID from build result action 
+				RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
+				assertEquals(snapshotUUID, action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID));
+				
+				// polling when snapshotUUID is a valid one
+				File pollingFile = Utils.getTemporaryFile();
+				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
+				
+				assertEquals(Change.NONE, pollingResult.change);
+				assertNotNull("Expecting not supported message", Utils.getMatch(pollingFile, "Polling is not supported for this configuration. Polling is supported only for build definition, repository workspace and stream configurations."));
+			}
+			{ // null snapshot UUID  - checkout and polling
+				FreeStyleProject prj = setupFreeStyleJobForSnapshot(null);
+				FreeStyleBuild build = Utils.runBuild(prj, null);
+	
+				// Verify the build status
+				assertNotNull(build);
+				assertEquals(Result.FAILURE, build.getResult());
+				
+				// polling when snapshotUUID is a valid one
+				File pollingFile = Utils.getTemporaryFile();
+				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
+				
+				assertEquals(Change.NONE, pollingResult.change);
+				assertNotNull("Expecting not supported message", Utils.getMatch(pollingFile, "Polling is not supported for this configuration. Polling is supported only for build definition, repository workspace and stream configurations."));
+			}
+		}
+		finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+
 	private FreeStyleProject setupFreeStyleJobForWorkspace(String workspaceName) throws Exception {
 		Config defaultC = Config.DEFAULT;
 		// Set the toolkit
@@ -1290,6 +1466,22 @@ public class RTCScmIT {
 		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()), 
 				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", buildDefinitionId, null, null, null), false);
 
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject();
+		prj.setScm(rtcScm);
+		
+		return prj;
+	}
+	
+	private FreeStyleProject setupFreeStyleJobForSnapshot(String snapshotUUID) throws Exception {
+		Config defaultC = Config.DEFAULT;
+
+		// Set the toolkit
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
+				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildSnapshot", null, null, snapshotUUID, null), false);
+	
 		// Setup
 		FreeStyleProject prj = r.createFreeStyleProject();
 		prj.setScm(rtcScm);
