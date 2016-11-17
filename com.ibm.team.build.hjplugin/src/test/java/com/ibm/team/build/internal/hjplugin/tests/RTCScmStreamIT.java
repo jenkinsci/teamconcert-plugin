@@ -14,9 +14,22 @@ package com.ibm.team.build.internal.hjplugin.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import hudson.model.FreeStyleBuild;
+import hudson.model.Result;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -25,21 +38,18 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.WithTimeout;
 
+import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
+import com.ibm.team.build.internal.hjplugin.RTCScm;
+import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.Result;
-import hudson.model.Run;
-import hudson.scm.PollingResult;
-import hudson.scm.PollingResult.Change;
-
-public class RTCScmStreamIT {
+public class RTCScmStreamIT extends AbstractTestCase {
 	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
 	@Rule public JenkinsRule r = new JenkinsRule();
@@ -53,7 +63,7 @@ public class RTCScmStreamIT {
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
-		String streamName = getTestName() + System.currentTimeMillis();
+		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts =  Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 
@@ -99,7 +109,7 @@ public class RTCScmStreamIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
-		String streamName = getTestName() + System.currentTimeMillis();
+		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
@@ -142,7 +152,7 @@ public class RTCScmStreamIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
-		String streamName = getTestName() + System.currentTimeMillis();
+		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamItemId = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
@@ -187,7 +197,7 @@ public class RTCScmStreamIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
-		String streamName = getTestName() + System.currentTimeMillis();
+		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
@@ -228,6 +238,97 @@ public class RTCScmStreamIT {
 		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}
+	}
+	
+	/**
+	 * Use this test as a placeholder for all simple validations related to stream configuration.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void testStreamConfiguration_misc() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		try {
+			// Create a basic project configuration
+			// Individual validation steps can then customize the RTCScm instance and update it in the project instance
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			// validate support for custom snapshot name
+			validateCustomSnapshotName_stream(prj);
+
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+
+	/**
+	 * Validate the snapshot name generated in the builds - with and without providing custom snapshot name
+	 * 
+	 * @param prj
+	 * @param setupArtifacts
+	 * @param buildDefinitionId
+	 * @throws Exception
+	 */
+	private void validateCustomSnapshotName_stream(FreeStyleProject prj) throws Exception {
+		// Run a build, without providing custom snapshot name
+		FreeStyleBuild build = Utils.runBuild(prj, null);
+
+		// Verify that by default the snapshot name is <Job Name>_#<Build_Number>
+		RTCChangeLogSet changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals(prj.getName() + "_#" + build.getNumber(), changelog.getBaselineSetName());
+
+		// update the job configuration with custom snapshot name
+		// set overrideDefaultSnapshotName to false. Should use default snapshot name even if a custom snapshot name is
+		// provided
+		RTCScm rtcScm = (RTCScm)prj.getScm();
+		BuildType buildType = rtcScm.getBuildType();
+		buildType.setOverrideDefaultSnapshotName(false);
+		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		// Verify that snapshot name is set to the default value
+		changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals(prj.getName() + "_#" + build.getNumber(), changelog.getBaselineSetName());
+
+		// update the job configuration with custom snapshot name and set overrideDefaultSnapshotName to true
+		rtcScm = (RTCScm)prj.getScm();
+		buildType = rtcScm.getBuildType();
+		buildType.setOverrideDefaultSnapshotName(true);
+		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		// Verify that the template specified in the custom snapshot name is resolved and set as the name of the
+		// generated snapshot
+		changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals("jenkins_" + prj.getName() + "_#" + build.getNumber(), changelog.getBaselineSetName());
+		
+		// update the job configuration with custom snapshot name that resolves to an empty string and set overrideDefaultSnapshotName to true
+		rtcScm = (RTCScm)prj.getScm();
+		buildType = rtcScm.getBuildType();
+		buildType.setOverrideDefaultSnapshotName(true);
+		buildType.setCustomizedSnapshotName("${emptyParam}");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+		
+		prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition("emptyParam", " ")})));
+		
+		build = Utils.runBuild(prj, Collections.singletonList(new ParametersAction(new StringParameterValue("emptyParam", " "))));
+
+		// Verify that the snapshot name is set to a default value
+		changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals(prj.getName() + "_#" + build.getNumber(), changelog.getBaselineSetName());
+		// Verify that the console output has the log message
+		assertNotNull(Utils
+				.getMatch(build.getLogFile(), java.util.regex.Pattern.quote(Messages.RTCScm_empty_resolved_snapshot_name("${emptyParam}"))));
 	}
 	
 	private static void verifyStreamBuild(FreeStyleBuild build, String streamUUID, String url) throws IOException {
@@ -272,9 +373,5 @@ public class RTCScmStreamIT {
 	
 	private String getSnapshotUUIDFromBuild(Run<?,?> build) {
 		return build.getActions(RTCBuildResultAction.class).get(0).getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID);
-	}
-	
-	private String getTestName() {
-		return this.getClass().getName();
 	}
 }

@@ -12,7 +12,16 @@ package com.ibm.team.build.internal.hjplugin.tests;
 
 import java.util.Map;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.JenkinsRule.WebClient;
 import org.junit.Assert;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+
 import org.kohsuke.stapler.StaplerRequest;
 import org.mockito.Mockito;
 
@@ -68,25 +77,28 @@ public class MayFailIT extends AbstractTestCase {
 	private static final String TEST_BUILD_SNAPSHOT = "_vf_F8EyGeBuAp7IPRTOeQ";
 	private static final String TEST_BUILD_STREAM = "compile-and-test-stream";
 	
-	public void testJobConfigRoundtripOverrideGlobal() throws Exception {
+	@Rule
+	public JenkinsRule j = new  JenkinsRule();
+	
+	@Test public void testJobConfigRoundtripOverrideGlobal() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = j.createFreeStyleProject();
 			RTCScm rtcScm = createTestOverrideGlobalRTCScm(false);
 			project.setScm(rtcScm);
 	
-			submit(createWebClient().getPage(project, CONFIGURE).getFormByName(CONFIG));
+			j.submit(j.createWebClient().getPage(project, CONFIGURE).getFormByName(CONFIG));
 	
 			RTCScm newRtcScm = (RTCScm) project.getScm();
 	
-			assertEqualBeans(rtcScm, newRtcScm, OVERRIDE_GLOBAL + "," + SERVER_URI + "," + USER_ID + "," + PASSWORD + "," + PASSWORD_FILE + ","
+			j.assertEqualBeans(rtcScm, newRtcScm, OVERRIDE_GLOBAL + "," + SERVER_URI + "," + USER_ID + "," + PASSWORD + "," + PASSWORD_FILE + ","
 					+ BUILD_TYPE + "," + BUILD_DEFINITION);
 		}
 	}
 
 	
-	public void testJobConfigRoundtripWithCredentials() throws Exception {
+	@Test public void testJobConfigRoundtripWithCredentials() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = j.createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
 			project.setScm(rtcScm);
@@ -108,7 +120,7 @@ public class MayFailIT extends AbstractTestCase {
 	
 			descriptor.configure(mockedReq, mockJSON);
 	
-			WebClient webClient = new WebClient();
+			WebClient webClient = j.createWebClient();
 	
 			// Get the page to configure the project
 			HtmlPage page = webClient.getPage(project, CONFIGURE);
@@ -123,7 +135,7 @@ public class MayFailIT extends AbstractTestCase {
 			overrideGlobalInput.setChecked(false);
 	
 			// Submit the config form
-			submit(form);
+			j.submit(form);
 	
 			// check submitted SCM result
 			RTCScm newRtcScm = (RTCScm) project.getScm();
@@ -138,9 +150,9 @@ public class MayFailIT extends AbstractTestCase {
 		}
 	}
 
-	public void testJobConfigRoundtripWithoutCredentials() throws Exception {
+	@Test public void testJobConfigRoundtripWithoutCredentials() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = j.createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
 			project.setScm(rtcScm);
@@ -159,7 +171,7 @@ public class MayFailIT extends AbstractTestCase {
 			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
 			descriptor.configure(mockedReq, mockJSON);
 	
-			WebClient webClient = new WebClient();
+			WebClient webClient = j.createWebClient();
 	
 			// Get the page to configure the project
 			HtmlPage page = webClient.getPage(project, CONFIGURE);
@@ -174,7 +186,7 @@ public class MayFailIT extends AbstractTestCase {
 			overrideGlobalInput.setChecked(false);
 	
 			// Submit the config form
-			submit(form);
+			j.submit(form);
 	
 			// check submitted SCM result
 			RTCScm newRtcScm = (RTCScm) project.getScm();
@@ -193,7 +205,7 @@ public class MayFailIT extends AbstractTestCase {
 	 * Test "Test Build Workspace" validates correctly a singly occurring workspace (valid)
 	 * and multiple workspaces with the same name (invalid)
 	 */
-	public void testTestBuildWorkspace() throws Exception {
+	@Test public void testTestBuildWorkspace() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();

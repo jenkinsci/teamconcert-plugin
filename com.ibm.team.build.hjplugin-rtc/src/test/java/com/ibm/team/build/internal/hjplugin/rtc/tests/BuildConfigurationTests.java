@@ -144,7 +144,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel",listener, null, Locale.getDefault());
+		buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel",listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -280,7 +280,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+		buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -410,7 +410,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+		buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -631,7 +631,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+		buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			throw failure[0];
 		}
@@ -731,7 +731,7 @@ public class BuildConfigurationTests {
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
-		buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+		buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
 		if (failure[0] != null) {
 			AssertUtil.fail("The relative fetch location should have been good: " + buildPath);
 		}
@@ -751,7 +751,7 @@ public class BuildConfigurationTests {
 
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
 		try {
-			buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+			buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
 			if (failure[0] != null) {
 				throw failure[0];
 			}
@@ -793,7 +793,7 @@ public class BuildConfigurationTests {
 		AssertUtil.assertEquals(buildConfiguration.getSnapshotName(), null);
 		
 		// Call tearDown and ensure that the workspace is deleted
-		buildConfiguration.tearDown(manager, null, listener, Locale.getDefault());
+		buildConfiguration.tearDown(manager, false, null, listener, Locale.getDefault());
 		try {
 			workspaceManager.getWorkspaceConnection(workspaceHandle, null);
 			AssertUtil.fail("tearDown failed to delete workspace " + workspaceName);

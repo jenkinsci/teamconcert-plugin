@@ -295,7 +295,7 @@ public class BuildConnectionTests {
 			}
 
 			BuildConfiguration buildConfiguration = new BuildConfiguration(repo, "");
-			buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+			buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
 			if (failure[0] != null) {
 				throw failure[0];
 			}
@@ -317,7 +317,7 @@ public class BuildConnectionTests {
 			}
 			
 			buildConfiguration = new BuildConfiguration(repo, "");
-			buildConfiguration.initialize(buildResultHandle, "builddef_my buildLabel", listener, null, Locale.getDefault());
+			buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
 			if (failure[0] != null) {
 				throw failure[0];
 			}

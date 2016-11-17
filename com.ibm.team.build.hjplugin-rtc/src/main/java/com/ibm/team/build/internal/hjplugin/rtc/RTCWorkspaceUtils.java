@@ -36,6 +36,7 @@ import java.util.logging.Logger;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.filesystem.client.internal.utils.FlowTableUtil;
 import com.ibm.team.process.client.IProcessClientService;
 import com.ibm.team.process.common.IProcessArea;
 import com.ibm.team.process.common.IProcessItem;
@@ -48,6 +49,7 @@ import com.ibm.team.repository.common.IItem;
 import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
+import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.client.internal.RepositoryItemProvider;
@@ -86,29 +88,91 @@ public class RTCWorkspaceUtils {
 	/**
 	 * Deletes a given {@link IWorkspace}. 
 	 * <br><br>
-	 * <b>Note:</b> Doesn't throw any exception if deletion fails.
+	 * <b>Note:</b> Throw any exceptions that occur during deletion.
 	 * 
-	 * @param workspace - the workspace to delete
-	 * @param repository
-	 * @param progress
-	 * @param clientLocale
+	 * @param workspace - the Repository Workspace handle to delete
+	 * @param repository - the RTC repository in which Repository Workspace resides
+	 * @param progress - a progress monitor
+	 * @param listener - a listener to which messages can be output
+	 * @param clientLocale - the locale of the requesting client.
 	 */
-	public void delete(IWorkspace workspace, ITeamRepository repository, IProgressMonitor progress, IConsoleOutput listener, Locale clientLocale) {
+	public void delete(IWorkspaceHandle workspaceH, ITeamRepository repository, 
+							IProgressMonitor progress, IConsoleOutput listener,
+							Locale clientLocale) throws TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		LOGGER.finest("RTCWorkspaceUtils.delete : Enter");
+		try {
+			if (workspaceH == null) {
+				return;
+			}
+			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
+			workspaceManager.deleteWorkspace(workspaceH, monitor.newChild(100));
+		}
+		finally {
+			monitor.done();
+		}
+	}
+	
+	/**
+	 * Deletes a given {@link IWorkspace}. 
+	 * <br><br>
+	 * <b>Note:</b> Doesn't throw any exception if deletion fails.
+	 * 
+	 * @param workspace - the Repository Workspace to delete
+	 * @param repository - the RTC repository in which the repository resides
+	 * @param progress - progress monitor
+	 * @param listener - the listener to which messages can be output
+	 * @param clientLocale - the locale of the requesting client
+	 */
+	public void deleteSilent(IWorkspace workspace, ITeamRepository repository, 
+							IProgressMonitor progress, IConsoleOutput listener, Locale clientLocale) {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		LOGGER.finest("RTCWorkspaceUtils.deleteSilent : Enter");
 		try {
 			if (workspace == null) {
 				return;
 			}
-			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
-			workspaceManager.deleteWorkspace(workspace, monitor.newChild(100));
+			LOGGER.finest("Received workspaceUUID '" + workspace.getItemId().getUuidValue() + "' and workspaceName '" + workspace.getName() + "'");
+			delete(workspace, repository, monitor.newChild(100), listener, clientLocale);
 		} catch (TeamRepositoryException exp) {
 			String logMessage = Messages.get(clientLocale).RTCWorkspaceUtils_cannot_delete_workspace(workspace.getName(), exp.getMessage()); 
 			listener.log(logMessage, exp);
 			if (LOGGER.isLoggable(Level.WARNING)) {
-				LOGGER.warning("RTCWorkspaceUtils.deleteWorkspace : Unable to delete temporary workspace '" + workspace.getName() + "'. Log message is " + logMessage);
+				LOGGER.warning("RTCWorkspaceUtils.deleteWorkspace : Unable to delete temporary workspace '" + 
+								workspace.getName() + "' with UUID '" + workspace.getItemId().getUuidValue() + "'. Log message is " + logMessage);
 			}
 		}
+		finally {
+			monitor.done();
+		}
+	}
+	
+	/**
+	 * Deletes a given a workspace UUID. 
+	 * <br><br>
+	 * <b>Note:</b> Throw any exceptions that occur during deletion.
+	 * 
+	 * @param workspaceUUID - the Repository Workspace UUID to delete
+	 * @param workspaceName - the name of the Repository Workspace
+	 * @param repository - The RTC repository in which the Repository Workspac resides
+	 * @param progress - progress monitor
+	 * @param listener - The listener to which messages can be output
+	 * @param clientLocale - The locale of the client
+	 * 
+	 * @throws TeamRepositoryException
+	 */
+	public void delete(String workspaceUUID, String workspaceName, ITeamRepository repository, 
+				IProgressMonitor progress, IConsoleOutput listener, Locale clientLocale) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		LOGGER.finest("RTCWorkspaceUtils.delete : Enter");
+		try {
+			LOGGER.finest("Received workspaceUUID '" + workspaceUUID + "' and workspaceName '" + workspaceName + "'");
+			if (workspaceUUID == null) {
+				return;
+			}
+			IWorkspaceHandle wh = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(workspaceUUID), null);
+			delete(wh, repository, monitor.newChild(100), listener, clientLocale);
+		} 
 		finally {
 			monitor.done();
 		}
@@ -240,10 +304,11 @@ public class RTCWorkspaceUtils {
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
 	 * @return The workspace connection for the workspace. Never <code>null</code>
+	 * @throws TeamRepositoryException 
+	 * @throws RTCConfigurationException 
 	 * @throws Exception if an error occurs
 	 */
-	public IWorkspaceHandle getWorkspace(String workspaceName, ITeamRepository repository, IProgressMonitor progress, Locale clientLocale)
-			throws Exception {
+	public IWorkspaceHandle getWorkspace(String workspaceName, ITeamRepository repository, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException {
 		LOGGER.finest("RTCWorkspaceUtils.getWorkspace from workspaceName: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
@@ -396,7 +461,26 @@ public class RTCWorkspaceUtils {
 		return processArea;
 	}
 	
-
+	/**
+	 * Sets the flow target for the given source to the target
+	 * 
+	 * @param repository The RTC repository which contains the given source and target workspace
+	 * @param source The workspace whose flow target is to be set
+	 * @param target The stream (or workspace) to which the source workspace should flow 
+	 * 			      to in both directions
+	 * @param monitor A progress monitor to report progress
+	 * @throws TeamRepositoryException If there is any error setting the flow target
+	 */
+	public void setFlowTarget(ITeamRepository repository, IWorkspace source, IWorkspaceHandle target, IProgressMonitor monitor) throws TeamRepositoryException {
+		SubMonitor progress = SubMonitor.convert(monitor, 10);
+		try {
+			IWorkspaceConnection sourceWorkspaceConnection =  SCMPlatform.getWorkspaceManager(repository).getWorkspaceConnection(source, progress.newChild(5));
+			IWorkspaceConnection remoteWorkspaceConnection =  SCMPlatform.getWorkspaceManager(repository).getWorkspaceConnection(target, progress.newChild(5));
+			FlowTableUtil.addCollaboration(sourceWorkspaceConnection, remoteWorkspaceConnection, progress.newChild(80));	
+		} finally {
+			progress.done();
+		}
+	}
 	
 	private String getDigest(final ArrayList<ComponentEntry> compEntries) throws IOException, NoSuchAlgorithmException {
 		LOGGER.finest("RTCWorkspaceUtils.getDigest for component Entries : Begin");

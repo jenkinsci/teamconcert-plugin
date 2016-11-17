@@ -25,7 +25,6 @@ import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
-import com.ibm.team.build.internal.common.model.BuildFactory;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.process.common.IProcessArea;
 import com.ibm.team.repository.client.ITeamRepository;
@@ -141,6 +140,7 @@ public class BuildUtil {
 		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID));
 		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID_1));
 		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID_2));
+		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID_3));
 		BuildUtil.deleteBuildDefinition(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ITEM_ID));
 		BuildUtil.deleteBuildEngine(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_ENGINE_ITEM_ID));
 	}

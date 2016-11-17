@@ -85,6 +85,8 @@ public class BuildConfiguration {
 	private BuildSnapshotDescriptor snapshot;
 	private String snapshotName;
 	private Map<String, String> buildProperties = new HashMap<String, String>();
+	private Map<String, String> temporaryRepositoryWorkspaceProperties = new HashMap<String, String>();
+	private boolean shouldDeleteTemporaryWorkspace = true;
 	
 	/**
 	 * Basic build configuration. Caller should also initialize prior to calling
@@ -153,8 +155,8 @@ public class BuildConfiguration {
 		SubMonitor progress = SubMonitor.convert(monitor, 10);
 		
 		IWorkspaceConnection workspaceConnection = null;
+		String workspaceName =  workspacePrefix + "_" + Long.toString(System.currentTimeMillis()) + "_" + Long.toString(System.nanoTime());
 		try {
-			String workspaceName =  workspacePrefix + "_" + Long.toString(System.currentTimeMillis()) + "_" + Long.toString(System.nanoTime());
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Creating workspace '" + workspaceName + "'");
 			}
@@ -168,13 +170,14 @@ public class BuildConfiguration {
 			this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 			this.acceptBeforeFetch = false;
 			this.isPersonalBuild = false;
-	
+			
 			if (LOGGER.isLoggable(Level.FINER)) {
-				LOGGER.finer("Loading from snapshot: " + snapshotUUID + "  using temporary workspace '" +  workspaceConnection.getName() + "'");
+				LOGGER.finer("Loading from snapshot: " + snapshotUUID + "  using temporary workspace '" +  workspaceName + "'");
 			}
 		} catch (Exception exp) {
 			if (workspaceConnection != null) {
-				RTCWorkspaceUtils.getInstance().delete(workspaceConnection.getResolvedWorkspace(), getTeamRepository(), progress, listener, clientLocale);
+				RTCWorkspaceUtils.getInstance().deleteSilent(workspaceConnection.getResolvedWorkspace(),
+								getTeamRepository(), progress, listener, clientLocale);
 			}
 			throw exp;
 		}
@@ -213,19 +216,33 @@ public class BuildConfiguration {
 	 * @throws IOException If anything goes wrong during the initialization
 	 * @throws TeamRepositoryException 
 	 */
-	public void initialize(IWorkspaceHandle streamHandle, String streamName, IWorkspace workspace, IBaselineSet baselineSet, IContributorHandle contributorHandle, IProgressMonitor monitor) throws IOException, TeamRepositoryException {
+	public void initialize(IWorkspaceHandle streamHandle, String streamName, IWorkspace workspace, IBaselineSet baselineSet, boolean shouldDeleteTemporaryWorkspace, IContributorHandle contributorHandle, IProgressMonitor monitor) throws IOException, TeamRepositoryException {
 		LOGGER.finest("BuildConfiguration.initialize for stream : Enter");
 		
-		this.stream = new BuildStreamDescriptor(streamName, baselineSet.getItemId().getUuidValue());
-		this.workspace = new BuildWorkspaceDescriptor(teamRepository, workspace.getItemId().getUuidValue(), workspace.getName()) ;
-		this.snapshotName = baselineSet.getName();
-		this.fetchDestinationFile = new File(hjWorkspace);
-		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
-		this.acceptBeforeFetch = false;
-		this.isPersonalBuild = false;
+		SubMonitor progress = SubMonitor.convert(monitor, 10);
 
-		if (LOGGER.isLoggable(Level.FINER)) {
-			LOGGER.finer("Building from stream : '" + streamName + "' with temporary workspace '" + workspace.getName() + "'. Created snapshot '" + snapshotName + "'.");
+		try {
+			this.stream = new BuildStreamDescriptor(streamName, baselineSet.getItemId().getUuidValue());
+			this.workspace = new BuildWorkspaceDescriptor(teamRepository, workspace.getItemId().getUuidValue(), workspace.getName()) ;
+			this.snapshotName = baselineSet.getName();
+			this.fetchDestinationFile = new File(hjWorkspace);
+			this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
+			this.acceptBeforeFetch = false;
+			this.isPersonalBuild = false;
+			this.shouldDeleteTemporaryWorkspace = shouldDeleteTemporaryWorkspace;
+			
+			// Set the flow target if temporary workspace will live on after load is over
+			if (!shouldDeleteTemporaryWorkspace) {
+				// Set the flow target
+				RTCWorkspaceUtils.getInstance().setFlowTarget(getTeamRepository(), workspace, streamHandle, progress.newChild(5));
+				setTemporaryRepositoryWorkspaceProperties(workspace);
+			}
+
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finer("Building from stream : '" + streamName + "' with temporary workspace '" + workspace.getName() + "'. Created snapshot '" + snapshotName + "'.");
+			}
+		} finally {
+			progress.done();
 		}
 	}
 
@@ -263,6 +280,7 @@ public class BuildConfiguration {
 	 * @param buildResultHandle The build result that will reference the build request that contains the
 	 * configuration details. Never <code>null</code>. If there is no build result available, you should
 	 * be calling {@link #initialize(IWorkspaceHandle, String, String)}
+	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
 	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
@@ -271,7 +289,7 @@ public class BuildConfiguration {
 	 * @throws RTCConfigurationException If validation fails
 	 * @throws TeamRepositoryException If anything goes wrong during the initialization
 	 */
-	public void initialize(IBuildResultHandle buildResultHandle, String snapshotName, final IConsoleOutput listener,
+	public void initialize(IBuildResultHandle buildResultHandle, boolean isCustomSnapshotName, String snapshotName, final IConsoleOutput listener,
 			IProgressMonitor progress, Locale clientLocale) throws IOException, RTCConfigurationException, TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IItemManager itemManager = getTeamRepository().itemManager();
@@ -306,8 +324,14 @@ public class BuildConfiguration {
         if (workspaceUuid == null) {
             throw new IllegalStateException("Missing build workspace specification from the build definition"); //$NON-NLS-1$
         }
-
-        this.snapshotName = buildRequest.getBuildDefinitionInstance().getBuildDefinitionId() + "_" + snapshotName; //$NON-NLS-1$
+        
+		// If a custom snapshot name is configured in the job, hjplugin resolves any references to environment variables
+		// and build variables(includes the parameters) and provides the resultant snapshot name. In this case set what
+		// is provided.
+		// If a custom snapshot name is not given fallback to the default pattern - <Build Definition
+		// Id>_<snapshotName>, by default the snapshotName passed from hjplugin contains "#<Build_Number>" string
+		this.snapshotName = isCustomSnapshotName ? snapshotName : buildRequest.getBuildDefinitionInstance().getBuildDefinitionId()
+				+ "_" + snapshotName; //$NON-NLS-1$
         
         workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceUuid, null);
         
@@ -612,13 +636,15 @@ public class BuildConfiguration {
      * @param clientLocale The locale of the requesting client
      * 
      */
-	public void tearDown(RepositoryManager repositoryManager, IProgressMonitor monitor, IConsoleOutput listener, Locale clientLocale){
+	public void tearDown(RepositoryManager repositoryManager, boolean forceDelete, IProgressMonitor monitor, IConsoleOutput listener, Locale clientLocale){
 		LOGGER.finest("BuildConfiguration.tearDown : Enter");
 		SubMonitor progress = SubMonitor.convert(monitor, 5);
 		if (isSnapshotLoad() || isStreamLoad()) {
 			try {
-				IWorkspaceConnection workspaceConnection = workspace.getConnection(repositoryManager, false, progress.newChild(2));
-				deleteWorkspace(workspaceConnection, progress, listener, clientLocale);
+				if (forceDelete || shouldDeleteTemporaryWorkspace) {
+					IWorkspace workspaceToDelete = workspace.getWorkspace(repositoryManager, progress.newChild(50));
+					deleteWorkspace(workspaceToDelete, progress, listener, clientLocale);
+				}
 			} catch (TeamRepositoryException exp) {
 				if (LOGGER.isLoggable(Level.WARNING)) {
 					LOGGER.warning("BuildConfiguration.tearDown : Unable to get workspace details. Log message is " + exp.getMessage());
@@ -627,13 +653,14 @@ public class BuildConfiguration {
 		}
 	}
 	
-	private void deleteWorkspace(IWorkspaceConnection workspaceConnection, IProgressMonitor monitor, IConsoleOutput listener, Locale clientLocale) {
+	private void deleteWorkspace(IWorkspace workspaceToDelete, IProgressMonitor monitor, IConsoleOutput listener, Locale clientLocale) {
 		SubMonitor progress = SubMonitor.convert(monitor, 10);
 		if (LOGGER.isLoggable(Level.INFO)) {
-			LOGGER.info("BuildConfiguration.deleteWorkspace : Deleting temporary workspace '" + workspaceConnection.getName() + "'");
+			LOGGER.info("BuildConfiguration.deleteWorkspace : Deleting temporary workspace '" + workspaceToDelete.getName() + "'");
 		}
-		if (workspaceConnection != null) {
-			RTCWorkspaceUtils.getInstance().delete(workspaceConnection.getResolvedWorkspace(), getTeamRepository(), progress.newChild(10), listener, clientLocale);
+		if (workspaceToDelete != null) {
+			RTCWorkspaceUtils.getInstance().deleteSilent(workspaceToDelete, 
+										getTeamRepository(), progress.newChild(10), listener, clientLocale);
 		}
 	}
 
@@ -826,6 +853,14 @@ public class BuildConfiguration {
 		return buildProperties;
 	}
 	
+	/**
+	 * 
+	 * @return Map<String, String> of temporary workspace details
+	 */
+    public Map<String, String> getTemporaryRepositoryWorkspaceProperties() {
+    	return temporaryRepositoryWorkspaceProperties;
+    }
+	   
 	public boolean isSnapshotLoad() {
 		return (snapshot != null && workspace != null);
 	}
@@ -888,4 +923,11 @@ public class BuildConfiguration {
             listener.log(""); //$NON-NLS-1$
         }
     }
+
+	private void setTemporaryRepositoryWorkspaceProperties(IWorkspace workspace) {
+		if (workspace != null) {
+			this.temporaryRepositoryWorkspaceProperties.put(Constants.TEMPORARY_WORKSPACE_NAME, workspace.getName());
+			this.temporaryRepositoryWorkspaceProperties.put(Constants.TEMPORARY_WORKSPACE_UUID, workspace.getItemId().getUuidValue());
+		}
+	}
 }

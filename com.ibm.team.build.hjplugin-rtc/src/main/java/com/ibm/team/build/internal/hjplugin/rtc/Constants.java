@@ -24,5 +24,8 @@ public class Constants {
 	public static final String BUILD_DEFINITION_ID = "buildDefinitionId"; //$NON-NLS-1$
 	public static final String DFLT_ENCODING = "UTF-8"; //$NON-NLS-1$
 	public static final String PROCESS_AREA_PATH_SEPARATOR = "/"; //$NON-NLS-1$
+	public static final String TEMPORARY_WORKSPACE_NAME = "rtcTempRepoWorkspaceName";
+	public static final String TEMPORARY_WORKSPACE_UUID = "rtcTempRepoWorkspaceUUID";
+	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData";
 	
 }

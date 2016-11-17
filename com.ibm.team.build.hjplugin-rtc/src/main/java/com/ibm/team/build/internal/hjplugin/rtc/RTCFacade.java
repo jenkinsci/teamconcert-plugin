@@ -455,7 +455,8 @@ public class RTCFacade {
 	 * should be supplied.
 	 * @param hjWorkspacePath The path where the contents of the RTC workspace should be loaded.
 	 * @param changeLog The file where a description of the changes made should be written. May be <code> null </code>.
-	 * @param baselineSetName The name to give the snapshot created. If <code>null</code> no snapshot
+	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
+	 * @param snapshotName The name to give the snapshot created. If <code>null</code> no snapshot
 	 * 				will be created.
 	 * @param previousSnapshotUUID The UUID as {@link String} of the previous snapshot. Used for comparing with the new snapshot
 	 *        created for buildStream case. May be <code>null</code> if buildWorkspace of buildResultUUID is supplied.
@@ -471,9 +472,10 @@ public class RTCFacade {
 	 * @throws Exception
 	 */
 	public Map<String, Object> accept(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
-			String buildWorkspace, Map<String, String> buildSnapshotContextMap, final String buildSnapshot, final String buildStream, String hjWorkspacePath, OutputStream changeLog,
-			String baselineSetName, final String previousSnapshotUUID, final Object listener, Locale clientLocale, String callConnectorTimeout,
-			boolean acceptBeforeLoad, String previousBuildUrl, String temporaryWorkspaceComment) throws Exception {
+			String buildWorkspace, Map<String, String> buildSnapshotContextMap, final String buildSnapshot, final String buildStream,
+			String hjWorkspacePath, OutputStream changeLog, boolean isCustomSnapshotName, String snapshotName, final String previousSnapshotUUID,
+			final Object listener, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad, String previousBuildUrl,
+			String temporaryWorkspaceComment) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -486,7 +488,7 @@ public class RTCFacade {
 		try	{
 			// create the BuildSnaphotContextMap instance from the context map and pass it to accept
 			return repoConnection.accept(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap),
-					buildSnapshot, buildStream, hjWorkspacePath, report, baselineSetName, previousSnapshotUUID, clientConsole, monitor, clientLocale,
+					buildSnapshot, buildStream, hjWorkspacePath, report, isCustomSnapshotName, snapshotName, previousSnapshotUUID, clientConsole, monitor, clientLocale,
 					callConnectorTimeout, acceptBeforeLoad, previousBuildUrl, temporaryWorkspaceComment);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
@@ -516,8 +518,8 @@ public class RTCFacade {
 	 * buildWorkspace or buildSnapshot is supplied. Only one of buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
 	 * @param buildStreamData The additional stream data for stream load. 
 	 * @param hjWorkspacePath The path where the contents of the RTC workspace should be loaded.
-	 * @param baselineSetName The name to give the snapshot created. If <code>null</code> no snapshot
-	 * 				will be created.
+	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
+	 * @param snapshotName The name of the snapshot created during accept.
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * This is defined as an Object due to class loader issues. It is expected to implement
 	 * {@link TaskListener}.
@@ -530,13 +532,16 @@ public class RTCFacade {
 	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 * @param temporaryWorkpsaceComment
+	 * @param shouldDeleteTemporaryWorkspace whether load should delete the temporary workspace 
+	 * 			before returning
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
-	public void load(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
-			String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjWorkspacePath,
-			String baselineSetName, final Object listener, Locale clientLocale, String parentActivityId, String connectorId, Object extProvider,
-			PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude, String loadRules,
-			boolean acceptBeforeLoad, String temporaryWorkpsaceComment) throws Exception {
+	public Map<String, Object> load(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
+			String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
+			Map<String, String> buildStreamData, String hjWorkspacePath, boolean isCustomSnapshotName, String snapshotName, final Object listener,
+			Locale clientLocale, String parentActivityId, String connectorId, Object extProvider, PrintStream logger, boolean isDeleteNeeded,
+			boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad,
+			String temporaryWorkpsaceComment, boolean shouldDeleteTemporaryWorkspace) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -544,10 +549,10 @@ public class RTCFacade {
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try	{
 			// create the BuildSnapshotContext instance from the Map and pass it to load
-			repoConnection.load(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap), buildSnapshot, buildStream, buildStreamData, hjWorkspacePath,
-					baselineSetName, clientConsole, monitor, clientLocale, parentActivityId, connectorId, extProvider, logger, isDeleteNeeded,
+			return repoConnection.load(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap), buildSnapshot, buildStream, buildStreamData, hjWorkspacePath,
+					isCustomSnapshotName, snapshotName, clientConsole, monitor, clientLocale, parentActivityId, connectorId, extProvider, logger, isDeleteNeeded,
 					createFoldersForComponents, componentsToExclude, loadRules,
-					acceptBeforeLoad, temporaryWorkpsaceComment);
+					acceptBeforeLoad, temporaryWorkpsaceComment, shouldDeleteTemporaryWorkspace);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -981,6 +986,37 @@ public class RTCFacade {
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
 			return repoConnection.getBuildStreamUUID(processArea, buildStream, monitor, clientLocale);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+	
+	/**
+	 * Delete a given Repository Workspace by UUID
+	 * 
+	 * Note that this method assumes that the repository workspace exists and does not handle
+	 * {@link ItemNotFoundException} 
+	 * 
+	 * @param serverURI The RTC server in which the repository workspace resides
+	 * @param userId The user Id for the repository
+	 * @param password The password for the user ID
+	 * @param timeout The timeout period for requests made to the server
+	 * @param workspaceUUID The Repository workspace UUID
+	 * @param listener
+	 * @param clientLocale The locale of the requesting client
+	 * @throws Exception If something goes wrong while deleting the repository workspace
+	 *
+	 */
+	public void deleteWorkspace(String serverURI, String userId, String password, int timeout, 
+								String workspaceUUID, String workspaceName, Object listener, Locale clientLocale) throws Exception {
+		IProgressMonitor monitor = getProgressMonitor();
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			repoConnection.deleteWorkspace(workspaceUUID, workspaceName, getConsoleOutput(listener), clientLocale, monitor);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {

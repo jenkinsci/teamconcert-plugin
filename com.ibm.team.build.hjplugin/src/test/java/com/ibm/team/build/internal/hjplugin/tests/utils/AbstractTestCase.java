@@ -11,22 +11,72 @@
 
 package com.ibm.team.build.internal.hjplugin.tests.utils;
 
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import org.junit.Ignore;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 @Ignore("Abstract class containing utility methods")
-public class AbstractTestCase extends HudsonTestCase {
+public class AbstractTestCase {
 	/**
      * generate the name of the project based on the test case
      * 
      * @return Name of the project
      */
-    protected String getTestName() {
+    private String getTestClassName() {
         String name = this.getClass().getName();
         int posn = name.lastIndexOf('.');
         if (posn != -1 && posn < name.length()-1) {
             name = name.substring(posn + 1);
         }
-        return name + "_" + this.getName();
+        return name; 
     }
+    
+    protected String getUniqueName() {
+    	return getUniqueName(getTestClassName()); 
+    }
+    
+    protected String getFileUniqueName() {
+    	return getUniqueName("File");
+    }
+    
+    /**
+     * This returns an unique name for use in a method of an object.
+     * @return A name that is unique
+     * @throws UnknownHostException 
+     */
+	protected String getUniqueName(String prefix) {
+		Long suffix1 = System.nanoTime();
+		SecureRandom random = new SecureRandom();
+		Long suffix2 = random.nextLong();
+		return prefix + "_" + Long.toHexString(suffix1) + "_" + Long.toHexString(suffix2);
+	}
+	
+	protected String getBuildDefinitionUniqueName() {
+		return getUniqueName("BuildDefinition");
+	}
+	
+	protected String getRepositoryWorkspaceUniqueName() {
+		return getUniqueName("RepositoryWorkspace");
+	}
+	
+	protected String getComponentUniqueName() {
+		return getUniqueName("Component");
+	}
+	
+	protected String getStreamUniqueName() {
+		return getUniqueName("Stream");
+	}
+	
+	protected String getProjectAreaUniqueName() {
+		return getUniqueName("ProjectArea");
+	}
+	
+	protected String getTeamAreaUniqueName() {
+		return getUniqueName("TeamArea");
+	}
+	
+	protected String getSnapshotUniqueName() {
+		return getUniqueName("Snapshot");
+	}
 }

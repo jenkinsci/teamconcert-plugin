@@ -1,21 +1,9 @@
 package com.ibm.team.build.internal.hjplugin.tests;
 
 import static org.junit.Assert.assertEquals;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
-import org.junit.Test;
-import org.mockito.Mockito;
-
-import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
-import com.ibm.team.build.internal.hjplugin.util.Helper;
-
 import hudson.EnvVars;
+import hudson.model.FreeStyleBuild;
+import hudson.model.TaskListener;
 import hudson.model.BooleanParameterDefinition;
 import hudson.model.Job;
 import hudson.model.ParameterDefinition;
@@ -24,13 +12,29 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
-import hudson.model.TaskListener;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import com.ibm.team.build.internal.hjplugin.Messages;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
+import com.ibm.team.build.internal.hjplugin.util.Helper;
+
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 
 /**
  * Tests for {@link Helper} class
  *
  */
-public class HelperTest {
+public class HelperTest extends AbstractTestCase {
 	
 	
 	private Run<?,?> createMockRun(TaskListener listener) throws IOException, InterruptedException {
@@ -310,8 +314,8 @@ public class HelperTest {
 	/**
 	 * If predefined parameter is defined, then return value trimmed. This takes precedence over configuration value as parameter
 	 * @throws Exception
-	 */@Test
-	public void parseConfigurationValuePredefinedParameterWorkflow_NonNullExistsWithConfigurationValueAsParam_ReturnsParameterValue() throws Exception {
+	 */
+	@Test public void parseConfigurationValuePredefinedParameterWorkflow_NonNullExistsWithConfigurationValueAsParam_ReturnsParameterValue() throws Exception {
 		// Setup
 		TaskListener listener = Mockito.mock(TaskListener.class);
 		Run<?, ?> mockR = createMockRun(listener);
@@ -1128,5 +1132,118 @@ public class HelperTest {
 		
 		// Verify
 		assertEquals(buildDefinitionParameterForValue, actualValue);
+	}
+	
+	@Test public void testResolveCustomSnapshotNameWithStaticText() throws Exception {
+		// Setup
+		TaskListener listener = Mockito.mock(TaskListener.class);
+		Run<?, ?> mockRun = createMockRun(listener);
+		String staticTextForCustomSnapshotName = "static-text-for-custom-snapshot-name with spaces";
+		
+		// Test
+		String actualSnapshotName = Helper.resolveCustomSnapshotName(mockRun, staticTextForCustomSnapshotName, listener);
+		
+		// Verify
+		assertEquals(staticTextForCustomSnapshotName, actualSnapshotName);
+	}
+	
+	@Test
+	public void testResolveCustomSnapshotNameWithEnvVariables() throws Exception {
+		// Setup
+		TaskListener listener = Mockito.mock(TaskListener.class);
+		Run<?, ?> mockRun = createMockRun(listener);
+
+		Map<String, String> envVarsMap = new HashMap<String, String>();
+		envVarsMap.put("JOB_NAME", "Test Job");
+		envVarsMap.put("BUILD_NUMBER", "1");
+		EnvVars v = new EnvVars(envVarsMap);
+		Mockito.doReturn(v).when(mockRun).getEnvironment(listener);
+
+		String customSnapshotNameWithEnvVars = "${JOB_NAME}_#${BUILD_NUMBER}";
+
+		// Test
+		String actualSnapshotName = Helper.resolveCustomSnapshotName(mockRun, customSnapshotNameWithEnvVars, listener);
+
+		// Verify
+		String expectedSnapshotName = "Test Job_#1";
+		assertEquals(expectedSnapshotName, actualSnapshotName);
+	}
+
+	@Test
+	public void testResolveCustomSnapshotNameWithUndefinedEnvVariables() throws Exception {
+		// Setup
+		TaskListener listener = Mockito.mock(TaskListener.class);
+		Run<?, ?> mockRun = createMockRun(listener);
+
+		Map<String, String> envVarsMap = new HashMap<String, String>();
+		envVarsMap.put("JOB_NAME", "Test Job");
+		envVarsMap.put("BUILD_NUMBER", "1");
+		EnvVars v = new EnvVars(envVarsMap);
+		Mockito.doReturn(v).when(mockRun).getEnvironment(listener);
+
+		String customSnapshotNameWithEnvVars = "${JOB_NAME1}_#${BUILD_NUMBER}";
+
+		// Test
+		String actualSnapshotName = Helper.resolveCustomSnapshotName(mockRun, customSnapshotNameWithEnvVars, listener);
+
+		// Verify
+		// Verify that the name of the unresolved environment variable is retained
+		String expectedSnapshotName = "${JOB_NAME1}_#1";
+		assertEquals(expectedSnapshotName, actualSnapshotName);
+	}
+
+	@Test
+	public void testResolveCustomSnapshotNameWithBuildParameters() throws Exception {
+		// Setup
+		TaskListener listener = Mockito.mock(TaskListener.class);
+		FreeStyleBuild freeStyleBuild = Mockito.mock(FreeStyleBuild.class);
+
+		Map<String, String> envVarsMap = new HashMap<String, String>();
+		envVarsMap.put("JOB_NAME", "Test Job");
+		envVarsMap.put("BUILD_NUMBER", "1");
+		EnvVars v = new EnvVars(envVarsMap);
+		Mockito.doReturn(v).when(freeStyleBuild).getEnvironment(listener);
+
+		Map<String, String> buildVariables = new HashMap<String, String>();
+		buildVariables.put("Branch", "CSN_Enhancement");
+		buildVariables.put("Release", "1202");
+		Mockito.doReturn(buildVariables).when(freeStyleBuild).getBuildVariables();
+
+		String customSnapshotNameWithBuildParams = "1_${JOB_NAME}_${Branch}_${Release}_$$";
+
+		// Test
+		String actualSnapshotName = Helper.resolveCustomSnapshotName(freeStyleBuild, customSnapshotNameWithBuildParams, listener);
+
+		// Verify
+		String expectedSnapshotName = "1_Test Job_CSN_Enhancement_1202_$$";
+		assertEquals(expectedSnapshotName, actualSnapshotName);
+	}
+
+	@Test
+	public void testResolveCustomSnapshotNameWithUndefinedBuildParameters() throws Exception {
+		// Setup
+		TaskListener listener = Mockito.mock(TaskListener.class);
+		FreeStyleBuild freeStyleBuild = Mockito.mock(FreeStyleBuild.class);
+
+		Map<String, String> envVarsMap = new HashMap<String, String>();
+		envVarsMap.put("JOB_NAME", "Test Job");
+		envVarsMap.put("BUILD_NUMBER", "1");
+		EnvVars v = new EnvVars(envVarsMap);
+		Mockito.doReturn(v).when(freeStyleBuild).getEnvironment(listener);
+
+		Map<String, String> buildVariables = new HashMap<String, String>();
+		buildVariables.put("Branch", "CSN_Enhancement");
+		buildVariables.put("Release", "1202");
+		Mockito.doReturn(buildVariables).when(freeStyleBuild).getBuildVariables();
+
+		String customSnapshotNameWithBuildParams = "1_${Branch1}_${Release}";
+
+		// Test
+		String actualSnapshotName = Helper.resolveCustomSnapshotName(freeStyleBuild, customSnapshotNameWithBuildParams, listener);
+
+		// Verify
+		// Verify that the name of the unresolved build parameter is retained
+		String expectedSnapshotName = "1_${Branch1}_1202";
+		assertEquals(expectedSnapshotName, actualSnapshotName);
 	}
 }

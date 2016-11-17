@@ -11,22 +11,30 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.util.Locale;
 import java.util.Map;
 
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
 
 import com.ibm.team.build.internal.hjplugin.BuildResultInfo;
-import com.ibm.team.build.internal.hjplugin.RTCAcceptTask;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultSetupTask;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
-import com.ibm.team.build.internal.hjplugin.RTCLoadTask;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
@@ -34,36 +42,37 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
 import hudson.model.TaskListener;
 import hudson.remoting.RemoteOutputStream;
+import hudson.util.Secret;
 import hudson.util.StreamTaskListener;
 
 public class RTCBuildTaskIT extends AbstractTestCase {
+	
+	@Rule public JenkinsRule r = new JenkinsRule();
 
 	private static final String FAKE_UUID = "_kkmC4NWiEdylmcAI5HeTUQ"; //$NON-NLS-1$
 	private RTCFacadeWrapper testingFacade;
 	private File sandboxDir;
 
-	@Override
+	@Before
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
-			super.setUp();
 
 			testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 			
 	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
 	        File buildTestDir = new File(tempDir, "HJPluginTests");
-	        sandboxDir = new File(buildTestDir, getTestName());
+	        sandboxDir = new File(buildTestDir, getUniqueName());
 	        sandboxDir.mkdirs();
 	        sandboxDir.deleteOnExit();
 	        Assert.assertTrue(sandboxDir.exists());
 		}
 	}
 
-	@Override
+	@After
 	public void tearDown() throws Exception {
 		// delete the sandbox after Hudson/Jenkins is shutdown
 		if (Config.DEFAULT.isConfigured()) {
-			super.tearDown();
 			FileUtils.delete(sandboxDir);
 		}
 	}
@@ -72,33 +81,33 @@ public class RTCBuildTaskIT extends AbstractTestCase {
      * Tests that BuildResultSetupTask knows when to setup locally
      * @throws Exception
      */
-	public void testLocalInvocation() throws Exception {
+	@Test public void testLocalInvocation() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		
 			TaskListener listener = new StreamTaskListener(System.out, null);
     		
 			RTCBuildResultSetupTask task = new RTCBuildResultSetupTask(
-					"Testing " + getTestName(), Config.DEFAULT.getToolkit(),
+					"Testing " + getUniqueName(), Config.DEFAULT.getToolkit(),
 					loginInfo.getServerUri(),
-					loginInfo.getUserId(),
-					loginInfo.getPassword(),
+					Config.DEFAULT.getUserID(),
+					Secret.fromString(Config.DEFAULT.getPassword()).getEncryptedValue(),
 					loginInfo.getTimeout(),
 					false, null,
-					null, getTestName(), listener, true, false,
+					null, getUniqueName(), listener, true, false,
 					Locale.getDefault());
 			
 			// using workspace and no build defn means task can run locally (no RTC calls)
 			assertNotNull(task.localInvocation());
 			
 			task = new RTCBuildResultSetupTask(
-					"Testing " + getTestName(), Config.DEFAULT.getToolkit(),
+					"Testing " + getUniqueName(), Config.DEFAULT.getToolkit(),
 					loginInfo.getServerUri(),
 					loginInfo.getUserId(),
-					loginInfo.getPassword(),
+					Secret.fromString(loginInfo.getPassword()).getEncryptedValue(),
 					loginInfo.getTimeout(),
 					false, null,
-					FAKE_UUID, getTestName(), listener, true, false,
+					FAKE_UUID, getUniqueName(), listener, true, false,
 					Locale.getDefault());
 			
 			// we have a build result so we have to get info from it - run on slave
@@ -106,13 +115,13 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 			
 			
 			task = new RTCBuildResultSetupTask(
-					"Testing " + getTestName(), Config.DEFAULT.getToolkit(),
+					"Testing " + getUniqueName(), Config.DEFAULT.getToolkit(),
 					loginInfo.getServerUri(),
 					loginInfo.getUserId(),
-					loginInfo.getPassword(),
+					Secret.fromString(loginInfo.getPassword()).getEncryptedValue(),
 					loginInfo.getTimeout(),
-					true, getTestName(),
-					null, getTestName(), listener, true, false,
+					true, getUniqueName(),
+					null, getUniqueName(), listener, true, false,
 					Locale.getDefault());
 			
 			// we have a build definition so need to create a result - run on slave
@@ -126,7 +135,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 	 * those API to start a build initiated but only queued by RTC
 	 * @throws Exception
 	 */
-	public void testBuildResultContributionsStartingBuild() throws Exception {
+	@Test public void testBuildResultContributionsStartingBuild() throws Exception {
 		// test add snapshot contribution (happens during checkout)
 		// test add workspace contribution (happens during checkout)
 		// test build activity added (happens during checkout)
@@ -135,10 +144,10 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String baselineSetName = "Snapshot_" + getTestName() + "_" + System.currentTimeMillis();
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName() + System.currentTimeMillis();
-			String buildDefinitionId = getTestName() + System.currentTimeMillis();
+			String baselineSetName = "Snapshot_" + getUniqueName();
+			String workspaceName = getUniqueName();
+			String componentName = getUniqueName();
+			String buildDefinitionId = getUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -170,14 +179,14 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				// We have no build result, but we do have a build definition
 				// The task should create a build result and we own its lifecycle
 				RTCBuildResultSetupTask task = new RTCBuildResultSetupTask(
-						"Testing " + getTestName(), Config.DEFAULT.getToolkit(),
+						"Testing " + getUniqueName(), Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						true, buildDefinitionId,
 						buildResultUUID, // no build result
-						getTestName(), listener, true, false,
+						getUniqueName(), listener, true, false,
 						Locale.getDefault());
 				assertNull(task.localInvocation());
 				
@@ -239,7 +248,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 	 * those API to setup the build result & do the checkout
 	 * @throws Exception
 	 */
-	public void testBuildResultContributions() throws Exception {
+	@Test public void testBuildResultContributions() throws Exception {
 		// test add snapshot contribution (happens during checkout)
 		// test add workspace contribution (happens during checkout)
 		// test build activity added (happens during checkout)
@@ -248,10 +257,10 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String baselineSetName = "Snapshot_" + getTestName() + "_" + System.currentTimeMillis();
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName() + System.currentTimeMillis();
-			String buildDefinitionId = getTestName() + System.currentTimeMillis();
+			String baselineSetName = getUniqueName("Snapshot");
+			String workspaceName = getUniqueName("Workspace");
+			String componentName = getUniqueName("Component");
+			String buildDefinitionId = getUniqueName("BuildDefinition");
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -280,14 +289,14 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				// We have no build result, but we do have a build definition
 				// The task should create a build result and we own its lifecycle
 				RTCBuildResultSetupTask task = new RTCBuildResultSetupTask(
-						"Testing " + getTestName(), Config.DEFAULT.getToolkit(),
+						"Testing " + getUniqueName(), Config.DEFAULT.getToolkit(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
-						loginInfo.getPassword(),
+						Secret.fromString(loginInfo.getPassword()).getEncryptedValue(),
 						loginInfo.getTimeout(),
 						true, buildDefinitionId,
 						null, // no build result
-						getTestName(), listener, true, false,
+						getUniqueName(), listener, true, false,
 						Locale.getDefault());
 				assertNull(task.localInvocation());
 				

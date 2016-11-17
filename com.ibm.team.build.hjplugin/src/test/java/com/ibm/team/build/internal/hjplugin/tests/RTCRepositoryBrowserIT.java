@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2015 IBM Corporation and others.
+ * Copyright (c) 2014, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -10,7 +10,8 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
@@ -18,9 +19,8 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemD
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCRepositoryBrowser;
-import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 
-public class RTCRepositoryBrowserIT  extends AbstractTestCase {
+public class RTCRepositoryBrowserIT  {
 	
 	private static final String WORK_ITEM_NUMBER = "2";
 	private static final String BASELINE_SET_ITEMID = "_ds8LYMpYEeOwhrfCswB9SQ";
@@ -33,32 +33,22 @@ public class RTCRepositoryBrowserIT  extends AbstractTestCase {
 	private static final String COMPONENT2_ITEMID = "_gHzLq8pVEeOwhrfCswB9SQ";
 	private static final String SERVER_URI = "https://localhost:9443/ccm";
 	
-	@Override
-	public void setUp() throws Exception {
-		// don't start Jenkins for faster tests
-	}
-
-	@Override
-	protected void tearDown() throws Exception {
-		// We didn't start Jenkins for faster tests
-	}
-	
-	public void testTrailingSlash() throws Exception {
+	@Test public void testTrailingSlash() throws Exception {
 		RTCRepositoryBrowser browser = new RTCRepositoryBrowser(SERVER_URI + "/");
 		exerciseBrowser(SERVER_URI, browser);
 	}
 	
-	public void testNoTrailingSlash() throws Exception {
+	@Test public void testNoTrailingSlash() throws Exception {
 		RTCRepositoryBrowser browser = new RTCRepositoryBrowser(SERVER_URI);
 		exerciseBrowser(SERVER_URI, browser);
 	}
 	
-	public void testNullURI() throws Exception {
+	@Test public void testNullURI() throws Exception {
 		RTCRepositoryBrowser browser = new RTCRepositoryBrowser(null);
 		exerciseBrowser(browser);
 	}
 	
-	public void testEmptyURI() throws Exception {
+	@Test public void testEmptyURI() throws Exception {
 		RTCRepositoryBrowser browser = new RTCRepositoryBrowser("");
 		exerciseBrowser(browser);
 	}

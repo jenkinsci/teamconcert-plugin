@@ -12,8 +12,11 @@
 package com.ibm.team.build.internal.hjplugin;
 
 public class RTCJobProperties {
-	public static final String BUILD_RESULT_UUID = "buildResultUUID";
-	public static final String USE_DYNAMIC_LOAD_RULE = "com.ibm.team.build.useExtension";
-	
-	public static final String RTC_BUILD_SNAPSHOT = "rtcBuildSnapshot";
+	public static final String BUILD_RESULT_UUID = "buildResultUUID"; //$NON-NLS-1$
+	public static final String USE_DYNAMIC_LOAD_RULE = "com.ibm.team.build.useExtension"; //$NON-NLS-1$
+	public static final String RTC_BUILD_SNAPSHOT = "rtcBuildSnapshot"; //$NON-NLS-1$ 
+	public static final String TEMPORARY_WORKSPACE_NAME = "rtcTempRepoWorkspaceName";
+	public static final String TEMPORARY_WORKSPACE_UUID = "rtcTempRepoWorkspaceUUID";
+	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData";
+	public static final String DEBUG_PROPERTY = "com.ibm.team.build.debug"; //$NON-NLS-1$
 }

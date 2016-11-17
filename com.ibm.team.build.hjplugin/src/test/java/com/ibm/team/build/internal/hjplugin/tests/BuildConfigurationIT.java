@@ -17,6 +17,12 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang.SystemUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.Assert;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
@@ -29,7 +35,6 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
 import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
-import junit.framework.Assert;
 
 @SuppressWarnings("nls")
 public class BuildConfigurationIT extends AbstractTestCase {
@@ -40,7 +45,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	private File sandboxDir;
 	private RTCFacadeWrapper testingFacade;
 
-	@Override
+	@Before
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
@@ -50,14 +55,14 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			
 	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
 	        File buildTestDir = new File(tempDir, "HJPluginTests");
-	        sandboxDir = new File(buildTestDir, getTestName());
+	        sandboxDir = new File(buildTestDir, getFileUniqueName());
 	        sandboxDir.mkdirs();
 	        sandboxDir.deleteOnExit();
 	        Assert.assertTrue(sandboxDir.exists());
 		}
 	}
 
-	@Override
+	@After
 	public void tearDown() throws Exception {
 		// delete the sandbox after Hudson/Jenkins is shutdown
 		if (Config.DEFAULT.isConfigured()) {
@@ -66,6 +71,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		}
 	}
 	
+	@Test
 	public void testComponentLoading() throws Exception {
 		// Test relative location for fetch destination
 		// Test create folders for components
@@ -75,10 +81,10 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		// checkout & verify contents on disk
 		if (Config.DEFAULT.isConfigured()) {
 			
-			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "path\\relative";
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
-
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("testComponentLoading",
@@ -93,8 +99,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getServerUri(),
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
-							loginInfo.getTimeout(), testName,
-							getTestName(),
+							loginInfo.getTimeout(), workspaceName,
+							componentName,
 							sandboxDir.getPath(),
 							fetchLocation);
 			
@@ -119,7 +125,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				Assert.assertTrue(actualRoot.exists());
 				children = actualRoot.list();
 				assertEquals(2, children.length); // metadata plus component root folder
-				File shareRoot = new File(actualRoot, getTestName());
+				File shareRoot = new File(actualRoot, componentName);
 				Assert.assertTrue(shareRoot.exists());
 				Assert.assertTrue(new File(shareRoot, "f").exists());
 				Assert.assertTrue(new File(shareRoot, "f/a.txt").exists());
@@ -199,13 +205,14 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		
 	}
 
-	public void testGoodRelativeFetchLocation() throws Exception {
+	@Test public void testGoodRelativeFetchLocation() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "relative\\is\\ok";
-
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
+			
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("testGoodFetchLocation",
@@ -220,8 +227,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getServerUri(),
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
-							loginInfo.getTimeout(), testName,
-							getTestName(),
+							loginInfo.getTimeout(), workspaceName,
+							componentName,
 							sandboxDir.getPath(),
 							fetchLocation);
 			
@@ -241,12 +248,13 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		}
 	}
 
-	public void testGoodAbsoluteFetchLocationWin() throws Exception {
+	@Test public void testGoodAbsoluteFetchLocationWin() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "C:\\absolute\\is\\ok\\too";
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -262,8 +270,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getServerUri(),
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
-							loginInfo.getTimeout(), testName,
-							getTestName(),
+							loginInfo.getTimeout(), getRepositoryWorkspaceUniqueName(),
+							getComponentUniqueName(),
 							sandboxDir.getPath(),
 							fetchLocation);
 			
@@ -282,12 +290,13 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		}
 	}
 
-	public void testBadFetchLocationWin() throws Exception {
+	@Test public void testBadFetchLocationWin() throws Exception {
 		if (Config.DEFAULT.isConfigured() && SystemUtils.IS_OS_WINDOWS) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String testName = getTestName() + System.currentTimeMillis();
 			String fetchLocation = "invalid/questionmark?/character/is/not/ok";
+			String repositoryWorkspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -303,8 +312,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getServerUri(),
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
-							loginInfo.getTimeout(), testName,
-							getTestName(),
+							loginInfo.getTimeout(), repositoryWorkspaceName,
+							componentName,
 							sandboxDir.getPath(),
 							fetchLocation);
 			
@@ -323,7 +332,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		}
 	}
 
-	public void testPersonalBuild() throws Exception {
+	@Test public void testPersonalBuild() throws Exception {
 		// create a build definition
 		// load directory ${propertyA}/here
 		// build properties
@@ -347,8 +356,9 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String testName = getTestName() + System.currentTimeMillis();
-
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
+			
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("testPersonalBuild",
@@ -363,8 +373,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getServerUri(),
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
-							loginInfo.getTimeout(), testName,
-							testName,
+							loginInfo.getTimeout(), workspaceName,
+							componentName,
 							sandboxDir.getPath(),
 							"${propertyA}/here");
 			
@@ -440,7 +450,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		}
 	}
 
-	public void testOldLoadRules() throws Exception {
+	@Test public void testOldLoadRules() throws Exception {
 		// Create build definition with old style load rules
 		// load directory missing
 		// don't delete directory before loading (dir has other stuff that will not be deleted)
@@ -459,7 +469,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String testName = getTestName() + System.currentTimeMillis();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -474,8 +485,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getServerUri(),
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
-							loginInfo.getTimeout(), testName,
-							testName,
+							loginInfo.getTimeout(), workspaceName,
+							componentName,
 							sandboxDir.getPath());
 			
 			try {
@@ -540,7 +551,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		}
 	}
 
-	public void testNewLoadRules() throws Exception {
+	@Test public void testNewLoadRules() throws Exception {
 		// create a build definition with new format load rules
 		// load directory "."
 		// delete directory before loading (dir has other stuff that will be deleted)
@@ -558,8 +569,9 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		// verify changes accepted
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
-			
-			String testName = getTestName() + System.currentTimeMillis();
+
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
 			@SuppressWarnings("unchecked")
@@ -576,8 +588,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getServerUri(),
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
-							loginInfo.getTimeout(), testName,
-							testName,
+							loginInfo.getTimeout(), workspaceName,
+							componentName,
 							sandboxDir.getPath(),
 							fetchLocation);
 			
@@ -644,15 +656,17 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void testBuildSnapshotConfiguration() throws Exception {
+	@Test public void testBuildSnapshotConfiguration() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = null;
 			Map<String, String> setupArtifacts = null;
 			try {
 
 			loginInfo = Config.DEFAULT.getLoginInfo();
-			String testName = getTestName() + System.currentTimeMillis();
-	
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
+			String snapshotName = getSnapshotUniqueName();
+			
 			setupArtifacts = (Map<String, String>) testingFacade
 					.invoke("setupBuildSnapshot",
 							new Class[] { String.class, // serverURL,
@@ -668,10 +682,10 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), 
-							testName,
-							testName,
-							testName,
-							"HPJ"
+							workspaceName,
+							snapshotName,
+							componentName,
+							"HJP"
 							);
 			
 			testingFacade.invoke("testBuildSnapshotConfiguration",
@@ -687,8 +701,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getUserId(),
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), 
-							testName,
-							"HPJ",
+							snapshotName,
+							"HJP",
 							sandboxDir.getPath());
 			}
 			finally {

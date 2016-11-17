@@ -14,10 +14,9 @@ package com.ibm.team.build.internal.hjplugin.tests;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import org.apache.commons.io.FileUtils;
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.junit.Assert;
+import org.junit.Test;
 
 import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
@@ -27,21 +26,7 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 @SuppressWarnings("nls")
 public class RTCFacadeFactoryIT extends AbstractTestCase {
 
-	@Override
-	protected void setUp() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			super.setUp();
-		}
-	}
-
-	@Override
-	protected void tearDown() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			super.tearDown();
-		}
-	}
-
-	public void testGetFacade() {
+	@Test public void testGetFacade() {
 		if (Config.DEFAULT.isConfigured()) {
 			try {
 				RTCFacadeFactory.getFacade(Config.DEFAULT.getToolkit(), null);
@@ -51,7 +36,7 @@ public class RTCFacadeFactoryIT extends AbstractTestCase {
 		}
 	}
 	
-	public void testGetFacadeSwitch() throws IOException {
+	@Test public void testGetFacadeSwitch() throws IOException {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCFacadeWrapper facade = null;
 			try {

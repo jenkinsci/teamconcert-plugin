@@ -76,6 +76,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_1= "buildResultItemId1";
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_2 = "buildResultItemId2";
+	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_3 = "buildResultItemId3";
 	public static final String ARTIFACT_PROJECT_AREA_ITEM_ID = "projectAreaItemId";
 	public static final String ARTIFACT_PROCESS_DEFINITION_ITEM_ID = "processDefinitionItemId";
 	
@@ -1148,8 +1149,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 		ITeamRepository repo = connection.getTeamRepository();
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
-		String workspaceName = "worksapce_" + Long.toString(System.currentTimeMillis());
-		String componentName = "component_" + Long.toString(System.currentTimeMillis());
+		String workspaceName = TestUtils.getRepositoryWorkspaceUniqueName();
+		String componentName = TestUtils.getComponentUniqueName();
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		IProcessAreaHandle projectAreaHandle = ProcessUtil.getDefaultProjectArea(repo);
 

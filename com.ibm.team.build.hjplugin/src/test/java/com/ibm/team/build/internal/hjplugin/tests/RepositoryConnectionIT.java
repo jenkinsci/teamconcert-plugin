@@ -21,6 +21,13 @@ import java.util.Map;
 
 import org.apache.http.auth.InvalidCredentialsException;
 import org.junit.Assert;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
@@ -47,7 +54,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	private RTCFacadeWrapper testingFacade;
 	private File sandboxDir;
 
-	@Override
+	@Before
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
@@ -55,14 +62,14 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			
 	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
 	        File buildTestDir = new File(tempDir, "HJPluginTests");
-	        sandboxDir = new File(buildTestDir, getTestName());
+	        sandboxDir = new File(buildTestDir, getFileUniqueName());
 	        sandboxDir.mkdirs();
 	        sandboxDir.deleteOnExit();
 	        Assert.assertTrue(sandboxDir.exists());
 		}
 	}
 
-	@Override
+	@After
 	public void tearDown() throws Exception {
 		// delete the sandbox
 		if (Config.DEFAULT.isConfigured()) {
@@ -74,13 +81,13 @@ public class RepositoryConnectionIT extends AbstractTestCase {
      * Tests that component additions and removals are reported properly
      * @throws Exception
      */
-	public void testComponentChanges() throws Exception {
+	@Test public void testComponentChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentAddedName = getTestName() + "_added";
-			String componentDroppedName = getTestName() + "_dropped";
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentAddedName = getUniqueName("Component_added");
+			String componentDroppedName = getUniqueName("Component_dropped");
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -180,12 +187,12 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * With discarded change sets the path may not always be able to be fully resolved.
 	 * @throws Exception
 	 */
-	public void testAcceptDiscardChanges() throws Exception {
+	@Test public void testAcceptDiscardChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -304,12 +311,12 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * associated with them are tested.
 	 * @throws Exception
 	 */
-	public void testAcceptChanges() throws Exception {
+	@Test public void testAcceptChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -429,12 +436,12 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * play, we can also use the rest API to check for changes.
 	 * @throws Exception
 	 */
-	public void testAcceptChangesWithDefinition() throws Exception {
+	@Test public void testAcceptChangesWithDefinition() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String testName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String testName = getUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -443,7 +450,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 									String.class, // userId,
 									String.class, // password,
 									int.class, // timeout,
-									String.class, // name,
+									String.class, // workspaceName,
 									String.class, // componentName
 									boolean.class}, // create build definition
 							loginInfo.getServerUri(),
@@ -570,12 +577,12 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * service respect the userId/password
 	 * @throws Exception
 	 */
-	public void testCheckIncomingChangesDifferentUsersSameThread() throws Exception {
+	@Test public void testCheckIncomingChangesDifferentUsersSameThread() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String testName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String testName = getUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -672,12 +679,12 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * Verify that an empty change set on its own will not cause problems
 	 * @throws Exception
 	 */
-	public void testEmptyChangeSet() throws Exception {
+	@Test public void testEmptyChangeSet() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -769,14 +776,14 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * does not cause problems.
 	 * @throws Exception
 	 */
-	public void testNoopChange() throws Exception {
+	@Test public void testNoopChange() throws Exception {
 		// add & delete versionable in the cs
 		// mod & restore versionable in the cs
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -865,13 +872,13 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * a problem on its own.
 	 * @throws Exception
 	 */
-	public void testComponentRootMod() throws Exception {
+	@Test public void testComponentRootMod() throws Exception {
 		// change the properties of the component root folder
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -959,12 +966,12 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * multiple components.
 	 * @throws Exception
 	 */
-	public void testMultipleComponentChanges() throws Exception {
+	@Test public void testMultipleComponentChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -1103,15 +1110,15 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	 * 	TODO work item summary
 	 * @throws Exception
 	 */
-	public void testXMLEncoding() throws Exception {
+	@Test public void testXMLEncoding() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			// create the build workspace & stream for this test
 			// Stream has a component not in the build workspace
 			// Build workspace has a component not in the stream
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + XML_ENCODED_CHARACTERS + System.currentTimeMillis();
-			String componentName = getTestName();
+			String workspaceName = getRepositoryWorkspaceUniqueName() + XML_ENCODED_CHARACTERS;
+			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
@@ -1195,7 +1202,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 		
 	}
 
-	public void testBuildResultContributions() throws Exception {
+	@Test public void testBuildResultContributions() throws Exception {
 		// test add snapshot contribution (happens during checkout)
 		// test add workspace contribution (happens during checkout)
 		// test build activity added (happens during checkout)
@@ -1204,9 +1211,9 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			String workspaceName = getTestName() + System.currentTimeMillis();
-			String componentName = getTestName();
-			String buildDefinitionId = getTestName() + System.currentTimeMillis();
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
+			String buildDefinitionId = getBuildDefinitionUniqueName();
 
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade

@@ -217,7 +217,7 @@ public class RTCFacadeTests {
 			throws Exception {
 		ITeamRepository repo = connection.getTeamRepository();
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
-		String componentName = "setupTestBuildSnapshot_complete_comp" + System.currentTimeMillis(); //$NON-NLS-1$
+		String componentName = TestUtils.getComponentUniqueName();
 
 		Map<String, String> artifactIds = setupTestProcessArea_basic(projectAreaName);
 		IProcessAreaHandle projectAreaHandle = (IProcessAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(

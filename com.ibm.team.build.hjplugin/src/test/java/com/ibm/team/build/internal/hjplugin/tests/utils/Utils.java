@@ -32,6 +32,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.tests.Config;
@@ -61,6 +62,8 @@ public class Utils {
 	public static final String ARTIFACT_BUILDDEFINITION_ITEM_ID = "buildDefinitionItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_ID = "buildResultItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_1_ID = "buildResultItemId1";
+	public static final String ARTIFACT_BUILDRESULT_ITEM_2_ID = "buildResultItemId2";
+	public static final String ARTIFACT_BUILDRESULT_ITEM_3_ID = "buildResultItemId3";
 	public static final String ARTIFACT_BASELINE_ITEM_ID = "baselineSetItemId";
 
 	public static Map<String,String> acceptAndLoad(RTCFacadeWrapper testingFacade, String serverURI,
@@ -91,7 +94,8 @@ public class Utils {
 							String.class, // buildStream,
 							String.class, // hjWorkspacePath,
 							OutputStream.class, // changeLog,
-							String.class, // baselineSetName,
+							boolean.class, // isCustomSnapshotName
+							String.class, // snapshotName,
 							String.class, // previousSnapshotUUID
 							Object.class, // listener
 							Locale.class, // locale
@@ -106,7 +110,7 @@ public class Utils {
 							null, 
 							buildResultUUID, buildWorkspaceName, null,
 							buildSnapshotNameOrUUID, buildStreamName,
-							hjWorkspacePath, changelog,
+							hjWorkspacePath, changelog, false,
 							baselineSetName, previousSnapshotUUID, listener, clientLocale, CALLCONNECTOR_TIMEOUT, 
 							options.acceptBeforeLoad, null, null);
 		
@@ -131,7 +135,8 @@ public class Utils {
 					String.class, //buildStream
 					Map.class, // buildStreamData,
 					String.class, // hjWorkspacePath
-					String.class, //baselineSetName
+					boolean.class, // isCustomSnapshotName
+					String.class, // snapshotName
 					Object.class, //listener
 					Locale.class, //clientLocale
 					String.class, // parentActivityId
@@ -144,7 +149,7 @@ public class Utils {
 					String.class, //loadRules
 					boolean.class, // acceptBeforeLoad
 					String.class, // workspaceComment
-					},
+					boolean.class},
 					serverURI, 
 					userId, 
 					password,
@@ -157,6 +162,7 @@ public class Utils {
 					buildStreamName,
 					acceptMap.get("buildStreamData"),
 					hjWorkspacePath,
+					false,
 					baselineSetName, 
 					listener,
 					clientLocale, 
@@ -169,7 +175,8 @@ public class Utils {
 					options.componentsToBeExcluded, 
 					options.loadRules,
 					options.acceptBeforeLoad,
-					null);
+					null,
+					true);
 		return buildProperties;
 	}
 	
@@ -321,5 +328,15 @@ public class Utils {
 	
 	public static void assertChangesMessage(File pollingFile) throws Exception {
 		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : Changes detected"));
+	}
+
+	/**
+	 * Update the given RTCScm instance with the provided build type and return the updated instance.
+	 */
+	public static RTCScm updateAndGetRTCScm(RTCScm rtcScm, BuildType buildType) {
+		RTCScm updatedRTCScm = new RTCScm(rtcScm.getOverrideGlobal(), rtcScm.getBuildTool(), rtcScm.getServerURI(), rtcScm.getTimeout(),
+				rtcScm.getUserId(), Secret.fromString(rtcScm.getPassword()), rtcScm.getPasswordFile(), rtcScm.getCredentialsId(), buildType,
+				rtcScm.getAvoidUsingToolkit());
+		return updatedRTCScm;
 	}
 }

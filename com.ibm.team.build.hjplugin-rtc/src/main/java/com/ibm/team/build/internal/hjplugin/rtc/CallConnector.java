@@ -26,6 +26,7 @@ import java.util.List;
  *
  */
 public class CallConnector<T> extends Thread {
+
 	public static final long DEFAULT_TIMEOUT = 3*60*1000; // 3 minutes
 	private T value;
 	List<T> container;
@@ -47,8 +48,10 @@ public class CallConnector<T> extends Thread {
 	@Override
 	public synchronized void run() {
 		try {
-			wait(timeout);
-			
+			if (container == null) {
+				wait(timeout);
+			}
+
 			if (container != null) {
 				container.add(value);
 			}

@@ -46,7 +46,8 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	private String buildSnapshot;
 	private String buildStream;
 	private TaskListener listener;
-	private String baselineSetName;
+	private boolean isCustomSnapshotName;
+	private String snapshotName;
 	private String previousSnapshotUUID;
 	private RemoteOutputStream changeLog;
 	private boolean isRemote;
@@ -86,7 +87,8 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	 * @param buildStream The name of the RTC build stream. May be <code>null</code> if buildWorkspace or
 	 *            buildDefinition is supplied instead.
 	 * @param buildResultUUID The build result to relate build results with.
-	 * @param baselineSetName The name to give the baselineSet created
+	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
+	 * @param snapshotName The name to set on the snapshot created during accept
 	 * @param previousSnapshotUUID The uuid of the previous snapshot. Used for generating changelog in build stream
 	 *            case. May be <code>null</code> if a buildResultUUID or buildWorkspace is supplied.
 	 * @param listener A listener that will be notified of the progress and errors encountered.
@@ -100,7 +102,7 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	 */
 	public RTCAcceptTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
 			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
-			String baselineSetName, String previousSnapshotUUID, TaskListener listener, RemoteOutputStream changeLog, boolean isRemote,
+			boolean isCustomSnapshotName, String snapshotName, String previousSnapshotUUID, TaskListener listener, RemoteOutputStream changeLog, boolean isRemote,
 			boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad, String previousBuildUrl,
 			String temporaryWorkspaceComment) {
     	
@@ -117,7 +119,8 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
     	this.buildSnapshotContextMap = buildSnapshotContextMap;
     	this.buildSnapshot = buildSnapshot;
     	this.buildStream = buildStream;
-    	this.baselineSetName = baselineSetName;
+    	this.isCustomSnapshotName = isCustomSnapshotName;
+    	this.snapshotName = snapshotName;
     	this.previousSnapshotUUID = previousSnapshotUUID;
     	this.listener = listener;
     	this.changeLog = changeLog;
@@ -213,7 +216,8 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 					String.class, // buildStream,
 					String.class, // hjWorkspacePath,
 					OutputStream.class, // changeLog,
-					String.class, // baselineSetName,
+					boolean.class, // isCustomSnapshotName
+					String.class, // snapshotName,
 					String.class, // previousSnapshotUUID
 					Object.class, // listener
 					Locale.class, // clientLocale
@@ -224,7 +228,7 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 			}, serverURI, userId, Secret.toString(password),
 					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot,
 					buildStream, workspace.getAbsolutePath(),
-					changeLog, baselineSetName, previousSnapshotUUID,
+					changeLog, isCustomSnapshotName, snapshotName, previousSnapshotUUID,
 					listener, clientLocale, callConnectorTimeout, acceptBeforeLoad, 
 					previousBuildUrl, temporaryWorkspaceComment);
 

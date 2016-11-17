@@ -70,7 +70,6 @@ public class Config {
 				userId = "ADMIN";
 			}
 			
-			userIDForAuthenticationFailures = System.getProperty(USER_ID_FOR_AUTHENTICATION_FAILURES);
 			if (userIDForAuthenticationFailures == null) {
 				userIDForAuthenticationFailures = Long.toHexString(System.currentTimeMillis());
 			}
@@ -149,5 +148,20 @@ public class Config {
 
 	public RTCLoginInfo getLoginInfo() throws InvalidCredentialsException {
 		return new RTCLoginInfo(null, getToolkit(), getServerURI(), getUserID(), getPassword(), getPasswordFile(), null, getTimeout());
+	}
+	
+	@Override
+	public int hashCode() {
+		StringBuffer b = new StringBuffer();
+		b.append(getServerURI())
+		  .append(getUserIDForAuthenticationFailures())
+		  .append(getUserID())
+		  .append(getToolkit())
+		  .append(getTimeout())
+		  .append(getPassword());
+		if (getPasswordFile() != null) {
+			b.append(getPasswordFile());
+		}
+		return b.hashCode();
 	}
 }

@@ -126,6 +126,9 @@
 				        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
 				    </f:entry>
 				    
+				    <!-- Include the option to specify custom snapshot name -->
+				    <st:include page="config-snapshotoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+				    
 				    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
 				        method="validateBuildDefinitionConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
 				</f:dropdownListBlock>
@@ -140,9 +143,12 @@
 				    <f:entry title="${%buildWorkspace.title}"  field="buildWorkspace" >
 				        <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}" value="${instance.buildWorkspace}" />
 				    </f:entry>
-
+					
+				    <!-- Include the option to specify custom snapshot name -->
+					<st:include page="config-snapshotoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+					
                     <st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
-
+					
 					<!-- Accept changes before load -->
                     <f:section name="AcceptOptions" title="${%acceptOptions.title}"/>
 			        <f:optionalBlock name="acceptBeforeLoad" title="${%acceptOptions.acceptBeforeLoad}" field="acceptBeforeLoad" checked="${instance == null || (instance != null &amp;&amp; instance.acceptBeforeLoad)}" inline="true" />
@@ -239,6 +245,9 @@
                     <f:entry title="${%buildStream.title}"  field="buildStream" >
                         <f:textbox name="buildStream" clazz="required" checkMessage="${%buildStream.checkMessage}" value="${instance.buildStream}" />
                     </f:entry>
+                    
+				    <!-- Include the option to specify custom snapshot name -->
+                    <st:include page="config-snapshotoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
                     
 					<st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 					

@@ -1,0 +1,30 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	Specifies the name given to the snapshot that is created after accepting the changes.
+  </p>
+  <p>
+  	This field can be set to any user-specified string, referencing environment variables and build parameters. It is recommended to include at least one variable 
+   	whose value is unique to each build, e.g. BUILD_NUMBER, BUILD_ID or BUILD_URL, in order to ensure that consecutive builds create snapshots with different names. 
+	If this field is empty then a default snapshot name will be used instead. For jobs that use a Build Definition, the snapshot name defaults to "${buildDefinitionId}_#${BUILD_NUMBER}". 
+	For jobs that use a Stream or a Repository Workspace, the snapshot name defaults to "${JOB_NAME}_#${BUILD_NUMBER}".
+  </p>
+  <p>
+  	e.g. For a job named "JUnit Integration Build" if this field is set to "${JOB_NAME}_#${BUILD_NUMBER}_Snapshot", the name of the snapshot created by the first 
+  	build would be "JUnit Integration Build_#1_Snapshot".
+  </p>
+</div>

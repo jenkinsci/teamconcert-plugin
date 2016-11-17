@@ -85,8 +85,6 @@ public class RTCScm extends SCM {
 
     private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
 
-	private static final String DEBUG_PROPERTY = "com.ibm.team.build.debug"; //$NON-NLS-1$
-	
 	private static final String CALL_CONNECTOR_TIMEOUT_PROPERTY = "com.ibm.team.build.callConnector.timeout"; //$NON-NLS-1$
 	
 	private static final String IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING = "com.ibm.team.build.ignoreOutgoingFromBuildWorkspaceWhilePolling"; //$NON-NLS-1$
@@ -151,13 +149,19 @@ public class RTCScm extends SCM {
 	// Use rest or whatever services instead of the build toolkit.
 	// Available in RTC 5.0 or 4.0.6 + retro-fitted changes
 	private boolean avoidUsingToolkit;
-	// process area associated with the configuration. Curretly applicable only to stream configuration and it is used
+	// process area associated with the configuration. Currently applicable only to stream configuration and it is used
 	// to lookup the stream by name.
 	private String processArea;
 	// see the config file for significance of this field
 	private String currentSnapshotOwnerType;
 	// object containing the snapshot owner details
 	private BuildSnapshotContext buildSnapshotContext;
+	// determines if we have to override the default name given to the snapshot that is created after accepting the
+	// changes
+	private boolean overrideDefaultSnapshotName;
+	// snapshot name, configured in the job, that overrides the default name given to the snapshot that is created after
+	// accepting the changes
+	private String customizedSnapshotName;
 	
 	/**
 	 * Class defining the snapshot context configuration data.
@@ -224,6 +228,8 @@ public class RTCScm extends SCM {
 		private String processArea;
 		private String currentSnapshotOwnerType;
 		private BuildSnapshotContext buildSnapshotContext;
+		private boolean overrideDefaultSnapshotName;
+		private String customizedSnapshotName;
 		
 		@DataBoundConstructor
 		public BuildType(String value, String buildDefinition, String buildWorkspace, String buildSnapshot, String buildStream) {
@@ -320,6 +326,24 @@ public class RTCScm extends SCM {
 		
 		public BuildSnapshotContext getBuildSnapshotContext() {
 			return buildSnapshotContext;
+		}
+		
+		@DataBoundSetter
+		public void setOverrideDefaultSnapshotName(boolean overrideDefaultSnapshotName) {
+			this.overrideDefaultSnapshotName = overrideDefaultSnapshotName;
+		}
+		
+		public boolean getOverrideDefaultSnapshotName() {
+			return overrideDefaultSnapshotName;
+		}
+		
+		@DataBoundSetter
+		public void setCustomizedSnapshotName(String customizedSnapshotName) {
+			this.customizedSnapshotName = customizedSnapshotName;
+		}
+		
+		public String getCustomizedSnapshotName() {
+			return customizedSnapshotName;
 		}
 	}
 	
@@ -1829,6 +1853,8 @@ public class RTCScm extends SCM {
 			this.processArea = buildType.processArea;
 			this.currentSnapshotOwnerType = buildType.currentSnapshotOwnerType;
 			this.buildSnapshotContext = buildType.buildSnapshotContext;
+			this.overrideDefaultSnapshotName = buildType.overrideDefaultSnapshotName;
+			this.customizedSnapshotName = buildType.customizedSnapshotName;
 		}
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
@@ -1940,7 +1966,7 @@ public class RTCScm extends SCM {
 		
         LOGGER.finest("RTCScm.checkout : Begin");
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
-
+	
 		String label = getLabel(build);
 		String localBuildToolkit;
 		String nodeBuildToolkit;
@@ -1970,7 +1996,7 @@ public class RTCScm extends SCM {
 		// Get the build toolkit on the node where the checkout is happening.
 		nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
 
-		boolean debug = Boolean.parseBoolean(Helper.getStringBuildParameter(build, DEBUG_PROPERTY, listener));
+		boolean debug = Boolean.parseBoolean(Helper.getStringBuildParameter(build, RTCJobProperties.DEBUG_PROPERTY, listener));
 
 		RTCLoginInfo loginInfo;
 		try {
@@ -2106,6 +2132,28 @@ public class RTCScm extends SCM {
 				previousSnapshotUUIDForChangeLog = previousSnapshotDetails.getSecond();
 			}
 
+			// By default for build definition, the snapshotName variable is set to #<Build Number> from the hjplugin,
+			// the RTC plugin adds "<Build Definition Id>_" as a prefix and sets "<Build Definition Id>_#<Build Number>
+			// as the snapshot name
+			// For repository workspace and stream, the snapshotName is set to
+			// "<Job Name>_#<Build Number> and used as is by the RTC plugin"
+			String snapshotName = useBuildDefinitionInBuild ? label : build.getParent().getName() + "_" + label;
+			// check if a custom snapshot name is configured in the job
+			// custom snapshot name, if provided, overrides the above determined default snapshot name
+			boolean isCustomSnapshotName = false;
+			if (overrideDefaultSnapshotName && Util.fixEmptyAndTrim(customizedSnapshotName) != null) {
+				// resolve any references to environment variables and build variables
+				String resolvedSnapshotName = Helper.resolveCustomSnapshotName(build, customizedSnapshotName, listener);
+				// make sure that the resolved value is not null and not empty
+				// if empty or null just go with the default name computed and set earlier
+				if (Util.fixEmptyAndTrim(resolvedSnapshotName) != null) {
+					isCustomSnapshotName = true;
+					snapshotName = resolvedSnapshotName;
+				} else {
+					listener.getLogger().println(Messages.RTCScm_empty_resolved_snapshot_name(customizedSnapshotName));
+				}
+			}
+	
 			String parentActivityId = "";
 			String connectorId = "";
 			Map<String, String> streamData = new HashMap<String, String>();
@@ -2118,8 +2166,8 @@ public class RTCScm extends SCM {
 					buildWorkspace,
 					buildSnapshotContextMap,
 					buildSnapshot,
-					buildStream,
-					label, previousSnapshotUUIDForChangeLog,
+					buildStream, isCustomSnapshotName,
+					snapshotName, previousSnapshotUUIDForChangeLog,
 					listener, changeLog,
 					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, getAcceptBeforeLoad(),
 					// If you are not comparing with any snapshot, no need to put the previous build URL
@@ -2144,18 +2192,22 @@ public class RTCScm extends SCM {
 			}
 			
 			// NOTE:
-			// TODO
-			// For buildStream case, we have created a temporary workspace. Its UUID is stored in streamChangesData.
-			// The temporary workspace will be used in load() and deleted at the end of load. If we do add any 
+			// For buildStream case, we have created a temporary repository workspace. Its UUID is stored in streamData.
+			// The temporary repository workspace will be used in load() and deleted at the end of load. If we do add any 
 			// intermediate steps between accept and load and there is some exception during those tasks (even now,
 			// we can get problems with componentsToExclude ad loadRules), we need to ensure that the temporary workspace
 			// is deleted.
-			// A better option is to create the temporary workspace and snapshot upfront using a separate task from checkout()
+			// 1) A better option is to create the temporary workspace and snapshot upfront using a separate task from checkout()
 			// That way, if there is any exception after that, we can safely delete the workspace in finally()	
-			// Or another option is to create+delete workpace in accept and then perform a load from snapshot.
-			// Or create and delete workspace in accept and then use load from snapshot (that already creates and deletes a 
-			// workspace). 
-				
+			// 2) Create and delete workspace in accept and then use load from snapshot (that already creates and deletes a 
+			// workspace).
+			// 3) Create a workspace in accept but delete it at the end of the build in RTCRunListener. However, if load fails
+			// the workspace is deleted immediately.
+			// However, deleting the temporary workspace requires build toolkit on master. Some cases, the build toolkit configured
+			// on master is invalid. In order to account for this scenario where master buildtoolkit is invalid, the temporary
+			// repository workspace will be deleted during checkout() itself. 
+			boolean isValidMasterBuildToolkit = validateBuildToolkitPath(localBuildToolkit);
+			boolean shouldDeleteTemporaryWorkspace = !isValidMasterBuildToolkit;
 			Map<String, Object> acceptResult = workspacePath.act(acceptTask);
 			Map<String, String> buildProperties = (Map<String, String>)acceptResult.get("buildProperties"); //$NON-NLS-1$
 			buildResultAction.addBuildProperties(buildProperties);
@@ -2171,10 +2223,11 @@ public class RTCScm extends SCM {
 
 			RTCLoadTask loadTask = new RTCLoadTask(
 					build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
-					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
-					getProcessArea(), buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot, buildStream, streamData, label, listener,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId, connectorId, extProvider, clearLoadDirectory, 
-					createFoldersForComponents, null, null, getAcceptBeforeLoad(), Helper.getTemporaryWorkspaceComment(build));
+					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+					getProcessArea(), buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot, buildStream, streamData,
+					isCustomSnapshotName, snapshotName, listener, workspacePath.isRemote(), debug, LocaleProvider.getLocale(), parentActivityId,
+					connectorId, extProvider, clearLoadDirectory, createFoldersForComponents, null, null, getAcceptBeforeLoad(),
+					Helper.getTemporaryWorkspaceComment(build), shouldDeleteTemporaryWorkspace);
 			if (buildResultUUID != null) {
 				String rootUrl = Hudson.getInstance().getRootUrl();
 				if (rootUrl != null) {
@@ -2190,13 +2243,16 @@ public class RTCScm extends SCM {
 				}
 				loadTask.setLinkURLs(rootUrl,  projectUrl, buildUrl);
 			}
-
+			
+			// build properties given by load will be added to RTCBuildResultAction
+			Map<String, Object> loadResult = null;
 			if (Util.fixEmptyAndTrim(loadDirectory) != null) {
 				FilePath newWorkspacePath = workspacePath.child(loadDirectory);
-				newWorkspacePath.act(loadTask);
+				loadResult = newWorkspacePath.act(loadTask);
 			} else {
-				workspacePath.act(loadTask);
+				loadResult = workspacePath.act(loadTask);
 			}
+			addTemporaryWorkspaceDetailsToAction(loadResult, buildResultAction);
     	} catch (Exception e) {
     		Throwable eToReport = e;
     		if (eToReport instanceof InvocationTargetException) {
@@ -2239,6 +2295,7 @@ public class RTCScm extends SCM {
 	}
 
 	private String getLabel(Run<?, ?> build) {
+		
 		// TODO if we have a build definition & build result id we should probably
 		// follow a similar algorithm to RTC?
 		// In the simple plugin case, generate the name from the project and the build
@@ -2654,6 +2711,14 @@ public class RTCScm extends SCM {
     public BuildSnapshotContext getBuildSnapshotContext() {
     	return buildSnapshotContext;
     }
+    
+    public boolean getOverrideDefaultSnapshotName() {
+    	return overrideDefaultSnapshotName;
+    }
+    
+    public String getCustomizedSnapshotName() {
+    	return customizedSnapshotName;
+    }
 	
 	@Override
 	@Exported
@@ -2712,4 +2777,26 @@ public class RTCScm extends SCM {
 			throw new AbortException(Messages.RTCScm_checkout_failure4(Messages.RTCScm_stream_not_provided()));
 		}	
 	}
+	
+	@SuppressWarnings("unchecked")
+	private void addTemporaryWorkspaceDetailsToAction(Map<String, Object> loadResult, RTCBuildResultAction action) {
+		if (loadResult == null || action == null) {
+			return;
+		}
+		Map<String, String> temporaryWorkspaceProperties = (Map<String, String>) loadResult.get(RTCJobProperties.TEMPORARY_REPO_WORKSPACE_DATA);
+		if (temporaryWorkspaceProperties != null) {
+			action.addBuildProperties(temporaryWorkspaceProperties);
+		}		
+	}
+
+	private boolean validateBuildToolkitPath(String buildToolkitPath) {
+		// Check whether buildtoolkit on master is valid
+		FormValidation buildToolkitCheck = RTCBuildToolInstallation.validateBuildToolkit(false, buildToolkitPath);
+
+		if (buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
+			 return true;
+		}
+		return false;
+	}
+
 }

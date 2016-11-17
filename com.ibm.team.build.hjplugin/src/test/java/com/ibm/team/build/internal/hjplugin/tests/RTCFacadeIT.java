@@ -11,21 +11,27 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Locale;
 import java.util.Map;
 
+import org.junit.After;
 import org.junit.Assert;
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.junit.Before;
+import org.junit.Test;
 import org.jvnet.localizer.LocaleProvider;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildSnapshotContext;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
 @SuppressWarnings("nls")
-public class RTCFacadeIT extends HudsonTestCase {
+public class RTCFacadeIT extends AbstractTestCase {
 
 	RTCFacadeWrapper facade = null;
 	
@@ -34,7 +40,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	private String userId;
 	private String password;
 
-	@Override
+	@Before
 	public void setUp() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			facade = RTCFacadeFactory.getFacade(Config.DEFAULT.getToolkit(), null);
@@ -46,15 +52,15 @@ public class RTCFacadeIT extends HudsonTestCase {
 		}
 	}
 
-	@Override
-	protected void tearDown() throws Exception {
+	@After
+	public void tearDown() throws Exception {
 		// Didn't start H/J
 	}
 
 	/**
 	 * Test "Test Connection" with a valid password
 	 */
-	public void testTestConnectionWithPassword() throws Exception {
+	@Test public void testTestConnectionWithPassword() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			String errorMessage = RTCFacadeFacade.testConnection(
 					Config.DEFAULT.getToolkit(),
@@ -77,7 +83,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	/**
 	 * Test "Test Connection" with an invalid password
 	 */
-	public void testTestConnectionWithInvalidPassword() throws Exception {
+	@Test public void testTestConnectionWithInvalidPassword() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			String errorMessage = RTCFacadeFacade.testConnection(
 					Config.DEFAULT.getToolkit(),
@@ -101,7 +107,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	/**
 	 * Test "Test Build Workspace" identifies the workspace is missing
 	 */
-	public void testTestMissingBuildWorkspace() throws Exception {
+	@Test public void testTestMissingBuildWorkspace() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
@@ -113,7 +119,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 					loginInfo.getPassword(),
 					loginInfo.getTimeout(),
 					false, // using toolkit
-					"MissingWorkspace" + System.currentTimeMillis());
+					getUniqueName("MissingWorkspace"));
 				assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
 
 				errorMessage = RTCFacadeFacade.testBuildWorkspace(
@@ -123,7 +129,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						true, // avoiding toolkit
-						"MissingWorkspace" + System.currentTimeMillis());
+						getUniqueName("MissingWorkspace"));
 				assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
 			} catch (Exception e) {
 				e.printStackTrace(System.out);
@@ -135,7 +141,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	/**
 	 * Test "Test Build Definition" identifies the build definition doesn't exist
 	 */
-	public void testTestMissingBuildDefinition() throws Exception {
+	@Test public void testTestMissingBuildDefinition() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
@@ -147,7 +153,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 					loginInfo.getPassword(),
 					loginInfo.getTimeout(),
 					false, // using toolkit
-					"MissingBuildDefinition" + System.currentTimeMillis());
+					getUniqueName("MissingBuildDefinition"));
 				assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
 
 				errorMessage = RTCFacadeFacade.testBuildWorkspace(
@@ -157,7 +163,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						true, // avoiding toolkit
-						"MissingBuildDefinition" + System.currentTimeMillis());
+						getUniqueName("MissingBuildDefinition"));
 					assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
 			} catch (Exception e) {
 				e.printStackTrace(System.out);
@@ -170,12 +176,12 @@ public class RTCFacadeIT extends HudsonTestCase {
 	 * Test "Test Build Definition" validates the build definition is setup properly
 	 * TODO Add more tests to validate improperly setup build definitions
 	 */
-	public void testTestBuildDefinition() throws Exception {
+	@Test public void testTestBuildDefinition() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 
-			String buildDefinitionName = "BuildDefinitionName" + System.currentTimeMillis();
+			String buildDefinitionName = getUniqueName("BuildDefinitionName");
 			@SuppressWarnings("unchecked")
 			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
 					"setupTestBuildDefinition", new Class[] {
@@ -233,7 +239,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	 * Execute tests comparing incoming changes, for quite period implementation
 	 * @throws Exception
 	 */
-	public void testCompareIncomingChanges() throws Exception {
+	@Test public void testCompareIncomingChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			System.out.println("&&&&&& Calling testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
 			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
@@ -248,13 +254,13 @@ public class RTCFacadeIT extends HudsonTestCase {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
-	public void testTestProcessArea_basic() throws Exception {
+	@Test public void testTestProcessArea_basic() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
-		String projectAreaName = "testTestProcessArea_basic" + System.currentTimeMillis();
+		String projectAreaName = getUniqueName("testTestProcessArea_basic");
 		// create a project area with a single team area
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_basic", new Class[] { String.class, // serverURL,
 				String.class, // userId,
@@ -301,13 +307,13 @@ public class RTCFacadeIT extends HudsonTestCase {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
-	public void testTestProcessArea_specialChars() throws Exception {
+	@Test public void testTestProcessArea_specialChars() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
-		String projectAreaName = "testTestProcessArea_specialChars`-=[]\\;',.?:\"{}|+_)(*&^%$#@!~)" + System.currentTimeMillis();
+		String projectAreaName = getUniqueName() + "testTestProcessArea_specialChars`-=[]\\;,.?:{}|+_)(*^%$#@!~)";
 		// create a project area with a single team area. include special characters in the name
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_basic", new Class[] { String.class, // serverURL,
 				String.class, // userId,
@@ -365,7 +371,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unchecked")
-	public void testTestProcessArea_nonExistent() throws Exception {
+	@Test public void testTestProcessArea_nonExistent() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
@@ -373,7 +379,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area to test that searching for a non-existent team area under an existing team area
 		// hierarchy fails
-		String projectAreaName = "testTestProcessArea_nonExistent" + System.currentTimeMillis();
+		String projectAreaName = getUniqueName("testTestProcessArea_nonExistent");
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_basic", new Class[] { String.class, // serverURL,
 				String.class, // userId,
 				String.class, // password,
@@ -453,14 +459,14 @@ public class RTCFacadeIT extends HudsonTestCase {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void testTestProcessArea_archiveProjectArea() throws Exception {
+	@Test public void testTestProcessArea_archiveProjectArea() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area to test that searching for an archived project area/ team area fails
-		String projectAreaName = "testTestProcessArea_archiveProjectArea" + System.currentTimeMillis();
+		String projectAreaName = getUniqueName("testTestProcessArea_archiveProjectArea");
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_archiveProjectArea", new Class[] {
 				String.class, // serverURL,
 				String.class, // userId,
@@ -503,7 +509,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void testTestProcessArea_archiveTeamArea() throws Exception {
+	@Test public void testTestProcessArea_archiveTeamArea() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
@@ -511,7 +517,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area and archive just the team area. Test that searching by project area succeeds and
 		// searching by team area fails
-		String projectAreaName = "testTestProcessArea_archiveTeamArea" + System.currentTimeMillis();
+		String projectAreaName = getUniqueName("testTestProcessArea_archiveTeamArea");
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestProcessArea_archiveTeamArea", new Class[] {
 				String.class, // serverURL,
 				String.class, // userId,
@@ -554,7 +560,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void testTestBuildStream_complete() throws Exception {
+	@Test public void testTestBuildStream_complete() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
@@ -562,9 +568,9 @@ public class RTCFacadeIT extends HudsonTestCase {
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area and archive just the team area. Test that searching by project area succeeds and
 		// searching by team area fails
-		String projectAreaName = "testTestBuildStream_complete_pa" + System.currentTimeMillis();
+		String projectAreaName = getUniqueName("testTestBuildStream_complete_pa");
 		String teamAreaPath = projectAreaName + "/" + projectAreaName + ".team.area";
-		String streamName = "testTestBuildStream_complete_stream" + System.currentTimeMillis();
+		String streamName = getUniqueName("testTestBuildStream_complete_stream");
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildStream_complete", new Class[] { String.class, // serverURL,
 				String.class, // userId,
 				String.class, // password,
@@ -739,7 +745,7 @@ public class RTCFacadeIT extends HudsonTestCase {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void testTestBuildSnapshot_complete() throws Exception {
+	@Test public void testTestBuildSnapshot_complete() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
@@ -747,12 +753,12 @@ public class RTCFacadeIT extends HudsonTestCase {
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area and archive just the team area. Test that searching by project area succeeds and
 		// searching by team area fails
-		String projectAreaName = "testTestBuildSnapshot_complete_pa_" + System.currentTimeMillis();
+		String projectAreaName = getUniqueName("testTestBuildSnapshot_complete_pa_");
 		String teamAreaName = projectAreaName + ".team.area";
 		String teamAreaPath = projectAreaName + "/" + teamAreaName;
-		String workspaceName = "testTestBuildSnapshot_complete_ws_" + System.currentTimeMillis();
-		String streamName = "testTestBuildSnapshot_complete_st_" + System.currentTimeMillis();
-		String snapshotName = "testTestBuildSnapshot_complete_ss_" + System.currentTimeMillis();
+		String workspaceName = getUniqueName("testTestBuildSnapshot_complete_ws_");
+		String streamName = getUniqueName("testTestBuildSnapshot_complete_st_");
+		String snapshotName = getUniqueName("testTestBuildSnapshot_complete_ss_");
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildSnapshot_complete",
 				new Class[] { String.class, // serverURL,
 						String.class, // userId,

@@ -15,6 +15,17 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.JenkinsRule.WebClient;
+import org.junit.Assert;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
@@ -30,18 +41,19 @@ import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 import hudson.model.FreeStyleProject;
 import hudson.util.Secret;
 
-@SuppressWarnings("unchecked")
 public class RTCBuildResultHelperIT extends AbstractTestCase {
 
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 
+	@Rule
+	public JenkinsRule j = new  JenkinsRule();
+	
 	private RTCFacadeWrapper testingFacade;
 
-	@Override
+	@Before
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
-			super.setUp();
 			
 			testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 		}
@@ -55,7 +67,7 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 	 * Detailed testing of the actual delete of the build result in RTC is in BuildConnectionIT
 	 * @throws Exception If the test fails
 	 */
-	public void testdeleteRTCBuildResults() throws Exception {
+	@Test public void testdeleteRTCBuildResults() throws Exception {
 		
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -70,13 +82,13 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
 			
 			try {
 				// start & delete in progress build (status ok) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
 				String buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
-				FreeStyleProject project = createFreeStyleProject();
+				FreeStyleProject project = j.createFreeStyleProject();
 				RTCScm scm = getRTCScm();
 				project.setScm(scm);
 				Set<RTCScm> rtcScmConfigs = Collections.singleton(scm);

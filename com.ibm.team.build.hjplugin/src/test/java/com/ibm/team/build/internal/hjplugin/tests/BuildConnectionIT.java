@@ -22,6 +22,14 @@ import com.ibm.team.build.internal.hjplugin.util.RTCBuildState;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
@@ -32,7 +40,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 
 	private RTCFacadeWrapper testingFacade;
 
-	@Override
+	@Before
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
@@ -42,7 +50,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 		}
 	}
 
-	@Override
+	@After
 	public void tearDown() throws Exception {
 		// Nothing to do including no need to shutdown Hudson/Jenkins
 	}
@@ -56,7 +64,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 	 * @throws Exception 
 	 */
 
-	public void testCreateBuildResult() throws Exception {
+	@Test public void testCreateBuildResult() throws Exception {
 		// test creation of build results
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -70,11 +78,11 @@ public class BuildConnectionIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
 		}
 	}
 
-	public void testCreateBuildResultFail() throws Exception {
+	@Test public void testCreateBuildResultFail() throws Exception {
 		// test creation of build results
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -88,11 +96,11 @@ public class BuildConnectionIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
 		}
 	}
 
-	public void testLinksToJenkins() throws Exception {
+	@Test public void testLinksToJenkins() throws Exception {
 		// test Jenkins external links added
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -106,7 +114,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
 		}
 	}
 
@@ -128,7 +136,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 	 * Test  leave pending & terminate build (cancelled)
 	 * @throws Exception
 	 */
-	public void testBuildTermination() throws Exception {
+	@Test public void testBuildTermination() throws Exception {
 		// test termination of build 
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -144,7 +152,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
 			
 			try {
 				// start & terminate build (status ok) using toolkit
@@ -444,7 +452,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 	 * test deleting a build already deleted
 	 * @throws Exception
 	 */
-	public void testBuildDeletion() throws Exception {
+	@Test public void testBuildDeletion() throws Exception {
 		// test deletion of build result
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -459,7 +467,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
 			
 			try {
 				// start & delete in progress build (status ok) using toolkit
@@ -593,7 +601,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 			setupArtifacts);
 	}
 
-	public void testBuildStart() throws Exception {
+	@Test public void testBuildStart() throws Exception {
 		// test termination of build 
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -607,11 +615,11 @@ public class BuildConnectionIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis());
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
 		}
 	}
 	
-	public void testBuildResultInfo() throws Exception {
+	@Test public void testBuildResultInfo() throws Exception {
 		// test that the build info represents the cause of the build
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
@@ -629,7 +637,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getTestName() + System.currentTimeMillis(),
+				loginInfo.getTimeout(), getBuildDefinitionUniqueName(),
 				buildResultInfo);
 			
 			assertFalse(buildResultInfo.ownLifeCycle());

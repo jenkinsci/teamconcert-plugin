@@ -10,40 +10,40 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.util;
 
-import java.util.Locale;
-import java.util.Map;
-import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
-import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
-
 import hudson.Util;
-import hudson.model.Job;
-import hudson.model.ParameterDefinition;
 import hudson.model.ParameterValue;
 import hudson.model.TaskListener;
+import hudson.model.AbstractBuild;
+import hudson.model.Job;
+import hudson.model.ParameterDefinition;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.util.FormValidation;
-import jenkins.model.Jenkins;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.model.Jenkins;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.io.IOUtils;
 
 import com.ibm.team.build.internal.hjplugin.Messages;
+import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
+import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
+import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 
 public class Helper {
 	private static final Logger LOGGER = Logger.getLogger(Helper.class.getName());
@@ -433,12 +433,49 @@ public class Helper {
 	}
 	
 	/**
+	 * 
 	 * Returns the comment string for the temporary workspace to be created.
-	 * @param build - The Jenkins {@link Run} from which some details are obtained. Never <code>null</code>
-	 * @return - A {@link String} that is the comment for the temporary workspace
+	 * 
+	 * @param build The Jenkins {@link Run} from which some details are obtained. Never <code>null</code>
+	 * @return A {@link String} that is the comment for the temporary workspace
 	 */
 	public static String getTemporaryWorkspaceComment(Run<?,?> build) {
-		return Messages.RTCScm_temporary_workspace_comment(build.getParent().getName(), Jenkins.getInstance().getRootUrl());
+		return Messages.RTCScm_temporary_workspace_comment(
+									Integer.toString(build.getNumber()), 
+									build.getParent().getName(), 
+									Jenkins.getInstance().getRootUrl());
+	}
+	
+	/**
+	 * This method resolves any references to the environment variables and build parameters in the custom snapshot name
+	 * configured in the job
+	 * 
+	 * @param build The Jenkins {@link Run} from which some details are obtained. Never <code>null</code>
+	 * @param customSnapshotName Custom snapshot name configured in the job
+	 * @param listener Task listener. Never <code>null</code>
+	 * @return
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public static String resolveCustomSnapshotName(Run<?, ?> build, String customSnapshotName, TaskListener listener)
+			throws IOException, InterruptedException {
+		if (customSnapshotName == null) {
+			return null;
+		}
+		// Util.replaceMacro() replaces $$ with a single $
+		// this replace is required to retain consecutive $, like $$, in the template string. 		
+		customSnapshotName = customSnapshotName.replaceAll("\\$\\$", "\\$\\$\\$\\$");
+		// lookup and resolve environment variables
+		String s = build.getEnvironment(listener).expand(customSnapshotName);
+
+		if (build instanceof AbstractBuild) {
+			// Util.replaceMacro() replaces $$ with a single $
+			// this replace is required to retain consecutive $, like $$, in the template string 	
+			s = s.replaceAll("\\$\\$", "\\$\\$\\$\\$");
+			// lookup and resolve build variables, Build variables include the parameters passed in the Build
+			s = Util.replaceMacro(s, ((AbstractBuild<?, ?>)build).getBuildVariableResolver());
+		}
+        return s;
 	}
 
 	private static Tuple<Run<?,?>, String> getValueForBuildStream(IJenkinsBuildIterator iterator, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, boolean onlyGoodBuild, String key, Locale clientLocale) throws Exception {

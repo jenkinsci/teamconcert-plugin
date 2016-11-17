@@ -78,6 +78,7 @@
         <configured>false</configured>
         <buildtoolkit>${env.buildtoolkit}</buildtoolkit>
         <excludeTests>**/UnknownTests.java</excludeTests>
+        <includeTests>**/*IT.java</includeTests>
     </properties>
 
 	<!-- get every artifact through repo.jenkins-ci.org, which proxies all the 
@@ -89,34 +90,27 @@
 		</repository>
 		<repository>
 			<id>repo.jenkins-ci.org</id>
-			<url>https://repo.jenkins-ci.org/public/</url>
+			<url>http://repo.jenkins-ci.org/public/</url>
 		</repository>
 	</repositories>
 
 	<pluginRepositories>
 		<pluginRepository>
 			<id>repo.jenkins-ci.org</id>
-			<url>https://repo.jenkins-ci.org/public/</url>
+			<url>http://repo.jenkins-ci.org/public/</url>
 		</pluginRepository>
 	</pluginRepositories>
-
-	<distributionManagement>
-		<repository>
-			<id>maven.jenkins-ci.org</id>
-			<url>https://repo.jenkins-ci.org/releases</url>
-		</repository>
-	</distributionManagement>
 
 	<dependencies>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.2.0</version>
+			<version>1.2.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
-			<version>1.2.0</version>
+			<version>1.2.1</version>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
@@ -179,6 +173,9 @@
 								<exclude>**/MayFailIT.java</exclude>
 								<exclude>${excludeTests}</exclude>
 							</excludes>
+							<includes>
+							<include>${includeTests}</include>
+							</includes>
 						</configuration>
 					</execution>
 					<execution>

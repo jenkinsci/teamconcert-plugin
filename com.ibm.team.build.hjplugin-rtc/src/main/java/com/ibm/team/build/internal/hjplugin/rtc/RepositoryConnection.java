@@ -392,7 +392,8 @@ public class RepositoryConnection {
 	 * supplied
 	 * @param hjFetchDestination The location the build workspace is to be loaded
 	 * @param changeReport The report to be built of all the changes accepted/discarded. May be <code> null </code>.
-	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
+	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
+	 * @param snapshotName The name to set on the snapshot that is created during accept 
 	 * @param previousSnapshotUUID The uuid of the previous snapshot for comparison. Used for generating changelog for buildStream. May be <code>null</code>
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
@@ -406,8 +407,8 @@ public class RepositoryConnection {
 	 */
 	public Map<String, Object> accept(String processAreaName, String buildResultUUID, String buildWorkspaceName,
 			BuildSnapshotContext buildSnapshotContext, String buildSnapshot, String buildStream, String hjFetchDestination,
-			ChangeReport changeReport, String defaultSnapshotName, final String previousSnapshotUUID, final IConsoleOutput listener,
-			IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad,
+			ChangeReport changeReport, boolean isCustomSnapshotName, String snapshotName, final String previousSnapshotUUID,
+			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad,
 			String previousBuildUrl, String temporaryWorkspaceComment)
 			throws Exception {
 		LOGGER.finest("RepositoryConnection.accept : Enter");
@@ -416,7 +417,7 @@ public class RepositoryConnection {
 		ensureLoggedIn(monitor.newChild(1));
 		
 		if (buildStream != null) {
-			return acceptForBuildStream(processAreaName, buildStream, changeReport, defaultSnapshotName, previousSnapshotUUID, previousBuildUrl,
+			return acceptForBuildStream(processAreaName, buildStream, changeReport, snapshotName, previousSnapshotUUID, previousBuildUrl,
 					temporaryWorkspaceComment, listener, monitor, clientLocale);
 		}
 		else if (buildSnapshot != null) {
@@ -432,11 +433,11 @@ public class RepositoryConnection {
 		IBuildResultHandle buildResultHandle = null;
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
 			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-	        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
+	        buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, listener, monitor.newChild(1), clientLocale);
 
 		} else {
 			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(), monitor.newChild(1), clientLocale);
-			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName, acceptBeforeLoad);
+			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad);
 		}
 
 		Map<String, String> buildProperties = buildConfiguration.getBuildProperties();
@@ -571,7 +572,8 @@ public class RepositoryConnection {
 	 * @param buildStream The name or UUID of the RTC build stream.
 	 * @param buildStreamData The additional stream data for stream load.
 	 * @param hjFetchDestination The location the build workspace is to be loaded
-	 * @param defaultSnapshotName The name to give the snapshot created if one can't be determined some other way
+	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
+	 * @param snapshotName The name of the snapshot created during accept
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
@@ -585,13 +587,16 @@ public class RepositoryConnection {
 	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 * @param temporaryWorkspaceComment 
+	 * @param shouldDeleteTemporaryWorkspace whether the temporary workspace created for snapshot/stream
+	 * 						case should be deleted before returning(irrespective of failure or not)
 	 * @throws Exception Thrown if anything goes wrong
 	 */
-	public void load(String processAreaName, String buildResultUUID, String buildWorkspaceName, BuildSnapshotContext buildSnapshotContext,
-			String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjFetchDestination, String defaultSnapshotName,
-			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String parentActivityId, String connectorId,
-			Object extProvider, final PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude,
-			String loadRules, boolean acceptBeforeLoad, String temporaryWorkspaceComment) throws Exception {
+	public Map<String, Object> load(String processAreaName, String buildResultUUID, String buildWorkspaceName, BuildSnapshotContext buildSnapshotContext,
+			String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjFetchDestination, boolean isCustomSnapshotName,
+			String snapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String parentActivityId,
+			String connectorId, Object extProvider, final PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents,
+			String componentsToExclude, String loadRules, boolean acceptBeforeLoad, 
+			String temporaryWorkspaceComment, boolean shouldDeleteTemporaryWorkspace) throws Exception {
 		 LOGGER.finest("RepositoryConnection.load : Enter");
 		
         // Lets get same workspaceConnection as created by accept call so that if 
@@ -613,12 +618,12 @@ public class RepositoryConnection {
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_definition_configuration());
 			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-                        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
+                        buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, listener, monitor.newChild(1), clientLocale);
 		} else if (buildWorkspaceName != null && buildWorkspaceName.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_workspace_configuration());
 			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
 					monitor.newChild(1), clientLocale);
-			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, defaultSnapshotName, acceptBeforeLoad);
+			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad);
 		} else if (buildSnapshot != null && buildSnapshot.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_snapshot_configuration());
 			String workspaceNamePrefix = getWorkspaceNamePrefix();
@@ -641,10 +646,12 @@ public class RepositoryConnection {
 				workspace = RTCWorkspaceUtils.getInstance().getWorkspace(UUID.valueOf(workspaceUUID), getTeamRepository(), monitor.newChild(3), clientLocale);
 				IContributor contributor = fRepository.loggedInContributor();
 				IWorkspaceHandle streamHandle = getBuildStream(processAreaName, buildStream, monitor.newChild(1), clientLocale);
-				buildConfiguration.initialize(streamHandle, buildStream, workspace, baselineSet, contributor, monitor.newChild(3));
+				buildConfiguration.initialize(streamHandle, buildStream, workspace, baselineSet, 
+						shouldDeleteTemporaryWorkspace, contributor, monitor.newChild(3));
 			} catch (Exception exp) {
 				if (workspace != null) {
-					RTCWorkspaceUtils.getInstance().delete(workspace, getTeamRepository(), progress, listener, clientLocale);
+					RTCWorkspaceUtils.getInstance().deleteSilent(workspace,
+							getTeamRepository(), progress, listener, clientLocale);
 				}
 				throw exp;
 			}
@@ -655,6 +662,7 @@ public class RepositoryConnection {
     		throw exception;
 		}
 		
+		boolean exceptionOccured = false;
 		try {
 		
 	        boolean synchronizeLoad = !buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch();
@@ -855,10 +863,18 @@ public class RepositoryConnection {
 	            	listener.log(Messages.getDefault().RepositoryConnection_checkout_termination_error(e.getMessage()), e);
 	            }
 	        }
+		} catch (Exception exp) {
+			exceptionOccured = true;
+			throw exp;
 		} finally {
-			  // Finalize the buildConfiguration
-           	buildConfiguration.tearDown(fRepositoryManager, monitor.newChild(1), listener, clientLocale);
+			// Finalize the buildConfiguration
+			buildConfiguration.tearDown(fRepositoryManager, exceptionOccured, monitor.newChild(1), listener, clientLocale);
 		}
+
+		// Add temporary workspace details as the return value
+		Map<String, Object> loadResult = new HashMap<String, Object> ();
+		loadResult.put(Constants.TEMPORARY_REPO_WORKSPACE_DATA, buildConfiguration.getTemporaryRepositoryWorkspaceProperties());
+ 		return loadResult;
 	}
 
 	/**
@@ -897,7 +913,7 @@ public class RepositoryConnection {
 		IBuildResultHandle buildResultHandle = null;
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
 			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-	        buildConfiguration.initialize(buildResultHandle, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
+	        buildConfiguration.initialize(buildResultHandle, false, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
 
 		} else {
 			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
@@ -1369,7 +1385,7 @@ public class RepositoryConnection {
 	 * @param processAreaName - the name of the owning project or team area
 	 * @param buildStream - the name of the RTC stream
 	 * @param changeReport - the change report to which the change log has to be written into
-	 * @param defaultSnapshotName - the default name for the snapshot that is to be created 
+	 * @param snapshotName The name to set on the snapshot that is created during accept 
 	 * @param previousSnapshotUUID - the UUID of the previous snapshot
 	 * @param previousBuildUrl - the url of the previous Jenkins build from which the previous snapshot uuid was taken
 	 * @param temporaryWorkspaceComment -
@@ -1380,7 +1396,7 @@ public class RepositoryConnection {
 	 * @throws {@link Exception} - if there is any error during the operation
 	 */
 	private Map<String, Object> acceptForBuildStream(final String processAreaName, final String buildStream, final ChangeReport changeReport,
-			final String defaultSnapshotName, final String previousSnapshotUUID, final String previousBuildUrl, String temporaryWorkspaceComment,
+			final String snapshotName, final String previousSnapshotUUID, final String previousBuildUrl, String temporaryWorkspaceComment,
 			final IConsoleOutput listener, final IProgressMonitor progress, final Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
@@ -1390,7 +1406,6 @@ public class RepositoryConnection {
 		IWorkspaceHandle streamHandle = getBuildStream(processAreaName, buildStream, monitor.newChild(1), clientLocale);
     	
     	String workspaceName = getWorkspaceNamePrefix() + "_" + Long.toString(System.currentTimeMillis());
-    	String snapshotName = defaultSnapshotName;
 
 		/*
 		 *  Create a workspace from the stream
@@ -1478,7 +1493,7 @@ public class RepositoryConnection {
 
 		} catch (Exception exp) {
 			if (workspaceConnection != null) {
-				RTCWorkspaceUtils.getInstance().delete(workspaceConnection.getResolvedWorkspace(), getTeamRepository(), monitor.newChild(5), listener, clientLocale);
+				RTCWorkspaceUtils.getInstance().deleteSilent(workspaceConnection.getResolvedWorkspace(), getTeamRepository(), monitor.newChild(5), listener, clientLocale);
 			}
 			throw exp;
 		}
@@ -2085,6 +2100,12 @@ public class RepositoryConnection {
 			}
 		}
 		return versionableHandle.getItemId().getUuidValue();
+	}
+
+	public void deleteWorkspace(String workspaceUUID, String workspaceName, IConsoleOutput listener, Locale clientLocale, IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(50));
+		RTCWorkspaceUtils.getInstance().delete(workspaceUUID, workspaceName, getTeamRepository(), monitor.newChild(40), listener, clientLocale);
 	}
 
 	/**

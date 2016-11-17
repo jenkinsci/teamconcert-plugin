@@ -22,11 +22,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.WithTimeout;
+import org.mockito.Mockito;
 
+import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
@@ -35,6 +38,7 @@ import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 
@@ -42,10 +46,12 @@ import hudson.FilePath;
 import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Job;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
+import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
@@ -59,7 +65,7 @@ import hudson.util.StreamTaskListener;
  * Integration Tests for {@link Helper} class
  *
  */
-public class HelperIT {
+public class HelperIT extends AbstractTestCase {
 	
 	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
@@ -76,9 +82,9 @@ public class HelperIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
-		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
 		@SuppressWarnings("unchecked")
@@ -106,8 +112,9 @@ public class HelperIT {
 					new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
 			String[] result = verifyBuildDefinitionWithParameter(r, rtcScm1, buildDefinitionId,
-								null, 
-								new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)), componentName);
+								null, componentName,
+								new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
+								new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			setupArtifacts.put("buildResultItemId1", result[0]);
 		} finally {
 			testingFacade.invoke(
@@ -139,9 +146,9 @@ public class HelperIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
-		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
 
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
 		@SuppressWarnings("unchecked")
@@ -171,7 +178,8 @@ public class HelperIT {
 			prj.setScm(rtcScm);
 			
 			// Test
-			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, Arrays.asList(new ParametersAction[] {}));
+			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, 
+									Arrays.asList(new ParametersAction[] {new ParametersAction(new StringParameterValue("buildResultUUID", ""))}));
 			while(!future.isDone());
 			FreeStyleBuild build = future.get();
 			
@@ -184,7 +192,7 @@ public class HelperIT {
 					"tearDown",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
-							String.class, // passwortestBuildDefinitionParameterWithDefaultValueAndNoOverrideSuccessd,
+							String.class, // password,
 							int.class, // timeout,
 							Map.class}, // setupArtifacts
 					loginInfo.getServerUri(),
@@ -207,9 +215,9 @@ public class HelperIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
-		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
 		@SuppressWarnings("unchecked")
@@ -235,8 +243,9 @@ public class HelperIT {
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
 			String[] result = verifyBuildDefinitionWithParameter(r, rtcScm1, buildDefinitionId,
-												new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", buildDefinitionId)},
-												null, componentName);
+												new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", buildDefinitionId), 
+														new StringParameterDefinition("buildResultUUID", "")},
+												componentName,null);
 			setupArtifacts.put("buildResultItemId1", result[0]);
 		} finally {
 			testingFacade.invoke(
@@ -265,9 +274,9 @@ public class HelperIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
-		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
 		String invalidBuildDefinitionId = "InvalidBuildDefinitionId";
 
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
@@ -295,8 +304,8 @@ public class HelperIT {
 
 			String[] result = verifyBuildDefinitionWithParameter(r, rtcScm1, buildDefinitionId,
 												new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", invalidBuildDefinitionId)},
-												new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
-												componentName);
+												componentName, new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
+												new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 
 			setupArtifacts.put("buildResultItemId1", result[0]);
 		} finally {
@@ -327,9 +336,9 @@ public class HelperIT {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
-		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
 		String invalidBuildDefinitionId = "InvalidBuildDefinitionId";
 
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
@@ -357,11 +366,14 @@ public class HelperIT {
 
 			// Setup
 			FreeStyleProject prj = r.createFreeStyleProject();
-			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", invalidBuildDefinitionId)})));
+			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {
+					new StringParameterDefinition("myBuildDefinition", invalidBuildDefinitionId),
+					new StringParameterDefinition("buildResultUUID", "")})));
 			prj.setScm(rtcScm);
 			
 			// Test
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, Arrays.asList(new ParametersAction[] {}));
+			
 			while(!future.isDone());
 			FreeStyleBuild build = future.get();
 			
@@ -398,9 +410,9 @@ public class HelperIT {
 
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
-		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
 		@SuppressWarnings("unchecked")
@@ -427,11 +439,13 @@ public class HelperIT {
 
 			// Setup with rtcBuildDefinition parameter with a value
 			FreeStyleProject prj = r.createFreeStyleProject();
-			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", buildDefinitionId)})));
+			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(
+						new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", buildDefinitionId),
+										new StringParameterDefinition("buildResultUUID", "")})));
 			prj.setScm(rtcScm);
 
 			// Test
-			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null);
+			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause)null);
 			while(!future.isDone());
 			FreeStyleBuild build = future.get();
 
@@ -487,9 +501,9 @@ public class HelperIT {
 
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
-		String buildDefinitionId = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
 
 		
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
@@ -520,7 +534,9 @@ public class HelperIT {
 			prj.setScm(rtcScm);
 
 			// Test
-			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,  new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)));
+			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, 
+						new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
+						new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			while(!future.isDone());
 			FreeStyleBuild build = future.get();
 
@@ -566,9 +582,9 @@ public class HelperIT {
 
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String snapshotName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String snapshotName = getSnapshotUniqueName();
+		String componentName = getComponentUniqueName();
 
 		
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
@@ -602,7 +618,9 @@ public class HelperIT {
 			prj.setScm(rtcScm);
 
 			// Test
-			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,  new ParametersAction(new StringParameterValue(RTCJobProperties.RTC_BUILD_SNAPSHOT, snapshotName)));
+			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,  
+						new ParametersAction(new StringParameterValue(RTCJobProperties.RTC_BUILD_SNAPSHOT, snapshotName)),
+						new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			while(!future.isDone());
 			FreeStyleBuild build = future.get();
 
@@ -638,9 +656,9 @@ public class HelperIT {
 
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String snapshotName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String snapshotName = getSnapshotUniqueName();
+		String componentName = getComponentUniqueName();
 
 		
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
@@ -678,7 +696,8 @@ public class HelperIT {
 			// Test
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,  
 								new ParametersAction(new StringParameterValue(RTCJobProperties.RTC_BUILD_SNAPSHOT, snapshotName)),
-								new ParametersAction(new StringParameterValue("myBuildSnapshot", "Dummy Snapshot")));
+								new ParametersAction(new StringParameterValue("myBuildSnapshot", "Dummy Snapshot")),
+								new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 
 			while(!future.isDone());
 			FreeStyleBuild build = future.get();
@@ -713,9 +732,9 @@ public class HelperIT {
 
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		String workspaceName = getTestName() + System.currentTimeMillis();
-		String snapshotName = getTestName() + System.currentTimeMillis();
-		String componentName = getTestName() + System.currentTimeMillis();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String snapshotName = getSnapshotUniqueName();
+		String componentName = getComponentUniqueName();
 
 		
 		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
@@ -749,7 +768,9 @@ public class HelperIT {
 			prj.setScm(rtcScm);
 
 			// Test
-			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,  new ParametersAction(new StringParameterValue("myBuildSnapshot", snapshotName)));
+			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, 
+						new ParametersAction(new StringParameterValue("myBuildSnapshot", snapshotName)),
+						new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			while(!future.isDone());
 			FreeStyleBuild build = future.get();
 
@@ -774,9 +795,37 @@ public class HelperIT {
 					loginInfo.getTimeout(), setupArtifacts);
 		}
 	}
+	
+	/**
+	 * Test whether the getTemorary workspace comment method uses build number, job name and server name
+	 */
+	@Test public void testGetTemporaryWorkspaceComment() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject("myfakeJob");
+		
+		// Test
+		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0);
+
+		while(!future.isDone());
+		FreeStyleBuild build = future.get();
+	
+		// Test
+		String workspaceComment = Helper.getTemporaryWorkspaceComment(build);
+		
+		// Behavior assertion
+		assertEquals(Messages.RTCScm_temporary_workspace_comment(
+				1, 
+				"myfakeJob", 
+				r.getURL()), workspaceComment);
+			
+	}
 
 	private String[] verifyBuildDefinitionWithParameter(JenkinsRule r, RTCScm rtcScm, String buildDefinitionId,
-				ParameterDefinition[] parameterDefinitions, ParametersAction pAction, String componentName) throws Exception {
+				ParameterDefinition[] parameterDefinitions, String componentName, ParametersAction... pActions) throws Exception {
 		String [] result = new String[2];
 		// Setup
 		FreeStyleProject prj = r.createFreeStyleProject();
@@ -785,8 +834,11 @@ public class HelperIT {
 		}
 		prj.setScm(rtcScm);
 		
+		if (pActions ==null) {
+			pActions = new ParametersAction[0];
+		}
 		// Test
-		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,pAction);
+		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,pActions);
 		while(!future.isDone());
 		FreeStyleBuild build = future.get();
 		
@@ -795,7 +847,7 @@ public class HelperIT {
 
 		RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
 		result[0] = action.getBuildResultUUID();
-		result[1] =  action.getBuildProperties().get("team_scm_snapshotUUID");
+		result[1] =  action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID);
 		
 		// Verify that build ran with the same definition Id
 		RTCChangeLogSet changelog = (RTCChangeLogSet) build.getChangeSet();
@@ -813,10 +865,6 @@ public class HelperIT {
 		assertTrue(new File(dir, "newTree2").exists());
 		assertTrue(new File(dir, componentName + "/f/newTree").exists());
 		return result;
-	}
-	
-	private String getTestName() {
-		return this.getClass().getName();
 	}
 	
 	private String getMatch(File file, String pattern) throws FileNotFoundException {

@@ -32,7 +32,7 @@ import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
  * Class responsible for Loading
  *
  */
-public class RTCLoadTask extends RTCTask<Void> {
+public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 	private static final Logger LOGGER = Logger.getLogger(RTCLoadTask.class.getName());
 	
 	private String buildToolkit;
@@ -47,7 +47,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 	private String buildWorkspace;
 	private String buildResultUUID;
 	private TaskListener listener;
-	private String baselineSetName;
+	boolean isCustomSnapshotName;
+	private String snapshotName;
 	private boolean isRemote;
 	private String contextStr;
 	private boolean debug;
@@ -62,6 +63,7 @@ public class RTCLoadTask extends RTCTask<Void> {
 	private boolean acceptBeforeLoad;
 	private Map<String,String> buildStreamData;
 	private String temporaryWorkspaceComment;
+	private boolean shouldDeleteTemporaryWorkspace;
 
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -91,7 +93,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 	 * @param buildStream The name of the RTC build stream. May be <code>null</code> if one of buildDefinition or
 	 *            buildWorkspace or buildSnapshot is supplied instead
 	 * @param buildStreamData the additional data from stream load obtained from {@link RTCAcceptTask}
-	 * @param baselineSetName The name to give the baselineSet created
+	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
+	 * @param snapshotName The name of the snapshot created during accept
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param isRemote Whether this will be executed on the Master or a slave
 	 * @param debug Whether to report debugging messages to the listener
@@ -102,14 +105,16 @@ public class RTCLoadTask extends RTCTask<Void> {
 	 * @param componentsToExclude json text representing the list of components to exclude during load
 	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param temporaryWorkspaceComment
+	 * @param deleteTemporaryWorkspace - whether the temporary workspace create for snapshot build or already created
+	 *         							for stream build should be deleted at the end of load
 	 * @throws Exception
 	 */
 	public RTCLoadTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
 			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
-			Map<String, String> buildStreamData, String baselineSetName, TaskListener listener, boolean isRemote, boolean debug, Locale clientLocale,
-			String parentActivityId, String connectorId, RtcExtensionProvider extProvider, boolean isDeleteNeeded,
-			boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad,
-			String temporaryWorkspaceComment) {
+			Map<String, String> buildStreamData, boolean isCustomSnapshotName, String snaspshotName, TaskListener listener, boolean isRemote,
+			boolean debug, Locale clientLocale, String parentActivityId, String connectorId, RtcExtensionProvider extProvider,
+			boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad,
+			String temporaryWorkspaceComment, boolean deleteTemporaryWorkspace) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -125,7 +130,8 @@ public class RTCLoadTask extends RTCTask<Void> {
     	this.buildStream = buildStream;
     	this.buildResultUUID = buildResultUUID;
     	this.buildStreamData = buildStreamData;
-    	this.baselineSetName = baselineSetName;
+    	this.isCustomSnapshotName = isCustomSnapshotName;
+    	this.snapshotName = snaspshotName;
     	this.listener = listener;
     	this.isRemote = isRemote;
     	this.debug = debug;
@@ -139,6 +145,7 @@ public class RTCLoadTask extends RTCTask<Void> {
     	this.loadRules = loadRules;
     	this.acceptBeforeLoad = acceptBeforeLoad;
     	this.temporaryWorkspaceComment = temporaryWorkspaceComment;
+    	this.shouldDeleteTemporaryWorkspace = deleteTemporaryWorkspace;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -152,7 +159,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 		this.buildUrl = buildUrl;
 	}
 
-	public Void invoke(File workspace, VirtualChannel channel) throws IOException, InterruptedException {
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> invoke(File workspace, VirtualChannel channel) throws IOException, InterruptedException {
 		if (debug) {
 			debug("Running " + contextStr); //$NON-NLS-1$
 			debug("serverURI " + serverURI); //$NON-NLS-1$
@@ -169,6 +177,7 @@ public class RTCLoadTask extends RTCTask<Void> {
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
 			debug("parentActivityId " + parentActivityId); // $NON-NLS-1$
 			debug("temporaryWorkspaceComment " + temporaryWorkspaceComment); // $NON-NLS-1$
+			debug("shouldDeleteTemporaryWorkspace " + shouldDeleteTemporaryWorkspace); // $NON-NLS-1$
 		}
 
 		try {
@@ -178,7 +187,7 @@ public class RTCLoadTask extends RTCTask<Void> {
     		}
     		
     		
-    		facade.invoke("load", new Class[] { //$NON-NLS-1$
+    		return (Map<String, Object>) facade.invoke("load", new Class[] { //$NON-NLS-1$
 					String.class, // serverURI,
 					String.class, // userId,
 					String.class, // password,
@@ -191,7 +200,8 @@ public class RTCLoadTask extends RTCTask<Void> {
 					String.class, // buildStream,
 					Map.class, // buildStreamData,
 					String.class, // hjWorkspacePath,
-					String.class, // baselineSetName,
+					boolean.class, // isCustomSnapshotName
+					String.class, // snapshotName,
 					Object.class, // listener
 					Locale.class, // clientLocale
 					String.class, // parentActivityId
@@ -204,15 +214,16 @@ public class RTCLoadTask extends RTCTask<Void> {
 					String.class, // loadRules
 					boolean.class, // acceptBeforeLoad
 					String.class, // temporaryWorkspaceComment
+					boolean.class // shouldDeleteTemporaryWorkspace
 			}, serverURI, userId, Secret.toString(password),
 					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap,
 					buildSnapshot, buildStream, buildStreamData,
-					workspace.getAbsolutePath(),
-					baselineSetName,
+					workspace.getAbsolutePath(), isCustomSnapshotName,
+					snapshotName,
 					listener, clientLocale, parentActivityId, connectorId,
 					extProvider, listener.getLogger(), isDeleteNeeded, 
 					createFoldersForComponents, componentsToExclude, loadRules,
-					acceptBeforeLoad, temporaryWorkspaceComment);
+					acceptBeforeLoad, temporaryWorkspaceComment, shouldDeleteTemporaryWorkspace);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;
@@ -231,7 +242,6 @@ public class RTCLoadTask extends RTCTask<Void> {
     		// if we can't check out then we can't build it
     		throw new AbortException(Messages.RTCScm_checkout_failure2(eToReport.getMessage()));
     	}
-		return null;
     }
 
 	@Override

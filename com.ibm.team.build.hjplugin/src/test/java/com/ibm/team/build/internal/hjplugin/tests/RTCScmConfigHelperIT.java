@@ -11,13 +11,16 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
-import hudson.model.FreeStyleProject;
-import hudson.util.Secret;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
 
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
@@ -26,19 +29,28 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.MockScm;
 import com.ibm.team.build.internal.hjplugin.util.RTCScmConfigHelper;
 
+import hudson.model.FreeStyleProject;
+import hudson.util.Secret;
+
 public class RTCScmConfigHelperIT extends AbstractTestCase {
 
 	private static final String DEFN_SERVER_URI = "https://localHost:4321/jazz";
 	private static final String SNAPSHOT_NAME = "AnotherSnapshot";
+	
+	@Rule
+	public JenkinsRule j = new  JenkinsRule();
+
 	/**
 	 * Tests that we can get the RTCScm configuration from the project
 	 * Tests we behave ok if the SCM is not set too
 	 * Tests we behave ok if its not an RTCScm
 	 * @throws Exception
 	 */
+	@Test
 	public void testGetCurrentConfigs() throws Exception {
+		
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = createFreeStyleProject();
+			FreeStyleProject project = j.createFreeStyleProject();
 			
 			// no scm
 			Set<RTCScm> currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
@@ -80,7 +92,7 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 			assertEquals("Expected Workspace RTCScm instance", rtcScm, currentConfigs.iterator().next());
 			
 			// non RTC Scm
-			project = createFreeStyleProject();
+			project = j.createFreeStyleProject();
 			project.setScm(new MockScm("mocking"));
 
 			currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
@@ -96,7 +108,7 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 		}
 	}
 
-	public void testFindRTCScm() throws Exception {
+	@Test public void testFindRTCScm() throws Exception {
 		Set<RTCScm> multipleConfigs = new HashSet<RTCScm>();
 		RTCScm defnRTCScm = createBuildDefnRTCScm();
 		RTCScm wsRTCScm = createWorkspaceRTCScm();
