@@ -14,10 +14,10 @@ import java.util.Map;
 
 import com.ibm.team.build.internal.hjplugin.BuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.RTCBuildCause;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildState;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
@@ -46,7 +46,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			// DO NOT initialize Hudson/Jenkins because its slow and we don't need it for the tests
 			
-			testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			testingFacade = Utils.getTestingFacade();
 		}
 	}
 

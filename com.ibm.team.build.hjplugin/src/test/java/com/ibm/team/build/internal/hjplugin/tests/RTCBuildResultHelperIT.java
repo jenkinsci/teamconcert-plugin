@@ -29,12 +29,12 @@ import static org.junit.Assert.assertEquals;
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildResultHelper;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 
@@ -55,7 +55,7 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 
 		if (Config.DEFAULT.isConfigured()) {
 			
-			testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			testingFacade = Utils.getTestingFacade();
 		}
 	}
 

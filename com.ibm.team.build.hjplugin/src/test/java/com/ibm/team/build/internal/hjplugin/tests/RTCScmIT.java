@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,7 +52,6 @@ import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemDesc;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCRepositoryBrowser;
@@ -83,7 +83,6 @@ public class RTCScmIT extends AbstractTestCase {
 	private static final String TEST_BUILD_STREAM = "compile-and-test-stream";
 	
 	private static final String CONFIG_TOOLKIT_NAME = "config_toolkit";
-	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
 	private String buildTool;
 	private String serverURI;
@@ -125,8 +124,19 @@ public class RTCScmIT extends AbstractTestCase {
 			userId = config.getUserID();
 			password = config.getPassword();
 		}
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Utils.deleteTemporaryWorkspaces();
 	}
-
+	
+	@After
+	public void tearDown() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Utils.deleteTemporaryWorkspaces();
+	}
 
 	@Test
 	public void testRTCScmConstructor() throws Exception {
@@ -440,7 +450,7 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals("Unable to find a workspace with name &quot;test&quot;", result.renderHtml());
 		
 		// create workspaces
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildWorkspace", new Class[] { String.class, // serverURL,
 				String.class, // userId,
 				String.class, // password,
@@ -539,7 +549,7 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals("Unable to find a build definition with name &quot;test&quot;", result.renderHtml());
 		
 		// create buildDefinition
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String buildDefinitionName = getBuildDefinitionUniqueName();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
@@ -620,7 +630,7 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals(Messages.RTCLoginInfo_missing_userid(), result.renderHtml());
 		
 		// create project area and build stream
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String projectAreaName = getUniqueName("testDoValidateBuildStreamConfiguration");
 		String streamName = getUniqueName("testDoValidateBuildStreamConfigurationStream");
 		// create a project area with a single team area
@@ -834,7 +844,7 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals(Messages.RTCLoginInfo_missing_userid(), result.renderHtml());
 
 		// create project area, build stream, and a snapshot
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String projectAreaName = getUniqueName("testDoValidateBuildSnapshotConfiguration");
 		String streamName = getUniqueName("testDoValidateBuildSnapshotConfigurationStream");
 		String workspaceName = getUniqueName("testDoValidateBuildSnapshotConfigurationWorkspace");
@@ -1057,7 +1067,7 @@ public class RTCScmIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -1077,7 +1087,7 @@ public class RTCScmIT extends AbstractTestCase {
 
 		try {
 			// Setup a build with build definition configuration
-			FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
 			ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
 			pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			// Run a build
@@ -1117,14 +1127,14 @@ public class RTCScmIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String workspaceUUID = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_ITEM_ID);
 		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
 		
 		try {
-			FreeStyleProject prj = setupFreeStyleJobForWorkspace(workspaceName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -1158,7 +1168,7 @@ public class RTCScmIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -1178,7 +1188,7 @@ public class RTCScmIT extends AbstractTestCase {
 
 		try {
 			// Setup a build with build definition configuration
-			FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
 			ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
 			pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			// Run a build
@@ -1215,7 +1225,7 @@ public class RTCScmIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getSnapshotUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC,
 							streamName);
@@ -1223,7 +1233,7 @@ public class RTCScmIT extends AbstractTestCase {
 		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
 		
 		try {
-			FreeStyleProject prj = setupFreeStyleJobForWorkspace(workspaceName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -1260,7 +1270,7 @@ public class RTCScmIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String workspaceName = getRepositoryWorkspaceUniqueName();
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
@@ -1269,7 +1279,7 @@ public class RTCScmIT extends AbstractTestCase {
 		try {
 			// positive case when there is a valid build definition Id
 			{
-				FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(buildDefinitionId);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
 				ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
 				pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 				// Run a build
@@ -1289,7 +1299,7 @@ public class RTCScmIT extends AbstractTestCase {
 			}
 			// negative case when build definition id is empty
 			{
-				FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(null);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, null);
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
 				
@@ -1324,7 +1334,7 @@ public class RTCScmIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC,
 							streamName);
@@ -1332,7 +1342,7 @@ public class RTCScmIT extends AbstractTestCase {
 		
 		try {
 			{ // positive case - when workspaceName is not null
-				FreeStyleProject prj = setupFreeStyleJobForWorkspace(workspaceName);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -1349,7 +1359,7 @@ public class RTCScmIT extends AbstractTestCase {
 				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, workspaceName);
 			}
 			{ // negative case - when workspaceName is null
-				FreeStyleProject prj = setupFreeStyleJobForWorkspace(null);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, null);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -1394,7 +1404,7 @@ public class RTCScmIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildSnapshot",
@@ -1411,14 +1421,13 @@ public class RTCScmIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(), workspaceName,
 						snapshotName, componentName, "HJP");
-		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINE_ITEM_ID);
+		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 		try {
 			{ // valid snapshot UUID - checkout and polling
-				FreeStyleProject prj = setupFreeStyleJobForSnapshot(snapshotUUID);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, snapshotUUID);
 				FreeStyleBuild build = Utils.runBuild(prj, null);
 	
 				// Verify the build status
-				assertNotNull(build);
 				assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
 				
 				// Get the build snapshot UUID from build result action 
@@ -1433,7 +1442,7 @@ public class RTCScmIT extends AbstractTestCase {
 				assertNotNull("Expecting not supported message", Utils.getMatch(pollingFile, "Polling is not supported for this configuration. Polling is supported only for build definition, repository workspace and stream configurations."));
 			}
 			{ // null snapshot UUID  - checkout and polling
-				FreeStyleProject prj = setupFreeStyleJobForSnapshot(null);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, null);
 				FreeStyleBuild build = Utils.runBuild(prj, null);
 	
 				// Verify the build status
@@ -1465,7 +1474,7 @@ public class RTCScmIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String workspaceName = getRepositoryWorkspaceUniqueName();
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
@@ -1473,89 +1482,13 @@ public class RTCScmIT extends AbstractTestCase {
 		try {
 			// Create a basic project configuration
 			// Individual validation steps can then customize the RTCScm instance and update it in the project instance
-			FreeStyleProject prj = setupFreeStyleJobForBuildDefinition(buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
 			// validate support for custom snapshot name
 			validateCustomSnapshotName_buildDef(prj, setupArtifacts, buildDefinitionId);
 
 		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}
-	}
-
-	/**
-	 * Validate the snapshot name generated in the builds - with and without providing custom snapshot name
-	 * 
-	 * @param prj
-	 * @param setupArtifacts
-	 * @param buildDefinitionId
-	 * @throws Exception
-	 */
-	private void validateCustomSnapshotName_buildDef(FreeStyleProject prj, Map<String, String> setupArtifacts, String buildDefinitionId)
-			throws Exception {
-		// Run a build, without providing custom snapshot name
-		FreeStyleBuild build = Utils.runBuild(prj, null);
-		RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
-		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID, action.getBuildResultUUID());
-
-		// Verify
-		// By default snapshot name should be <Build Definition Id>_<Build Number>
-		RTCChangeLogSet changelog = (RTCChangeLogSet)build.getChangeSet();
-		assertEquals(buildDefinitionId + "_#" + build.getNumber(), changelog.getBaselineSetName());
-
-		// update the job configuration with custom snapshot name
-		// but do not set overrideDefaultSnapshotName to true. Should use default snapshot name even if a custom snapshot name is provided 
-		RTCScm rtcScm = (RTCScm)prj.getScm();
-		BuildType buildType = rtcScm.getBuildType();
-		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
-		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
-
-		build = Utils.runBuild(prj, null);
-
-		action = build.getActions(RTCBuildResultAction.class).get(0);
-		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID, action.getBuildResultUUID());
-		
-		// Verify that the snapshot name is set to the default value
-		changelog = (RTCChangeLogSet)build.getChangeSet();
-		assertEquals(buildDefinitionId + "_#" + build.getNumber(), changelog.getBaselineSetName());
-		
-
-		// update the job configuration with custom snapshot name and set overrideDefaultSnapshotName to true
-		rtcScm = (RTCScm)prj.getScm();
-		buildType = rtcScm.getBuildType();
-		buildType.setOverrideDefaultSnapshotName(true);
-		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
-		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
-
-		build = Utils.runBuild(prj, null);
-
-		action = build.getActions(RTCBuildResultAction.class).get(0);
-		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_2_ID, action.getBuildResultUUID());
-
-		// Verify that the template specified in the custom snapshot name is resolved and set as the name of the
-		// generated snapshot
-		changelog = (RTCChangeLogSet)build.getChangeSet();
-		assertEquals("jenkins_" + prj.getName() + "_#" + build.getNumber(), changelog.getBaselineSetName());
-
-		// update the job configuration with custom snapshot name that resolves to an empty string and set overrideDefaultSnapshotName to true
-		rtcScm = (RTCScm)prj.getScm();
-		buildType = rtcScm.getBuildType();
-		buildType.setOverrideDefaultSnapshotName(true);
-		buildType.setCustomizedSnapshotName("${emptyParam}");
-		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
-		
-		prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition("emptyParam", " ")})));
-		
-		build = Utils.runBuild(prj, Collections.singletonList(new ParametersAction(new StringParameterValue("emptyParam", " "))));
-
-		action = build.getActions(RTCBuildResultAction.class).get(0);
-		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_3_ID, action.getBuildResultUUID());
-
-		// Verify that the snapshot name is set to a default value
-		changelog = (RTCChangeLogSet)build.getChangeSet();
-		assertEquals(buildDefinitionId + "_#" + build.getNumber(), changelog.getBaselineSetName());
-		// Verify that the console output has the log message		
-		assertNotNull(Utils.getMatch(build.getLogFile(),
-				java.util.regex.Pattern.quote(Messages.RTCScm_empty_resolved_snapshot_name("${emptyParam}"))));
 	}
 
 	/**
@@ -1570,7 +1503,7 @@ public class RTCScmIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
@@ -1578,7 +1511,7 @@ public class RTCScmIT extends AbstractTestCase {
 		try {
 			// Create a basic project configuration
 			// Individual validation steps can then customize the RTCScm instance and update it in the project instance
-			FreeStyleProject prj = setupFreeStyleJobForWorkspace(workspaceName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
 			// validate support for custom snapshot name
 			validateCustomSnapshotName_repositoryWS(prj);
 
@@ -1587,18 +1520,119 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 	
-	@WithTimeout(600)
-	@Test
-	public void testTemporaryWorkspaceDeletedForSnapshotSuccess() {
-		
-	}
 	
+	/**
+	 * 
+	 */
 	@WithTimeout(600)
 	@Test
-	public void testTemporaryWorkspaceDeletedForStreamSuccess() {
+	public void testTemporaryWorkspaceDeletedForSnapshotSuccess() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
 		
+		Config defaultC = Config.DEFAULT;
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String snapshotName = getSnapshotUniqueName();
+		String componentName = getComponentUniqueName();
+		
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
+				"setupBuildSnapshot",
+				new Class[] { String.class, // serverURL,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						String.class, // workspaceName,
+						String.class, // snapshotName
+						String.class, // componentName
+						String.class}, // workspacePrefix
+				loginInfo.getServerUri(),
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(), workspaceName,
+				snapshotName, componentName, "HJP");
+		try {
+			String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
+			// setup a free style project and start a build
+			// verify that the temporary workspace created during the build is deleted
+			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, snapshotUUID);
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			
+			// Ensure build is successful
+			assertTrue(build.getLog().toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+			
+			// Ensure non null snapshot UUID 
+			RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
+			assertEquals(snapshotUUID, action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID));
+			
+			// Make a testing facade call to ensure that the temporary workspace does not exist.
+			String [] workspaceItemIds = Utils.findTemporaryWorkspaces();
+			assertEquals(0, workspaceItemIds.length);	
+			
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
 	}
 
+	@WithTimeout(600)
+	@Test
+	public void testTemporaryWorkspaceDeletedForSnapshotLoadFailure() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		
+		Config defaultC = Config.DEFAULT;
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String snapshotName = getSnapshotUniqueName();
+		String componentName = getComponentUniqueName();
+		
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
+				"setupBuildSnapshot",
+				new Class[] { String.class, // serverURL,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						String.class, // workspaceName,
+						String.class, // snapshotName
+						String.class, // componentName
+						String.class}, // workspacePrefix
+				loginInfo.getServerUri(),
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(), workspaceName,
+				snapshotName, componentName, "HJP");
+		try {
+			String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
+			// setup a free style project with an invalid load path and start a build
+			// verify that the temporary workspace created during the build is deleted
+			String loadDirectory = Utils.getInvalidLoadPath();
+			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, snapshotUUID, loadDirectory);
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			
+			// Ensure build is successful
+			assertTrue(build.getLog().toString(), build.getResult().isWorseOrEqualTo(Result.FAILURE));
+			
+			// Ensure non null snapshot UUID 
+			RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
+			assertEquals(snapshotUUID, action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID));
+			
+			// Make a testing facade call to ensure that the temporary workspace does not exist.
+			String [] workspaceItemIds = Utils.findTemporaryWorkspaces();
+			assertEquals(0, workspaceItemIds.length);	
+			
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
 	/**
 	 * Validate the snapshot name generated in the builds - with and without providing custom snapshot name
 	 * 
@@ -1662,51 +1696,83 @@ public class RTCScmIT extends AbstractTestCase {
 				.getMatch(build.getLogFile(), java.util.regex.Pattern.quote(Messages.RTCScm_empty_resolved_snapshot_name("${emptyParam}"))));
 		
 	}
-
-	private FreeStyleProject setupFreeStyleJobForWorkspace(String workspaceName) throws Exception {
-		Config defaultC = Config.DEFAULT;
-		// Set the toolkit
-		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
-		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
-				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildWorkspace", null, workspaceName, null, null), false);
-		
-		// Setup
-		FreeStyleProject prj = r.createFreeStyleProject();
-		prj.setScm(rtcScm);
-		
-		return prj;
-	}
 	
-	private FreeStyleProject setupFreeStyleJobForBuildDefinition(String buildDefinitionId) throws Exception{
-		Config defaultC = Config.DEFAULT;
-		// Set the toolkit
-		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
-		
-		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()), 
-				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", buildDefinitionId, null, null, null), false);
 
-		// Setup
-		FreeStyleProject prj = r.createFreeStyleProject();
-		prj.setScm(rtcScm);
-		
-		return prj;
-	}
-	
-	private FreeStyleProject setupFreeStyleJobForSnapshot(String snapshotUUID) throws Exception {
-		Config defaultC = Config.DEFAULT;
+	/**
+	 * Validate the snapshot name generated in the builds - with and without providing custom snapshot name
+	 * 
+	 * @param prj
+	 * @param setupArtifacts
+	 * @param buildDefinitionId
+	 * @throws Exception
+	 */
+	private void validateCustomSnapshotName_buildDef(FreeStyleProject prj, Map<String, String> setupArtifacts, String buildDefinitionId)
+			throws Exception {
+		ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
+		pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
+		// Run a build, without providing custom snapshot name
+		FreeStyleBuild build = Utils.runBuild(prj, pActions);
+		RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
+		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID, action.getBuildResultUUID());
 
-		// Set the toolkit
-		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
-		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
-				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildSnapshot", null, null, snapshotUUID, null), false);
-	
-		// Setup
-		FreeStyleProject prj = r.createFreeStyleProject();
-		prj.setScm(rtcScm);
+		// Verify
+		// By default snapshot name should be <Build Definition Id>_<Build Number>
+		RTCChangeLogSet changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals(buildDefinitionId + "_#" + build.getNumber(), changelog.getBaselineSetName());
+
+		// update the job configuration with custom snapshot name
+		// but do not set overrideDefaultSnapshotName to true. Should use default snapshot name even if a custom snapshot name is provided 
+		RTCScm rtcScm = (RTCScm)prj.getScm();
+		BuildType buildType = rtcScm.getBuildType();
+		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		action = build.getActions(RTCBuildResultAction.class).get(0);
+		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID, action.getBuildResultUUID());
 		
-		return prj;
+		// Verify that the snapshot name is set to the default value
+		changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals(buildDefinitionId + "_#" + build.getNumber(), changelog.getBaselineSetName());
+		
+
+		// update the job configuration with custom snapshot name and set overrideDefaultSnapshotName to true
+		rtcScm = (RTCScm)prj.getScm();
+		buildType = rtcScm.getBuildType();
+		buildType.setOverrideDefaultSnapshotName(true);
+		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		action = build.getActions(RTCBuildResultAction.class).get(0);
+		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_2_ID, action.getBuildResultUUID());
+
+		// Verify that the template specified in the custom snapshot name is resolved and set as the name of the
+		// generated snapshot
+		changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals("jenkins_" + prj.getName() + "_#" + build.getNumber(), changelog.getBaselineSetName());
+
+		// update the job configuration with custom snapshot name that resolves to an empty string and set overrideDefaultSnapshotName to true
+		rtcScm = (RTCScm)prj.getScm();
+		buildType = rtcScm.getBuildType();
+		buildType.setOverrideDefaultSnapshotName(true);
+		buildType.setCustomizedSnapshotName("${emptyParam}");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+		
+		prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition("emptyParam", " ")})));
+		
+		build = Utils.runBuild(prj, Collections.singletonList(new ParametersAction(new StringParameterValue("emptyParam", " "))));
+
+		action = build.getActions(RTCBuildResultAction.class).get(0);
+		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_3_ID, action.getBuildResultUUID());
+
+		// Verify that the snapshot name is set to a default value
+		changelog = (RTCChangeLogSet)build.getChangeSet();
+		assertEquals(buildDefinitionId + "_#" + build.getNumber(), changelog.getBaselineSetName());
+		// Verify that the console output has the log message		
+		assertNotNull(Utils.getMatch(build.getLogFile(),
+				java.util.regex.Pattern.quote(Messages.RTCScm_empty_resolved_snapshot_name("${emptyParam}"))));
 	}
 }

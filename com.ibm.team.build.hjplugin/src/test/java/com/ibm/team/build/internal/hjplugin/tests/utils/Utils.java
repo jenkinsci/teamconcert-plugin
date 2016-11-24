@@ -17,6 +17,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
@@ -31,11 +32,12 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
+import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
+import com.ibm.team.build.internal.hjplugin.tests.Config;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
-import com.ibm.team.build.internal.hjplugin.tests.Config;
 
 import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
@@ -51,6 +53,8 @@ import hudson.util.Secret;
 import hudson.util.StreamTaskListener;
 
 public class Utils {
+	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
+
 	private static final String CALLCONNECTOR_TIMEOUT = "30";
 	public static final String ARTIFACT_WORKSPACE_NAME = "workspaceName";
 	public static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
@@ -64,7 +68,10 @@ public class Utils {
 	public static final String ARTIFACT_BUILDRESULT_ITEM_1_ID = "buildResultItemId1";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_2_ID = "buildResultItemId2";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_3_ID = "buildResultItemId3";
-	public static final String ARTIFACT_BASELINE_ITEM_ID = "baselineSetItemId";
+	public static final String ARTIFACT_BASELINESET_ITEM_ID = "baselineSetItemId";
+	public static final String TEMPORARY_WORKSPACE_PREFIX = "HJP_";
+	
+	private static RTCFacadeWrapper testingFacade = null;
 
 	public static Map<String,String> acceptAndLoad(RTCFacadeWrapper testingFacade, String serverURI,
 			String userId, String password, int timeout, String buildResultUUID,
@@ -217,19 +224,28 @@ public class Utils {
 		return setupArtifacts;
 	}
 	
-	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, String buildtoolkitName, String streamName) throws Exception {
+	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, String buildtoolkitName, 
+							String streamName, String loadDirectory) throws Exception {
 		Config defaultC = c;
 		// Set the toolkit
 		RTCBuildToolInstallation install = new RTCBuildToolInstallation(buildtoolkitName, defaultC.getToolkit(), null);
 		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		RTCScm.BuildType buildType = new RTCScm.BuildType("buildStream", null, null, null, streamName);
+		if (loadDirectory != null) {
+			buildType.setLoadDirectory(loadDirectory);
+		}
 		RTCScm rtcScm = new RTCScm(true, buildtoolkitName, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
-				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildStream", null, null, null, streamName), false);
+				defaultC.getPasswordFile(), null, buildType, false);
 		
 		// Setup
 		FreeStyleProject prj = r.createFreeStyleProject();
 		prj.setScm(rtcScm);
 		
 		return prj;
+	}
+	
+	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, String buildtoolkitName, String streamName) throws Exception {
+		return setupFreeStyleJobForStream(r, c, buildtoolkitName, streamName, null);
 	}
 	
 	public static FreeStyleBuild runBuild(FreeStyleProject prj, List<ParametersAction> actions) throws InterruptedException, ExecutionException  {
@@ -298,7 +314,7 @@ public class Utils {
 		return prj.poll(new StreamTaskListener(pollingFile, Charset.forName("UTF-8")));
 	}
 	
-	public static File getTemporaryFile() throws Exception {
+	public static File getTemporaryFile() throws IOException  {
 		File f = File.createTempFile("tmp", "log");
 		f.deleteOnExit();
 		return f;
@@ -338,5 +354,122 @@ public class Utils {
 				rtcScm.getUserId(), Secret.fromString(rtcScm.getPassword()), rtcScm.getPasswordFile(), rtcScm.getCredentialsId(), buildType,
 				rtcScm.getAvoidUsingToolkit());
 		return updatedRTCScm;
+	}
+	
+
+	public static FreeStyleProject setupFreeStyleJobForWorkspace(JenkinsRule r, String workspaceName) throws Exception {
+		Config defaultC = Config.DEFAULT;
+		// Set the toolkit
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
+				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildWorkspace", null, workspaceName, null, null), false);
+		
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject();
+		prj.setScm(rtcScm);
+		
+		return prj;
+	}
+	
+	public static FreeStyleProject setupFreeStyleJobForBuildDefinition(JenkinsRule r, String buildDefinitionId) throws Exception{
+		Config defaultC = Config.DEFAULT;
+		// Set the toolkit
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		
+		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()), 
+				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", buildDefinitionId, null, null, null), false);
+
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject();
+		prj.setScm(rtcScm);
+		
+		return prj;
+	}
+	
+	public static FreeStyleProject setupFreeStyleJobForSnapshot(JenkinsRule r, String snapshotUUID, 
+			String loadDirectory) throws Exception {
+		Config defaultC = Config.DEFAULT;
+
+		// Set the toolkit
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+		RTCScm.BuildType buildType = new RTCScm.BuildType("buildSnapshot", null, null, snapshotUUID, null);
+		if (loadDirectory != null) {
+			buildType.setLoadDirectory(loadDirectory);
+		}
+		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
+				defaultC.getPasswordFile(), null, buildType, false);
+	
+		// Setup
+		FreeStyleProject prj = r.createFreeStyleProject();
+		prj.setScm(rtcScm);
+		
+		return prj;
+	}
+	
+	public static FreeStyleProject setupFreeStyleJobForSnapshot(JenkinsRule r, String snapshotUUID) throws Exception {
+		return setupFreeStyleJobForSnapshot(r, snapshotUUID, null);
+	}
+
+	/**
+	 * Delete any temporary repository workspaces created during tests
+	 * Temporary workspaces start with the prefix HJP 
+	 */
+	public static void deleteTemporaryWorkspaces() throws Exception {
+		// Ensure that temporary workspaces are deleted before our test begins
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		testingFacade.invoke("tearDownRepositoryWorkspaces", new Class [] {
+				String.class, // Server URI
+				String.class, // userId
+				String.class, // password
+				int.class, // timeout
+				String.class}, // repositoryWorkspacePrefix
+				loginInfo.getServerUri(), 
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(),
+				TEMPORARY_WORKSPACE_PREFIX);
+	}
+	
+	/**
+	 * Find temporary Repository workspaces
+	 * 
+	 */
+	public static String [] findTemporaryWorkspaces() throws Exception {
+		// Ensure that temporary workspaces are deleted before our test begins
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		return (String []) testingFacade.invoke("findRepositoryWorkspaces", new Class [] {
+				String.class, // Server URI
+				String.class, // userId
+				String.class, // password
+				int.class, // timeout
+				String.class}, // repositoryWorkspacePrefix
+				loginInfo.getServerUri(), 
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(),
+				TEMPORARY_WORKSPACE_PREFIX);
+	}
+	
+	public static String getInvalidLoadPath() throws IOException {
+		File f = getTemporaryFile();
+		return f.getAbsolutePath();
+	}
+	
+	public synchronized static RTCFacadeWrapper getTestingFacade() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return null;
+		}
+		if (testingFacade == null) {
+			Config defaultC = Config.DEFAULT;
+			testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		}
+		return testingFacade;
 	}
 }

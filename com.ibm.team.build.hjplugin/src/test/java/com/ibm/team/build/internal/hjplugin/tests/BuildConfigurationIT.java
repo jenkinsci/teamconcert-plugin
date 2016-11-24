@@ -26,7 +26,6 @@ import static org.junit.Assert.assertEquals;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
@@ -51,7 +50,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			// DO NOT initialize Hudson/Jenkins because its slow and we don't need it for the tests
 			
-			testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			testingFacade = Utils.getTestingFacade();
 			
 	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
 	        File buildTestDir = new File(tempDir, "HJPluginTests");

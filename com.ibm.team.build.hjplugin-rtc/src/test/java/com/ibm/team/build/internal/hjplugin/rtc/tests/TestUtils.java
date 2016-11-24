@@ -50,4 +50,8 @@ public class TestUtils {
 	public static String getTeamAreaUniqueName() {
 		return getUniqueName("TeamArea");
 	}
+	
+	public static String getSnapshotUniqueName() {
+		return getUniqueName("Snapshot");
+	}
 }

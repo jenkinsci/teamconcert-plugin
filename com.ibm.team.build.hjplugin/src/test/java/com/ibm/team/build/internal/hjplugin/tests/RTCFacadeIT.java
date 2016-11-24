@@ -28,6 +28,7 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildSnapshotContext;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
 @SuppressWarnings("nls")
@@ -178,7 +179,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 	 */
 	@Test public void testTestBuildDefinition() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 
 			String buildDefinitionName = getUniqueName("BuildDefinitionName");
@@ -242,7 +243,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 	@Test public void testCompareIncomingChanges() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			System.out.println("&&&&&& Calling testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
-			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 			testingFacade.invoke("testCompareIncomingChanges", null, null);
 			System.out.println("&&&&&& Called testCompareIncomingChanges&&&&&&&&&&&&&&&&&&");
 		}
@@ -258,7 +259,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		String projectAreaName = getUniqueName("testTestProcessArea_basic");
 		// create a project area with a single team area
@@ -311,7 +312,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		String projectAreaName = getUniqueName() + "testTestProcessArea_specialChars`-=[]\\;,.?:{}|+_)(*^%$#@!~)";
 		// create a project area with a single team area. include special characters in the name
@@ -375,7 +376,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area to test that searching for a non-existent team area under an existing team area
 		// hierarchy fails
@@ -463,7 +464,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area to test that searching for an archived project area/ team area fails
 		String projectAreaName = getUniqueName("testTestProcessArea_archiveProjectArea");
@@ -513,7 +514,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area and archive just the team area. Test that searching by project area succeeds and
 		// searching by team area fails
@@ -564,7 +565,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area and archive just the team area. Test that searching by project area succeeds and
 		// searching by team area fails
@@ -749,7 +750,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
 		}
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		// create a project area and archive just the team area. Test that searching by project area succeeds and
 		// searching by team area fails

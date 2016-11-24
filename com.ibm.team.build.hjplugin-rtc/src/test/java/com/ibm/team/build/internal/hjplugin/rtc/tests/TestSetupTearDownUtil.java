@@ -12,6 +12,7 @@
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -47,7 +48,10 @@ import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.client.IFlowNodeConnection.IComponentAdditionOp;
 import com.ibm.team.scm.common.AcceptFlags;
+import com.ibm.team.scm.common.BaselineSetFlags;
+import com.ibm.team.scm.common.WorkspaceComparisonFlags;
 import com.ibm.team.scm.common.IBaselineSetHandle;
+import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IChange;
 import com.ibm.team.scm.common.IChangeSet;
 import com.ibm.team.scm.common.IChangeSetHandle;
@@ -58,6 +62,7 @@ import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IItemConflictReport;
 import com.ibm.team.scm.common.dto.IUpdateReport;
+import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 import com.ibm.team.workitem.common.model.IWorkItem;
 import com.ibm.team.workitem.common.model.IWorkItemHandle;
 
@@ -251,7 +256,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		SCMUtil.addVersionables(workspace, component, cs3, pathToHandle, new String[] {
 				root + "/f/newTree/",
 				root + "/f/newTree/newFile.txt"
-		});
+		}, "createChangeSet3");
 		List<IWorkItemHandle> workItems = WorkItemUtil.findSomeWorkItems(repo, 1);
 		if (!workItems.isEmpty()) {
 			SCMUtil.createWorkItemChangeSetLink(repo, new IWorkItemHandle[] { workItems.get(0) }, cs3);
@@ -295,7 +300,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		for (int i = 0; i < 257; i++) {
 			toAdd[i+1] = "/newTree2/newF" + i + ".txt";
 		}
-		SCMUtil.addVersionables(workspace, component, cs4, pathToHandle, toAdd);
+		SCMUtil.addVersionables(workspace, component, cs4, pathToHandle, toAdd , "createChangeSet4");
 		workItems = WorkItemUtil.findSomeWorkItems(repo, 5);
 		if (!workItems.isEmpty()) {
 			SCMUtil.createWorkItemChangeSetLink(repo, workItems.toArray(new IWorkItemHandle[workItems.size()]), cs4);
@@ -523,7 +528,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		SCMUtil.addVersionables(workspace, component, csSuspend, pathToHandle, new String[] {
 				c1 + "/f/NoopFolder/",
 				c1 + "/f/NoopFolder/Noop.txt",
-		});
+		}, "createNoopChangeSets");
 		workspace.closeChangeSets(Collections.singletonList(csSuspend), null);
 		workspace.suspend(Collections.singletonList(csSuspend), null);
 
@@ -535,7 +540,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		SCMUtil.addVersionables(workspace, component, cs, pathToHandle, new String[] {
 				c1 + "/f/NoopFolder/",
 				c1 + "/f/NoopFolder/Noop.txt",
-		});
+		}, "createNoopChangeSets");
 		
 		// resume the suspended change set to get conflicts
 		workspace.resume(AcceptFlags.DEFAULT, Collections.singletonList(csSuspend), null);
@@ -1140,8 +1145,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
-	
-	@SuppressWarnings("restriction")
 	public Map<String, String> setupTestBuildStream_basic(ConnectionDetails connectionDetails, String streamName,
 			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
@@ -1151,12 +1154,14 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		String workspaceName = TestUtils.getRepositoryWorkspaceUniqueName();
 		String componentName = TestUtils.getComponentUniqueName();
+
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		IProcessAreaHandle projectAreaHandle = ProcessUtil.getDefaultProjectArea(repo);
 
-		IWorkspaceConnection buildStream = SCMUtil.createStream(workspaceManager, projectAreaHandle, streamName);
+		IWorkspaceConnection buildStreamConnection = SCMUtil.createStream(workspaceManager, projectAreaHandle, streamName);
 		String c1 = "/" + componentName;
-		Map<String, IItemHandle> pathToHandle = setupWorkspaceWithComponent(repo, workspaceName, componentName, 
+		Map<String, IItemHandle> pathToHandle = setupWorkspaceWithComponent(repo, buildStreamConnection, 
+				workspaceName, componentName, 
 				new String[] {
 					c1 + "/",
 					c1 + "/f/",
@@ -1172,16 +1177,24 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 		IWorkspace buildWorkspace = (IWorkspace) pathToHandle.get(workspaceName);
+		IWorkspaceConnection buildWorkspaceConnection = workspaceManager.getWorkspaceConnection(buildWorkspace, null);
+
 		// Add the component to the stream
-		IComponentAdditionOp componentOp = buildStream.componentOpFactory().addComponent(component, false);
-		buildStream.applyComponentOperations(Collections.singletonList(componentOp), null);
+		IComponentAdditionOp componentOp = buildStreamConnection.componentOpFactory().addComponent(component, false);
+		buildStreamConnection.applyComponentOperations(Collections.singletonList(componentOp), null);
 		
-		// Deliver the changes
-		//IChangeHistorySyncReport report = buildWorkspace.compareTo(buildStream, WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY, Collections.EMPTY_LIST, progress);
-		//buildWorkspace.deliver(buildStream, report, Collections.EMPTY_LIST, report.outgoingChangeSets(component), progress);
+		// Get the change set out of the artifacts
+		IChangeSetHandle csH = (IChangeSetHandle) pathToHandle.get("changeSet1");
+
+		//Deliver the changes
+		IChangeHistorySyncReport report = buildWorkspaceConnection.compareTo(buildStreamConnection, 
+					WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,  
+					Collections.EMPTY_LIST, null);
+		// TODO  disabled for now until we use a modified process spec for the project area
+		//buildWorkspaceConnection.deliver(buildStreamConnection, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
 		
 		// capture interesting uuids to verify against
-		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStreamConnection.getContextHandle().getItemId().getUuidValue());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_NAME, streamName);
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getItemId().getUuidValue());
@@ -1283,12 +1296,29 @@ public class TestSetupTearDownUtil extends BuildClient {
 		workspaceConnection.removeBaselineSet(baseline, progress);
 	}
 	
-	private Map<String, IItemHandle> setupWorkspaceWithComponent(ITeamRepository repo, String workspaceName, String componentName, 
+	private Map<String, IItemHandle> setupWorkspaceWithComponent(ITeamRepository repo, IWorkspaceConnection target, 
+				String workspaceName, String componentName, 
 			String [] filePaths) throws TeamRepositoryException {
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
-		IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, workspaceName);
+		IWorkspaceConnection buildWorkspace = null;
+		if (target == null) {
+			buildWorkspace = SCMUtil.createWorkspace(workspaceManager, workspaceName); 
+		} else {
+			buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager,target, workspaceName);
+		}
 		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildWorkspace, componentName, filePaths);
 		pathToHandle.put(workspaceName, buildWorkspace.getResolvedWorkspace());
 		return pathToHandle;
+	}
+	
+	private Map<String, IItemHandle> setupBuildWorkspaceWithComponent(ITeamRepository repo, IWorkspaceConnection target, 
+			String workspaceName, String componentName, 
+			String [] filePaths) throws TeamRepositoryException {
+		return setupWorkspaceWithComponent(repo, target, workspaceName, componentName, filePaths);
+	}
+	
+	private Map<String, IItemHandle> setupWorkspaceWithComponent(ITeamRepository repo, String workspaceName, String componentName, 
+			String [] filePaths) throws TeamRepositoryException {
+		return setupWorkspaceWithComponent(repo, null, workspaceName, componentName, filePaths);
 	}
 }

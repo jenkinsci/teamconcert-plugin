@@ -33,6 +33,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -41,7 +43,7 @@ import org.jvnet.hudson.test.recipes.WithTimeout;
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
@@ -54,6 +56,22 @@ public class RTCScmStreamIT extends AbstractTestCase {
 
 	@Rule public JenkinsRule r = new JenkinsRule();
 	
+	@Before
+	public void setup() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Utils.deleteTemporaryWorkspaces();
+	}
+	
+	@After
+	public void tearDown() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Utils.deleteTemporaryWorkspaces();
+	}
+
 	@WithTimeout(600)
 	@Test
 	public void buildPassIfPrevSnapshotIsNotFoundInStreamBuild() throws Exception {
@@ -62,7 +80,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		}
 		Config defaultC = Config.DEFAULT;
 		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts =  Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
@@ -108,7 +126,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
@@ -151,7 +169,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamItemId = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
@@ -196,7 +214,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
@@ -252,7 +270,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 			return;
 		}
 		Config defaultC = Config.DEFAULT;
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		try {
@@ -263,6 +281,84 @@ public class RTCScmStreamIT extends AbstractTestCase {
 			validateCustomSnapshotName_stream(prj);
 
 		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * 
+	 */
+	@WithTimeout(600)
+	@Test
+	public void testTemporaryWorkspaceDeletedForStreamSuccess() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
+		try {
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			verifyStreamBuild(build, streamUUID, "");
+			
+			// Check whether the temporary workspace is uuid and name is not null
+			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
+			assertEquals(1, actions.size());
+			
+			Map<String, String> buildProperties = actions.get(0).getBuildProperties();
+			String tempWorkspaceName = buildProperties.get(RTCJobProperties.TEMPORARY_WORKSPACE_NAME);
+			String tempWorkspaceUUID = buildProperties.get(RTCJobProperties.TEMPORARY_WORKSPACE_UUID);
+			
+			assertNotNull(tempWorkspaceName);
+			assertNotNull(tempWorkspaceUUID);
+			
+			// Make a testing facade call to ensure that the temporary workspace does not exist.
+			String [] workspaceItemIds = Utils.findTemporaryWorkspaces();
+			assertEquals(0, workspaceItemIds.length);			
+		}  finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	@WithTimeout(600)
+	@Test
+	public void testTemporaryWorkspaceDeletedForStreamLoadFailure() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
+		try {
+
+			String loadDirectory = Utils.getInvalidLoadPath();
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName, loadDirectory);
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			assertTrue(build.getLog(100).toString(), build.getResult().isWorseOrEqualTo(Result.FAILURE));
+			
+			// Check whether the temporary workspace is uuid and name is not null
+			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
+			assertEquals(1, actions.size());
+			
+			// Since load failed, temporary workspace should have been deleted before RTCScm returns 
+			Map<String, String> buildProperties = actions.get(0).getBuildProperties();
+			String tempWorkspaceName = buildProperties.get(RTCJobProperties.TEMPORARY_WORKSPACE_NAME);
+			String tempWorkspaceUUID = buildProperties.get(RTCJobProperties.TEMPORARY_WORKSPACE_UUID);
+			
+			assertTrue(tempWorkspaceName == null);
+			assertTrue(tempWorkspaceUUID == null);
+			
+			// Make a testing facade call to ensure that the temporary workspace does not exist.
+			String [] workspaceItemIds = Utils.findTemporaryWorkspaces();
+			assertEquals(0, workspaceItemIds.length);			
+		}  finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}
 	}

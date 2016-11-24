@@ -11,13 +11,15 @@
 
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
+import java.util.List;
 import java.util.Map;
 
+import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCFacade;
-import com.ibm.team.build.internal.hjplugin.rtc.RTCWorkspaceUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
+import com.ibm.team.scm.common.IWorkspaceHandle;
 
 
 public class RTCTestingFacade extends RTCFacade {
@@ -28,6 +30,46 @@ public class RTCTestingFacade extends RTCFacade {
 			 fTestSetupTearDownUtil = new TestSetupTearDownUtil();
 		}
 		return fTestSetupTearDownUtil;
+	}
+	
+	/**
+	 * Finds Repository Workspaces matching the given prefix
+	 *
+	 * @param serverURL
+	 * @param userId
+	 * @param password
+	 * @param timeout
+	 * @param repositoryWorkspacePrefix
+	 * @return an array of workspace itemids. Never <code>null</code>
+	 * @throws Exception
+	 */
+	public String[] findRepositoryWorkspaces(String serverURL, String userId, String password, int timeout,
+			String repositoryWorkspacePrefix) throws Exception {
+		BuildClient testClient = new BuildClient();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		RepositoryConnection connection = testClient.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(null);
+		List<IWorkspaceHandle> workspaceHs = SCMUtil.findRepositoryWorkspaces(
+								connection.getTeamRepository(), repositoryWorkspacePrefix);
+		String [] workspaceItemIds = new String[workspaceHs.size()];
+		for (int i = 0 ; i < workspaceHs.size(); i++) {
+			workspaceItemIds[i] = workspaceHs.get(i).getItemId().getUuidValue();
+		}
+		return workspaceItemIds;
+	}
+	
+	/**
+	 * Remove repository workspaces starting with a specific prefix
+	 * @throws Exception 
+	 */
+	public void tearDownRepositoryWorkspaces(String serverURL, String userId, String password, int timeout,
+				String repositoryWorkspacePrefix) throws Exception {
+		BuildClient testClient = new BuildClient();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		RepositoryConnection connection = testClient.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(null);
+		SCMUtil.deleteRepositoryWorkspaces(connection.getTeamRepository(), 
+					repositoryWorkspacePrefix);
 	}
 
 	public Map<String, String> setupComponentChanges(String serverURL, String userId, String password, int timeout,

@@ -28,13 +28,13 @@ import org.mockito.Mockito;
 import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
 import hudson.model.FreeStyleProject;
@@ -207,7 +207,7 @@ public class MayFailIT extends AbstractTestCase {
 	 */
 	@Test public void testTestBuildWorkspace() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			@SuppressWarnings("unchecked")

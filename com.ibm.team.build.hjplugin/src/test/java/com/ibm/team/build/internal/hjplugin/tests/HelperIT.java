@@ -22,7 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -33,7 +34,6 @@ import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
@@ -69,8 +69,24 @@ public class HelperIT extends AbstractTestCase {
 	
 	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
-
 	@Rule public JenkinsRule r = new JenkinsRule();
+	
+	@Before
+	public void setup() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Utils.deleteTemporaryWorkspaces();
+	}
+	
+	@After
+	public void tearDown() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Utils.deleteTemporaryWorkspaces();
+	}
+
 	/**
 	 * Check whether RTCScm can accept build definition value from the a build parameter when running the build
 	 * @throws Exception
@@ -86,7 +102,7 @@ public class HelperIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -150,7 +166,7 @@ public class HelperIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -219,7 +235,7 @@ public class HelperIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -279,7 +295,7 @@ public class HelperIT extends AbstractTestCase {
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		String invalidBuildDefinitionId = "InvalidBuildDefinitionId";
 
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -341,7 +357,7 @@ public class HelperIT extends AbstractTestCase {
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		String invalidBuildDefinitionId = "InvalidBuildDefinitionId";
 
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -414,7 +430,7 @@ public class HelperIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -506,7 +522,7 @@ public class HelperIT extends AbstractTestCase {
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildResultContributions",
@@ -587,7 +603,7 @@ public class HelperIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildSnapshot",
@@ -604,7 +620,7 @@ public class HelperIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(), workspaceName,
 						snapshotName, componentName, "HJP");
-		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINE_ITEM_ID);
+		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
@@ -661,7 +677,7 @@ public class HelperIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildSnapshot",
@@ -678,7 +694,7 @@ public class HelperIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(), workspaceName,
 						snapshotName, componentName, "HJP");
-		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINE_ITEM_ID);
+		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
@@ -737,7 +753,7 @@ public class HelperIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 
 		
-		RTCFacadeWrapper testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
 				.invoke("setupBuildSnapshot",
@@ -754,7 +770,7 @@ public class HelperIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(), workspaceName,
 						snapshotName, componentName, "HJP");
-		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINE_ITEM_ID);
+		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);

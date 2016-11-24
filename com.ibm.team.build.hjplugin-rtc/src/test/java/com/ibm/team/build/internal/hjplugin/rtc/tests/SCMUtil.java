@@ -36,6 +36,7 @@ import com.ibm.team.process.common.IProcessAreaHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 import com.ibm.team.scm.client.IConfiguration;
@@ -61,6 +62,7 @@ import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 import com.ibm.team.scm.common.dto.IComponentSearchCriteria;
+import com.ibm.team.scm.common.dto.IWorkspaceSearchCriteria;
 import com.ibm.team.scm.common.internal.ScmFactory;
 import com.ibm.team.scm.common.internal.Versionable;
 import com.ibm.team.workitem.common.model.IWorkItemHandle;
@@ -100,7 +102,8 @@ public class SCMUtil {
 		IComponentAdditionOp componentOp = workspace.componentOpFactory().addComponent(component, false);
 		workspace.applyComponentOperations(Collections.singletonList(componentOp), null);
 		
-		addVersionables(workspace, component, null, artifacts, contents);
+		IChangeSetHandle csH  = addVersionables(workspace, component, null, artifacts, contents, "addComponent");
+		artifacts.put("changeSet1", csH);
 		return artifacts;
 	}
 	
@@ -129,15 +132,15 @@ public class SCMUtil {
 	public static IChangeSetHandle addVersionables(IWorkspaceConnection workspace,
 			IComponent component, IChangeSetHandle changeSet,
 			Map<String, IItemHandle> artifacts,
-			String[] hierarchy) throws TeamRepositoryException {
+			String[] hierarchy, String changeSetComment) throws TeamRepositoryException {
 		return addVersionables(workspace, component, changeSet,
-				artifacts, hierarchy, null);
+				artifacts, hierarchy, null, changeSetComment);
 	}
 	
 	public static IChangeSetHandle addVersionables(IWorkspaceConnection workspace,
 			IComponent component, IChangeSetHandle changeSet,
 			Map<String, IItemHandle> artifacts,
-			String[] hierarchy, String[] fileContents) throws TeamRepositoryException {
+			String[] hierarchy, String[] fileContents, String changeSetComment) throws TeamRepositoryException {
 		
 		if (hierarchy == null || hierarchy.length == 0) {
 			return changeSet;
@@ -196,7 +199,7 @@ public class SCMUtil {
         }
         boolean closeChangeSet = false;
         if (changeSet == null) {
-            changeSet = workspace.createChangeSet(component, null);
+            changeSet = workspace.createChangeSet(component, changeSetComment, true, null);
             closeChangeSet = true;
         }
         workspace.commit(changeSet, ops, null);
@@ -446,5 +449,46 @@ public class SCMUtil {
 			}
 			workspaceManager.deleteWorkspace(toDelete, null);
 		}
+	}
+
+	/**
+	 * Delete Repository Workspaces beginning with a particular prefix owned by the logged in
+	 * user 
+	 * It will handle only {@link ItemNotFoundException} and ignore it
+	 * All other exceptions will be thrown back to the caller
+	 * 
+	 * @param workspaceManager
+	 * @param repositoryWorkspacePrefix
+	 */
+	public static void deleteRepositoryWorkspaces(ITeamRepository repository,
+			String repositoryWorkspacePrefix) throws TeamRepositoryException {
+		List<IWorkspaceHandle> workspaces = findRepositoryWorkspaces(repository, repositoryWorkspacePrefix);
+		for (IWorkspaceHandle workspace : workspaces) {
+			try {
+				deleteWorkspace(repository, workspace.getItemId().getUuidValue());
+			} catch (ItemNotFoundException exp) {
+				// Purposefully ignore this exception
+			}
+		}
+	}
+	
+	/**
+	 * Search for Repository Workspaces beginning with a particular prefix owned by the logged in
+	 * user
+	 * 
+	 * @param repository
+	 * @param repositoryWorkspacePrefix
+	 * @return 
+	 */
+	public static List<IWorkspaceHandle> findRepositoryWorkspaces(ITeamRepository repository, 
+			String repositoryWorkspacePrefix) throws TeamRepositoryException {
+		repositoryWorkspacePrefix = StringUtil.fixEmptyAndTrim(repositoryWorkspacePrefix);
+		String pattern = repositoryWorkspacePrefix;
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
+		IWorkspaceSearchCriteria criteria = IWorkspaceSearchCriteria.FACTORY.newInstance();
+		criteria.setPartialName(pattern);
+		criteria.setExactOwnerName(repository.loggedInContributor().getUserId());
+		criteria.setKind(IWorkspaceSearchCriteria.WORKSPACES);
+		return workspaceManager.findWorkspaces(criteria, Integer.MAX_VALUE, null);
 	}
 }

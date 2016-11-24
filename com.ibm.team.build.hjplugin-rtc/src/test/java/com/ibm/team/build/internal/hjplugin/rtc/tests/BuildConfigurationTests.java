@@ -202,7 +202,8 @@ public class BuildConfigurationTests {
 			IChangeSetHandle cs = buildStream.createChangeSet(component, null);
 			SCMUtil.addVersionables(buildStream, component, cs, pathToHandle,
 					new String[] {"/h/new.loadRule"}, 
-					new String[] {getNewLoadRule(componentName, "f")}); // load rule to load f directory
+					new String[] {getNewLoadRule(componentName, "f")},
+					"setupNewLoadRules"); // load rule to load f directory
 			buildStream.closeChangeSets(Collections.singletonList(cs), null);
 			IFileItemHandle loadRuleFile = (IFileItemHandle) pathToHandle.get("/h/new.loadRule");
 			Map<IComponentHandle, IFileItemHandle> loadRuleFiles = Collections.singletonMap((IComponentHandle) component, loadRuleFile);
@@ -216,7 +217,7 @@ public class BuildConfigurationTests {
 			SCMUtil.addVersionables(buildStream, component, cs1, pathToHandle, new String[] {
 					"/f/h.txt",
 					"/g/i.txt"
-			});
+			}, "SetupNewLoadRules");
 			buildStream.closeChangeSets(Collections.singletonList(cs1), null);
 
 			// capture interesting uuids to verify against
@@ -336,7 +337,8 @@ public class BuildConfigurationTests {
 			IChangeSetHandle cs = buildStream.createChangeSet(component, null);
 			SCMUtil.addVersionables(buildStream, component, cs, pathToHandle,
 					new String[] {"/h/new.loadRule"}, 
-					new String[] {getOldLoadRule(componentName, "f")}); // load rule to load f directory
+					new String[] {getOldLoadRule(componentName, "f")},
+					"setupOldLoadRules"); // load rule to load f directory
 			buildStream.closeChangeSets(Collections.singletonList(cs), null);
 			IFileItemHandle loadRuleFile = (IFileItemHandle) pathToHandle.get("/h/new.loadRule");
 			Map<IComponentHandle, IFileItemHandle> loadRuleFiles = Collections.singletonMap((IComponentHandle) component, loadRuleFile);
@@ -350,7 +352,7 @@ public class BuildConfigurationTests {
 			SCMUtil.addVersionables(buildStream, component, cs1, pathToHandle, new String[] {
 					"/f/h.txt",
 					"/g/i.txt"
-			});
+			},"setupOldLoadRules");
 			buildStream.closeChangeSets(Collections.singletonList(cs1), null);
 
 			// capture interesting uuids to verify against
@@ -473,7 +475,8 @@ public class BuildConfigurationTests {
 			IChangeSetHandle cs = buildStream.createChangeSet(component, null);
 			SCMUtil.addVersionables(buildStream, component, cs, pathToHandle,
 					new String[] {"/h/new.loadRule", "/h/old.loadRule"}, 
-					new String[] {getNewLoadRule(testName, "f"), getOldLoadRule(testName, "g")}); 
+					new String[] {getNewLoadRule(testName, "f"), getOldLoadRule(testName, "g")},
+					"setupPersonalBuild"); 
 			buildStream.closeChangeSets(Collections.singletonList(cs), null);
 			IFileItemHandle loadRuleFile = (IFileItemHandle) pathToHandle.get("/h/new.loadRule");
 			IFileItemHandle oldLoadRuleFile = (IFileItemHandle) pathToHandle.get("/h/old.loadRule");
@@ -488,7 +491,7 @@ public class BuildConfigurationTests {
 			SCMUtil.addVersionables(buildWorkspace, component, cs1, pathToHandle, new String[] {
 					"/f/h.txt",
 					"/g/i.txt"
-			});
+			},"setupPersonalBuild");
 			buildWorkspace.closeChangeSets(Collections.singletonList(cs1), null);
 
 			// capture interesting uuids to verify against

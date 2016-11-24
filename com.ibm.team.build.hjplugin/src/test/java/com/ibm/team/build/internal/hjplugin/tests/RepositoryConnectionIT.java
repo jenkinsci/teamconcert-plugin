@@ -36,7 +36,6 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
@@ -58,7 +57,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
-			testingFacade = RTCFacadeFactory.newTestingFacade(Config.DEFAULT.getToolkit());
+			testingFacade = Utils.getTestingFacade();
 			
 	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
 	        File buildTestDir = new File(tempDir, "HJPluginTests");
