@@ -33,6 +33,7 @@ import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConfiguration;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
+import com.ibm.team.build.internal.hjplugin.rtc.Constants;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.Messages;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCConfigurationException;
@@ -791,10 +792,12 @@ public class BuildConfigurationTests {
 		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "includeComponents cannot be true for testLoadSnapshotConfiguration");
 		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "isDeleteNeeded cannot be true for  testLoadSnapshotConfiguration");
 		AssertUtil.assertEquals(buildConfiguration.getComponents(), Collections.emptyList());
-		AssertUtil.assertTrue(buildConfiguration.getBuildProperties().keySet().size() == 0, "buildProperties has to be zero size");
 		AssertUtil.assertEquals(buildConfiguration.getFetchDestinationFile().getCanonicalPath(), hjPath);
 		AssertUtil.assertEquals(buildConfiguration.getSnapshotName(), null);
 		
+		// There should not be any build properties (for now)
+		AssertUtil.assertTrue(buildConfiguration.getBuildProperties().keySet().size() == 0, "buildProperties has to be zero size");
+
 		// Call tearDown and ensure that the workspace is deleted
 		buildConfiguration.tearDown(manager, false, null, listener, Locale.getDefault());
 		try {

@@ -45,6 +45,7 @@ import com.ibm.team.process.common.ITeamArea;
 import com.ibm.team.process.common.ProcessCommon;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.internal.ItemManager;
+import com.ibm.team.repository.common.IContributorHandle;
 import com.ibm.team.repository.common.IItem;
 import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
@@ -63,7 +64,6 @@ import com.ibm.team.scm.common.internal.ComponentEntry;
 /**
  * Provides utility methods to retrieve information on a RTC SCM Streams and Workspaces
  */
-@SuppressWarnings("restriction")
 public class RTCWorkspaceUtils {
 	private static final String [] hexToStringMap = {"0","1","2","3","4", "5", "6", "7","8", "9","a", "b", "c", "d", "e" ,"f"};
 	private static RTCWorkspaceUtils instance = null;
@@ -85,6 +85,32 @@ public class RTCWorkspaceUtils {
 		return instance;
 	}
 	
+	/** 
+	 * Create a workspace with the given {@link IBaselineSet}
+	 * 
+	 * @param repository The RTC repository to work with
+	 * @param baselineSet The Snapshot from which the repository workspace should be created
+	 * @param workspaceName The name for the new Repository Workspace  
+	 * @param workspaceComment The description for the new Repository Workspace
+	 * @param contributor The owner of the new Repository Workspace
+	 * @param progress A progress monitor
+	 * @return a {@link IWorkspaceConnection} of the new Repository Workspace. Never <code>null</code>
+	 * @throws TeamRepositoryException If there is any problem creating the Repository Workspace
+	 * 
+	 */
+	public IWorkspaceConnection createWorkspace(ITeamRepository repository, IBaselineSet baselineSet, 
+										String workspaceName, String workspaceComment, IContributorHandle contributor,
+										IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 10);
+		try {
+			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
+			return workspaceManager.createWorkspace(contributor, workspaceName, 
+						workspaceComment, baselineSet, monitor.newChild(10));
+		} finally {
+			monitor.done();
+		}
+	}
+												
 	/**
 	 * Deletes a given {@link IWorkspace}. 
 	 * <br><br>
@@ -379,6 +405,7 @@ public class RTCWorkspaceUtils {
 	 * @throws NoSuchAlgorithmException
 	 * @throws IOException
 	 */
+	@SuppressWarnings("restriction")
 	public String getDigest(ITeamRepository repository, IWorkspaceHandle workspaceHandle, IProgressMonitor progress) throws TeamRepositoryException, NoSuchAlgorithmException, IOException {
 		LOGGER.finest("RTCWorkspaceUtils.getDigest: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
@@ -471,6 +498,7 @@ public class RTCWorkspaceUtils {
 	 * @param monitor A progress monitor to report progress
 	 * @throws TeamRepositoryException If there is any error setting the flow target
 	 */
+	@SuppressWarnings("restriction")
 	public void setFlowTarget(ITeamRepository repository, IWorkspace source, IWorkspaceHandle target, IProgressMonitor monitor) throws TeamRepositoryException {
 		SubMonitor progress = SubMonitor.convert(monitor, 10);
 		try {
@@ -482,6 +510,7 @@ public class RTCWorkspaceUtils {
 		}
 	}
 	
+	@SuppressWarnings("restriction")
 	private String getDigest(final ArrayList<ComponentEntry> compEntries) throws IOException, NoSuchAlgorithmException {
 		LOGGER.finest("RTCWorkspaceUtils.getDigest for component Entries : Begin");
 		MessageDigest d = MessageDigest.getInstance(MD5_ALG);
@@ -531,6 +560,7 @@ public class RTCWorkspaceUtils {
 		return streamDataHashS.toString();
 	}
 
+	@SuppressWarnings("restriction")
 	private void sort(ArrayList<ComponentEntry> compEntries) {
 		Collections.sort(compEntries, new Comparator<ComponentEntry>() {
 			@Override

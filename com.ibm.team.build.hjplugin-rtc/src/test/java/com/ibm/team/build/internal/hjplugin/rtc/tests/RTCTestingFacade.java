@@ -103,6 +103,13 @@ public class RTCTestingFacade extends RTCFacade {
         testClient.tearDownTestBuildSnapshot_complete(connectionDetails, setupArtifacts, getProgressMonitor());
     }
 	
+    public Map<String, String> addComponentToStream(String serverURL, String userId, String password, int timeout,
+    		String streamUUID, String componentToBeAddedName) throws Exception {
+    	TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+    	ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+    	return testClient.addComponentToStream(connectionDetails, 
+    			streamUUID, componentToBeAddedName, getProgressMonitor());
+    }
 	public Map<String, String> setupAcceptChanges(String serverURL, String userId, String password, int timeout,
 			String name,  String componentName, boolean createBuildDefinition) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 

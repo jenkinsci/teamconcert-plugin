@@ -60,9 +60,8 @@ public class Utils {
 	public static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
 	public static final String ARTIFACT_STREAM_NAME = "streamName";
 	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
-	public static final String TEAM_SCM_SNAPSHOTUUID = "team_scm_snapshotUUID";
-	public static final String TEAM_SCM_STREAM_CHANGES_DATA = "team_scm_streamChangesData";
-	public static final String TEAM_SCM_SNAPSHOT_OWNER = "team_scm_snapshotOwner";
+	public static final String ARTIFACT_COMPONENT_ADDED_ITEM_ID = "componentAddedItemId";
+
 	public static final String ARTIFACT_BUILDDEFINITION_ITEM_ID = "buildDefinitionItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_ID = "buildResultItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_1_ID = "buildResultItemId1";
@@ -70,6 +69,14 @@ public class Utils {
 	public static final String ARTIFACT_BUILDRESULT_ITEM_3_ID = "buildResultItemId3";
 	public static final String ARTIFACT_BASELINESET_ITEM_ID = "baselineSetItemId";
 	public static final String TEMPORARY_WORKSPACE_PREFIX = "HJP_";
+
+	public static final String TEAM_SCM_ACCEPT_PHASE_OVER = "team_scm_acceptPhaseOver";
+	public static final String TEAM_SCM_CHANGES_ACCEPTED = "team_scm_changesAccepted";
+	public static final String TEAM_SCM_SNAPSHOTUUID = "team_scm_snapshotUUID";
+	public static final String TEAM_SCM_STREAM_CHANGES_DATA = "team_scm_streamChangesData";
+	public static final String TEAM_SCM_SNAPSHOT_OWNER = "team_scm_snapshotOwner";
+
+	public static final Object REPOSITORY_ADDRESS = "repositoryAddress";
 	
 	private static RTCFacadeWrapper testingFacade = null;
 
@@ -80,7 +87,29 @@ public class Utils {
 		return acceptAndLoad(testingFacade, serverURI, userId, password, timeout, buildResultUUID, buildWorkspaceName,
 				 null, null, hjWorkspacePath, changeLog, baselineSetName, null, LoadOptions.getDefault(), listener, clientLocale);
 	}
-	
+	/**
+	 * Call accept and load of RTC Facade one after the other.
+	 * Return the build properties from accept
+	 *  
+	 * @param testingFacade The facade for the build toolkit
+	 * @param serverURI The RTC server to interact with
+	 * @param userId  
+	 * @param password
+	 * @param timeout
+	 * @param buildResultUUID
+	 * @param buildWorkspaceName
+	 * @param buildSnapshotNameOrUUID
+	 * @param buildStreamName
+	 * @param hjWorkspacePath
+	 * @param changelog
+	 * @param baselineSetName
+	 * @param previousSnapshotUUID
+	 * @param options
+	 * @param listener
+	 * @param clientLocale
+	 * @return
+	 * @throws Exception
+	 */
 	public static Map<String, String> acceptAndLoad(RTCFacadeWrapper testingFacade, String serverURI, 
 			String userId, String password, int timeout, String buildResultUUID, String buildWorkspaceName,
 			String buildSnapshotNameOrUUID, String buildStreamName, String hjWorkspacePath, OutputStream changelog,
@@ -185,6 +214,31 @@ public class Utils {
 					null,
 					true);
 		return buildProperties;
+	}
+	
+	/**
+	 * Create and add a component to the stream identified by its UUID
+	 * 
+	 * @param testingFacade
+	 * @param c
+	 * @param streamUUID
+	 * @param componentToAddName
+	 * @return
+	 * @throws Exception
+	 */
+	public static Map<String, String> addComponentToBuildStream(RTCFacadeWrapper testingFacade, 
+						Config c, String streamUUID, String componentToAddName) throws Exception {
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke("addComponentToStream",
+				   new Class[] { String.class,  // serverURI
+						   String.class, // userId 
+						   String.class, //password
+						   int.class, //timeout
+						   String.class, //streamUUID
+						   String.class }, //componentToAddName
+				   c.getServerURI(), c.getUserID(), c.getPassword(), c.getTimeout(),
+				   streamUUID, componentToAddName);
+		return setupArtifacts;
 	}
 	
 	
@@ -333,18 +387,6 @@ public class Utils {
 		assertCheckForIncomingChangesMessage(pollingFile, item);
 		assertChangesMessage(pollingFile);		
 	}
-	
-	public static void assertCheckForIncomingChangesMessage(File pollingFile, String item) throws Exception {
-		assertNotNull("Expected message about checking incoming changes", getMatch(pollingFile, "Checking incoming changes for \"" + item + "\""));
-	}
-	
-	public static void assertNoChangesMessage(File pollingFile) throws Exception {
-		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : No changes detected"));
-	}
-	
-	public static void assertChangesMessage(File pollingFile) throws Exception {
-		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : Changes detected"));
-	}
 
 	/**
 	 * Update the given RTCScm instance with the provided build type and return the updated instance.
@@ -457,6 +499,13 @@ public class Utils {
 				TEMPORARY_WORKSPACE_PREFIX);
 	}
 	
+	/** 
+	 * Return a directory path that is invalid.
+	 * A file path is a invalid directory path.
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
 	public static String getInvalidLoadPath() throws IOException {
 		File f = getTemporaryFile();
 		return f.getAbsolutePath();
@@ -471,5 +520,18 @@ public class Utils {
 			testingFacade = RTCFacadeFactory.newTestingFacade(defaultC.getToolkit());
 		}
 		return testingFacade;
+	}
+	
+	
+	private static void assertCheckForIncomingChangesMessage(File pollingFile, String item) throws Exception {
+		assertNotNull("Expected message about checking incoming changes", getMatch(pollingFile, "Checking incoming changes for \"" + item + "\""));
+	}
+	
+	private static void assertNoChangesMessage(File pollingFile) throws Exception {
+		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : No changes detected"));
+	}
+	
+	private static void assertChangesMessage(File pollingFile) throws Exception {
+		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : Changes detected"));
 	}
 }

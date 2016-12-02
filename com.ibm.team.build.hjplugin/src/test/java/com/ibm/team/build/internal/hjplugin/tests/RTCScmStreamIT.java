@@ -13,6 +13,7 @@ package com.ibm.team.build.internal.hjplugin.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import hudson.model.FreeStyleBuild;
 import hudson.model.Result;
@@ -42,7 +43,9 @@ import org.jvnet.hudson.test.recipes.WithTimeout;
 
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
+import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
+import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
@@ -51,6 +54,12 @@ import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
+/**
+ * Tests for Build from Stream 
+ * 
+ * @author lvaikunt
+ *
+ */
 public class RTCScmStreamIT extends AbstractTestCase {
 	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
@@ -72,6 +81,11 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		Utils.deleteTemporaryWorkspaces();
 	}
 
+	/**
+	 * Verify that build completes when snapshot from a previous build has been deleted.
+	 * 
+	 * @throws Exception
+	 */
 	@WithTimeout(600)
 	@Test
 	public void buildPassIfPrevSnapshotIsNotFoundInStreamBuild() throws Exception {
@@ -116,6 +130,8 @@ public class RTCScmStreamIT extends AbstractTestCase {
 	}
 	
 	/**
+	 * Verify that stream name and UUID and previous build url after found in
+	 * changelog
 	 * 
 	 * @throws Exception
 	 */
@@ -259,6 +275,62 @@ public class RTCScmStreamIT extends AbstractTestCase {
 	}
 	
 	/**
+	 * Test that after adding a component to the stream, polling detects
+	 * new changes.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test 
+	public void streamCheckoutAndPollingAfterNewChangesWithBuildtoolkit() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
+		
+		try {
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+				
+				// Run a build
+				FreeStyleBuild build = Utils.runBuild(prj, null);
+				verifyStreamBuild(build, streamUUID, "");
+				
+				// Run polling and check whether message appears
+				File pollingFile = Utils.getTemporaryFile();
+				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
+				// Verify polling messages for "No Changes"
+				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, streamName);
+
+				// Add a component to the stream
+				String componentToAddName = getComponentUniqueName();
+				Utils.addComponentToBuildStream(testingFacade, defaultC, streamUUID, componentToAddName);
+				
+				// Run polling to check whether "Changes Found" message appears
+				pollingFile = Utils.getTemporaryFile();
+				pollingResult = Utils.pollProject(prj, pollingFile);
+				// Verify polling messages for "No Changes"
+				Utils.assertPollingMessagesWhenChangesDetected(pollingResult, pollingFile, streamName);
+				
+				// Run a build and check whether the change log set contains the new component's name
+				build = Utils.runBuild(prj, null);
+				verifyStreamBuild(build, streamUUID, build.getPreviousBuild().getUrl());
+
+				RTCChangeLogSet changeLogSet = (RTCChangeLogSet) build.getChangeSets().get(0);
+				assertEquals(1, changeLogSet.getComponentChangeCount());
+				
+				for (RTCChangeLogComponentEntry componentEntry : changeLogSet.getComponentChanges()) {
+					assertEquals(componentToAddName, componentEntry.getName());
+				}
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
 	 * Use this test as a placeholder for all simple validations related to stream configuration.
 	 * 
 	 * @throws Exception
@@ -286,7 +358,10 @@ public class RTCScmStreamIT extends AbstractTestCase {
 	}
 	
 	/**
+	 * Ensure that temporary workspace created during a stream build is deleted 
+	 * at the end of a successful build
 	 * 
+	 * @throws Exception
 	 */
 	@WithTimeout(600)
 	@Test
@@ -324,6 +399,13 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		}
 	}
 	
+	/**
+	 * Test whether temporary workspace is deleted when load fails.
+	 * In this case, the temporary workspace is deleted immediately after]
+	 * load finishes. Therefore two the properties "rtcTempRepoWorkspaceName"
+	 *  and "rtcTempRepoWorkspaceUUID" are null
+	 * @throws Exception
+	 */
 	@WithTimeout(600)
 	@Test
 	public void testTemporaryWorkspaceDeletedForStreamLoadFailure() throws Exception {
@@ -359,6 +441,107 @@ public class RTCScmStreamIT extends AbstractTestCase {
 			String [] workspaceItemIds = Utils.findTemporaryWorkspaces();
 			assertEquals(0, workspaceItemIds.length);			
 		}  finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	
+	/**
+	 * Check for following
+	 * team_scm_snapshotUUID, 
+	 * team.scm.snapshotOwner,
+	 * team.scm.streamChangesData,
+	 * team.scm.acceptPhaseOver,
+	 * repositoryAddress,
+	 * rtcTempRepoWorkspaceName
+	 * rtcTempRepoWorkspaceUUID
+	 * team.scm.changesAccepted is undefined if there are no changes
+	 * @throws Exception
+	 */
+	@Test
+	public void testBuildPropertiesInStreamBuild() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
+		try {
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			Utils.verifyRTCScmInBuild(build, false);
+			
+			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
+			Map<String, String> buildProperties = actions.get(0).getBuildProperties();
+			
+			assertNotNull(buildProperties.get(Utils.TEAM_SCM_SNAPSHOTUUID));
+			assertNotNull(buildProperties.get(Utils.TEAM_SCM_SNAPSHOT_OWNER));
+			assertNotNull(buildProperties.get(Utils.TEAM_SCM_STREAM_CHANGES_DATA));
+			assertNotNull(buildProperties.get(Utils.TEAM_SCM_ACCEPT_PHASE_OVER));
+			assertEquals(defaultC.getLoginInfo().getServerUri(), 
+								buildProperties.get(Utils.REPOSITORY_ADDRESS));
+			assertNotNull(buildProperties.get(RTCJobProperties.TEMPORARY_WORKSPACE_NAME));
+			assertNotNull(buildProperties.get(RTCJobProperties.TEMPORARY_WORKSPACE_UUID));
+			
+			// Should be null if there are no changes
+			assertNull("Not excepting any changes", buildProperties.get(Utils.TEAM_SCM_CHANGES_ACCEPTED));
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * Check whether team_scm_changesAccepted is non zero if there are component additions in a 
+	 * stream
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testNonZeroChangesAcceptedBuildPropertyInStreamBuild() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
+		try {
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleBuild build = Utils.runBuild(prj, null);		
+			Utils.verifyRTCScmInBuild(build, false);
+			
+			// Verify that after adding a component to the stream, 
+			// we see a non zero team_scm_changesAccepted
+			String componentToAddName = getComponentUniqueName();
+			Map<String, String> newSetupArtifacts = Utils.addComponentToBuildStream(testingFacade, 
+					defaultC,
+					streamUUID, componentToAddName);
+			String componentAddedUUID = newSetupArtifacts.get(Utils.ARTIFACT_COMPONENT_ADDED_ITEM_ID);
+			build = Utils.runBuild(prj, null);
+			Utils.verifyRTCScmInBuild(build, false);
+			
+			// Ensure that in build's changelog set we find the component UUID
+			RTCChangeLogSet changelog = (RTCChangeLogSet) build.getChangeSet();
+			assertEquals(1, changelog.getComponentChangeCount());
+			
+			List<RTCChangeLogComponentEntry> componentChanges = changelog.getComponentChanges();
+			assertEquals(1, componentChanges.size());
+			
+			// assert that the component change has the right UUID
+			assertEquals(componentAddedUUID, componentChanges.get(0).getItemId());
+			
+			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
+			assertEquals(1, actions.size());
+			Map<String, String> buildProperties = actions.get(0).getBuildProperties();
+			
+			// Assert that team_scm_changesAccepted is 1
+			assertEquals(String.valueOf(1), buildProperties.get(Utils.TEAM_SCM_CHANGES_ACCEPTED));
+			
+		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}
 	}
@@ -449,13 +632,22 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		
 	}
 	
+	/**
+	 * Delete the snapshot identified by a UUID
+	 *  
+	 * @param testingFacade The facade for the build toolkit
+	 * @param loginInfo The login details
+	 * @param streamName The stream that owns the snapshot
+	 * @param snapshotUUID The uuid of the snapshot to be deleted
+	 * @throws Exception
+	 */
 	private void deleteSnapshot(RTCFacadeWrapper testingFacade, RTCLoginInfo loginInfo, String streamName, String snapshotUUID) throws Exception {
 		testingFacade.invoke("deleteSnapshot",
 				new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
-						String.class, // workspaceName
+						String.class, // streamName
 						String.class // snapshotUUID
 							},
 				loginInfo.getServerUri(),
@@ -467,6 +659,12 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		
 	}
 	
+	/**
+	 * Return the snapshot uuid from the build
+	 *  
+	 * @param build - The Jenkins Freestyle build
+	 * @return A string that represents the snapshot UUID
+	 */
 	private String getSnapshotUUIDFromBuild(Run<?,?> build) {
 		return build.getActions(RTCBuildResultAction.class).get(0).getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID);
 	}

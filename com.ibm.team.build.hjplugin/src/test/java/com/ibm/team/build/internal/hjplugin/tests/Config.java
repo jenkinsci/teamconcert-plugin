@@ -62,7 +62,11 @@ public class Config {
 
 			serverURI = System.getProperty(SERVER_URI);
 			if (serverURI == null) {
-				serverURI="https://localhost:9443/jazz";
+				serverURI="https://localhost:9443/jazz/";
+			} else {
+				if (!serverURI.endsWith("/")) {
+					serverURI = serverURI + "/";
+				}
 			}
 
 			userId = System.getProperty(USER_ID);

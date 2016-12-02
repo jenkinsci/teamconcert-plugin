@@ -1401,6 +1401,7 @@ public class RepositoryConnection {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
         Map<String, Object> result = new HashMap<String, Object>();
+		Map<String, String> buildProperties = new HashMap<String, String>();
 
 		IContributor contributor = fRepository.loggedInContributor();
 		IWorkspaceHandle streamHandle = getBuildStream(processAreaName, buildStream, monitor.newChild(1), clientLocale);
@@ -1447,6 +1448,7 @@ public class RepositoryConnection {
 					}					
 				}
 			}
+			
 			// Build the change report
 			// If the previousSnapshot is not null, then compare 
 			// Otherwise skip the compare put the link to the current snapshot in the change report
@@ -1462,6 +1464,13 @@ public class RepositoryConnection {
 		            		baselineSet, snapshotName, compareReport,
 		            		previousBuildUrl, listener, monitor.newChild(2));
 		        	changeReport.prepareChangeSetLog();
+		        	
+		        	// From the compareReport, get the list of accepted, discarded, components added/removed count
+		        	int acceptCount = getAcceptChangesCount(changeReport);
+		        	if (acceptCount > 0) {
+		        		buildProperties.put(IJazzScmConfigurationElement.PROPERTY_CHANGES_ACCEPTED, String.valueOf(acceptCount));
+		        	}
+
 				}
 			} else { // Fill in just the snapshot UUID in the change log
 				ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
@@ -1469,8 +1478,6 @@ public class RepositoryConnection {
 				changeReport.prepareChangeSetLog();
 			}
 			
-			Map<String, String> buildProperties = new HashMap<String, String>();
-	       
 			// Create streamChangesData and add it to build properties
 			String streamDataHashS = RTCWorkspaceUtils.getInstance().getDigest(getTeamRepository(), workspaceConnection.getResolvedWorkspace(), monitor.newChild(10)); 
 			LOGGER.finer("Stream's data hash during accept is " +  streamDataHashS.toString());
@@ -1480,6 +1487,10 @@ public class RepositoryConnection {
 			buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, baselineSet.getItemId().getUuidValue());
 			buildProperties.put(Constants.TEAM_SCM_SNAPSHOT_OWNER, streamConnection.getResolvedWorkspace().getItemId().getUuidValue());
 	        buildProperties.put(Constants.TEAM_SCM_ACCEPT_PHASE_OVER, "true");
+
+	        // Add RepositoryAddress to build properties
+			buildProperties.put(Constants.REPOSITORY_ADDRESS, getTeamRepository().getRepositoryURI());
+	        
 			buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
 	        result.put(Constants.BUILD_PROPERTIES, buildProperties);
 	        	        
@@ -1535,6 +1546,9 @@ public class RepositoryConnection {
 		
 		Map<String, String> buildProperties = new HashMap<String, String>();
 
+		// Add RepositoryAddress to build properties
+		buildProperties.put(Constants.REPOSITORY_ADDRESS, getTeamRepository().getRepositoryURI());
+		
 		// Put the snapshotUUID in the buildProperties and add it to result
 		buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, baselineSet.getItemId().getUuidValue());
 		buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
@@ -1543,9 +1557,26 @@ public class RepositoryConnection {
         return result;
 	}
 
-	
 	private String getWorkspaceNamePrefix() {
 		return DEFAULTWORKSPACEPREFIX; 
+	}
+
+	/**
+	 * Return the count of processed change sets (accepted or discarded)
+	 *  + processed components (adds/removes)
+	 */
+	private int getAcceptChangesCount(ChangeReport changeReport) {
+		if (changeReport == null) {
+			return 0;
+		}
+		int changesCount = 0;
+		if (changeReport.getChangeSets() != null) {
+			changesCount += changeReport.getChangeSets().size();
+		}
+		if (changeReport.getComponentChanges() != null) {
+			changesCount += changeReport.getComponentChanges().size();
+		}
+		return changesCount;
 	}
 	
 	/**

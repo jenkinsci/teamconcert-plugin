@@ -833,6 +833,20 @@ public class Messages {
     public String BuildConfiguration_scm_not_configured(String arg1) {
     	return MessageFormat.format(getString("BuildConfiguration_scm_not_configured"), arg1);
     }
+    
+    /**
+     * Retrying to create Repository Workspace
+     */
+    public String BuildConfiguration_repo_workspace_retry() {
+    	return getString("BuildConfiguration_repo_workspace_retry");
+    }
+    
+    /**
+     * Failed to create a Repository Workspace after {0} retries
+     */
+    public String BuildConfiguration_repo_workspace_create_failed(String arg1) {
+    	return MessageFormat.format(getString("BuildConfiguration_repo_workspace_create_failed"), arg1);
+    }
 
     /**
      * Unable to determine load rule type due to {0}

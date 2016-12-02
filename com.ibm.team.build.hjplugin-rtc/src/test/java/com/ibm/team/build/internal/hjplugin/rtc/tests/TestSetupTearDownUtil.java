@@ -74,6 +74,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
 	public static final String ARTIFACT_STREAM_NAME = "streamName";
 	public static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
+	public static final String ARTIFACT_COMPONENT_ADDED_ITEM_ID = "componentAddedItemId";
 	public static final String ARTIFACT_BASELINE_SET_ITEM_ID = "baselineSetItemId";
 	public static final String ARTIFACT_BUILD_DEFINITION_ITEM_ID = "buildDefinitionItemId";
 	public static final String ARTIFACT_BUILD_DEFINITION_ID = "buildDefinitionId";
@@ -86,6 +87,41 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_PROCESS_DEFINITION_ITEM_ID = "processDefinitionItemId";
 	
 	public TestSetupTearDownUtil() {
+		
+	}
+	
+	/**
+	 * Creates and adds a new component to the stream given its UUID
+	 * @param connectionDetails
+	 * @param streamUUID
+	 * @param componentName
+	 * @param progress
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> addComponentToStream(ConnectionDetails connectionDetails, String streamUUID,
+										String componentName, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		IProcessAreaHandle projectAreaHandle = ProcessUtil.getDefaultProjectArea(repo);
+
+		IWorkspaceHandle streamHandle = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(streamUUID), null);
+		IWorkspaceConnection buildStreamConnection = workspaceManager.getWorkspaceConnection(streamHandle, null);
+
+		// Create a component and add it to the stream
+		IComponent component = workspaceManager.createComponent(componentName, workspaceManager.teamRepository().loggedInContributor(), null);
+		
+		// Add the component to the stream
+		IComponentAdditionOp componentOp = buildStreamConnection.componentOpFactory().addComponent(component, false);
+		buildStreamConnection.applyComponentOperations(Collections.singletonList(componentOp), null);
+
+		// capture interesting uuids
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT_ADDED_ITEM_ID, component.getItemId().getUuidValue());
+		return artifactIds;
 	}
 	
 	public Map<String, String> setupComponentChanges(ConnectionDetails connectionDetails, String workspaceName,

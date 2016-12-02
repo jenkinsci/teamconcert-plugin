@@ -14,7 +14,9 @@ package com.ibm.team.build.internal.hjplugin.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+
 import hudson.model.FreeStyleBuild;
 import hudson.model.Result;
 import hudson.model.FreeStyleProject;
@@ -1051,7 +1053,7 @@ public class RTCScmIT extends AbstractTestCase {
 	
 	
 	/**
-	 * 
+	 * Verify that build definition item id and name is found in the changelogset 
 	 * @throws Exception
 	 */
 	@WithTimeout(600)
@@ -1117,7 +1119,8 @@ public class RTCScmIT extends AbstractTestCase {
 	}
 	
 	/**
-	 * 
+	 * Verify that Repository workspace item id and name are found in 
+	 * Changelogset
 	 * @throws Exception
 	 */
 	@WithTimeout(600)
@@ -1152,6 +1155,8 @@ public class RTCScmIT extends AbstractTestCase {
 	
 	
 	/**
+	 * Verify that build definition name nad Itemid is found in the 
+	 * change log file
 	 * 
 	 * @throws Exception
 	 */
@@ -1215,6 +1220,9 @@ public class RTCScmIT extends AbstractTestCase {
 	}
 	
 	/**
+	 * 
+	 * Verify that Repository workspace name and item id is found in the 
+	 * changelog file
 	 * 
 	 * @throws Exception
 	 */
@@ -1522,7 +1530,8 @@ public class RTCScmIT extends AbstractTestCase {
 	
 	
 	/**
-	 * 
+	 * Test whether temporary workspace created during build from snapshot 
+	 * is deleted after a successful build.
 	 */
 	@WithTimeout(600)
 	@Test
@@ -1578,6 +1587,12 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 
+	/**
+	 * Test whether temporary workspace created during build from snapshot is deleted
+	 * even if load fails 
+	 *  
+	 * @throws Exception
+	 */
 	@WithTimeout(600)
 	@Test
 	public void testTemporaryWorkspaceDeletedForSnapshotLoadFailure() throws Exception {
@@ -1628,6 +1643,111 @@ public class RTCScmIT extends AbstractTestCase {
 			String [] workspaceItemIds = Utils.findTemporaryWorkspaces();
 			assertEquals(0, workspaceItemIds.length);	
 			
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * Check for 
+	 * team_scm_snapshotUUID
+	 * repositoryAddress
+	 * team_scm_changesAccepted should be null forever
+	 * @throws Exception
+	 */
+	@Test
+	public void testBuildPropertiesInSnapshotBuild() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+
+		Config defaultC = Config.DEFAULT;
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String snapshotName = getSnapshotUniqueName();
+		String componentName = getComponentUniqueName();
+		
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+				.invoke("setupBuildSnapshot",
+						new Class[] { String.class, // serverURL,
+								String.class, // userId,
+								String.class, // password,
+								int.class, // timeout,
+								String.class, // workspaceName,
+								String.class, // snapshotName
+								String.class, // componentName
+								String.class}, // workspacePrefix
+						loginInfo.getServerUri(),
+						loginInfo.getUserId(),
+						loginInfo.getPassword(),
+						loginInfo.getTimeout(), workspaceName,
+						snapshotName, componentName, "HJP");
+		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
+		try {
+		  
+			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, snapshotUUID);
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+
+			// Verify the build status
+			assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+			
+			// Verify the build properties from RTCBuildResultAction
+			RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
+			Map<String, String> buildProperties = action.getBuildProperties();
+			
+			// Check for known properties
+			assertEquals(snapshotUUID, buildProperties.get(Utils.TEAM_SCM_SNAPSHOTUUID));
+			assertEquals(loginInfo.getServerUri(), buildProperties.get(Utils.REPOSITORY_ADDRESS));	
+			
+			// Doesn't make sense for a snapshot build
+			assertNull(buildProperties.get(Utils.TEAM_SCM_ACCEPT_PHASE_OVER));
+			assertNull(buildProperties.get(Utils.TEAM_SCM_CHANGES_ACCEPTED));
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+
+	/**
+	 * Check for 
+	 * team_scm_snapshotUUID, 
+	 * repositoryAddress, 
+	 * team.scm.acceptPhaseOver,
+	 * team.scm.changesAccepted may be non zero from the very first build
+	 * @throws Exception
+	 */
+	@Test
+	public void testBuildPropertiesInWorkspaceBuild() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC,
+							streamName);
+		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
+		
+		try {
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
+			
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			
+			// Get Build Properties out of RTCBuildResultAction
+			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
+			assertTrue(actions.size() == 1);
+			
+			Map<String, String> buildProperties = actions.get(0).getBuildProperties();
+			assertEquals(defaultC.getLoginInfo().getServerUri(), 
+						buildProperties.get(Utils.REPOSITORY_ADDRESS));
+			assertNotNull(buildProperties.get(Utils.TEAM_SCM_SNAPSHOTUUID));
+			assertNotNull(buildProperties.get(Utils.TEAM_SCM_ACCEPT_PHASE_OVER));
+			// Changes would have been dropped since the stream doesn't have some 
+			// change sets
+
+			assertTrue(Integer.parseInt(buildProperties.get(Utils.TEAM_SCM_CHANGES_ACCEPTED))>0);
 		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}

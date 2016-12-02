@@ -27,5 +27,6 @@ public class Constants {
 	public static final String TEMPORARY_WORKSPACE_NAME = "rtcTempRepoWorkspaceName";
 	public static final String TEMPORARY_WORKSPACE_UUID = "rtcTempRepoWorkspaceUUID";
 	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData";
+	public static final String REPOSITORY_ADDRESS = "repositoryAddress";
 	
 }

@@ -52,11 +52,11 @@ import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IContributor;
 import com.ibm.team.repository.common.IContributorHandle;
+import com.ibm.team.repository.common.InternalRepositoryException;
 import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.PermissionDeniedException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.scm.client.IWorkspaceConnection;
-import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
@@ -67,7 +67,8 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 public class BuildConfiguration {
     private static final Logger LOGGER = Logger.getLogger(BuildConfiguration.class.getName());
 	private static final String eol = System.getProperty("line.separator");  //$NON-NLS-1$
-
+	private static final int MAX_RETRY_COUNT = 10;
+	private static final long SLEEP_TIMEOUT_SECONDS = 30; // seconds
 
     private File fetchDestinationFile;
 	private Path fetchDestinationPath;
@@ -160,23 +161,25 @@ public class BuildConfiguration {
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Creating workspace '" + workspaceName + "'");
 			}
-	
-			workspaceConnection = SCMPlatform.getWorkspaceManager(getTeamRepository()).createWorkspace(contributorHandle, workspaceName, workspaceComment, baselineSet, progress.newChild(5));
 			
+			workspaceConnection = createRepositoryWorkspaceWithRetry(getTeamRepository(), baselineSet, workspaceName,
+					workspaceComment, contributorHandle, listener, progress.newChild(5));
 			String snapshotUUID =  baselineSet.getItemId().getUuidValue();
 			this.snapshot = new BuildSnapshotDescriptor(teamRepository, snapshotUUID, baselineSet);
-			this.workspace = new BuildWorkspaceDescriptor(teamRepository, workspaceConnection.getResolvedWorkspace().getItemId().getUuidValue(), workspaceName);
+			this.workspace = new BuildWorkspaceDescriptor(teamRepository, 
+											workspaceConnection.getResolvedWorkspace().getItemId().getUuidValue(), 
+										    workspaceName);
 			this.fetchDestinationFile = new File(hjWorkspace);
 			this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 			this.acceptBeforeFetch = false;
 			this.isPersonalBuild = false;
-			
+
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finer("Loading from snapshot: " + snapshotUUID + "  using temporary workspace '" +  workspaceName + "'");
 			}
 		} catch (Exception exp) {
 			if (workspaceConnection != null) {
-				RTCWorkspaceUtils.getInstance().deleteSilent(workspaceConnection.getResolvedWorkspace(),
+				getRTCWorkspaceUtils().deleteSilent(workspaceConnection.getResolvedWorkspace(),
 								getTeamRepository(), progress, listener, clientLocale);
 			}
 			throw exp;
@@ -199,6 +202,8 @@ public class BuildConfiguration {
 		this.fetchDestinationFile = new File(hjWorkspace);
 		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 		this.acceptBeforeFetch = acceptBeforeLoad;
+		
+		addCommonBuildProperties();
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
 			LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
@@ -234,7 +239,7 @@ public class BuildConfiguration {
 			// Set the flow target if temporary workspace will live on after load is over
 			if (!shouldDeleteTemporaryWorkspace) {
 				// Set the flow target
-				RTCWorkspaceUtils.getInstance().setFlowTarget(getTeamRepository(), workspace, streamHandle, progress.newChild(5));
+				getRTCWorkspaceUtils().setFlowTarget(getTeamRepository(), workspace, streamHandle, progress.newChild(5));
 				setTemporaryRepositoryWorkspaceProperties(workspace);
 			}
 
@@ -659,7 +664,7 @@ public class BuildConfiguration {
 			LOGGER.info("BuildConfiguration.deleteWorkspace : Deleting temporary workspace '" + workspaceToDelete.getName() + "'");
 		}
 		if (workspaceToDelete != null) {
-			RTCWorkspaceUtils.getInstance().deleteSilent(workspaceToDelete, 
+			getRTCWorkspaceUtils().deleteSilent(workspaceToDelete, 
 										getTeamRepository(), progress.newChild(10), listener, clientLocale);
 		}
 	}
@@ -929,5 +934,108 @@ public class BuildConfiguration {
 			this.temporaryRepositoryWorkspaceProperties.put(Constants.TEMPORARY_WORKSPACE_NAME, workspace.getName());
 			this.temporaryRepositoryWorkspaceProperties.put(Constants.TEMPORARY_WORKSPACE_UUID, workspace.getItemId().getUuidValue());
 		}
+	}
+	
+	/**
+	 * Add Build Properties for Repository Workspace, Snapshot, Stream load type
+	 * However, Stream and snapshot do not use BuildConfiguration during accept
+	 * and only accept returns properties built in BuildConfiguration to export
+	 * to environment.
+	 * TODO One possible way to solve this is to share the BuildConfiguration created during
+	 * accept for load, which also means we create the workspace during accept for 
+	 * snapshot type, to maintain consistency).
+	 * 
+	 */
+	private void addCommonBuildProperties() {
+		if (getTeamRepository() != null) {
+			buildProperties.put(Constants.REPOSITORY_ADDRESS, getTeamRepository().getRepositoryURI());
+		}
+	}
+	
+	/**
+	 * Creates a repository workspace with retry logic. Retries for <code>MAX_RETRY_COUNT</code>
+	 * times until a successful Repository Workspace is created. This is intended as a workaround 
+	 * to address defect 404637, until the problem is fixed in RTC server
+	 * 
+	 * @param repository  The RTC repository to work with 
+	 * @param baselineSet The Snapshot from which a new repository workspace should be created 
+	 * @param workspaceName  The name for the new repository workspace 
+	 * @param workspaceComment The description for the new repository workspace
+	 * @param contributor The owner for the Repository workspace
+	 * @param progress A progress monitor
+	 * @return a {@link IWorkspaceConnection} for the newly created Repository Workspace
+	 * @throws TeamRepositoryException only if there is an exception on all tries to create a 
+	 * Repository Workspace. If the creation of Repository Workspace is successful in at least
+	 * one attempt, then any previous exceptions are ignored and are not logged or thrown.
+	 * @throws RTCInternalException 
+	 * 		
+	 */
+	public IWorkspaceConnection createRepositoryWorkspaceWithRetry(ITeamRepository repository, 
+										IBaselineSet baselineSet, String workspaceName, 
+										String workspaceComment, IContributorHandle contributor, 
+										IConsoleOutput listener,
+										IProgressMonitor progress) throws TeamRepositoryException, RTCInternalException {
+		TeamRepositoryException caughtException = null;
+		IWorkspaceConnection workspaceConnection = null;
+		SubMonitor monitor = SubMonitor.convert(progress, 10);
+		try {
+			for (int i = 0 ; i < getRetryCount(); i++) {
+				try {
+					workspaceConnection = getRTCWorkspaceUtils().createWorkspace(repository, 
+										baselineSet, workspaceName, workspaceComment, 
+										contributor, monitor.newChild(8));
+					break;
+				} catch (InternalRepositoryException exp) {
+					caughtException = exp;
+				} catch (TeamRepositoryException exp) {
+					throw exp;
+				} 
+				listener.log(Messages.getDefault().BuildConfiguration_repo_workspace_retry());
+				try {
+					if (i < getRetryCount() - 1) {
+						Thread.sleep(getSleepTimeout());
+					}
+				} catch (InterruptedException exp ) {
+					// Silently ignore and continue
+				}
+			}
+			monitor.worked(2);
+			if (workspaceConnection == null) {
+				listener.log(Messages.getDefault().BuildConfiguration_repo_workspace_create_failed(String.valueOf(getRetryCount())));
+				// Return the last caught InternalRepositoryException
+				throw new RTCInternalException(String.format("Failed to create a Repository Workspace after %s retries", getRetryCount()), caughtException);
+			}
+			return workspaceConnection;
+		} finally {
+			monitor.done();
+		}
+	}
+
+	/**
+	 * Supply a different timeout for testing
+	 * 
+	 * @return the number of milliseconds to sleep
+	 */
+	protected long getSleepTimeout() {
+		return SLEEP_TIMEOUT_SECONDS * 1000;
+	}
+
+	/**
+	 * Supply a different retry count for testing
+	 * 
+	 * @return the number of times to retry
+	 */
+	protected int getRetryCount() {
+		return MAX_RETRY_COUNT;
+	}
+	
+	/**
+	 * Supply a mock RTCWorkspaceUtils for testing
+	 * 
+	 * @return {@link RTCWorkspaceUtils} instance.
+	 * 
+	 */
+	protected RTCWorkspaceUtils getRTCWorkspaceUtils() {
+		return RTCWorkspaceUtils.getInstance();
 	}
 }
