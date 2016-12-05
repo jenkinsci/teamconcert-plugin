@@ -35,16 +35,7 @@
 			<url>${rtc-client-p2repo-url}</url>
 		</repository>
 	</repositories>
-	
-	<dependencies>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.11</version>
-			<scope>test</scope>
-		</dependency>
-	
-	</dependencies>
+
 	<build>
 		<plugins>
 			<plugin>
@@ -55,20 +46,13 @@
 				<extensions>true</extensions>
 			</plugin>
 			<plugin>
-				<groupId>org.eclipse.tycho</groupId>
-				<artifactId>tycho-compiler-plugin</artifactId>
-				<version>${tycho-version}</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.13</version>
 				<configuration>
-				<extraClasspathElements>
-					<extraClasspathElement>
-						<groupId>junit</groupId>
-						<artifactId>junit</artifactId>
-						<version>4.11</version>
-					</extraClasspathElement>
-				</extraClasspathElements>
+					<skipTests>true</skipTests>
 				</configuration>
 			</plugin>
-			
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -81,47 +65,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			
-			
-			<plugin>
-			    <groupId>org.apache.maven.plugins</groupId>
-			    <artifactId>maven-surefire-plugin</artifactId>
-			    <version>2.19.1</version>
-			    <executions>
-		          <execution>
-		            <goals>
-		              <goal>test</goal>
-		            </goals>
-		          </execution>
-      		  </executions>
-      		  <!-- set additional classpath entries like this -->
-			  <!--
-	          <configuration>
-	          	<additionalClasspathElement>${buildtoolkit}</additionalClasspathElement>
-	          </configuration>
-		       -->
-			</plugin>
-			
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-failsafe-plugin</artifactId>
-				<version>2.13</version>
-				<executions>
-				<execution>
-						<goals>
-							<goal>integration-test</goal>
-							<goal>verify</goal>
-						</goals>
-					</execution>
-				</executions>
-				<!-- set additional classpath entries like this -->
-				<!-- 
-					<configuration>
-					<additionalClasspathElement>${buildtoolkit}</additionalClasspathElement>
-					</configuration>
-				-->
-			</plugin>
-			
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				 <artifactId>maven-antrun-plugin</artifactId>

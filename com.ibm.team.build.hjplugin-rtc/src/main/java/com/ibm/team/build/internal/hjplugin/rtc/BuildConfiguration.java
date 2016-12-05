@@ -67,8 +67,8 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 public class BuildConfiguration {
     private static final Logger LOGGER = Logger.getLogger(BuildConfiguration.class.getName());
 	private static final String eol = System.getProperty("line.separator");  //$NON-NLS-1$
-	private static final int MAX_RETRY_COUNT = 10;
-	private static final long SLEEP_TIMEOUT_SECONDS = 30; // seconds
+	private static final int MAX_RETRY_COUNT = 3;
+	private static final long SLEEP_TIMEOUT_SECONDS = 60; // seconds
 
     private File fetchDestinationFile;
 	private Path fetchDestinationPath;
