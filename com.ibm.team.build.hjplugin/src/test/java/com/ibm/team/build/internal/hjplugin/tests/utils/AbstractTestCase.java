@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2016, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,13 +11,20 @@
 
 package com.ibm.team.build.internal.hjplugin.tests.utils;
 
+import java.io.File;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+
+import org.junit.Assert;
 import org.junit.Ignore;
+
+import hudson.model.TaskListener;
+import hudson.util.StreamTaskListener;
 
 @Ignore("Abstract class containing utility methods")
 public class AbstractTestCase {
+	protected File sandboxDir;
+
 	/**
      * generate the name of the project based on the test case
      * 
@@ -78,5 +85,25 @@ public class AbstractTestCase {
 	
 	protected String getSnapshotUniqueName() {
 		return getUniqueName("Snapshot");
+	}
+
+	protected void createSandboxDirectory() {
+		File tempDir = new File(System.getProperty("java.io.tmpdir"));
+		File buildTestDir = new File(tempDir, "HJPluginTests");
+		sandboxDir = new File(buildTestDir, getFileUniqueName());
+		sandboxDir.mkdirs();
+		sandboxDir.deleteOnExit();
+		Assert.assertTrue(sandboxDir.exists());
+	}
+
+	protected void tearDownSandboxDirectory() throws Exception {
+		if (sandboxDir != null) {
+			FileUtils.delete(sandboxDir);
+		}
+	}
+
+	protected TaskListener getTaskListener() {
+		TaskListener listener = new StreamTaskListener(System.out, null);
+		return listener;
 	}
 }

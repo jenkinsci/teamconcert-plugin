@@ -1,0 +1,26 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	对接受更改后创建的快照指定给定名称。
+  </p>
+  <p>
+  	此字段可设置为任何用户指定字符串（引用环境变量和构建参数）。建议包括至少一个变量，该变量的值对每个构建唯一（例如，BUILD_NUMBER、BUILD_ID 或
+BUILD_URL），以确保连续构建创建具有不同名称的快照。如果此字段为空，那么将改用缺省快照名称。对于使用构建定义的作业，快照名称缺省为“${buildDefinitionId}_#${BUILD_NUMBER}”。对于使用流或存储库工作空间的作业，快照名称缺省为“${JOB_NAME}_#${BUILD_NUMBER}”。</p>
+  <p>
+  	例如，对于名为“JUnit Integration Build”的作业，如果此字段设置为“${JOB_NAME}_#${BUILD_NUMBER}_Snapshot”，那么第一个构建创建的快照的名称将为“JUnit Integration Build_#1_Snapshot”。
+  </p>
+</div>

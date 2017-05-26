@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2016 IBM Corporation and others.
+ * Copyright (c) 2014, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,9 +22,11 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.SimpleTimeZone;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import net.sf.json.JSON;
@@ -32,6 +34,7 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
+import org.apache.http.Header;
 import org.apache.http.auth.InvalidCredentialsException;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.jvnet.localizer.LocaleProvider;
@@ -120,6 +123,117 @@ public class RTCFacadeFacade {
         _RFC3339DateFormatInternal.setTimeZone(_gmtTimeZoneInternal);
 	}
 
+	/**
+	 * Perform post build deliver for the given build result. 
+	 * 
+	 * @param serverURI
+	 * @param userId
+	 * @param password
+	 * @param timeout
+	 * @param buildResultUUID
+	 * @param buildResultLabel
+	 * @param listener
+	 * @throws Exception - An IOException is thrown if there is a TeamRepositoryException or if the 
+	 * 			HTTP connection was broken.
+	 * 					   A GeneralSecurityException is thrown if there is a problem performing HTTPs 
+	 * 					  communication
+	 * 					   An InvalidCredentialsException is thrown if the user name or password is incorrect
+	 */
+	public static PostBuildDeliverResult postBuildDeliver(String serverURI, String userId, String password, int timeout,
+				String buildResultUUID, String buildResultLabel, TaskListener listener) throws Exception {
+
+		if (buildResultLabel != null) {
+			listener.getLogger().println(Messages.RTCFacadeFacade_starting_post_build_deliver2(buildResultLabel, buildResultUUID));
+		} else {
+			listener.getLogger().println(Messages.RTCFacadeFacade_starting_post_build_deliver(buildResultUUID));
+		}
+		
+		LOGGER.finest(String.format("RTCFacadeFacade:postBuildDeliver : Enter for %s", buildResultUUID));
+		
+		// There is some issue in the authentication flow when doing a POST
+		// So we have to do a get that logs in to the repository and then do a post
+		String uri = RTCBuildConstants.URI_RESULT + buildResultUUID + SLASH + RTCBuildConstants.URI_SEGMENT_BUILD_STATE;
+		GetResult result = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, listener);
+		HttpClientContext context = result.getHttpContext();
+
+		// Create a JSON object that puts in the details for post build deliver
+		JSONObject participantRequest = new JSONObject();
+		participantRequest.put(RTCBuildConstants.PB_DELIVER_PARTICIPANT_KEY,  RTCBuildConstants.POST_BUILD_DELIVER_PARTICIPANT);
+		participantRequest.put(RTCBuildConstants.PB_DELIVER_BUILD_RESULT_ITEMID_KEY, buildResultUUID);
+		participantRequest.put(RTCBuildConstants.PB_DELIVER_IGNORE_TRIGGER_POLICY_KEY, RTCBuildConstants.TRUE);
+		
+		// Construct the URI for invoking a participant
+		uri = RTCBuildConstants.URI_RESULT + buildResultUUID +
+					RTCBuildConstants.SEPARATOR + RTCBuildConstants.URI_SEGMENT_RESULT_PARTICIPANT;
+		
+		HttpUtils.performPost(serverURI, uri, userId, password, timeout, participantRequest, context, listener);
+		
+		// If this is reached here, we got a 200.
+		if (context != null) {
+			Header h = context.getResponse().getFirstHeader("Location");
+			if (h != null && h.getValue() != null) {
+
+				String contribUri = h.getValue();
+				contribUri = contribUri.replace(RTCBuildConstants.URI_SEGMENT_RESULT_PARTICIPANT, RTCBuildConstants.URI_SEGMENT_CONTRIBUTION);
+				contribUri = contribUri.substring(serverURI.length());
+				
+				// Log the contribution URI
+				LOGGER.finest(String.format("Retrieving post build deliver contribution from URI : ", contribUri));
+				
+				// Get the contribution
+				JSON contribResult = HttpUtils.performGet(serverURI, contribUri, userId, password, timeout, context, listener).getJson();
+				JSONObject contrib =  JSONHelper.getJSONObject(contribResult,"contribution");
+				if (contrib != null) {
+					// This determines the current build's status (if the user has set failOnError to true)  
+					String contributionStatus = JSONHelper.getString(contrib, "contributionStatus");
+
+					// Get the extended contribution properties to see if post build deliver happened
+					// and what is the summary
+					boolean delivered = false;
+					String participantSummary = null;
+					String participantLog = null;
+					String contentURI = null;
+					JSONArray extendedContribProperties = JSONHelper.getJSONArray(contrib, RTCBuildConstants.EXTENDED_CONTRIB_PROPERTIES_MEMBER);
+					for (@SuppressWarnings("unchecked")
+					Iterator<JSONObject> iter = extendedContribProperties.iterator(); iter.hasNext();) {
+			            JSONObject contribProperty = iter.next();
+			            if (contribProperty.get(RTCBuildConstants.EXTENDED_CONTRIB_PROPERTY_NAME).equals(RTCBuildConstants.AUTO_DELIVER_POST_BUILD_PARTICIPANT_DELIVERED)) {
+			            	delivered = Boolean.parseBoolean((String)contribProperty.get(RTCBuildConstants.EXTENDED_CONTRIB_PROPERTY_VALUE));
+			            }
+			            if (contribProperty.get(RTCBuildConstants.EXTENDED_CONTRIB_PROPERTY_NAME).equals(RTCBuildConstants.AUTO_DELIVER_POST_BUILD_PARTICIPANT_SUMMARY)) {
+			            	participantSummary = contribProperty.getString(RTCBuildConstants.EXTENDED_CONTRIB_PROPERTY_VALUE);
+			            }
+					}
+					if (delivered && contributionStatus.equals("OK")) {
+						// Get the link to the participant log and print it to the log
+						// This can be done only if delivered is true and build status is set to OK
+						contentURI = JSONHelper.getString(contribResult, "contentUri");
+						if (contentURI != null) {
+							// Make it absolute by appending repository URI
+							try {
+								Tuple<HttpClientContext, String> tr = HttpUtils.performRawGet(serverURI, contentURI, userId, password, timeout, context, listener);
+								participantLog = tr.getSecond();
+							} catch (Exception exp) {
+								LOGGER.log(Level.WARNING, String.format("Unable to retrieve participant log from content URI %s. Exception is :", contentURI), exp);
+							}
+							
+						}
+					}
+					return new PostBuildDeliverResult(contributionStatus, delivered, participantSummary, participantLog, contentURI);
+				} else {
+					// TODO extra information on what response was expected??
+					throw new IOException(Messages.RTCFacadeFacade_unexpected_response_postbuild_deliver(), null);
+
+				}
+			} else {
+				// TODO extra information on what response was expected??
+				throw new IOException(Messages.RTCFacadeFacade_unexpected_response_postbuild_deliver(), null);
+			}
+		} else {
+			// TODO extra information on what response was expected??
+			throw new IOException(Messages.RTCFacadeFacade_unexpected_response_postbuild_deliver(), null);
+		}
+	}
 
 
 	/**
@@ -235,6 +349,7 @@ public class RTCFacadeFacade {
 		return changesIncoming;
 
 	}
+	
 	/**
 	 * Logs into the repository to test the connection. Essentially exercises the configuration parameters supplied.
 	 * Either the rest service or the build toolkit will be used to test the connection.
@@ -245,18 +360,40 @@ public class RTCFacadeFacade {
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
-	 * @return an error message to display, or null if no problem
+	 * @return An error message to display, or null if no problem
+	 * @throws Exception
+	 */
+	public static String testConnection(String buildToolkitPath, 
+			String serverURI, String userId, String password, int timeout,
+			boolean avoidUsingtoolkit) throws Exception {
+		return testConnection(buildToolkitPath, serverURI, userId, password,
+				timeout, RTCBuildConstants.URI_COMPATIBILITY_CHECK, avoidUsingtoolkit);
+	}
+			
+	/**
+	 * Logs into the repository to test the connection with a given level of compatibility.
+	 * Essentially exercises the configuration parameters supplied.
+	 * Either the rest service or the build toolkit will be used to test the connection.
+	 * 
+	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
+	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param compatbilityURI The expected version of the server that we should be compatible with
+	 * @return An error message to display, or null if no problem
 	 * @throws Exception
 	 */
 	public static String testConnection(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
-			boolean avoidUsingToolkit)
+			String compatibilityURI, boolean avoidUsingToolkit)
 			throws Exception {
 		
 		// Attempt to use Rest api if this is for a build definition
 		if (avoidUsingToolkit) {
 			String errorMessage = null;
-			String uri = RTCBuildConstants.URI_COMPATIBILITY_CHECK;
+			String uri = compatibilityURI;
 			try {
 				
 				// Validate that the server version is sufficient 

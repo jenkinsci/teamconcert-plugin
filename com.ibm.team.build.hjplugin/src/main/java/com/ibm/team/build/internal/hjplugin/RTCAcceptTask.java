@@ -73,7 +73,7 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	 * Task that performs accept work on the master or the slave
 	 * 
 	 * @param contextStr Context for logging
-	 * @param buildToolkit The build toolkit to use when working with the facade
+	 * @param buildToolkit The full path to build toolkit to use when working with the facade
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.

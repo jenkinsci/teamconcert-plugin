@@ -1,0 +1,30 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	변경사항 승인 후 작성된 스냅샷에 주어진 이름을 지정합니다.
+  </p>
+  <p>
+  	환경 변수와 빌드 매개변수를 참조하여 이 필드를 사용자 지정 문자열로 설정할 수 있습니다. 연속 빌드에서 서로 다른 이름의 스냅샷을
+작성하도록 하려면 각 빌드에 고유한 값을 가진 하나 이상의 변수(예: BUILD_NUMBER, BUILD_ID 또는 BUILD_URL)를 포함하는 것이 좋습니다.
+	이 필드가 비어 있는 경우에는 대신 기본 스냅샷 이름이 사용됩니다. 빌드 정의를 사용하는 작업의 경우 스냅샷 이름이 기본적으로 "${buildDefinitionId}_#${BUILD_NUMBER}"(으)로 지정됩니다.
+	스트림 또는 저장소 작업공간을 사용하는 작업의 경우에는 스냅샷 이름이 기본적으로 "${JOB_NAME}_#${BUILD_NUMBER}"(으)로 지정됩니다.
+  </p>
+  <p>
+  	예를 들어 이름이 "JUnit Integration Build"인 작업의 경우 이 필드가 "${JOB_NAME}_#${BUILD_NUMBER}_Snapshot"으로 설정되면 첫 번째 빌드에서 작성된 스냅샷의
+이름이 "JUnit Integration Build_#1_Snapshot"입니다.
+  </p>
+</div>

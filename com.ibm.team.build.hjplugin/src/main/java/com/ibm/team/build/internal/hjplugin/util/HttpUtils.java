@@ -146,6 +146,7 @@ public class HttpUtils {
 
 	/**
 	 * Perform GET request against an RTC server
+	 * 
 	 * @param serverURI The RTC server
 	 * @param uri The relative URI for the GET. It is expected it is already encoded if necessary.
 	 * @param userId The userId to authenticate as
@@ -217,6 +218,78 @@ public class HttpUtils {
 	}
 
 	/**
+	 * Perform GET request against an RTC server.
+	 * Extracts a string from the response stream and returns it.
+	 * 
+	 * @param serverURI The RTC server
+	 * @param uri The relative URI for the GET. It is expected it is already encoded if necessary.
+	 * @param userId The userId to authenticate as
+	 * @param password The password to authenticate with
+	 * @param timeout The timeout period for the connection (in seconds)
+	 * @param httpContext The context from the login if cycle is being managed by the caller
+	 * Otherwise <code>null</code> and this call will handle the login.
+	 * @param listener The listener to report errors to. May be 
+	 * <code>null</code>
+	 * @return a tuple of context and a string
+	 * @throws IOException Thrown if things go wrong
+	 * @throws InvalidCredentialsException
+	 * @throws GeneralSecurityException 
+	 */
+	public static Tuple<HttpClientContext, String> performRawGet(String serverURI, String uri, String userId,
+			String password, int timeout, HttpClientContext httpContext, TaskListener listener)
+			throws IOException, InvalidCredentialsException, GeneralSecurityException {
+
+		CloseableHttpClient httpClient = getClient();
+		String fullURI = getFullURI(serverURI, uri);
+		HttpGet request = getGET(fullURI, timeout);
+		if (httpContext == null) {
+			httpContext = createHttpContext();
+		}
+
+		LOGGER.finer("GET: " + request.getURI()); //$NON-NLS-1$
+		CloseableHttpResponse response = httpClient.execute(request, httpContext);
+		try {
+			// based on the response do any authentication. If authentication requires
+			// the request to be performed again (i.e. Basic auth) re-issue request
+			response = authenticateIfRequired(response,
+					httpClient, httpContext, serverURI, userId, password,
+					timeout, listener);
+			if (response == null) {
+				// retry get
+				request = getGET(fullURI, timeout);
+				response = httpClient.execute(request, httpContext);
+			}
+			int statusCode = response.getStatusLine().getStatusCode();
+			
+			if (statusCode == 200) {
+				InputStreamReader inputStream = new InputStreamReader(response.getEntity().getContent(), UTF_8);
+				try {
+					return new Tuple<HttpClientContext, String>(httpContext, IOUtils.toString(inputStream));
+				} finally {
+					try {
+						inputStream.close();
+					} catch (IOException e) {
+						LOGGER.finer("Failed to close the result input stream for request: " + fullURI); //$NON-NLS-1$
+					}
+				}
+			} else if (statusCode == 401) {
+				// if still un-authorized, then there is a good chance the basic credentials are bad.
+				throw new InvalidCredentialsException(Messages.HttpUtils_authentication_failed(userId, serverURI));
+
+			} else {
+				// capture details about the error
+				LOGGER.finer(Messages.HttpUtils_GET_failed(fullURI, statusCode));
+				if (listener != null) {
+					listener.fatalError(Messages.HttpUtils_GET_failed(fullURI, statusCode));
+				}
+				throw logError(fullURI, response, Messages.HttpUtils_GET_failed(fullURI, statusCode));
+			}
+		} finally {
+			closeResponse(response);
+		}
+	}
+					
+	/**
 	 * Perform PUT request against an RTC server
 	 * @param serverURI The RTC server
 	 * @param uri The relative URI for the PUT. It is expected that it is already encoded if necessary.
@@ -259,6 +332,11 @@ public class HttpUtils {
 		LOGGER.finer("PUT: " + put.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse response = httpClient.execute(put, httpContext);
 		try {
+			/**
+			 * TODO this reauth flow does not work
+			 * So mostly we end up doing a get/reauth and then put
+			 */
+
 			// based on the response do any authentication. If authentication requires
 			// the request to be performed again (i.e. Basic auth) re-issue request
 			response = authenticateIfRequired(response,
@@ -287,6 +365,91 @@ public class HttpUtils {
 					}
 	
 					throw logError(fullURI, response, Messages.HttpUtils_PUT_failed(fullURI, statusCode));
+				}
+				return httpContext;
+			}
+		} finally {
+			closeResponse(response);
+		}
+	}
+	
+	/**
+	 * Perform Post request against an RTC server
+	 * 
+	 * @param serverURI The RTC server
+	 * @param uri The relative URI for the PUT. It is expected that it is already encoded if necessary.
+	 * @param userId The userId to authenticate as
+	 * @param password The password to authenticate with
+	 * @param timeout The timeout period for the connection (in seconds)
+	 * @param json The JSON object to put to the RTC server
+	 * @param httpContext The context from the login if cycle is being managed by the caller
+	 * Otherwise <code>null</code> and this call will handle the login.
+	 * @param listener The listener to report errors to.
+	 * May be <code>null</code> if there is no listener.
+	 * @return The HttpContext for the request. May be reused in subsequent requests
+	 * for the same user
+	 * @throws IOException Thrown if things go wrong
+	 * @throws InvalidCredentialsException
+	 * @throws GeneralSecurityException 
+	 */
+	public static HttpClientContext performPost(String serverURI, String uri, String userId,
+			String password, int timeout, final JSONObject json, HttpClientContext httpContext, TaskListener listener)
+			throws IOException, InvalidCredentialsException, GeneralSecurityException {
+
+		CloseableHttpClient httpClient = getClient();
+		// Fill the request body
+		ContentProducer cp = new ContentProducer() {
+			public void writeTo(OutputStream outstream) throws IOException {
+				Writer writer = new OutputStreamWriter(outstream, UTF_8);
+				json.write(writer);
+				writer.flush();
+			}
+		};
+		HttpEntity entity = new EntityTemplate(cp);
+		String fullURI = getFullURI(serverURI, uri);
+		HttpPost postRequest = getPost(fullURI, timeout);
+		postRequest.setEntity(entity);
+		
+		if (httpContext == null) {
+			httpContext = createHttpContext();
+		}
+		
+		LOGGER.finer("POST: " + postRequest.getURI()); //$NON-NLS-1$
+		CloseableHttpResponse response = httpClient.execute(postRequest, httpContext);
+		try {
+			/**
+			 * TODO this reauth flow does not work inside POST
+			 * We end up doing a get/reauth and then put or post
+			 */
+			// based on the response do any authentication. If authentication requires
+			// the request to be performed again (i.e. Basic auth) re-issue request
+			response = authenticateIfRequired(response,
+					httpClient, httpContext, serverURI, userId, password,
+					timeout, listener);
+			
+			// retry put request if we have to do authentication
+			if (response == null) {
+				postRequest = getPost(fullURI, timeout);
+				postRequest.setEntity(entity);
+				response = httpClient.execute(postRequest, httpContext);
+			}
+
+			int statusCode = response.getStatusLine().getStatusCode();
+			if (statusCode == 401) {
+				// It is an unusual case to get here (in our current work flow) because it means
+				// the user has become unauthenticated since the previous request 
+				// (i.e. the get of the value about to put back)
+				throw new InvalidCredentialsException(Messages.HttpUtils_authentication_failed(userId, serverURI));
+
+			} else {
+				int responseClass = statusCode / 100;
+				if (responseClass != 2) {
+					LOGGER.warning(Messages.HttpUtils_POST_failed(fullURI, statusCode));
+					if (listener != null) {
+						listener.fatalError(Messages.HttpUtils_POST_failed(fullURI, statusCode));
+					}
+	
+					throw logError(fullURI, response, Messages.HttpUtils_POST_failed(fullURI, statusCode));
 				}
 				return httpContext;
 			}
@@ -635,6 +798,21 @@ public class HttpUtils {
 		put.setConfig(getRequestConfig(timeout));
 		return put;
 	}
+
+	/**
+	 * Obtain a POST request to execute
+	 * @param fullURI The full uri
+	 * @param timeout The time out period in seconds
+	 * @return a POST http request
+	 */
+	private static HttpPost getPost(String fullURI, int timeout) {
+		HttpPost post = new HttpPost(fullURI);
+		post.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
+		post.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
+		post.addHeader("Content-type", TEXT_JSON); //$NON-NLS-1$
+		post.setConfig(getRequestConfig(timeout));
+		return post;
+	}
 	
 	/**
 	 * Obtain a DELETE request to execute
@@ -680,7 +858,7 @@ public class HttpUtils {
 		return requestConfig;
 	}
 
-	private static String getFullURI(String serverURI, String relativeURI) {
+	public static String getFullURI(String serverURI, String relativeURI) {
 		String fullURI = serverURI;
 		if (!serverURI.endsWith(SLASH) && !relativeURI.startsWith(SLASH)) {
 			fullURI = serverURI + SLASH + relativeURI;

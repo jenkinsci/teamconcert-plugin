@@ -1,0 +1,34 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	Megadja a módosítások elfogadása után létrehozott pillanatképnek adott nevet. </p>
+  <p>
+  	Ez a mező beállítható bármilyen felhasználó által megadott karaktersorozatra, amely környezeti változókra és összeépítési paraméterekre hivatkozik. 
+Ajánlott legalább egy olyan változót belefoglalni, amely minden egyes
+összeépítés esetén egyedi (például a BUILD_NUMBER, BUILD_ID vagy a
+BUILD_URL), hogy biztosítsa, az egymást követő összeépítések eltérő nevű
+pillanatképeket hoznak létre. Ha a mező üres, akkor egy alapértelmezett
+pillanatképnév kerül felhasználásra. Egy összeépítés-meghatározást
+használó feladatok esetén a pillanatképnév alapértelmezés szerint
+"${buildDefinitionId}_#${BUILD_NUMBER}". Folyamot vagy lerakat munkaterületet használó feladatok esetén az alapértelmezett pillanatképnév: "${JOB_NAME}_#${BUILD_NUMBER}".
+  </p>
+  <p>
+  	például egy "JUnit integrációs összeépítés" nevű feladat esetén, ha ez a
+mező "${JOB_NAME}_#${BUILD_NUMBER}_Snapshot" értékre van beállítva, akkor az első összeépítés által létrehozott pillanatkép neve
+"JUnit integrációs összeépítés_#1_Snapshot" lesz.
+ </p>
+</div>

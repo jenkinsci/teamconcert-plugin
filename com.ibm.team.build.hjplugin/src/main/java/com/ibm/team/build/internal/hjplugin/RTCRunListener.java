@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -136,8 +136,7 @@ public class RTCRunListener extends RunListener<Run> {
 		    		LOGGER.log(Level.FINER, "terminateBuild failed " + e.getMessage(), e); //$NON-NLS-1$
 				}
 				// Handle deletion of temporary workspace created during snapshot or stream build
-				handleDeleteOfTempRepositoryWorkspace(build, action, listener);
-				
+				handleDeleteOfTempRepositoryWorkspace(build, action, listener);				
 			}
 			if (actions.isEmpty()) {
 				LOGGER.finer("Completed Build: " + build.getDisplayName() + " No RTC build result associated."); //$NON-NLS-1$ //$NON-NLS-2$
@@ -246,7 +245,9 @@ public class RTCRunListener extends RunListener<Run> {
 			LOGGER.finest("Exiting from delete temporary Repository Workspaces");
 		}
 	}
+
 	
+
 	@Override
 	public void onDeleted(Run r) {
 		LOGGER.finest("onDeleted : Start");
@@ -266,7 +267,18 @@ public class RTCRunListener extends RunListener<Run> {
 		LOGGER.finest("onDeleted : End");
 	}
 	
-	private RTCScm getRTCScm(Run<?,?> build, RTCBuildResultAction action, SCM scmSystem) {
+	static RTCScm getRTCScm(Run<?,?> build, RTCBuildResultAction action) {
+		SCM scmSystem = null;
+		// This allows us to get the current SCM configuration. If it is RTC, then we get the 
+		// latest configuration
+		if (build instanceof AbstractBuild) {
+			scmSystem = ((AbstractBuild)build).getProject().getScm(); 
+		}
+		
+		return getRTCScm(build, action, scmSystem);
+	}
+	
+	static RTCScm getRTCScm(Run<?,?> build, RTCBuildResultAction action, SCM scmSystem) {
 		RTCScm scm = null;
 		if (scmSystem != null && scmSystem instanceof RTCScm) {
 			scm = (RTCScm) scmSystem;

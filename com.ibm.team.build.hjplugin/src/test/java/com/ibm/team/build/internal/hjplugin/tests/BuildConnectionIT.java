@@ -10,7 +10,15 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Map;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.ibm.team.build.internal.hjplugin.BuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.RTCBuildCause;
@@ -21,14 +29,6 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildState;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 import hudson.model.Result;
 import hudson.model.TaskListener;

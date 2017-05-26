@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,7 +12,6 @@
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +20,10 @@ import java.util.Map;
 
 import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.build.common.builddefinition.IAutoDeliverConfigurationElement;
+import com.ibm.team.build.common.builddefinition.UDeployConfigurationElement.TriggerPolicy;
 import com.ibm.team.build.common.model.BuildState;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
@@ -40,18 +42,15 @@ import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
+import com.ibm.team.scm.client.IFlowNodeConnection.IComponentAdditionOp;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceConnection.IConfigurationOp;
 import com.ibm.team.scm.client.IWorkspaceConnection.IMarkAsMergedOp;
 import com.ibm.team.scm.client.IWorkspaceConnection.IRevertOp;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
-import com.ibm.team.scm.client.IFlowNodeConnection.IComponentAdditionOp;
 import com.ibm.team.scm.common.AcceptFlags;
-import com.ibm.team.scm.common.BaselineSetFlags;
-import com.ibm.team.scm.common.WorkspaceComparisonFlags;
 import com.ibm.team.scm.common.IBaselineSetHandle;
-import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IChange;
 import com.ibm.team.scm.common.IChangeSet;
 import com.ibm.team.scm.common.IChangeSetHandle;
@@ -60,19 +59,25 @@ import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
+import com.ibm.team.scm.common.WorkspaceComparisonFlags;
+import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 import com.ibm.team.scm.common.dto.IItemConflictReport;
 import com.ibm.team.scm.common.dto.IUpdateReport;
-import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 import com.ibm.team.workitem.common.model.IWorkItem;
 import com.ibm.team.workitem.common.model.IWorkItemHandle;
 
 @SuppressWarnings("nls")
 public class TestSetupTearDownUtil extends BuildClient {
 	
+	public static final String ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_2 = "multipleWorkspaceItemId2";
+	public static final String ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_1 = "multipleWorkspaceItemId1";
+	public static final String ARTIFACT_SINGLE_WORKSPACE_ITEM_ID = "singleWorkspaceItemId";
 	public static final String ARTIFACT_WORKSPACE_NAME = "workspaceName";
 	public static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
 	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
 	public static final String ARTIFACT_STREAM_NAME = "streamName";
+	public static final String ARTIFACT_PB_STREAM_ITEM_ID = "pbStreamItemId";
+	public static final String ARTIFACT_PB_STREAM_NAME = "pbStreamName";
 	public static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
 	public static final String ARTIFACT_COMPONENT_ADDED_ITEM_ID = "componentAddedItemId";
 	public static final String ARTIFACT_BASELINE_SET_ITEM_ID = "baselineSetItemId";
@@ -147,7 +152,12 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
 			String componentName, boolean createBuildDefinition, IProgressMonitor progress) throws Exception {
-				
+		return setupAcceptChanges(connectionDetails, name, componentName, name, createBuildDefinition, true, progress);
+	}
+	
+	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
+			String componentName, String buildDefinitionId, boolean createBuildDefinition,
+			boolean createBuildResult, IProgressMonitor progress) throws Exception {			
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
@@ -174,20 +184,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		if (createBuildDefinition) {
 			
-			BuildUtil.createBuildDefinition(repo, name, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
-			
-			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
-
-			String buildResultItemId = connection.createBuildResult(name, null, "my buildLabel", listener, null, Locale.getDefault());
-			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (createBuildResult) {
+				BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
 			}
-
 		}
 		
 		IComponent component = (IComponent) pathToHandle.get(componentName);
@@ -213,6 +216,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void createChangeSet1(ITeamRepository repo,
 			IWorkspaceConnection workspace, IComponent component, String root,
 			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts,
@@ -359,12 +363,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
-		// Can't delete components just the workspaces
-		SCMUtil.deleteWorkspace(repo, setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID));
-		SCMUtil.deleteWorkspace(repo, setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID));
-		SCMUtil.deleteWorkspace(repo, setupArtifacts.get("singleWorkspaceItemId"));
-		SCMUtil.deleteWorkspace(repo, setupArtifacts.get("multipleWorkspaceItemId1"));
-		SCMUtil.deleteWorkspace(repo, setupArtifacts.get("multipleWorkspaceItemId2"));
+
+		// Delete SCM repository workspaces
+		SCMUtil.deleteSCMArtifacts(repo, setupArtifacts);
 		
 		// Delete the build defn related artifacts
 		BuildUtil.deleteBuildArtifacts(repo, setupArtifacts);
@@ -404,9 +405,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IWorkspaceConnection buildWorkspace3 = SCMUtil.createWorkspace(workspaceManager, multipleWorkspaceName);
 		
 		Map<String, String> result = new HashMap<String, String>();
-		result.put("singleWorkspaceItemId", buildWorkspace.getContextHandle().getItemId().getUuidValue());
-		result.put("multipleWorkspaceItemId1", buildWorkspace2.getContextHandle().getItemId().getUuidValue());
-		result.put("multipleWorkspaceItemId2", buildWorkspace3.getContextHandle().getItemId().getUuidValue());
+		result.put(ARTIFACT_SINGLE_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		result.put(ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_1, buildWorkspace2.getContextHandle().getItemId().getUuidValue());
+		result.put(ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_2, buildWorkspace3.getContextHandle().getItemId().getUuidValue());
 		repo.logout();
 		return result;
 	}
@@ -977,10 +978,12 @@ public class TestSetupTearDownUtil extends BuildClient {
 			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
 		Map<String, String> artifactIds = buildConfigurationTests.setupComponentLoading(workspaceName,
+				buildDefinitionId,
 				componentName, hjPath, buildPath);
 		try {
-			buildConfigurationTests.testComponentLoading(workspaceName, componentName, hjPath, buildPath, artifactIds);
+			buildConfigurationTests.testComponentLoading(workspaceName, buildDefinitionId, componentName, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
 				tearDown(connectionDetails, artifactIds, progress);
@@ -997,10 +1000,11 @@ public class TestSetupTearDownUtil extends BuildClient {
 			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
-		Map<String, String> artifactIds = buildConfigurationTests.setupNewLoadRules(workspaceName,
-				componentName, hjPath, buildPath);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupNewLoadRules(workspaceName, 
+				componentName, buildDefinitionId, hjPath, buildPath);
 		try {
-			buildConfigurationTests.testNewLoadRules(workspaceName, componentName, hjPath, buildPath, artifactIds);
+			buildConfigurationTests.testNewLoadRules(workspaceName, componentName, buildDefinitionId, hjPath, buildPath, artifactIds);
 		} catch (Exception e) {
 			try {
 				tearDown(connectionDetails, artifactIds, progress);
@@ -1123,7 +1127,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 	
-	@SuppressWarnings("restriction")
 	public Map<String, String> setupTestBuildStream_basic(ConnectionDetails connectionDetails, String projectAreaName, String streamName,
 			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
@@ -1330,6 +1333,76 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IWorkspaceConnection workspaceConnection = workspaceManager.getWorkspaceConnection(workspaceHandle, progress);
 		IBaselineSetHandle baseline = RTCSnapshotUtils.getSnapshot(repository, null, snapshotUUID, progress, Locale.getDefault());
 		workspaceConnection.removeBaselineSet(baseline, progress);
+	}
+	
+	public Map<String, String> setupBuildDefinitionWithJazzScmAndPBDeliver(ConnectionDetails connectionDetails,
+			String workspaceName, String componentName, String buildDefinitionId,
+			boolean createBuildResult, Map<String, String> configOrGenericProperties, 
+			IProgressMonitor progress) throws Exception {
+		Map<String, String> artifactIds = setupAcceptChanges(connectionDetails, workspaceName, componentName, 
+								buildDefinitionId, true, false, progress);
+		
+		// Setting up the PB deliver configuration element.
+		String deliverTargetName = TestUtils.getRepositoryWorkspaceUniqueName();
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		// Create another repository workspace that will act as the flow target. Use the stream created in setupAcceptChanges as the base for this new workspace
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(connection.getTeamRepository());
+		IWorkspaceConnection stream = workspaceManager.getWorkspaceConnection((IWorkspaceHandle)IWorkspace.ITEM_TYPE.createItemHandle(
+										UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID)),null),null);
+		IWorkspaceConnection deliverTarget = SCMUtil.createWorkspace(workspaceManager, deliverTargetName, ""
+												+ "My deliver target workspace", stream);
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_PB_STREAM_ITEM_ID, deliverTarget.getResolvedWorkspace().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_PB_STREAM_NAME, deliverTarget.getName());
+		
+		// Compose the map of properties that has to be provided for PB deliver configuration
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_ADD_NEW_COMPONENTS_TO_TARGET, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+					IAutoDeliverConfigurationElement.PROPERTY_ADD_NEW_COMPONENTS_TO_TARGET, "true"));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_ALL_COMPONENTS, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_DELIVER_ALL_COMPONENTS, "true"));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_REMOVE_COMPONENTS_IN_TARGET, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_REMOVE_COMPONENTS_IN_TARGET, "true"));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TRIGGER_POLICY, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TRIGGER_POLICY, TriggerPolicy.NO_WARNINGS.name()));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TARGET_UUID, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TARGET_UUID, deliverTarget.getResolvedWorkspace().getItemId().getUuidValue()));
+		setupPBDeliverConfigurationElement(connectionDetails, buildDefinitionId, artifactIds, configOrGenericProperties, progress);
+		
+		// Create the build result now, so that it includes PB deliver configuration element
+		if (createBuildResult) {
+			BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
+		}
+		return artifactIds;
+	}
+	
+	public Map<String, String> setupBuildDefinitionWithPBDeliver(ConnectionDetails connectionDetails, String buildDefinitionId, 
+												Map<String, String> configOrGenericProperties, IProgressMonitor progress) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		try {
+			RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+			connection.ensureLoggedIn(monitor.newChild(2));
+			Map<String, String> artifactIds = setupTestBuildDefinition(connectionDetails, buildDefinitionId, monitor.newChild(10));
+			setupPBDeliverConfigurationElement(connectionDetails, buildDefinitionId, artifactIds, configOrGenericProperties,
+												monitor.newChild(70));
+			return artifactIds;
+		} finally {
+			monitor.done();
+		}
+	}
+	
+	private void setupPBDeliverConfigurationElement(ConnectionDetails connectionDetails, String buildDefinitionId, 
+							   Map<String,String> artifactIds, 
+							   Map<String,String> configOrGenericProperties, IProgressMonitor progress) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		try {
+			RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+			connection.ensureLoggedIn(monitor.newChild(30));
+			ITeamRepository repository = connection.getTeamRepository();
+			BuildUtil.setupPBDeliverConfigurationElement(repository, buildDefinitionId, 
+													artifactIds,
+								 					configOrGenericProperties, monitor.newChild(70));
+		} finally {
+			monitor.done();
+		}
 	}
 	
 	private Map<String, IItemHandle> setupWorkspaceWithComponent(ITeamRepository repo, IWorkspaceConnection target, 

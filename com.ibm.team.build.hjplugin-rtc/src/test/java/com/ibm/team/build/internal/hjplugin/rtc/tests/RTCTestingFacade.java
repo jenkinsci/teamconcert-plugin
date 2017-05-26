@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,7 @@
 
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -115,6 +116,15 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		Map<String, String> setup = testClient.setupAcceptChanges(connectionDetails, name, componentName, createBuildDefinition, getProgressMonitor());
+		return setup;
+	}
+	
+	public Map<String, String> setupAcceptChanges(String serverURL, String userId, String password, int timeout,
+			String name,  String componentName, String buildDefinitionId,  boolean createBuildDefinition, boolean createBuildResult) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupAcceptChanges(connectionDetails, name, componentName, buildDefinitionId,
+						createBuildDefinition, createBuildResult, getProgressMonitor());
 		return setup;
 	}
 	
@@ -433,5 +443,17 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		testClient.deleteSnapshot(connectionDetails, streamName, snapshotUUID, getProgressMonitor());
+	}
+	
+	public Map<String, String> setupBuildDefinitionWithJazzScmAndPBDeliver(String serverURL, String userId, String password, int timeout,
+						String workspaceName, String componentName, String buildDefinitionId, boolean createBuildResult,
+						Map<String, String> configOrGenericProperties) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		if (configOrGenericProperties == null) {
+			configOrGenericProperties = new HashMap<String, String>();
+		}
+		return testClient.setupBuildDefinitionWithJazzScmAndPBDeliver(connectionDetails, workspaceName, componentName, buildDefinitionId, 
+									createBuildResult, configOrGenericProperties, getProgressMonitor());
 	}
 }

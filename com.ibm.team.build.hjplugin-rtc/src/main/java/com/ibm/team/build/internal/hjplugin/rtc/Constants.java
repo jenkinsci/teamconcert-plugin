@@ -29,4 +29,54 @@ public class Constants {
 	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData";
 	public static final String REPOSITORY_ADDRESS = "repositoryAddress";
 	
+	/**
+	 * Build Definition Info constants
+	 */
+	
+	/**
+	 * Identifies post build deliver information
+	 */
+	public static final String PB_INFO_ID = "pbDeliver";
+	
+	/**
+	 * Whether post build deliver is configured
+	 */
+	public static final String PB_CONFIGURED_KEY = "configured";
+	
+	/**
+	 * Whether post build deliver is enabled.
+	 */
+	public static final String PB_ENABLED_KEY = "enabled";
+	
+	/**
+	 * Identifies trigger policy for post build deliver.
+	 */
+	public static final String PB_TRIGGER_POLICY_KEY = "triggerPolicy";
+	
+	/**
+	 * Used when the value of trigger policy is unknown
+	 */
+	public static final String PB_TRIGGER_POLICY_UNKNOWN_VALUE = "unknown";
+	
+	/**
+	 * Generic constants
+	 */
+	public static final String TRUE = "true";
+	
+	public static final String FALSE = "false";
+	
+	/**
+	 *  Identifies generic build information
+	 */
+	public static final String GENERIC_INFO_ID = "general";
+
+	/**
+	 * Build definition id
+	 */
+	public static final String GENERIC_BUILD_DEFINITION_ID_KEY = "id";
+	
+	/**
+	 * Build result label
+	 */
+	static final String BUILD_RESULT_LABEL = "buildLabel";
 }

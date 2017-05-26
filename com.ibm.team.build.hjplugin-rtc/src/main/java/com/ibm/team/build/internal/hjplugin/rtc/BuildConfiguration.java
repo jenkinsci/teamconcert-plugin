@@ -381,7 +381,7 @@ public class BuildConfiguration {
             buildProperties.put(property.getName(), property.getValue());
         }
         
-		buildProperties.put("buildLabel", result.getLabel()); //$NON-NLS-1$
+		buildProperties.put(Constants.BUILD_RESULT_LABEL, result.getLabel()); //$NON-NLS-1$
 
 		// Substitute variables in the build and config properties.
 		IBuildRequest workingCopy = (IBuildRequest) buildRequest.getWorkingCopy();

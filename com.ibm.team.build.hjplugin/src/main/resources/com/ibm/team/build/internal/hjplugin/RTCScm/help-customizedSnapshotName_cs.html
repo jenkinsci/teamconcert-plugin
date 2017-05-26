@@ -1,0 +1,29 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	Uvádí název daný snímku vytvořenému po přijetí změn.
+  </p>
+  <p>
+  	Toto pole lze nastavit na libovolný uživatelem definovaný řetězec, který se bude odkazovat na proměnné prostředí a parametry sestavení. Doporučuje se, aby obsahoval minimálně jednu proměnnou, jejíž hodnota
+je jedinečná pro každé sestavení, např. BUILD_NUMBER, BUILD_ID nebo BUILD_URL, abyste zajistili, že následná sestavení vytvoří snímky s jinými názvy.
+	Je-li toto pole prázdné, použije se výchozí název snímku. Pro úlohy používající definici sestavení se jako název snímku standardně použije "${buildDefinitionId}_#${BUILD_NUMBER}". Pro úlohy používající proud nebo pracovní prostor úložiště používá
+snímek standardně název ve tvaru "${JOB_NAME}_#${BUILD_NUMBER}".
+  </p>
+  <p>
+  	Např. u úlohy s názvem "JUnit Integration Build" bude v případě, že je toto pole nastaveno na hodnotu "${JOB_NAME}_#${BUILD_NUMBER}_Snapshot", název snímku vytvořeného prvním sestavením "JUnit Integration Build_#1_Snapshot".
+  </p>
+</div>

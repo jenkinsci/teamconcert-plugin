@@ -16,6 +16,7 @@ package com.ibm.team.build.internal.hjplugin.util;
  */
 public interface RTCBuildConstants {
 
+	public static final String SEPARATOR = "/";
     /**
      * Indicates the build has not been started. Also known as PENDING.
      */
@@ -94,12 +95,29 @@ public interface RTCBuildConstants {
      * Result is of type {@link IncomingChangesResponseDTO} a query can be made for only 1 build definition or workspace
      */
     public static final String URI_INCOMING_CHANGES = "resource/virtual/build/incomingchanges"; //$NON-NLS-1$
+    
+    public static final String URI_SEGMENT_RESURCE = "resource/virtual";
+    
+    
+    public static final String URI_SEGMENT_RESULT = "build/result";
+
+    public static final String URI_SEGMENT_RESULT_PARTICIPANT = "participant"; //$NON-NLS-1$
 
     /**
      * URI for checking compatibility of the RTC server. We need 5.0 or higher in order to
      * use the Rest services.
      */
     public static final String URI_COMPATIBILITY_CHECK = "versionCompatibility?clientVersion=5.0"; //$NON-NLS-1$
+    
+    /**
+     * URI for checking compatibility of the RTC server version 6.0.4
+     */
+    public static final String URI_COMPATIBILITY_CHECK_604 = "versionCompatibility?clientVersion=6.0.4"; //$NON-NLS-1$
+    
+    /**
+     * URI for checking compatibility of the RTC server version 6.0.4 M5
+     */
+    public static final String URI_COMPATIBILITY_CHECK_604_M5 = "versionCompatibility?clientVersion=6.0.4M5"; //$NON-NLS-1$
 
     /**
      * URI for searching for workspaces (uses ITeamModelledRestService)
@@ -187,5 +205,98 @@ public interface RTCBuildConstants {
 	 * The definition's element ID. Constant from IJazzScmConfigurationElement
 	 */
 	public static final String SCM_ELEMENT_ID = "com.ibm.team.build.jazzscm";
+    
+    public static final String URI_SEGMENT_CONTRIBUTION = "contribution"; //$NON-NLS-1$
 
+
+	/**
+	 * Build Definition Info constants
+	 */
+	
+	/**
+	 * Identifies post build deliver information
+	 */
+	public static final String PB_INFO_ID = "pbDeliver";
+	
+	/**
+	 * Whether post build deliver is configured
+	 */
+	public static final String PB_CONFIGURED_KEY = "configured";
+	
+	/** 
+	 * Whether post build deliver is enabled
+	 */
+	public static final String PB_ENABLED_KEY = "enabled";
+	
+	/**
+	 * Identifies trigger policy for post build deliver.
+	 */
+	public static final String PB_TRIGGER_POLICY_KEY = "triggerPolicy";
+	
+	/**
+	 * Used when the value of trigger policy is unknown
+	 */
+	public static final String PB_TRIGGER_POLICY_UNKNOWN_VALUE = "unknown";
+	
+	/**
+	 * Key for ignoring trigger policy when invoking post build deliver participant
+	 */
+	public static final String PB_DELIVER_IGNORE_TRIGGER_POLICY_KEY = "ignoreTriggerPolicy";
+	
+	/**
+	 * Key for specifying the build result item id 
+	 */
+	public static final String PB_DELIVER_BUILD_RESULT_ITEMID_KEY = "buildResultItemId";
+	
+	/**
+	 * Key for specifying the the participant to be invoked
+	 */
+	public static final String PB_DELIVER_PARTICIPANT_KEY = "participant";
+	
+    /** 
+     * Id of Auto Deliver post build participant on the server
+     */
+    public static final String POST_BUILD_DELIVER_PARTICIPANT = "com.ibm.team.build.service.AutoDeliverPostBuildParticipant"; //$NON-NLS-1$
+    
+    /**
+     * Key for finding whether post build participant actually delivered code
+     */
+    public static final String AUTO_DELIVER_POST_BUILD_PARTICIPANT_DELIVERED = "AutoDeliverPostBuildParticipant.delivered"; //$NON-NLS-1$
+    
+    /**
+     * Textual summary of the post build deliver
+     */
+    public static final String AUTO_DELIVER_POST_BUILD_PARTICIPANT_SUMMARY = "AutoDeliverPostBuildParticipant.summary"; //$NON-NLS-1$
+    
+	
+	/**
+	 * Generic constants
+	 */
+	public static final String TRUE = "true";
+	
+	public static final String FALSE = "false";
+	
+	/**
+	 * Extended contribution property related constants
+	 */
+	String EXTENDED_CONTRIB_PROPERTY_NAME = "name";
+	
+	String EXTENDED_CONTRIB_PROPERTY_VALUE = "value";
+	
+	String EXTENDED_CONTRIB_PROPERTIES_MEMBER = "extendedContributionProperties";
+	
+	/**
+	 *  Identifies generic build information
+	 */
+	public static final String GENERIC_INFO_ID = "general";
+
+	/**
+	 * Build definition id
+	 */
+	public static final String GENERIC_BUILD_DEFINITION_ID_KEY = "id";
+	
+	/**
+	 * Build Result label
+	 */
+	public static final Object BUILD_RESULT_LABEL = "buildLabel";
 }

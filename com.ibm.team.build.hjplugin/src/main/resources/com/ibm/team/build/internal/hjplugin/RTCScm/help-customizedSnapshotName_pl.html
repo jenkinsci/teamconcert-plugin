@@ -1,0 +1,36 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	Określa nazwę obrazu stanu, który jest tworzony po zaakceptowaniu zmian. </p>
+  <p>
+  	To pole można ustawić na dowolny łańcuch podany przez użytkownika,
+przywoływane zmienne środowiskowe i parametry budowania. Zalecane jest
+dołączenie do każdego budowania co najmniej jednej zmiennej o wartości
+unikalnej, na przykład BUILD_NUMBER, BUILD_ID lub BUILD_URL, aby zapewnić, że
+kolejne operacje budowania utworzą obrazy stanu o innych nazwach. Jeśli to pole
+będzie puste, zamiast niego zostanie użyta domyślna nazwa obrazu stanu. W
+przypadku zadań, które korzystają z definicji budowania, domyślna nazwa obrazu
+stanu to ${buildDefinitionId}_#${BUILD_NUMBER}. W przypadku zadań, które
+używają strumienia lub obszaru roboczego repozytorium, domyślna nazwa obrazu
+stanu to ${JOB_NAME}_#${BUILD_NUMBER}. </p>
+  <p>
+  	Na przykład jeśli dla zadania o nazwie „Budowanie integracyjne JUnit” to pole
+zostanie ustawione na wartość ${JOB_NAME}_#${BUILD_NUMBER}_Obraz_stanu, nazwą
+obrazu stanu utworzonego przez pierwszą operację budowania będzie „Budowanie
+integracyjne JUnit_#1_Obraz_stanu”.
+  </p>
+</div>

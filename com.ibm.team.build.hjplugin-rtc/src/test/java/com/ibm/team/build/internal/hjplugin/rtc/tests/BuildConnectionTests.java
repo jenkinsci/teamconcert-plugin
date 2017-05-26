@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -19,7 +19,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 
@@ -46,7 +45,6 @@ import com.ibm.team.build.internal.common.links.BuildLinkTypes;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConfiguration;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
-import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCConfigurationException;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
@@ -271,8 +269,7 @@ public class BuildConnectionTests {
 		Map<String, String> artifactIds = new HashMap<String, String>();
 
 		try {
-			final Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			ConsoleOutputHelper listener = new ConsoleOutputHelper();
 			
 			// create 2 workspaces, a build one and a personal build one
 			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
@@ -290,14 +287,14 @@ public class BuildConnectionTests {
 			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 
 			BuildConfiguration buildConfiguration = new BuildConfiguration(repo, "");
 			buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 
 			AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
@@ -312,14 +309,14 @@ public class BuildConnectionTests {
 			buildResultItemId = connection.createBuildResult(testName, personalWorkspace.getResolvedWorkspace().getName(), "my personal buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 			
 			buildConfiguration = new BuildConfiguration(repo, "");
 			buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", listener, null, Locale.getDefault());
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 			
 			AssertUtil.assertTrue(buildConfiguration.isPersonalBuild(), "Should be a personal build");
@@ -343,7 +340,7 @@ public class BuildConnectionTests {
 
 		try {
 			final Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			ConsoleOutputHelper listener = new ConsoleOutputHelper();
 			
 			// create a build workspace
 			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
@@ -383,8 +380,7 @@ public class BuildConnectionTests {
 		Map<String, String> artifactIds = new HashMap<String, String>();
 
 		try {
-			final Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			ConsoleOutputHelper listener = new ConsoleOutputHelper();
 			
 			// create build workspace
 			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
@@ -399,15 +395,15 @@ public class BuildConnectionTests {
 			// create a build result
 			String buildResultItemId = connection.createBuildResult(testName, null, "external links test 1", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 
 			// Add external links
 			connection.getBuildConnection().createBuildLinks(buildResultItemId, "http://localHost:8080", "myJob", "myJob/2",
 					listener, null);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 			
 			// verify the links are on the build result
@@ -430,14 +426,14 @@ public class BuildConnectionTests {
 			BuildUtil.deleteBuildResult(repo, buildResultItemId);
 			buildResultItemId = connection.createBuildResult(testName, null, "external links test 2", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 
 			// test creating links when we could not get the hudson url
 			connection.getBuildConnection().createBuildLinks(buildResultItemId, null, "anotherJob", "anotherJob/44", listener, null);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 
 			// verify the links are on the build result
@@ -643,15 +639,14 @@ public class BuildConnectionTests {
 	private String startBuild(ITeamRepository repo, String testName,
 			Map<String, String> artifactIds) throws Exception,
 			TeamRepositoryException {
-		final Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = getListener(failure);
+		ConsoleOutputHelper listener = new ConsoleOutputHelper();
 
 		String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
-		if (failure[0] != null) {
-			throw failure[0];
+		if (listener.hasFailure()) {
+			throw listener.getFailure();
 		}
-		
+
 		// make sure the build is in progress
 		IBuildResultHandle buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
 		IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchPartialItem(buildResultHandle, 
@@ -701,7 +696,7 @@ public class BuildConnectionTests {
 			BuildState expectedState, Map<String, String> artifactIds)
 					throws Exception, TeamRepositoryException {
 		final Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = getListener(failure);
+		ConsoleOutputHelper listener = new ConsoleOutputHelper();
 
 		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
 		OperationCanceledException cancelException = null;
@@ -737,23 +732,6 @@ public class BuildConnectionTests {
 			throw cancelException;
 		}
 	}
-
-	private IConsoleOutput getListener(final Exception[] failure) {
-		IConsoleOutput listener = new IConsoleOutput() {
-			
-			@Override
-			public void log(String message, Exception e) {
-				failure[0] = e;
-			}
-			
-			@Override
-			public void log(String message) {
-				// not good
-				throw new AssertionFailedException(message);
-			}
-		};
-		return listener;
-	}
 	
 	public String testBuildResultInfo(String testName, final IBuildResultInfo buildResultInfo) throws Exception {
 		connection.ensureLoggedIn(null);
@@ -762,8 +740,7 @@ public class BuildConnectionTests {
 		Map<String, String> artifactIds = new HashMap<String, String>();
 
 		try {
-			final Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = getListener(failure);
+			ConsoleOutputHelper listener = new ConsoleOutputHelper();
 			
 			// create 2 workspaces, a build one and a personal build one
 			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
@@ -780,8 +757,8 @@ public class BuildConnectionTests {
 			// test a personal build
 			final String buildResultItemId = connection.createBuildResult(testName, personalWorkspace.getResolvedWorkspace().getName(), "my personal buildLabel", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
-			if (failure[0] != null) {
-				throw failure[0];
+			if (listener.hasFailure()) {
+				throw listener.getFailure();
 			}
 			
 			BuildResultInfoDelegate buildResultInfoDelegate = new BuildResultInfoDelegate(buildResultItemId);

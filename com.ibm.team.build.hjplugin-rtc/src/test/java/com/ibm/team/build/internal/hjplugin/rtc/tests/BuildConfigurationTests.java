@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -33,7 +33,6 @@ import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConfiguration;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
-import com.ibm.team.build.internal.hjplugin.rtc.Constants;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.Messages;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCConfigurationException;
@@ -67,7 +66,7 @@ public class BuildConfigurationTests {
 		this.connection = repositoryConnection; 
 	}
 
-	public Map<String, String> setupComponentLoading(String workspaceName,
+	public Map<String, String> setupComponentLoading(String workspaceName, String buildDefinitionId,
 			String testName, String hjPath, String buildPath) throws Exception {
 		
 		connection.ensureLoggedIn(null);
@@ -103,7 +102,7 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -112,16 +111,8 @@ public class BuildConfigurationTests {
 					IJazzScmConfigurationElement.PROPERTY_COMPONENT_LOAD_RULES, "",
 					IJazzScmConfigurationElement.PROPERTY_INCLUDE_COMPONENTS, "true",
 					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.singletonList(component)).getBuildProperty() );
-			
-			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
-			
-			// create the build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "my buildLabel", listener, null, Locale.getDefault());
-			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
-			if (failure[0] != null) {
-				throw failure[0];
-			}
+
+			BuildUtil.createBuildResult(buildDefinitionId, connection, "my buildLabel", artifactIds);
 		
 			return artifactIds;
 		} catch (Exception e) {
@@ -133,7 +124,7 @@ public class BuildConfigurationTests {
 		}
 	}
 
-	public void testComponentLoading(String workspaceName,
+	public void testComponentLoading(String workspaceName, String buildDefinitionId,
 			String testName, String hjPath, String buildPath, Map<String, String> artifactIds) throws Exception {
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
@@ -164,12 +155,12 @@ public class BuildConfigurationTests {
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
 		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion should not be needed");
 	}
 
 	public Map<String, String> setupNewLoadRules(String workspaceName,
-			String componentName, String hjPath, String buildPath) throws Exception {
+			String componentName, String buildDefinitionId, String hjPath, String buildPath) throws Exception {
 		// create a build definition with new format load rules
 		// load directory "."
 		// delete directory before loading (dir has other stuff that will be deleted)
@@ -227,24 +218,16 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, componentName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS, "false",
 					IJazzScmConfigurationElement.PROPERTY_COMPONENT_LOAD_RULES, loadRule.getBuildPropertySetting(),
-					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.EMPTY_LIST).getBuildProperty() );
-			
-			Exception[] failure = new Exception[] {null};
-			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
-			
-			// create the build result
-			String buildResultItemId = connection.createBuildResult(componentName, null, "my buildLabel", listener, null, Locale.getDefault());
-			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
-			if (failure[0] != null) {
-				throw failure[0];
-			}
+					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.<IComponentHandle>emptyList()).getBuildProperty() );
+
+			BuildUtil.createBuildResult(buildDefinitionId, connection, "my buildLabel", artifactIds);
 		
 			return artifactIds;
 		} catch (Exception e) {
@@ -270,7 +253,7 @@ public class BuildConfigurationTests {
 		return loadRule;
 	}
 
-	public void testNewLoadRules(String workspaceName, String testName,
+	public void testNewLoadRules(String workspaceName, String testName, String buildDefinitionId, 
 			String hjPath, String buildPath, Map<String, String> artifactIds) throws Exception {
 		connection.ensureLoggedIn(null);
 		ITeamRepository repo = connection.getTeamRepository(); 
@@ -300,7 +283,7 @@ public class BuildConfigurationTests {
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
 		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
 	}
 
@@ -368,7 +351,7 @@ public class BuildConfigurationTests {
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "false",
 					IJazzScmConfigurationElement.PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS, "false",
 					IJazzScmConfigurationElement.PROPERTY_COMPONENT_LOAD_RULES, loadRule.getBuildPropertySetting(),
-					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.EMPTY_LIST).getBuildProperty() );
+					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.<IComponentHandle>emptyList()).getBuildProperty() );
 			
 			Exception[] failure = new Exception[] {null};
 			IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
@@ -508,7 +491,7 @@ public class BuildConfigurationTests {
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS, "false",
 					IJazzScmConfigurationElement.PROPERTY_COMPONENT_LOAD_RULES, loadRule.getBuildPropertySetting(),
-					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.EMPTY_LIST).getBuildProperty(),
+					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS, new LoadComponents(Collections.<IComponentHandle>emptyList()).getBuildProperty(),
 					"myPropsFile", "${team.scm.fetchDestination}/com.ibm.team.build.releng/continuous-buildsystem.properties",
 					"propertyA", "loadDir",
 					"propertyB", "a place (${propertyA}) to load some stuff", 
@@ -767,8 +750,7 @@ public class BuildConfigurationTests {
 	
 	public void testLoadSnapshotConfiguration(String snapshotName, String workspacePrefix, String hjPath) throws Exception {
 		connection.ensureLoggedIn(null);
-		Exception[] failure = new Exception[] {null};
-		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
+		ConsoleOutputHelper listener = new ConsoleOutputHelper();
 		
 		ITeamRepository repo = connection.getTeamRepository();
 		RepositoryManager manager = connection.getRepositoryManager();
@@ -776,8 +758,8 @@ public class BuildConfigurationTests {
 		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
 		IBaselineSet bs = RTCSnapshotUtils.getSnapshot(repo, null, snapshotName, null, Locale.getDefault());
 		buildConfiguration.initialize(bs, repo.loggedInContributor(), workspacePrefix, null, listener, Locale.getDefault(), null);
-		if (failure[0] != null) {
-			throw failure[0];
+		if (listener.hasFailure()) {
+			throw listener.getFailure();
 		}
 		// Things that have be right in BuildConfiguration
 		AssertUtil.assertEquals(buildConfiguration.getBuildSnapshotDescriptor().getSnapshotUUID(), bs.getItemId().getUuidValue());

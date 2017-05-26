@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -1171,6 +1171,7 @@ public class RepositoryConnection {
 	 * Create an RTC build result.
 	 * @param buildDefinition The name of the build definition that is behind the request
 	 * for the build.
+	 * @param buildLabel - the label for the build result
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
@@ -1556,28 +1557,6 @@ public class RepositoryConnection {
         
         return result;
 	}
-
-	private String getWorkspaceNamePrefix() {
-		return DEFAULTWORKSPACEPREFIX; 
-	}
-
-	/**
-	 * Return the count of processed change sets (accepted or discarded)
-	 *  + processed components (adds/removes)
-	 */
-	private int getAcceptChangesCount(ChangeReport changeReport) {
-		if (changeReport == null) {
-			return 0;
-		}
-		int changesCount = 0;
-		if (changeReport.getChangeSets() != null) {
-			changesCount += changeReport.getChangeSets().size();
-		}
-		if (changeReport.getComponentChanges() != null) {
-			changesCount += changeReport.getComponentChanges().size();
-		}
-		return changesCount;
-	}
 	
 	/**
 	 * Validate if the specified components exist in the repository and included in the given workspace.
@@ -1644,7 +1623,6 @@ public class RepositoryConnection {
 		}
 	}
 	
-	
 	/**
 	 * Validate if the given project/team area exists in the repository.
 	 * 
@@ -1661,6 +1639,49 @@ public class RepositoryConnection {
 		} catch (RTCConfigurationException e) {
 			throw new RTCValidationException(e.getMessage());
 		}
+	}
+
+	/**
+	 * Delete the repository workspace having the given UUID 
+	 * Does not handle {@link ItemNotFoundException} 
+	 * 
+	 * @param workspaceUUID The UUID of the repository workspace to delete
+	 * @param workspaceName The name of the repository workspace.
+	 * @param listener
+	 * @param clientLocale The locale of the requesting client.
+	 * @param progress Progress Monitor to report progress.
+	 * @throws TeamRepositoryException - if anything goes wrong when deleting the repository workspace, including 
+	 * 		item not found exception
+	 */
+	public void deleteWorkspace(String workspaceUUID, String workspaceName, IConsoleOutput listener, Locale clientLocale, IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(50));
+		RTCWorkspaceUtils.getInstance().delete(workspaceUUID, workspaceName, getTeamRepository(), monitor.newChild(40), listener, clientLocale);
+	}
+
+	/**
+	 * Get the build definition information stored in the build result.
+	 * The build result's request has a reference to build definition instance used 
+	 * in constructing the request.
+	 * @param buildResultUUID The build result UUID to work with
+	 * @param listener
+	 * @param clientLocale The locale of the requesting client.
+	 * @param progress Progress Monitor to report progress.
+	 * @return a map with Object as values. This object could be another map. 
+	 */
+	public Map<String, Object> getBuildDefinitionInfoFromBuildResult(String buildResultUUID, IConsoleOutput listener, Locale clientLocale,
+							IProgressMonitor progress) throws TeamRepositoryException {
+		if (LOGGER.isLoggable(Level.FINEST)) {
+			LOGGER.finest("Entering RepositoryConnection : getBuildDefinitionInfo");
+		}
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		ensureLoggedIn(monitor.newChild(10));
+		Map<String, Object> result = RTCBuildUtils.getInstance().getBuildDefinitionInfoFromBuildResult(buildResultUUID, getTeamRepository(), listener, 
+										clientLocale, monitor.newChild(90));
+		if (LOGGER.isLoggable(Level.FINEST)) {
+			LOGGER.finest("Leaving RepositoryConnection : getBuildDefinitionInfo");
+		}
+		return result;
 	}
 
 	/**
@@ -2132,11 +2153,27 @@ public class RepositoryConnection {
 		}
 		return versionableHandle.getItemId().getUuidValue();
 	}
+	
+	private String getWorkspaceNamePrefix() {
+		return DEFAULTWORKSPACEPREFIX; 
+	}
 
-	public void deleteWorkspace(String workspaceUUID, String workspaceName, IConsoleOutput listener, Locale clientLocale, IProgressMonitor progress) throws TeamRepositoryException {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		ensureLoggedIn(monitor.newChild(50));
-		RTCWorkspaceUtils.getInstance().delete(workspaceUUID, workspaceName, getTeamRepository(), monitor.newChild(40), listener, clientLocale);
+	/**
+	 * Return the count of processed change sets (accepted or discarded)
+	 *  + processed components (adds/removes)
+	 */
+	private int getAcceptChangesCount(ChangeReport changeReport) {
+		if (changeReport == null) {
+			return 0;
+		}
+		int changesCount = 0;
+		if (changeReport.getChangeSets() != null) {
+			changesCount += changeReport.getChangeSets().size();
+		}
+		if (changeReport.getComponentChanges() != null) {
+			changesCount += changeReport.getComponentChanges().size();
+		}
+		return changesCount;
 	}
 
 	/**

@@ -1,0 +1,28 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	Indique le nom donné à l'image instantanée qui est créée après l'acceptation des modifications.
+  </p>
+  <p>
+  	Cette zone peut être définie sur toute chaîne utilisateur faisant référence à des variables d'environnement et à des paramètres de génération. 
+Incluez au moins une variable de valeur spécifique à chaque génération (par exemple, BUILD_NUMBER, BUILD_ID ou BUILD_URL) pour garantir que les versions suivantes créent des images instantanées portant des noms différents.	Si cette zone est vide, un nom d'image instantanée par défaut est utilisé. Pour les travaux qui utilisent une définition de génération, le nom d'image instantanée par défaut est "${buildDefinitionId}_#${BUILD_NUMBER}".
+	Pour les travaux qui utilisent un flux ou un espace de travail de référentiel, le nom d'image instantanée par défaut est "${JOB_NAME}_#${BUILD_NUMBER}".
+  </p>
+  <p>
+  	Par exemple, pour un travail nommé "JUnit Integration Build", si la zone est définie sur "${JOB_NAME}_#${BUILD_NUMBER}_Snapshot", le nom de l'image instantanée créée par la première génération est "JUnit Integration Build_#1_Snapshot".
+  </p>
+</div>

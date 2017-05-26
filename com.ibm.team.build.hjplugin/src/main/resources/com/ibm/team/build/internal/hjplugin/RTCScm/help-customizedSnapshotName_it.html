@@ -1,0 +1,30 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	Specifica il nome fornito all'istantanea creata dopo l'accettazione delle modifiche.
+  </p>
+  <p>
+  	Questo campo può essere impostato su qualsiasi stringa specificata dall'utente, con riferimenti alle variabili di ambiente ed ai parametri di build. Si consiglia di inserire almeno una variabile
+   	il cui valore sia univoco per ciascuna build, ad esempio BUILD_NUMBER, BUILD_ID o BUILD_URL, per garantire che build consecutive creino istantanee con nomi differenti.
+	Se questo campo è vuoto, viene utilizzato un nome istantanea predefinito. Per i lavori che utilizzano una definizione build, il nome dell'istantanea è "${buildDefinitionId}_#${BUILD_NUMBER}" per impostazione predefinita.
+	Per i lavori che utilizzano uno stream o uno spazio di lavoro del repository, il nome dell'istantanea è "${JOB_NAME}_#${BUILD_NUMBER}" per impostazione predefinita.
+  </p>
+  <p>
+  	Esempio: per un lavoro denominato "JUnit Integration Build", se questo campo è impostato su "${JOB_NAME}_#${BUILD_NUMBER}_Snapshot", il nome dell'istantanea creata dalla prima
+  	build sarà "JUnit Integration Build_#1_Snapshot".
+  </p>
+</div>

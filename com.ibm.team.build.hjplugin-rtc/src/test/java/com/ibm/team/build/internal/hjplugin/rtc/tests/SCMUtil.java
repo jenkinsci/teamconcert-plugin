@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -50,7 +50,6 @@ import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.client.content.util.VersionedContentManagerByteArrayInputStreamPovider;
 import com.ibm.team.scm.common.BaselineSetFlags;
 import com.ibm.team.scm.common.ContentHash;
-import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IChangeSetHandle;
 import com.ibm.team.scm.common.IComponent;
@@ -81,6 +80,28 @@ public class SCMUtil {
 	public static IWorkspaceConnection createWorkspace(IWorkspaceManager workspaceManager, String workspaceName, String description) throws TeamRepositoryException {
 		return workspaceManager.createWorkspace(workspaceManager.teamRepository().loggedInContributor(), workspaceName , description, null);
 	}
+	
+	/**
+	 * Creates a workspace by duplicating existing workspace
+	 * 
+	 * @param workspaceManager
+	 * @param workspaceName
+	 * @param description
+	 * @param existingWorkspace
+	 * @return
+	 * @throws TeamRepositoryException
+	 */
+	public static IWorkspaceConnection createWorkspace(IWorkspaceManager workspaceManager, String workspaceName, String description, IWorkspaceConnection existingWorkspace) throws TeamRepositoryException {
+		IWorkspaceConnection dupWorkspace = workspaceManager.createWorkspace(workspaceManager.teamRepository().loggedInContributor(), workspaceName , description, null);
+		List<IComponentHandle> components = existingWorkspace.getComponents();
+		List<IComponentAdditionOp> componentAddOps = new ArrayList<IComponentAdditionOp>();
+		for (IComponentHandle compHandle : components) {
+			componentAddOps.add(dupWorkspace.componentOpFactory().addComponent(compHandle, false));
+		}
+		dupWorkspace.applyComponentOperations(componentAddOps, null);
+		return dupWorkspace;
+	}
+	
 	
 	public static IWorkspaceConnection createStream(IWorkspaceManager workspaceManager, IProcessAreaHandle processAreaHandle, String streamName)
 			throws TeamRepositoryException {
@@ -425,13 +446,27 @@ public class SCMUtil {
 		ISaveOp saveOp = workspace.configurationOpFactory().save(fullItem);
 		workspace.commit(cs, Collections.singleton(saveOp), null);
 	}
+	
+	public static void deleteSCMArtifacts(ITeamRepository repo,
+			Map<String, String> artifactIds) throws Exception {
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_SINGLE_WORKSPACE_ITEM_ID));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_1));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_2));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_PB_STREAM_ITEM_ID));
+	}
     
 	public static void deleteWorkspace(ITeamRepository repo,
 			String uuidValue) throws TeamRepositoryException {
 		if (uuidValue != null) {
-			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
-			IWorkspaceHandle toDelete = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(uuidValue), null);
-			workspaceManager.deleteWorkspace(toDelete, null);
+			try {
+				IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+				IWorkspaceHandle toDelete = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(uuidValue), null);
+				workspaceManager.deleteWorkspace(toDelete, null);
+			} catch(ItemNotFoundException exp) {
+				// ignore it
+			}
 		}
 	}
 

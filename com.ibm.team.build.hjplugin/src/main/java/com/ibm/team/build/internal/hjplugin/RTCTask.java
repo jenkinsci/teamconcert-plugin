@@ -48,6 +48,14 @@ public abstract class RTCTask<T> extends MasterToSlaveFileCallable<T> implements
 			e.printStackTrace(listener.getLogger());
 		}
 	}
+	
+	protected boolean getIsDebug() {
+		return isDebug;
+	}
+	
+	protected TaskListener getListener() {
+		return listener;
+	}
 
 	protected abstract Logger getLogger();
 }

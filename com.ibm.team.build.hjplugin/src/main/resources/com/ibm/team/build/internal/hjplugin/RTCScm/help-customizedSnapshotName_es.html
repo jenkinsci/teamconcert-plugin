@@ -1,0 +1,28 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+  	Especifica el nombre dado a la instantánea que se ha creado tras aceptar los cambios.
+  </p>
+  <p>
+  	Este campo se puede establecer en cualquier serie especificada por el usuario, en variables de entorno de referencia y en parámetros de compilación. Se recomienda incluir al menos una variable cuyo valor sea exclusivo para cada compilación, por ejemplo: BUILD_NUMBER, BUILD_ID o BUILD_URL, para garantizar que las compilaciones consecutivas creen instantáneas con diferentes nombres. 
+	Este campo está vacío, por tanto se utilizará un nombre de instantánea predeterminado. Para los trabajos que utilizan una Definición de construcción, el nombre de la instantánea toma como valor predeterminado "${buildDefinitionId}_#${BUILD_NUMBER}". 
+	Para los trabajos que utilizan una corriente o un espacio de trabajo del repositorio, el nombre de la instantánea toma como valor predeterminado "${JOB_NAME}_#${BUILD_NUMBER}".
+  </p>
+  <p>
+  	Por ejemplo, para un trabajo denominado "Compilación de integración de JUnit" si este campo se establece en "instantánea_#${BUILD_NUMBER}_${JOB_NAME}", el nombre de la instantánea que se crea para la primera compilación sería "instantánea_#1_Compilación de integración de JUnit".
+  </p>
+</div>

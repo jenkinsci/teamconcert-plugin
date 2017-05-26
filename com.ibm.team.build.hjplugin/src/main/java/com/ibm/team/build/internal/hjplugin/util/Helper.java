@@ -42,6 +42,7 @@ import org.apache.commons.io.IOUtils;
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 
@@ -477,6 +478,21 @@ public class Helper {
 		}
         return s;
 	}
+	
+
+	/**
+	 * Return <code>true</code> if debug property {@link RTCJobProperties#DEBUG_PROPERTY} is defined and set to "true" in the build. 
+	 * <code>false</code> otherwise
+	 *  
+	 * @param build - The build to inspect for the property
+	 * @param listener - To log messages
+	 * @return <code>true</code> if debug property is defined and set to "true". <code>false</code> otherwise. 
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public static boolean isDebugEnabled(Run<?, ?> build, TaskListener listener) throws IOException, InterruptedException {
+		return Boolean.parseBoolean(Helper.getStringBuildParameter(build, RTCJobProperties.DEBUG_PROPERTY, listener));
+	}
 
 	private static Tuple<Run<?,?>, String> getValueForBuildStream(IJenkinsBuildIterator iterator, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, boolean onlyGoodBuild, String key, Locale clientLocale) throws Exception {
 		if (buildStream == null) {
@@ -532,9 +548,11 @@ public class Helper {
 	}
 
 	/**
+	 * If the given value has a parameter inside it like ${A}, then remove {} from the value and 
+	 * return the parameter name
 	 * 
-	 * @param parameter
-	 * @return
+	 * @param parameter - the given value that has a parameter inside it
+	 * @return a String that is the parameter name.
 	 */
 	private static String extractParameterFromValue(String parameter) {
 		parameter = Util.fixEmptyAndTrim(parameter);

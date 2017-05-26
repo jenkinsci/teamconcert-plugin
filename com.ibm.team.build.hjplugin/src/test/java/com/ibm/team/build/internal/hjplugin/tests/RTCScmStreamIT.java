@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2016, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,17 +15,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import hudson.model.FreeStyleBuild;
-import hudson.model.Result;
-import hudson.model.FreeStyleProject;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.Run;
-import hudson.model.StringParameterDefinition;
-import hudson.model.StringParameterValue;
-import hudson.scm.PollingResult;
-import hudson.scm.PollingResult.Change;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,14 +34,25 @@ import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
-import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
+
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
 
 /**
  * Tests for Build from Stream 
@@ -61,7 +61,6 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
  *
  */
 public class RTCScmStreamIT extends AbstractTestCase {
-	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
 	@Rule public JenkinsRule r = new JenkinsRule();
 	
@@ -100,7 +99,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -148,7 +147,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -191,7 +190,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamItemId = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -237,7 +236,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		
 		try {
 			{ // positive case - when stream name is not null
-				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -251,7 +250,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, streamName);
 			}
 			{ // negative case - when stream name is null
-				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, null);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, null);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -293,7 +292,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
 		try {
-				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -348,7 +347,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		try {
 			// Create a basic project configuration
 			// Individual validation steps can then customize the RTCScm instance and update it in the project instance
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 			// validate support for custom snapshot name
 			validateCustomSnapshotName_stream(prj);
 
@@ -375,7 +374,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
 			verifyStreamBuild(build, streamUUID, "");
@@ -420,7 +419,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		try {
 
 			String loadDirectory = Utils.getInvalidLoadPath();
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName, loadDirectory);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName, loadDirectory);
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
 			assertTrue(build.getLog(100).toString(), build.getResult().isWorseOrEqualTo(Result.FAILURE));
@@ -469,7 +468,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
 			Utils.verifyRTCScmInBuild(build, false);
@@ -510,7 +509,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, BUILDTOOLKITNAME, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
 			FreeStyleBuild build = Utils.runBuild(prj, null);		
 			Utils.verifyRTCScmInBuild(build, false);
 			

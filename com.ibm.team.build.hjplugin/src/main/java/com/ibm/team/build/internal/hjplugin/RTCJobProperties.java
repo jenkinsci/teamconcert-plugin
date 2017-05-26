@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2016, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -19,4 +19,5 @@ public class RTCJobProperties {
 	public static final String TEMPORARY_WORKSPACE_UUID = "rtcTempRepoWorkspaceUUID";
 	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData";
 	public static final String DEBUG_PROPERTY = "com.ibm.team.build.debug"; //$NON-NLS-1$
+	public static final String POST_BUILD_DELIVER_HANDLED = "rtcPostBuildDeliverHandled";
 }

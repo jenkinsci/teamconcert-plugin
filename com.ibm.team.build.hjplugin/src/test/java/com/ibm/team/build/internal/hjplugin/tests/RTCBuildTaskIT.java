@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2016 IBM Corporation and others.
+ * Copyright (c) 2014, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -36,7 +36,6 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
-import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
 import hudson.model.TaskListener;
@@ -50,21 +49,13 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 
 	private static final String FAKE_UUID = "_kkmC4NWiEdylmcAI5HeTUQ"; //$NON-NLS-1$
 	private RTCFacadeWrapper testingFacade;
-	private File sandboxDir;
-
 	@Before
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
 
 			testingFacade = Utils.getTestingFacade();
-			
-	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
-	        File buildTestDir = new File(tempDir, "HJPluginTests");
-	        sandboxDir = new File(buildTestDir, getUniqueName());
-	        sandboxDir.mkdirs();
-	        sandboxDir.deleteOnExit();
-	        Assert.assertTrue(sandboxDir.exists());
+			createSandboxDirectory();
 		}
 	}
 
@@ -72,7 +63,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 	public void tearDown() throws Exception {
 		// delete the sandbox after Hudson/Jenkins is shutdown
 		if (Config.DEFAULT.isConfigured()) {
-			FileUtils.delete(sandboxDir);
+			tearDownSandboxDirectory();
 		}
 	}
 
@@ -171,10 +162,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				return;
 			}
 			
-			try {
-				
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// We have no build result, but we do have a build definition
 				// The task should create a build result and we own its lifecycle
 				RTCBuildResultSetupTask task = new RTCBuildResultSetupTask(
@@ -185,7 +173,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						true, buildDefinitionId,
 						buildResultUUID, // no build result
-						getUniqueName(), listener, true, false,
+						getUniqueName(), getTaskListener(), true, false,
 						Locale.getDefault());
 				assertNull(task.localInvocation());
 				
@@ -200,7 +188,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), 
 						loginInfo.getUserId(), loginInfo.getPassword(),
 						loginInfo.getTimeout(), buildResultInfo.getBuildResultUUID(),
-						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, listener, Locale.getDefault());
+						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -281,10 +269,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				return;
 			}
 			
-			try {
-				
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// We have no build result, but we do have a build definition
 				// The task should create a build result and we own its lifecycle
 				RTCBuildResultSetupTask task = new RTCBuildResultSetupTask(
@@ -295,7 +280,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						true, buildDefinitionId,
 						null, // no build result
-						getUniqueName(), listener, true, false,
+						getUniqueName(), getTaskListener(), true, false,
 						Locale.getDefault());
 				assertNull(task.localInvocation());
 				
@@ -312,7 +297,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 				
 				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(), 
 						loginInfo.getPassword(), loginInfo.getTimeout(), buildResultInfo.getBuildResultUUID(),
-						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, listener,
+						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, getTaskListener(),
 						Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.

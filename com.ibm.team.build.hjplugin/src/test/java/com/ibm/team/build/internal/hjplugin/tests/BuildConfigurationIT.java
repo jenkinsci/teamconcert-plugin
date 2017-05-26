@@ -10,6 +10,9 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -18,22 +21,18 @@ import java.util.Map;
 
 import org.apache.commons.lang.SystemUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Assert;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
-import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
 import hudson.model.TaskListener;
-import hudson.util.StreamTaskListener;
 
 @SuppressWarnings("nls")
 public class BuildConfigurationIT extends AbstractTestCase {
@@ -41,7 +40,6 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	private static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
 	private static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
 
-	private File sandboxDir;
 	private RTCFacadeWrapper testingFacade;
 
 	@Before
@@ -49,15 +47,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 		if (Config.DEFAULT.isConfigured()) {
 			// DO NOT initialize Hudson/Jenkins because its slow and we don't need it for the tests
-			
 			testingFacade = Utils.getTestingFacade();
-			
-	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
-	        File buildTestDir = new File(tempDir, "HJPluginTests");
-	        sandboxDir = new File(buildTestDir, getFileUniqueName());
-	        sandboxDir.mkdirs();
-	        sandboxDir.deleteOnExit();
-	        Assert.assertTrue(sandboxDir.exists());
+	        createSandboxDirectory();
 		}
 	}
 
@@ -66,7 +57,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		// delete the sandbox after Hudson/Jenkins is shutdown
 		if (Config.DEFAULT.isConfigured()) {
 			// Nothing to do including no need to shutdown Hudson/Jenkins
-			FileUtils.delete(sandboxDir);
+			tearDownSandboxDirectory();
 		}
 	}
 	
@@ -104,7 +95,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							fetchLocation);
 			
 			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
+				TaskListener listener = getTaskListener();
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -161,7 +152,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			}
 		}
 	}
-	
+
 	private void validateBuildProperties(String workspaceItemId,
 			String fetchDestination,
 			boolean deleteBeforeFetch,
@@ -378,7 +369,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							"${propertyA}/here");
 			
 			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
+				TaskListener listener = getTaskListener();
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -489,7 +480,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							sandboxDir.getPath());
 			
 			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
+				TaskListener listener = getTaskListener();
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -593,7 +584,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							fetchLocation);
 			
 			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
+				TaskListener listener = getTaskListener();
 				
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);

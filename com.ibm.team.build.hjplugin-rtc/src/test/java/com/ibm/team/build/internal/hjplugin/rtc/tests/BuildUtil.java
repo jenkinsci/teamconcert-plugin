@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -10,11 +10,17 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
+import java.util.Locale;
 import java.util.Map;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.client.ClientFactory;
 import com.ibm.team.build.client.ITeamBuildClient;
 import com.ibm.team.build.common.BuildItemFactory;
+import com.ibm.team.build.common.builddefinition.AutoDeliverTriggerPolicy;
+import com.ibm.team.build.common.builddefinition.IAutoDeliverConfigurationElement;
 import com.ibm.team.build.common.model.BuildPhase;
 import com.ibm.team.build.common.model.IBuildConfigurationElement;
 import com.ibm.team.build.common.model.IBuildDefinition;
@@ -26,6 +32,7 @@ import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
+import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.process.common.IProcessArea;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.ItemNotFoundException;
@@ -135,6 +142,44 @@ public class BuildUtil {
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ITEM_ID, buildDefinition.getItemId().getUuidValue());
 	}
 
+	/**
+	 * Add a configuration element for post build deliver to the build definition and return it 
+	 * Few generic properties are added to the build definition
+	 * @param repo - the repository to work with
+	 * @param buildDefinitionId - the build definition to which post build deliver configuration element is to be added
+	 * @param artifactIds - a map in which new items that are created will be added to.
+	 * @param configOrGenericProperties - a map which contains values for generic or configuration properties
+	 * @param progress - if progress monitoring is required
+	 * @return - a configuration element for post build deliver.
+	 * @throws Exception - if there is any error in retrieving/saving the build definition
+	 */
+	public static IBuildConfigurationElement setupPBDeliverConfigurationElement(ITeamRepository repo,
+				String buildDefinitionId, Map<String,String> artifactIds,
+				Map<String, String> configOrGenericProperties, IProgressMonitor progress) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		try {
+			IBuildDefinition buildDefinition = (IBuildDefinition) getTeamBuildClient(repo).getBuildDefinition(buildDefinitionId, monitor.newChild(20)).getWorkingCopy();
+			IBuildConfigurationElement configElement = BuildItemFactory.createBuildConfigurationElement();
+			configElement.setName(buildDefinitionId);
+			configElement.setElementId(IAutoDeliverConfigurationElement.ELEMENT_ID);
+			buildDefinition.initializeConfiguration(configElement);
+			// Ordering is important. Initialize with the config element and then add generic properties.
+			String deliverEnabled = getValueOrDefault(configOrGenericProperties, IAutoDeliverConfigurationElement.PROPERTY_DELIVER_ENABLED, "true");
+			String triggerPolicy = getValueOrDefault(configOrGenericProperties, IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TRIGGER_POLICY, AutoDeliverTriggerPolicy.NO_ERRORS.name());
+			buildDefinition.getProperty(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_ENABLED).setValue(deliverEnabled);
+			buildDefinition.getProperty(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TRIGGER_POLICY).setValue(triggerPolicy);
+			if (configOrGenericProperties  != null) {
+				for (String configProperty : configOrGenericProperties.keySet()) {
+					buildDefinition.getProperty(configProperty).setValue(configOrGenericProperties.get(configProperty));
+				}
+			}
+			getTeamBuildClient(repo).save(buildDefinition, monitor.newChild(50));
+			return configElement;
+		} finally {
+			monitor.done();
+		}
+	}
+
 	public static void deleteBuildArtifacts(ITeamRepository repo,
 			Map<String, String> artifactIds) throws Exception {
 		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID));
@@ -175,5 +220,24 @@ public class BuildUtil {
 			buildClient.delete(buildEngineHandle, null);
 		}
 	}
+	
+	public static String createBuildResult(String buildDefinitionId, RepositoryConnection connection, String buildLabel, Map<String,String> artifactIds) throws Exception {
+		 ConsoleOutputHelper listener = new ConsoleOutputHelper();
+		 String itemId = connection.createBuildResult(buildDefinitionId, null, buildLabel, listener, null, Locale.getDefault());
+		 if (listener.getFailure() != null) {
+			 throw listener.getFailure();
+		 }
+		 artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, itemId);
+		 return itemId;
+	}
 
+	public static String getValueOrDefault(Map<String, String> configOrGenericProperties, String key, String defaultValue) {
+		if (configOrGenericProperties == null) {
+			return defaultValue;
+		}
+		if (configOrGenericProperties.containsKey(key)) {
+			return configOrGenericProperties.get(key);
+		}
+		return defaultValue;
+	}
 }

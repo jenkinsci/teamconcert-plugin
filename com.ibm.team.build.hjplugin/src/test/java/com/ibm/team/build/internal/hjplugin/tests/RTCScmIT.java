@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,23 +17,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import hudson.model.FreeStyleBuild;
-import hudson.model.Result;
-import hudson.model.FreeStyleProject;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.StringParameterDefinition;
-import hudson.model.StringParameterValue;
-import hudson.scm.PollingResult;
-import hudson.scm.PollingResult.Change;
-import hudson.tools.ToolProperty;
-import hudson.util.FormValidation;
-import hudson.util.Secret;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -62,6 +47,20 @@ import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
+
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
+import hudson.tools.ToolProperty;
+import hudson.util.FormValidation;
+import hudson.util.Secret;
 
 public class RTCScmIT extends AbstractTestCase {
 
@@ -1090,10 +1089,9 @@ public class RTCScmIT extends AbstractTestCase {
 		try {
 			// Setup a build with build definition configuration
 			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
-			ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
-			pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
+
 			// Run a build
-			FreeStyleBuild build = Utils.runBuild(prj, pActions);
+			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			
 			// Get the buildresultUUID from actions and insert it into setupArtifacts
 			List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
@@ -1194,10 +1192,8 @@ public class RTCScmIT extends AbstractTestCase {
 		try {
 			// Setup a build with build definition configuration
 			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
-			ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
-			pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			// Run a build
-			FreeStyleBuild build = Utils.runBuild(prj, pActions);
+			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			File changelogFile = new File(build.getRootDir(), "changelog.xml");
 
 			// Get the buildresultUUID from actions and insert it into setupArtifacts
@@ -1288,10 +1284,8 @@ public class RTCScmIT extends AbstractTestCase {
 			// positive case when there is a valid build definition Id
 			{
 				FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
-				ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
-				pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 				// Run a build
-				FreeStyleBuild build = Utils.runBuild(prj, pActions);
+				FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 				
 				// Verify
 				Utils.verifyRTCScmInBuild(build, true);
@@ -1413,22 +1407,7 @@ public class RTCScmIT extends AbstractTestCase {
 
 		
 		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
-		@SuppressWarnings("unchecked")
-		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
-				.invoke("setupBuildSnapshot",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // workspaceName,
-								String.class, // snapshotName
-								String.class, // componentName
-								String.class}, // workspacePrefix
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(), workspaceName,
-						snapshotName, componentName, "HJP");
+		Map<String, String> setupArtifacts = Utils.setupBuildSnapshot(loginInfo, workspaceName, snapshotName, componentName, testingFacade);
 		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 		try {
 			{ // valid snapshot UUID - checkout and polling
@@ -1548,22 +1527,7 @@ public class RTCScmIT extends AbstractTestCase {
 		
 		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		
-		@SuppressWarnings("unchecked")
-		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
-				"setupBuildSnapshot",
-				new Class[] { String.class, // serverURL,
-						String.class, // userId,
-						String.class, // password,
-						int.class, // timeout,
-						String.class, // workspaceName,
-						String.class, // snapshotName
-						String.class, // componentName
-						String.class}, // workspacePrefix
-				loginInfo.getServerUri(),
-				loginInfo.getUserId(),
-				loginInfo.getPassword(),
-				loginInfo.getTimeout(), workspaceName,
-				snapshotName, componentName, "HJP");
+		Map<String, String> setupArtifacts = Utils.setupBuildSnapshot(loginInfo, workspaceName, snapshotName, componentName, testingFacade);
 		try {
 			String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 			// setup a free style project and start a build
@@ -1608,22 +1572,7 @@ public class RTCScmIT extends AbstractTestCase {
 		
 		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		
-		@SuppressWarnings("unchecked")
-		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
-				"setupBuildSnapshot",
-				new Class[] { String.class, // serverURL,
-						String.class, // userId,
-						String.class, // password,
-						int.class, // timeout,
-						String.class, // workspaceName,
-						String.class, // snapshotName
-						String.class, // componentName
-						String.class}, // workspacePrefix
-				loginInfo.getServerUri(),
-				loginInfo.getUserId(),
-				loginInfo.getPassword(),
-				loginInfo.getTimeout(), workspaceName,
-				snapshotName, componentName, "HJP");
+		Map<String, String> setupArtifacts = Utils.setupBuildSnapshot(loginInfo, workspaceName, snapshotName, componentName, testingFacade);
 		try {
 			String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 			// setup a free style project with an invalid load path and start a build
@@ -1668,22 +1617,7 @@ public class RTCScmIT extends AbstractTestCase {
 		String componentName = getComponentUniqueName();
 		
 		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
-		@SuppressWarnings("unchecked")
-		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
-				.invoke("setupBuildSnapshot",
-						new Class[] { String.class, // serverURL,
-								String.class, // userId,
-								String.class, // password,
-								int.class, // timeout,
-								String.class, // workspaceName,
-								String.class, // snapshotName
-								String.class, // componentName
-								String.class}, // workspacePrefix
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(), workspaceName,
-						snapshotName, componentName, "HJP");
+		Map<String, String> setupArtifacts = Utils.setupBuildSnapshot(loginInfo, workspaceName, snapshotName, componentName, testingFacade);
 		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 		try {
 		  
@@ -1828,10 +1762,15 @@ public class RTCScmIT extends AbstractTestCase {
 	 */
 	private void validateCustomSnapshotName_buildDef(FreeStyleProject prj, Map<String, String> setupArtifacts, String buildDefinitionId)
 			throws Exception {
-		ArrayList<ParametersAction> pActions = new ArrayList<ParametersAction> ();
-		pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 		// Run a build, without providing custom snapshot name
-		FreeStyleBuild build = Utils.runBuild(prj, pActions);
+		
+		// This Jenkins instance sees all parameters of the build as environment variables.
+		// So buildResultUUID will be set if a personal build was triggered from RTC
+		// The  build running inside Jenkins instance will see the buildResultUUID parameter
+		// and try to get IBuildResult in the context of the test RTC server but this buildResultUUID 
+		// is from our production server. To avoid this issue, we explicitly set buildResultUUID to be empty
+		// so that the test build will create a new build result in the RTC test server.
+		FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 		RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
 		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID, action.getBuildResultUUID());
 
@@ -1847,8 +1786,7 @@ public class RTCScmIT extends AbstractTestCase {
 		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
 		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 
-		build = Utils.runBuild(prj, null);
-
+		build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 		action = build.getActions(RTCBuildResultAction.class).get(0);
 		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID, action.getBuildResultUUID());
 		
@@ -1864,8 +1802,7 @@ public class RTCScmIT extends AbstractTestCase {
 		buildType.setCustomizedSnapshotName("jenkins_${JOB_NAME}_#${BUILD_NUMBER}");
 		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 
-		build = Utils.runBuild(prj, null);
-
+		build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 		action = build.getActions(RTCBuildResultAction.class).get(0);
 		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_2_ID, action.getBuildResultUUID());
 
@@ -1883,7 +1820,9 @@ public class RTCScmIT extends AbstractTestCase {
 		
 		prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition("emptyParam", " ")})));
 		
-		build = Utils.runBuild(prj, Collections.singletonList(new ParametersAction(new StringParameterValue("emptyParam", " "))));
+		List<ParametersAction> pActions = Utils.getPactionsWithEmptyBuildResultUUID();
+		pActions.add(new ParametersAction(new StringParameterValue("emptyParam", " ")));
+		build = Utils.runBuild(prj, pActions);
 
 		action = build.getActions(RTCBuildResultAction.class).get(0);
 		setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_3_ID, action.getBuildResultUUID());

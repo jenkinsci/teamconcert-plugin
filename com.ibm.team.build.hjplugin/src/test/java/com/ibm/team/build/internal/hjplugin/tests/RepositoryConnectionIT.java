@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,9 @@
 
 package com.ibm.team.build.internal.hjplugin.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -20,14 +23,10 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.http.auth.InvalidCredentialsException;
-import org.junit.Assert;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.ChangeDesc;
@@ -39,32 +38,23 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet.ComponentDescriptor;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
-import com.ibm.team.build.internal.hjplugin.tests.utils.FileUtils;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
 import hudson.model.TaskListener;
 import hudson.scm.EditType;
-import hudson.util.StreamTaskListener;
 
 @SuppressWarnings("nls")
 public class RepositoryConnectionIT extends AbstractTestCase {
 
 	private RTCFacadeWrapper testingFacade;
-	private File sandboxDir;
-
+	
 	@Before
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
 			testingFacade = Utils.getTestingFacade();
-			
-	        File tempDir = new File(System.getProperty("java.io.tmpdir"));
-	        File buildTestDir = new File(tempDir, "HJPluginTests");
-	        sandboxDir = new File(buildTestDir, getFileUniqueName());
-	        sandboxDir.mkdirs();
-	        sandboxDir.deleteOnExit();
-	        Assert.assertTrue(sandboxDir.exists());
+	        createSandboxDirectory();
 		}
 	}
 
@@ -72,11 +62,11 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	public void tearDown() throws Exception {
 		// delete the sandbox
 		if (Config.DEFAULT.isConfigured()) {
-			FileUtils.delete(sandboxDir);
+			tearDownSandboxDirectory();
 		}
 	}
-	
-    /**
+
+	/**
      * Tests that component additions and removals are reported properly
      * @throws Exception
      */
@@ -108,9 +98,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 			
-			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 						Config.DEFAULT.getToolkit(),
@@ -121,7 +109,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false, 
 						null,
-						workspaceName, null, null, listener, false);
+						workspaceName, null, null, getTaskListener(), false);
 				
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
@@ -135,7 +123,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						(String) null, listener, Locale.getDefault());
+						(String) null, getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -213,7 +201,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			}
 			
 			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
+				TaskListener listener = getTaskListener();
 				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
@@ -338,9 +326,6 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			}
 
 			try {
-				
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 						Config.DEFAULT.getToolkit(),
@@ -351,7 +336,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false, 
 						null,
-						workspaceName,  null, null, listener, false);
+						workspaceName,  null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 
@@ -366,7 +351,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener, Locale.getDefault());
+						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -402,7 +387,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false, 
 						null,
-						workspaceName, null, null, listener, false);
+						workspaceName, null, null, getTaskListener(), false);
 
 				Assert.assertFalse("Expected zero hashcode", !hashCode.equals(new BigInteger("0")));
 	    		
@@ -463,9 +448,6 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			}
 
 			try {
-				
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
 				// ensure that the incoming changes are detected
 				Boolean changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 	    				Config.DEFAULT.getToolkit(),
@@ -474,7 +456,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						testName,
-						null, listener);
+						null, getTaskListener());
 				Assert.assertTrue(changesIncoming.booleanValue());
 
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
@@ -486,7 +468,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						true,
 						testName,
-						null,  null, null, listener, false);
+						null,  null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -502,7 +484,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						buildResultUUID, null,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener, Locale.getDefault());
+						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -538,7 +520,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						true,
 						testName,
-						null,  null, null, listener, false);
+						null,  null, null, getTaskListener(), false);
 
 				Assert.assertFalse("Expected zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -549,7 +531,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						testName,
-						null, listener);
+						null, getTaskListener());
 				
 				Assert.assertFalse(changesIncoming.booleanValue());
 
@@ -603,10 +585,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 
-			try {
-				
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				Boolean changesIncoming = RTCFacadeFacade.incomingChangesUsingBuildDefinitionWithREST(
 	    				Config.DEFAULT.getToolkit(),
@@ -615,7 +594,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						testName,
-						null, listener);
+						null, getTaskListener());
 				Assert.assertTrue(changesIncoming.booleanValue());
 				
 				try {
@@ -626,7 +605,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 							"BAD_PASSWORD", //$NON-NLS-1$
 							loginInfo.getTimeout(),
 							testName,
-							null, listener);
+							null, getTaskListener());
 					fail("Invalid credentials ignored");
 				} catch (InvalidCredentialsException e) {
 					// good
@@ -651,7 +630,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 							"BAD_PASSWORD", //$NON-NLS-1$
 							loginInfo.getTimeout(),
 							testName,
-							null, listener);
+							null, getTaskListener());
 					fail("Invalid credentials ignored");
 				} catch (InvalidCredentialsException e) {
 					// good
@@ -705,9 +684,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 
-			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
@@ -718,7 +695,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false,
 						null,
-						workspaceName,  null, null, listener, false);
+						workspaceName,  null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -733,7 +710,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener, Locale.getDefault());
+						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -803,9 +780,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 			
-			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
@@ -816,7 +791,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false,
 						null,
-						workspaceName,  null, null, listener, false);
+						workspaceName,  null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -831,7 +806,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener, Locale.getDefault());
+						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -898,9 +873,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 
-			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
@@ -911,7 +884,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false,
 						null,
-						workspaceName,  null, null, listener, false);
+						workspaceName,  null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -926,7 +899,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener, Locale.getDefault());
+						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -991,9 +964,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 
-			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
@@ -1004,7 +975,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false,
 						null,
-						workspaceName, null, null, listener, false);
+						workspaceName, null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -1019,7 +990,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot #42", listener, Locale.getDefault());
+						"Snapshot #42", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -1077,7 +1048,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false,
 						null,
-						workspaceName, null, null, listener, false);
+						workspaceName, null, null, getTaskListener(), false);
 
 				Assert.assertFalse("Expected zero hashcode", !hashCode.equals(new BigInteger("0")));
 	    		
@@ -1138,9 +1109,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 
-			try {
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
@@ -1151,7 +1120,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false,
 						null,
-						workspaceName,  null, null, listener, false);
+						workspaceName,  null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -1167,7 +1136,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						null, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						snapshotName, listener, Locale.getDefault());
+						snapshotName, getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -1234,10 +1203,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				return;
 			}
 			
-			try {
-				
-				TaskListener listener = new StreamTaskListener(System.out, null);
-				
+			try {				
 				// ensure that the incoming changes are detected
 				BigInteger hashCode = RTCFacadeFacade.incomingChangesUsingBuildToolkit(
 	    				Config.DEFAULT.getToolkit(),
@@ -1248,7 +1214,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						null,
 						false,
 						null,
-						workspaceName,  null, null, listener, false);
+						workspaceName,  null, null, getTaskListener(), false);
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
@@ -1271,7 +1237,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
-						buildDefinitionId, "TestBuildResultContributions", listener, Locale.getDefault());
+						buildDefinitionId, "TestBuildResultContributions", getTaskListener(), Locale.getDefault());
 				setupArtifacts.put("buildResultItemId", buildResultItemId);
 				
 				// checkout the changes
@@ -1282,7 +1248,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						loginInfo.getTimeout(),
 						buildResultItemId, workspaceName,
 						sandboxDir.getCanonicalPath(), changeLog,
-						"Snapshot", listener, Locale.getDefault());
+						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();

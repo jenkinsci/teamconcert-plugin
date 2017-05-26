@@ -27,6 +27,7 @@ public class Config {
 	public static final String PASSWORD = "com.ibm.team.build.password";
 	public static final String PASSWORD_FILE = "com.ibm.team.build.passwordFile";
 	public static final String TIMEOUT = "com.ibm.team.build.timeout";
+	public static final String DUMP_LOG_FILES = "com.ibm.team.build.dumpLogFiles";
 	
 	public static final String SET_UP_ONLY = "com.ibm.team.build.setUpOnly";
 
@@ -42,6 +43,7 @@ public class Config {
 	private String passwordFile;
 	private int timeout;
 	private boolean setUpOnly;
+	private boolean dumpLogFiles;
 
 	public static final Config DEFAULT = new Config();
 
@@ -91,6 +93,12 @@ public class Config {
 				timeoutString = "480";
 			}
 			timeout = Integer.parseInt(timeoutString);
+			
+			String dumpLogFilesString = System.getProperty(DUMP_LOG_FILES);
+			if (dumpLogFilesString == null) {
+				dumpLogFilesString = "false";
+			}
+			dumpLogFiles = Boolean.parseBoolean(dumpLogFilesString);
 			
 			String setUpOnlyString = System.getProperty(SET_UP_ONLY);
 			if (setUpOnlyString == null) {
@@ -150,6 +158,11 @@ public class Config {
 		return setUpOnly;
 	}
 
+	public boolean isDumpLogFiles() {
+		validateConfigured();
+		return dumpLogFiles;
+	}
+
 	public RTCLoginInfo getLoginInfo() throws InvalidCredentialsException {
 		return new RTCLoginInfo(null, getToolkit(), getServerURI(), getUserID(), getPassword(), getPasswordFile(), null, getTimeout());
 	}
@@ -162,7 +175,8 @@ public class Config {
 		  .append(getUserID())
 		  .append(getToolkit())
 		  .append(getTimeout())
-		  .append(getPassword());
+		  .append(getPassword())
+		  .append(isDumpLogFiles());
 		if (getPasswordFile() != null) {
 			b.append(getPasswordFile());
 		}

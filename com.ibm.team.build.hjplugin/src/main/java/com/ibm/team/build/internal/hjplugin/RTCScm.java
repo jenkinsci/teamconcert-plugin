@@ -555,7 +555,7 @@ public class RTCScm extends SCM {
 		 * @throws IOException
 		 * @throws InterruptedException
 		 */
-		private String getBuildToolkit(String buildTool, Node node, TaskListener listener) throws IOException, InterruptedException {
+		public String getBuildToolkit(String buildTool, Node node, TaskListener listener) throws IOException, InterruptedException {
 	        RTCBuildToolInstallation[] installations = RTCBuildToolInstallation.allInstallations();
 	        for (RTCBuildToolInstallation buildToolIntallation : installations) {
 	        	if (buildToolIntallation.getName().equals(buildTool)) {
@@ -1996,7 +1996,7 @@ public class RTCScm extends SCM {
 		// Get the build toolkit on the node where the checkout is happening.
 		nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
 
-		boolean debug = Boolean.parseBoolean(Helper.getStringBuildParameter(build, RTCJobProperties.DEBUG_PROPERTY, listener));
+		boolean debug = Helper.isDebugEnabled(build, listener);
 
 		RTCLoginInfo loginInfo;
 		try {

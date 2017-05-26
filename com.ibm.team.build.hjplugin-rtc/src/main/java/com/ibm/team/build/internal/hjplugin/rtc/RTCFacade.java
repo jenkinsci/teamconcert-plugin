@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -1017,6 +1017,35 @@ public class RTCFacade {
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
 			repoConnection.deleteWorkspace(workspaceUUID, workspaceName, getConsoleOutput(listener), clientLocale, monitor);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+
+	/**
+	 * Get the build definition information from a build result.
+	 * 
+	 * @param serverURI The RTC server in which the repository workspace resides
+	 * @param userId The user Id for the repository
+	 * @param password The password for the user ID
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID The UUID of the build result from which build definition information has to be obtained
+	 * @param listener 
+	 * @param clientLocale Locale of the requesting client
+	 * @return A map of String Object pairs. An Object could be another map of String, String pairs. 
+	 * @throws Exception If build definition information cannot be fetched.
+	 */
+	public Map<String, Object> getBuildDefinitionInfoFromBuildResult(String serverURI, String userId, String password, 
+					int timeout, String buildResultUUID, Object listener, Locale clientLocale) throws Exception {
+		
+		IProgressMonitor monitor = getProgressMonitor();
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			return repoConnection.getBuildDefinitionInfoFromBuildResult(buildResultUUID, getConsoleOutput(listener), clientLocale, monitor);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
