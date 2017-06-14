@@ -124,7 +124,7 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		Map<String, String> setup = testClient.setupAcceptChanges(connectionDetails, name, componentName, buildDefinitionId,
-						createBuildDefinition, createBuildResult, getProgressMonitor());
+						null, createBuildDefinition, createBuildResult, false, getProgressMonitor());
 		return setup;
 	}
 	
@@ -395,13 +395,13 @@ public class RTCTestingFacade extends RTCFacade {
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		testClient.testBuildSnapshotConfiguration(connectionDetails, snapshotName,
 				workspacePrefix, hjPath);
-}
+	}
 	
-	public void testBuildStreamConfiguration(String serverURL, String userId, String password,
+	/*public void testBuildStreamConfiguration(String serverURL, String userId, String password,
 			int timeout, String workspaceName, String streamName, String componentName, String workspacePrefix, String hjPath) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
-	}
+	}*/
 
 	public Map<String, String> setupTestProcessArea_basic(String serverURL, String userId, String password, int timeout, String projectAreaName)
 			throws Exception {
@@ -446,7 +446,8 @@ public class RTCTestingFacade extends RTCFacade {
 	}
 	
 	public Map<String, String> setupBuildDefinitionWithJazzScmAndPBDeliver(String serverURL, String userId, String password, int timeout,
-						String workspaceName, String componentName, String buildDefinitionId, boolean createBuildResult,
+						String workspaceName, String componentName, String buildDefinitionId, 
+						String loadDirectory, boolean createBuildResult, boolean isPersonalBuild, 
 						Map<String, String> configOrGenericProperties) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
@@ -454,6 +455,18 @@ public class RTCTestingFacade extends RTCFacade {
 			configOrGenericProperties = new HashMap<String, String>();
 		}
 		return testClient.setupBuildDefinitionWithJazzScmAndPBDeliver(connectionDetails, workspaceName, componentName, buildDefinitionId, 
+							loadDirectory, createBuildResult, isPersonalBuild, configOrGenericProperties, getProgressMonitor());
+	}
+	
+	public Map<String, String> setupBuildDefinitionWithoutJazzScmWithPBDeliver(String serverURL, String userId, String password, int timeout,
+						String workspaceName, String componentName, String buildDefinitionId, boolean createBuildResult,
+						Map<String, String> configOrGenericProperties) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		if (configOrGenericProperties == null) {
+			configOrGenericProperties = new HashMap<String, String>();
+		}
+		return testClient.setupBuildDefinitionWithoutJazzScmWithPBDeliver(connectionDetails, workspaceName, componentName, buildDefinitionId, 
 									createBuildResult, configOrGenericProperties, getProgressMonitor());
 	}
 }

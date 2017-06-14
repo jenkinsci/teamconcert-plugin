@@ -16,10 +16,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Pattern;
 
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -56,7 +59,9 @@ import hudson.util.Secret;
 import hudson.util.StreamTaskListener;
 
 public class Utils {
-	private static final String Delimiter = "\n|" + System.getProperty("line.separator");
+	public static final String ACCEPT_BUILD_PROPERTIES = "buildProperties";
+
+	public static final String LOG_Delimiter = "\n|" + System.getProperty("line.separator") + "|"+ Pattern.quote("[0m");
 
 	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
@@ -334,7 +339,7 @@ public class Utils {
 							previousSnapshotUUID, options, listener, clientLocale);
 		// Retrieve connectorId and parentActivityId
 		@SuppressWarnings("unchecked")
-		Map<String, String> buildProperties = (Map <String, String>) acceptMap.get("buildProperties");
+		Map<String, String> buildProperties = (Map <String, String>) acceptMap.get(ACCEPT_BUILD_PROPERTIES);
 		load(testingFacade, serverURI, userId, password, timeout, buildResultUUID, buildWorkspaceName,
 				buildSnapshotNameOrUUID, buildStreamName, hjWorkspacePath, baselineSetName, options, listener,
 				clientLocale, acceptMap);
@@ -429,6 +434,44 @@ public class Utils {
 	}
 	
 	/**
+	 * Sets up a build definition with the given buildDefinitionId. Also create a build repository workspace with a
+	 * component. It does NOT add a Jazz SCM configuration element.
+	 * 
+	 * It creates a repository workspace to which the build workspace flows and creates a few change sets 
+	 * on the build repository workspace.
+	 *  
+	 * @param testingFacade - The {@link RTCTestingFacade} for the build toolkit
+	 * @param c - configuration options for this test run
+	 * @param buildDefinitionId - The name of the build definition id.
+	 * @param workspaceName - The name of the repository workspace to be setup as the build workspace 
+	 * @param componentName - The name of the component to be added to the build workspace and the flow target
+	 * @return - A map of artifact ids and their UUIDs.
+	 * 			  Artifact ids are declared in TestSetupTearDownUtil in -rtc plugin.
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public static Map<String, String> setupBuildDefinitionWithOutJazzScmWithPBDeliver(RTCLoginInfo loginInfo, String componentName,
+			String workspaceName, String buildDefinitionId, boolean createBuildResult, Map<String, String> configOrGenericProperties)
+			throws Exception {
+		return (Map<String, String>) getTestingFacade()
+		.invoke("setupBuildDefinitionWithoutJazzScmWithPBDeliver",
+				new Class[] { String.class, // serverURL,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						String.class, // workspaceName,
+						String.class, // componentToAddName,
+						String.class, // buildDefinitionId
+						boolean.class, // createBuiildResult
+						Map.class}, // configOrGenericPropreties
+				loginInfo.getServerUri(),
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(), workspaceName,
+				componentName, buildDefinitionId, createBuildResult, configOrGenericProperties);
+	}
+	
+	/**
 	 * Sets up a build definition with post build deliver deliver configuration.
 	 * Sets up a build definition with the given buildDefinitionId. Also create a build repository workspace with a
 	 * component and adds the repository workspace to the JazzSCM configuration element of the build definition.
@@ -450,9 +493,10 @@ public class Utils {
 	public static Map<String, String> setupBuildDefinitionWithPBDeliver(RTCLoginInfo loginInfo, String componentName,
 			String workspaceName, String buildDefinitionId, Map<String, String> configOrGenericProperties)
 			throws Exception {
-		return setupBuildDefinitionWithPBDeliver(loginInfo, componentName, workspaceName, buildDefinitionId, false, configOrGenericProperties);
-	}
-	
+		return setupBuildDefinitionWithPBDeliver(loginInfo, componentName, 
+						workspaceName, buildDefinitionId, 
+						null, false, false, configOrGenericProperties);
+	}	
 	
 	/**
 	 * 
@@ -469,6 +513,7 @@ public class Utils {
 	 * @param componentName - The name of the component to be added to the build workspace and the flow target
 	 * @param workspaceName - The name of the repository workspace to be setup as the build workspace 
 	 * @param buildDefinitionId - The name of the build definition id.
+	 * @param loadDirectory - Directory where the contents should be loaded.
 	 * @param createBuildResult - Whether to create a build result or not.
 	 * @param configOrGenericProperties - A map configuration or build property names and values for the post build deliver
 	 * 									 configuration element  
@@ -478,8 +523,8 @@ public class Utils {
 	 */
 	@SuppressWarnings("unchecked")
 	public static Map<String, String> setupBuildDefinitionWithPBDeliver(RTCLoginInfo loginInfo, String componentName,
-			String workspaceName, String buildDefinitionId, boolean createBuildResult, Map<String, 
-			String> configOrGenericProperties)
+			String workspaceName, String buildDefinitionId, String loadDirectory,
+			boolean createBuildResult, boolean isPersonalBuild, Map<String, String> configOrGenericProperties)
 			throws Exception {
 		return (Map<String, String>) getTestingFacade()
 			.invoke("setupBuildDefinitionWithJazzScmAndPBDeliver",
@@ -490,13 +535,16 @@ public class Utils {
 							String.class, // workspaceName,
 							String.class, // componentToAddName,
 							String.class, // buildDefinitionId
-							boolean.class, // createBuiildResult
+							String.class, // loadDirectory
+							boolean.class, // createBuildResult
+							boolean.class, // isPersonalBuild
 							Map.class}, // configOrGenericPropreties
 					loginInfo.getServerUri(),
 					loginInfo.getUserId(),
 					loginInfo.getPassword(),
 					loginInfo.getTimeout(), workspaceName,
-					componentName, buildDefinitionId, createBuildResult, configOrGenericProperties);
+					componentName, buildDefinitionId, loadDirectory,
+					createBuildResult, isPersonalBuild, configOrGenericProperties);
 	}
 	
 	/**
@@ -592,12 +640,12 @@ public class Utils {
     	int matchCount = 0;
         try {
         	scanner = new Scanner(file, "UTF-8");
-        	scanner.useDelimiter(Delimiter);
+        	scanner.useDelimiter(LOG_Delimiter);
             while(scanner.hasNext()) {
-                    String token = scanner.next();
-                    if (token.matches(pattern)) {
-                    	matchCount++;
-                    }
+                String token = scanner.next();
+                if (token.matches(pattern)) {
+                	matchCount++;
+                }
             }
         } finally {
         	if (scanner != null) {
@@ -623,13 +671,13 @@ public class Utils {
         }
         try {
         	scanner = new Scanner(file, "UTF-8");
-        	scanner.useDelimiter(Delimiter);
+        	scanner.useDelimiter(LOG_Delimiter);
             while(scanner.hasNext()) {
-                    String token = scanner.next();
-                    if (token.matches(pattern)) {
-                    	match = token;
-                            break;
-                    }
+				String token = scanner.next();
+				if (token.matches(pattern)) {
+					match = token;
+				        break;
+				}
             }
         } finally {
         	if (scanner != null) {
@@ -841,6 +889,27 @@ public class Utils {
 	public static FreeStyleProject setupFreeStyleJobForSnapshot(JenkinsRule r, String snapshotUUIDOrName) throws Exception {
 		return setupFreeStyleJobForSnapshot(r, snapshotUUIDOrName, null);
 	}
+	
+
+	/**
+	 * Delete a repository workspace with the given name
+	 */
+	public static void deleteRepositoryWorkspace(String repositoryWorkspaceName) throws Exception {
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		testingFacade.invoke("tearDownRepositoryWorkspaces", new Class [] {
+			String.class, // Server URI
+			String.class, // userId
+			String.class, // password
+			int.class, // timeout
+			String.class}, // repositoryWorkspacePrefix
+			loginInfo.getServerUri(), 
+			loginInfo.getUserId(),
+			loginInfo.getPassword(),
+			loginInfo.getTimeout(),
+			repositoryWorkspaceName);
+	}
 
 	/**
 	 * Delete any temporary repository workspaces created during tests
@@ -961,6 +1030,17 @@ public class Utils {
 	}
 	
 	/**
+	 * Returns a list of one ParametersAction for agiven RTCBuildResultUUID
+	 *  
+	 * @return A list of ParametersAction that contains one item representing an empty buildResultUUID.
+	 */
+	public static List<ParametersAction> getPactionsWithBuildResultUUID(String buildResultUUID) {
+		List<ParametersAction> pActions = new ArrayList<ParametersAction> ();
+		pActions.add(new ParametersAction(new StringParameterValue("buildResultUUID", buildResultUUID)));
+		return pActions;
+	}
+	
+	/**
 	 * Runs a tearDown operation on the given artifacts 
 	 *
 	 * @param testingFacade The testing facade to work with
@@ -969,6 +1049,9 @@ public class Utils {
 	 * @throws Exception
 	 */
 	public static void tearDown(RTCFacadeWrapper testingFacade, Config c, Map<String, String> setupArtifacts) throws Exception {
+		if (setupArtifacts == null) {
+			return;
+		}
 		testingFacade.invoke(
 				"tearDown",
 				new Class[] { String.class, // serverURL,
@@ -980,6 +1063,50 @@ public class Utils {
 				c.getUserID(),
 				c.getPassword(),
 				c.getTimeout(), setupArtifacts);
+	}
+	
+	/**
+	 * Utility to dump the log file from the build with post build deliver
+	 * into a temporary file 
+	 * 
+	 * @param b the Jenkins build
+	 * @param filename the name of the temporary file
+	 * @throws IOException if there is an exception reading or writing files.
+	 */
+	public static void dumpPBLogFile(FreeStyleBuild b, String filename) throws IOException {
+		dumpLogFile(b, "pbdeliver-", filename, ".tmp");
+	}
+
+	/**
+	 * Dump the log file from the build into a temporary file
+	 * 
+	 * @param b the Jenkins build
+	 * @param filename the name of the temporary file
+	 * @throws IOException if there is an exception reading or writing files.
+	 */
+	public static void dumpLogFile(FreeStyleBuild b, String prefix, String filename, String suffix) throws IOException {
+		if (Config.DEFAULT.isDumpLogFiles()) {
+			File tmpFile = File.createTempFile(prefix + filename, suffix);
+			PrintWriter outputPrintWriter = null;
+			Scanner inputLogFileScanner = null;
+			try {
+				outputPrintWriter = new PrintWriter(tmpFile);
+				File logFile = b.getLogFile();
+				inputLogFileScanner = new Scanner(new FileInputStream(logFile));
+				inputLogFileScanner.useDelimiter(LOG_Delimiter);
+				while(inputLogFileScanner.hasNext()) {
+					outputPrintWriter.println(inputLogFileScanner.next());
+				}
+			}
+			finally {
+				if (outputPrintWriter != null) {
+					outputPrintWriter.close();
+				}
+				if (inputLogFileScanner != null) {
+					inputLogFileScanner.close();
+				}
+			}
+		}
 	}
 	
 	/**

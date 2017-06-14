@@ -92,7 +92,7 @@ public class AbstractTestCase {
 		File buildTestDir = new File(tempDir, "HJPluginTests");
 		sandboxDir = new File(buildTestDir, getFileUniqueName());
 		sandboxDir.mkdirs();
-		sandboxDir.deleteOnExit();
+		//sandboxDir.deleteOnExit();
 		Assert.assertTrue(sandboxDir.exists());
 	}
 

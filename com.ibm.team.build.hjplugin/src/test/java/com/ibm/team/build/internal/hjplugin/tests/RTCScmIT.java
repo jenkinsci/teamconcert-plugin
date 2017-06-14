@@ -318,7 +318,7 @@ public class RTCScmIT extends AbstractTestCase {
 
 	@Test public void testDoCheckPasswordFile() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			File testPasswordFileFile = File.createTempFile("ADMIN-password", null);
+			File testPasswordFileFile = Utils.getTemporaryFile();
 			String testPasswordFile = testPasswordFileFile.getAbsolutePath();
 	
 			FreeStyleProject project = r.createFreeStyleProject();

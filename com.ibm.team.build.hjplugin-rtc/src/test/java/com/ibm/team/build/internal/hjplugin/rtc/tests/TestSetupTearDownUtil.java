@@ -22,9 +22,11 @@ import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.build.client.ITeamBuildClient;
 import com.ibm.team.build.common.builddefinition.IAutoDeliverConfigurationElement;
 import com.ibm.team.build.common.builddefinition.UDeployConfigurationElement.TriggerPolicy;
 import com.ibm.team.build.common.model.BuildState;
+import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
@@ -39,6 +41,7 @@ import com.ibm.team.process.common.IProcessAreaHandle;
 import com.ibm.team.process.common.IProjectArea;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
+import com.ibm.team.repository.client.internal.ItemManager;
 import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
@@ -152,12 +155,12 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
 			String componentName, boolean createBuildDefinition, IProgressMonitor progress) throws Exception {
-		return setupAcceptChanges(connectionDetails, name, componentName, name, createBuildDefinition, true, progress);
+		return setupAcceptChanges(connectionDetails, name, componentName, name, null, createBuildDefinition, true, false, progress);
 	}
 	
 	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
-			String componentName, String buildDefinitionId, boolean createBuildDefinition,
-			boolean createBuildResult, IProgressMonitor progress) throws Exception {			
+			String componentName, String buildDefinitionId, String loadDirectory, boolean createBuildDefinition,
+			boolean createBuildResult, boolean isPersonalBuild, IProgressMonitor progress) throws Exception {			
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
@@ -183,13 +186,23 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, name);
 		
 		if (createBuildDefinition) {
-			
+			String destinationDirectory = loadDirectory;
+			if (destinationDirectory == null) {
+				destinationDirectory = ".";
+			}
 			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
-					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, destinationDirectory,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
 			if (createBuildResult) {
-				BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
+				String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
+				
+				if (isPersonalBuild) {
+					IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchCompleteItem(IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null), 
+							ItemManager.REFRESH, null).getWorkingCopy();
+					buildResult.setPersonalBuild(true);
+					BuildUtil.save(repo, buildResult);
+				}
 			}
 		}
 		
@@ -1335,16 +1348,22 @@ public class TestSetupTearDownUtil extends BuildClient {
 		workspaceConnection.removeBaselineSet(baseline, progress);
 	}
 	
-	public Map<String, String> setupBuildDefinitionWithJazzScmAndPBDeliver(ConnectionDetails connectionDetails,
+	public Map<String, String> setupBuildDefinitionWithoutJazzScmWithPBDeliver(ConnectionDetails connectionDetails,
 			String workspaceName, String componentName, String buildDefinitionId,
 			boolean createBuildResult, Map<String, String> configOrGenericProperties, 
 			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository(); 
+		
 		Map<String, String> artifactIds = setupAcceptChanges(connectionDetails, workspaceName, componentName, 
-								buildDefinitionId, true, false, progress);
+								buildDefinitionId, null, true, false, false, progress);
+		
+		// Remove the Jazz SCM configuration element but leave the post build deliver configuration element
+		BuildUtil.removeConfigurationElement(repo, buildDefinitionId, IJazzScmConfigurationElement.ELEMENT_ID, progress);
 		
 		// Setting up the PB deliver configuration element.
 		String deliverTargetName = TestUtils.getRepositoryWorkspaceUniqueName();
-		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		// Create another repository workspace that will act as the flow target. Use the stream created in setupAcceptChanges as the base for this new workspace
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(connection.getTeamRepository());
 		IWorkspaceConnection stream = workspaceManager.getWorkspaceConnection((IWorkspaceHandle)IWorkspace.ITEM_TYPE.createItemHandle(
@@ -1370,6 +1389,57 @@ public class TestSetupTearDownUtil extends BuildClient {
 		// Create the build result now, so that it includes PB deliver configuration element
 		if (createBuildResult) {
 			BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> setupBuildDefinitionWithJazzScmAndPBDeliver(ConnectionDetails connectionDetails,
+			String workspaceName, String componentName, String buildDefinitionId,
+			String loadDirectory, boolean createBuildResult, 
+			boolean isPersonalBuild, Map<String, String> configOrGenericProperties, IProgressMonitor progress) throws Exception {
+		// Purposefully sending false, false for createBuildResult and isPersonalBuild because
+		// we want to create a build result after adding PB deliver configuration element to the build
+		// definition
+		Map<String, String> artifactIds = setupAcceptChanges(connectionDetails, workspaceName, componentName, 
+								buildDefinitionId, loadDirectory, true, false, false, progress);
+		
+		// Setting up the PB deliver configuration element.
+		String deliverTargetName = TestUtils.getRepositoryWorkspaceUniqueName();
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository(); 
+		
+		// Create another repository workspace that will act as the flow target. Use the stream created in setupAcceptChanges as the base for this new workspace
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(connection.getTeamRepository());
+		IWorkspaceConnection stream = workspaceManager.getWorkspaceConnection((IWorkspaceHandle)IWorkspace.ITEM_TYPE.createItemHandle(
+										UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID)),null),null);
+		IWorkspaceConnection deliverTarget = SCMUtil.createWorkspace(workspaceManager, deliverTargetName, ""
+												+ "My deliver target workspace", stream);
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_PB_STREAM_ITEM_ID, deliverTarget.getResolvedWorkspace().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_PB_STREAM_NAME, deliverTarget.getName());
+		
+		// Compose the map of properties that has to be provided for PB deliver configuration
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_ADD_NEW_COMPONENTS_TO_TARGET, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+					IAutoDeliverConfigurationElement.PROPERTY_ADD_NEW_COMPONENTS_TO_TARGET, "true"));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_ALL_COMPONENTS, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_DELIVER_ALL_COMPONENTS, "true"));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_REMOVE_COMPONENTS_IN_TARGET, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_REMOVE_COMPONENTS_IN_TARGET, "true"));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TRIGGER_POLICY, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TRIGGER_POLICY, TriggerPolicy.NO_WARNINGS.name()));
+		configOrGenericProperties.put(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TARGET_UUID, BuildUtil.getValueOrDefault(configOrGenericProperties, 
+				IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TARGET_UUID, deliverTarget.getResolvedWorkspace().getItemId().getUuidValue()));
+		setupPBDeliverConfigurationElement(connectionDetails, buildDefinitionId, artifactIds, configOrGenericProperties, progress);
+		
+		// Create the build result now, so that it includes PB deliver configuration element
+		if (createBuildResult) {
+			String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
+			if (isPersonalBuild) {
+				IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchCompleteItem(IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null), 
+						ItemManager.REFRESH, null).getWorkingCopy();
+				buildResult.setPersonalBuild(true);
+				BuildUtil.save(repo, buildResult);
+			}
 		}
 		return artifactIds;
 	}

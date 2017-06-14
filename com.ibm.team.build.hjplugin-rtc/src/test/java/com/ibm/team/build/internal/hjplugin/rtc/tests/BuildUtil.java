@@ -27,6 +27,7 @@ import com.ibm.team.build.common.model.IBuildDefinition;
 import com.ibm.team.build.common.model.IBuildDefinitionHandle;
 import com.ibm.team.build.common.model.IBuildEngine;
 import com.ibm.team.build.common.model.IBuildEngineHandle;
+import com.ibm.team.build.common.model.IBuildItem;
 import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
@@ -69,6 +70,12 @@ public class BuildUtil {
         
 		ITeamBuildClient buildClient = getTeamBuildClient(repo);
 		return buildClient.save(buildDefinition, null);
+	}
+	
+	public static IBuildDefinition getBuildDefinition(ITeamRepository repo, String buildDefinitionId) 
+								throws TeamRepositoryException {
+		ITeamBuildClient buildClient = getTeamBuildClient(repo);
+		return buildClient.getBuildDefinition(buildDefinitionId, null);
 	}
 
 	private static ITeamBuildClient getTeamBuildClient(ITeamRepository repo) {
@@ -239,5 +246,29 @@ public class BuildUtil {
 			return configOrGenericProperties.get(key);
 		}
 		return defaultValue;
+	}
+
+	public static void removeConfigurationElement(ITeamRepository repo, String buildDefinitionId,
+			String elementId, IProgressMonitor progress) throws Exception, TeamRepositoryException {
+		// Once done, remove the JazzSCM configuration element from the build definition
+		IBuildDefinition buildDefinition = (IBuildDefinition) getBuildDefinition(repo, buildDefinitionId).getWorkingCopy();
+		int indexToRemove = -1;
+		for (int i = 0 ; i < buildDefinition.getConfigurationElements().size(); i++) {
+			IBuildConfigurationElement configElement = (IBuildConfigurationElement) (buildDefinition.getConfigurationElements().get(i));
+			if (configElement.getElementId().equals(elementId)) {
+				indexToRemove = i;
+				break;
+			}
+		}
+		if (indexToRemove != -1) {
+			buildDefinition.getConfigurationElements().remove(indexToRemove);
+		}
+		ITeamBuildClient buildClient = getTeamBuildClient(repo);
+		buildClient.save(buildDefinition, null);
+	}
+	
+	public static void save(ITeamRepository repo, IBuildResult item) throws IllegalArgumentException, TeamRepositoryException  {
+		ITeamBuildClient buildClient = getTeamBuildClient(repo);
+		buildClient.save(item, null);
 	}
 }

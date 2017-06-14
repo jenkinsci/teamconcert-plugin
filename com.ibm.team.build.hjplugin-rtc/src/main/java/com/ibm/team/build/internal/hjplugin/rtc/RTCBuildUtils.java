@@ -86,7 +86,7 @@ public class RTCBuildUtils {
 		}
 
         if (buildRequestHandles.isEmpty()) {
-        	throw new IllegalStateException("No build request for the build result");
+        	throw new IllegalStateException(Messages.getDefault().RTCBuildUtils_unexpected_zero_requests());
         }
         
 		
