@@ -16,6 +16,8 @@ import hudson.Util;
 import hudson.model.Action;
 import hudson.model.EnvironmentContributingAction;
 import hudson.model.AbstractBuild;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -32,6 +34,7 @@ import java.util.logging.Logger;
  * Contains information about the RTC build result so that other extensions to the build can 
  * access it (example: RunListener to be able to terminate the RTC build result).
  */
+@ExportedBean(defaultVisibility = 999)
 public class RTCBuildResultAction implements Serializable, Action, EnvironmentContributingAction {
 
     private static final Logger LOGGER = Logger.getLogger(RTCBuildResultAction.class.getName());
@@ -84,6 +87,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	/**
 	 * @return The build result UUID for the RTC build result
 	 */
+	@Exported(visibility = 3)
 	public String getBuildResultUUID() {
 		return buildResultUUID;
 	}
@@ -113,6 +117,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	}
 
 	@Override
+	@Exported(visibility = 3)
 	public String getDisplayName() {
 		if (serverURI != null && buildResultUUID != null) {
 			return Messages.RTCBuildResultAction_display_name();
@@ -121,6 +126,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	}
 
 	@Override
+	@Exported(visibility = 3)
 	public String getUrlName() {
 		if (serverURI != null && buildResultUUID != null) {
 			return serverURI + ITEM_OID + buildResultUUID;
@@ -159,6 +165,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	/**
 	 * @return return the server uri
 	 */
+	@Exported(visibility = 3)
 	public String getServerURI() {
 		return serverURI;
 	}
@@ -166,6 +173,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	/**
 	 * @return The SCM configuration for the build that created this action
 	 */
+	@Exported(visibility = 3)
 	public RTCScm getScm() {
 		return scm;
 	}
