@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,6 +13,7 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -57,6 +58,7 @@ import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.PermissionDeniedException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.scm.client.IWorkspaceConnection;
+import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
@@ -70,7 +72,7 @@ public class BuildConfiguration {
 	private static final int MAX_RETRY_COUNT = 3;
 	private static final long SLEEP_TIMEOUT_SECONDS = 60; // seconds
 
-    private File fetchDestinationFile;
+	private File fetchDestinationFile;
 	private Path fetchDestinationPath;
 	private boolean deleteNeeded = false;
 	private boolean isPersonalBuild = false;
@@ -88,7 +90,10 @@ public class BuildConfiguration {
 	private Map<String, String> buildProperties = new HashMap<String, String>();
 	private Map<String, String> temporaryRepositoryWorkspaceProperties = new HashMap<String, String>();
 	private boolean shouldDeleteTemporaryWorkspace = true;
-	
+	private String loadPolicy;
+	private String componentLoadConfig;
+	private boolean isBuildDefinitionConfiguration = false;
+
 	/**
 	 * Basic build configuration. Caller should also initialize prior to calling
 	 * the get methods.
@@ -99,26 +104,6 @@ public class BuildConfiguration {
 	public BuildConfiguration(ITeamRepository teamRepository, String hjWorkspace) {
 		this.teamRepository = teamRepository;
 		this.hjWorkspace = hjWorkspace;
-	}
-	
-	public void setCreateFoldersForComponents(boolean createFoldersForComponents) {
-		this.createFoldersForComponents = createFoldersForComponents;
-	}
-	
-	/**
-	 * Set load rules from specified json data
-	 * @param loadRules
-	 */
-	public void setLoadRules(String loadRules) {
-		loadRuleUUIDs = loadRules;
-	}
-	
-	public void setIncludeComponents(boolean includeComponents) {
-		this.includeComponents = includeComponents;
-	}
-	
-	public void setComponents(Collection<IComponentHandle> components) {
-		this.components = components;
 	}
 	
 	/**
@@ -141,20 +126,30 @@ public class BuildConfiguration {
 			LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
 		}
 	}
-	
+
 	/**
 	 * Initialize a configuration that describes how to load from a RTC SCM snapshot
-	 * @param baselineSetHandle
-	 * @param contributorHandle
-	 * @param workspacePrefix
-	 * @param monitor
+	 * 
+	 * @param baselineSet The snapshot configured in the Jenkins job. Never <code>null</code>.
+	 * @param contributorHandle Handle to the logged in contributor. Required to create the workspace.
+	 * @param workspacePrefix Prefix to be used in the name of the workspace.
+	 * @param workspaceComment Description set on the workspace.
+	 * @param loadPolicy load policy value that determines whether to use load rules or load options during load
+	 * @param componentLoadConfig component load configuration value that determines whether to load all components or
+	 *            exclude some components
+	 * @param createFoldersForComponents determines whether to component root folders
+	 * @param componentsToExclude list of components to exclude. comma separated list of id/name of components
+	 * @param pathToLoadRuleFile Path to the load rule file. Can be <code>null</code>.
+	 * @param listener A listener to report error/progress
+	 * @param monitor Progress monitor.
 	 * @throws Exception
 	 */
 	public void initialize(IBaselineSet baselineSet, IContributorHandle contributorHandle, String workspacePrefix, String workspaceComment,
-								IConsoleOutput listener, Locale clientLocale, IProgressMonitor monitor) throws Exception {
+			String loadPolicy, String componentLoadConfig, boolean createFoldersForComponents, String componentsToExclude, String pathToLoadRuleFile, IConsoleOutput listener,
+			Locale clientLocale, IProgressMonitor monitor) throws Exception {
 		LOGGER.finest("BuildConfiguration.initialize for baselineSetHandle : Enter");
-		SubMonitor progress = SubMonitor.convert(monitor, 10);
-		
+		SubMonitor progress = SubMonitor.convert(monitor, 30);
+
 		IWorkspaceConnection workspaceConnection = null;
 		String workspaceName =  workspacePrefix + "_" + Long.toString(System.currentTimeMillis()) + "_" + Long.toString(System.nanoTime());
 		try {
@@ -173,6 +168,12 @@ public class BuildConfiguration {
 			this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 			this.acceptBeforeFetch = false;
 			this.isPersonalBuild = false;
+			this.includeComponents = false;
+			setLoadPolicy(loadPolicy);
+			setComponentLoadConfig(componentLoadConfig);
+			setCreateFoldersForComponents(createFoldersForComponents);
+			setComponents(workspaceConnection, componentsToExclude, listener, clientLocale, progress.newChild(10));
+			setComponentLoadRules(workspaceConnection, pathToLoadRuleFile, clientLocale, progress.newChild(10));
 
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finer("Loading from snapshot: " + snapshotUUID + "  using temporary workspace '" +  workspaceName + "'");
@@ -188,23 +189,47 @@ public class BuildConfiguration {
 	
 	/**
 	 * Initialize configuration that describes how to build & load with a RTC SCM workspace
+	 * 
 	 * @param workspaceHandle The build workspace. Never <code>null</code>
 	 * @param workspaceName Name of the build workspace. Never <code>null</code>
 	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
 	 * @param acceptBeforeLoad Accept latest changes before loading if true
-	 * @throws IOException If anything goes wrong during the initialization
+	 * @param loadPolicy load policy value that determines whether to use load rules or load options during load
+	 * @param componentLoadConfig component load configuration value that determines whether to load all components or
+	 *            exclude some components
+	 * @param createFoldersForComponents determines whether to component root folders
+	 * @param componentsToExclude list of components to exclude. comma separated list of id/name of components
+	 * @param pathToLoadRuleFile Path to the load rule file. Can be <code>null</code>.
+	 * @param listener A listener to report error/progress
+	 * @param clientLocale Locale of the requesting client.
+	 * @param monitor Progress monitor.
+	 * @throws Exception
 	 */
-	public void initialize(IWorkspaceHandle workspaceHandle, String workspaceName, String snapshotName, boolean acceptBeforeLoad) throws IOException {
+	public void initialize(IWorkspaceHandle workspaceHandle, String workspaceName, String snapshotName, boolean acceptBeforeLoad, String loadPolicy,
+			String componentLoadConfig, boolean createFoldersForComponents, String componentsToExclude, String pathToLoadRuleFile,
+			IConsoleOutput listener, Locale clientLocale, IProgressMonitor monitor) throws Exception {
 		LOGGER.finest("BuildConfiguration.initialize for workspaceHandle : Enter");
+		SubMonitor progress = SubMonitor.convert(monitor, 30);
 
 		this.workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(), workspaceName);
 		this.snapshotName = snapshotName;
 		this.fetchDestinationFile = new File(hjWorkspace);
 		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 		this.acceptBeforeFetch = acceptBeforeLoad;
-		
+		this.includeComponents = false;
+		setLoadPolicy(loadPolicy);
+		setComponentLoadConfig(componentLoadConfig);
+		IWorkspaceConnection wsConnection = SCMPlatform.getWorkspaceManager(teamRepository).getWorkspaceConnection(workspaceHandle,
+				progress.newChild(10));
+		setCreateFoldersForComponents(createFoldersForComponents);
+		setComponents(wsConnection, componentsToExclude, listener, clientLocale, progress.newChild(10));
+		setComponentLoadRules(wsConnection, pathToLoadRuleFile, clientLocale, progress.newChild(10));
+
 		addCommonBuildProperties();
 		
+		// Add the workspace UUID property
+		buildProperties.put(IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, workspaceHandle.getItemId().getUuidValue());
+
 		if (LOGGER.isLoggable(Level.FINER)) {
 			LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
 		}
@@ -212,19 +237,30 @@ public class BuildConfiguration {
 	
 	/**
 	 * Initialize configuration that describes how to build & load with a RTC SCM stream
+	 * 
 	 * @param streamHandle The stream handle. Never <code>null</code>
 	 * @param streamName - the name of the stream
 	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
 	 * @param workspacePrefix Prefix for the temporary build workspace to be created. Never <code>null</code>
 	 * @param contributorHandle The handle to the logged in contributor
-	 * @param monitor
-	 * @throws IOException If anything goes wrong during the initialization
-	 * @throws TeamRepositoryException 
+	 * @param loadPolicy load policy value that determines whether to use load rules or load options during load
+	 * @param componentLoadConfig component load configuration value that determines whether to load all components or
+	 *            exclude some components
+	 * @param createFoldersForComponents determines whether to component root folders
+	 * @param componentsToExclude list of components to exclude. comma separated list of id/name of components
+	 * @param pathToLoadRuleFile Path to the load rule file. Can be <code>null</code>.
+	 * @param listener A listener to report error/progress
+	 * @param clientLocale Locale of the requesting client.
+	 * @param monitor Progress Monitor
+	 * @throws Exception
 	 */
-	public void initialize(IWorkspaceHandle streamHandle, String streamName, IWorkspace workspace, IBaselineSet baselineSet, boolean shouldDeleteTemporaryWorkspace, IContributorHandle contributorHandle, IProgressMonitor monitor) throws IOException, TeamRepositoryException {
+	public void initialize(IWorkspaceHandle streamHandle, String streamName, IWorkspace workspace, IBaselineSet baselineSet,
+			boolean shouldDeleteTemporaryWorkspace, IContributorHandle contributorHandle, String loadPolicy, String componentLoadConfig,
+			boolean createFoldersForComponents, String componentsToExclude, String pathToLoadRuleFile, IConsoleOutput listener, Locale clientLocale,
+			IProgressMonitor monitor) throws Exception {
 		LOGGER.finest("BuildConfiguration.initialize for stream : Enter");
-		
-		SubMonitor progress = SubMonitor.convert(monitor, 10);
+
+		SubMonitor progress = SubMonitor.convert(monitor, 30);
 
 		try {
 			this.stream = new BuildStreamDescriptor(streamName, baselineSet.getItemId().getUuidValue());
@@ -233,15 +269,22 @@ public class BuildConfiguration {
 			this.fetchDestinationFile = new File(hjWorkspace);
 			this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 			this.acceptBeforeFetch = false;
+			this.includeComponents = false;
 			this.isPersonalBuild = false;
 			this.shouldDeleteTemporaryWorkspace = shouldDeleteTemporaryWorkspace;
-			
 			// Set the flow target if temporary workspace will live on after load is over
 			if (!shouldDeleteTemporaryWorkspace) {
 				// Set the flow target
 				getRTCWorkspaceUtils().setFlowTarget(getTeamRepository(), workspace, streamHandle, progress.newChild(5));
 				setTemporaryRepositoryWorkspaceProperties(workspace);
-			}
+			}			
+			setLoadPolicy(loadPolicy);
+			setComponentLoadConfig(componentLoadConfig);
+			IWorkspaceConnection wsConnection = SCMPlatform.getWorkspaceManager(teamRepository).getWorkspaceConnection(streamHandle,
+					progress.newChild(10));
+			setCreateFoldersForComponents(createFoldersForComponents);
+			setComponents(wsConnection, componentsToExclude, listener, clientLocale, progress.newChild(10));
+			setComponentLoadRules(wsConnection, pathToLoadRuleFile, clientLocale, progress.newChild(10));
 
 			if (LOGGER.isLoggable(Level.FINER)) {
 				LOGGER.finer("Building from stream : '" + streamName + "' with temporary workspace '" + workspace.getName() + "'. Created snapshot '" + snapshotName + "'.");
@@ -286,6 +329,7 @@ public class BuildConfiguration {
 	 * configuration details. Never <code>null</code>. If there is no build result available, you should
 	 * be calling {@link #initialize(IWorkspaceHandle, String, String)}
 	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
+	 * @param useDynamicLoadRules Determines whether to use dynamic load rules for loading components
 	 * @param snapshotName The name to give any snapshot created. Never <code>null</code>
 	 * @param listener A listener that will be notified of the progress and errors encountered.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
@@ -294,7 +338,7 @@ public class BuildConfiguration {
 	 * @throws RTCConfigurationException If validation fails
 	 * @throws TeamRepositoryException If anything goes wrong during the initialization
 	 */
-	public void initialize(IBuildResultHandle buildResultHandle, boolean isCustomSnapshotName, String snapshotName, final IConsoleOutput listener,
+	public void initialize(IBuildResultHandle buildResultHandle, boolean isCustomSnapshotName, String snapshotName, boolean useDynamicLoadRules, final IConsoleOutput listener,
 			IProgressMonitor progress, Locale clientLocale) throws IOException, RTCConfigurationException, TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		IItemManager itemManager = getTeamRepository().itemManager();
@@ -317,14 +361,16 @@ public class BuildConfiguration {
         }
         
         String workspaceUuid = getWorkspaceUuid(buildDefinitionInstance);
-        loadRuleUUIDs = getComponentLoadRuleUUIDs(buildDefinitionInstance);
-        includeComponents = getIncludeComponents(buildDefinitionInstance);
-        components = getLoadComponents(buildDefinitionInstance);
         deleteNeeded = getDeleteBeforeFetch(buildDefinitionInstance);
-        createFoldersForComponents = getCreateFoldersForComponents(buildDefinitionInstance);
         acceptBeforeFetch = getAcceptBeforeFetch(buildDefinitionInstance);
         isPersonalBuild = result.isPersonalBuild();
-
+		this.loadPolicy = useDynamicLoadRules ? Constants.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES : getLoadPolicy(buildDefinitionInstance);
+		this.componentLoadConfig = getComponentLoadConfig(buildDefinitionInstance);
+        createFoldersForComponents = getCreateFoldersForComponents(buildDefinitionInstance);
+        loadRuleUUIDs = getComponentLoadRuleUUIDs(buildDefinitionInstance);
+        components = getLoadComponents(buildDefinitionInstance);
+        includeComponents = getIncludeComponents(buildDefinitionInstance);
+		isBuildDefinitionConfiguration = true;
 
         if (workspaceUuid == null) {
             throw new IllegalStateException("Missing build workspace specification from the build definition"); //$NON-NLS-1$
@@ -436,6 +482,49 @@ public class BuildConfiguration {
 		}
 		return result;
 	}
+    
+    /**
+	 * Check and set the loadPolicy value. When loadPolicy value is not set, default to "useComponentLoadConfig". For
+	 * this reason, this method should not be invoked when initializing build definition configuration. For build
+	 * definition configuration if load policy is not set then we continue to support the old load rules behavior i.e.
+	 * load all components and load those components for which load rules are specified according to those rules.
+	 * 
+	 * @param loadPolicy
+	 */
+	private void setLoadPolicy(String loadPolicy) {
+		// if loadPolicy is not set then treat it as useComponentLoadConfig 
+		this.loadPolicy = (loadPolicy != null) ? loadPolicy : Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
+	}
+	
+	private void setComponentLoadConfig(String componentLoadConfig) {
+		// if componentLoadConfig is not set then treat it as loadAllComponents
+		this.componentLoadConfig = (componentLoadConfig != null) ? componentLoadConfig : Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS;
+	}
+
+	private void setCreateFoldersForComponents(boolean createFoldersForComponents) throws Exception {
+		this.createFoldersForComponents = createFoldersForComponents && (!isLoadPolicySet() || isLoadPolicySetToUseComponentLoadConfig());
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void setComponents(IWorkspaceConnection workspaceConnection, String loadComponents, IConsoleOutput listener, Locale clientLocale,
+			IProgressMonitor monitor) throws Exception {
+		if (!isLoadPolicySet() || isLoadPolicySetToUseComponentLoadConfig() && isComponentLoadConfigSetToExcludeSomeComponents()) {
+			this.components = RTCWorkspaceUtils.getInstance().getComponentHandles(new RTCWorkspaceUtils.LoadConfigurationDescriptor(this),
+					workspaceConnection, loadComponents, false, listener, clientLocale, monitor);
+		} else {
+			this.components = Collections.EMPTY_LIST;
+		}
+	}
+	
+	private void setComponentLoadRules(IWorkspaceConnection workspaceConnection, String pathToLoadRuleFile, Locale clientLocale,
+			IProgressMonitor monitor) throws Exception {
+		if (isLoadPolicySetToUseLoadRules()) {
+			this.loadRuleUUIDs = getRTCWorkspaceUtils().getComponentLoadRuleString(new RTCWorkspaceUtils.LoadConfigurationDescriptor(this),
+					workspaceConnection, pathToLoadRuleFile, clientLocale, monitor);
+		} else {
+			this.loadRuleUUIDs = null;
+		}
+	}
 
 	private static String formatAsEnvironmentVariable(String key) {
 		StringBuilder sb = new StringBuilder();
@@ -499,17 +588,19 @@ public class BuildConfiguration {
     }
 
 
-    private String getComponentLoadRuleUUIDs(IBuildDefinitionInstance instance) throws TeamRepositoryException {
-        IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_COMPONENT_LOAD_RULES);
-        if (property != null && property.getValue() != null && property.getValue().length() > 0) {
-            return property.getValue();
-        }
-        return null;
-    }
+	private String getComponentLoadRuleUUIDs(IBuildDefinitionInstance instance) throws TeamRepositoryException {
+		IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_COMPONENT_LOAD_RULES);
+		if (property != null && property.getValue() != null && property.getValue().length() > 0
+				&& (!isLoadPolicySet() || isLoadPolicySetToUseLoadRules())) {
+			return property.getValue();
+		}
+		return null;
+	}
 
     /**
      * The load rules to be used during the load.
      * @param workspaceConnection The workspace containing the load rules
+     * @param pathToDynamicLoadRuleFile Path to the file containing the dynamic load rules
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
      * @return Collection of load rules for the load. The return collection
      * is deliberately not typed because releases later than 3.0.1.5 use ILoadRule2
@@ -518,74 +609,108 @@ public class BuildConfiguration {
      * @throws TeamRepositoryException If anything goes wrong retrieving the load rules
      */
     @SuppressWarnings("rawtypes")
-	public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection, Map<String, String> compLoadRules, IProgressMonitor progress, Locale clientLocale) throws Exception {
-    	SubMonitor monitor = SubMonitor.convert(progress, 100);
-        if (loadRuleUUIDs != null) {
-          	Collection loadRules = new ArrayList<Object>();
-           // Determine if the new format of load rules is supported and if so, will it be able to find
-        	// the schema to validate against.
-        	boolean useOverride = false;
-    		try {
-    			BuildConfiguration.class.getClassLoader().loadClass("com.ibm.team.filesystem.client.operations.ILoadRule2");
-    			// New load rule format supported.
-    		   	try {
-    				URL schemaURL = new URL("platform:/plugin/com.ibm.team.filesystem.client/schema/LoadRule.xsd");
-    				schemaURL.getContent();
-    			} catch (MalformedURLException e) {
-    				LOGGER.log(Level.FINER, e.getMessage(), e);
-    				useOverride = true;
-    			} catch (IOException e) {
-    				// can't read the contents of the schema
-    				useOverride = true;
-				} 
-    		} catch (ClassNotFoundException e) {
-    			// uses old load rule support
-    		}
-    		
-    		Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules, clientLocale);
-    		Map<String, Object> allLoadRules = new HashMap<String, Object>();
-    		
+	public Collection getComponentLoadRules(IWorkspaceConnection workspaceConnection, String pathToDynamicLoadRuleFile, PrintStream buildLog,
+			IProgressMonitor progress, Locale clientLocale) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		// Determine if the new format of load rules is supported and if so, will it be able to find
+		// the schema to validate against.
+		boolean useOverride = false;
+		try {
+			BuildConfiguration.class.getClassLoader().loadClass("com.ibm.team.filesystem.client.operations.ILoadRule2");
+			// New load rule format supported.
+			try {
+				URL schemaURL = new URL("platform:/plugin/com.ibm.team.filesystem.client/schema/LoadRule.xsd");
+				schemaURL.getContent();
+			} catch (MalformedURLException e) {
+				LOGGER.log(Level.FINER, e.getMessage(), e);
+				useOverride = true;
+			} catch (IOException e) {
+				// can't read the contents of the schema
+				useOverride = true;
+			}
+		} catch (ClassNotFoundException e) {
+			// we support only new load rule format when load policy is set to use load rules
+			if (isLoadPolicySetToUseLoadRules()
+					|| (isLoadPolicySetToUseDynamicLoadRules() && pathToDynamicLoadRuleFile != null && pathToDynamicLoadRuleFile.trim().length() > 0)) {
+				e.printStackTrace();
+				throw new RTCConfigurationException(Messages.get(clientLocale).BuildConfiguration_loadrule2_class_not_found());
+			}
+			// uses old load rule support
+		}
+		// first preference given to dynamic load rules
+		if (isLoadPolicySetToUseDynamicLoadRules()) {
+			Collection<Object> loadRules = new ArrayList<Object>();
+			ILoadRule2 customLoadRules = getCustomLoadRules(workspaceConnection, pathToDynamicLoadRuleFile, buildLog, clientLocale);
+			if (customLoadRules != null) {
+				LOGGER.finest("BuildConfiguration.getComponentLoadRules: there are load rules provided through extension."); //$NON-NLS-1$
+				loadRules.add(customLoadRules);
+			}
+			if (loadRules.size() > 0) {
+				return loadRules;
+			}
+		} else if (loadRuleUUIDs != null) {
+
+			Collection loadRules = new ArrayList<Object>();
+			Map<String, Object> allLoadRules = new HashMap<String, Object>();
+
+			ComponentLoadRules rules = new ComponentLoadRules(loadRuleUUIDs);
+			Map<IComponentHandle, IFileItemHandle> ruleFiles = rules.getLoadRuleFiles();
+			// support for specifying multiple load rule files, one per component is deprecated from 1.2.0.4
+			// fail or log a warning
+			if (ruleFiles.size() > 1) {
+				// if load policy set to use load rules fail otherwise add warning
+				if (isLoadPolicySetToUseLoadRules()) {
+					throw new RTCConfigurationException(Messages.get(clientLocale).BuildConfiguration_multiple_load_rule_files_not_supported());
+				} else {
+					String messageString = Messages.get(clientLocale).BuildConfiguration_multiple_load_rule_files_deprecated();
+					buildLog.println(messageString);
+					if (LOGGER.isLoggable(Level.WARNING)) {
+						LOGGER.warning(messageString);
+					}
+				}
+			}
 			if (useOverride) {
-            	ComponentLoadRules rules = new ComponentLoadRules(loadRuleUUIDs);
-            	Map<IComponentHandle, IFileItemHandle> ruleFiles = rules.getLoadRuleFiles();
-            	monitor.setWorkRemaining(20 * ruleFiles.size());
-                for (Map.Entry<IComponentHandle, IFileItemHandle> entry : ruleFiles.entrySet()) {
-                    IComponentHandle componentHandle = entry.getKey();;
-                    try {
-                    	Object rule = NonValidatingLoadRuleFactory.getLoadRule(workspaceConnection, componentHandle, entry.getValue(), monitor.newChild(10));
-                        allLoadRules.put(componentHandle.getItemId().getUuidValue(), rule);
-                    } catch (TeamRepositoryException e1) {
-                    	// Generalized to handle more than just the VersionablePermissionException
-                    	// That exception can't be handled directly because its not defined in older releases
-                    	// which would cause class loading issues.
-                    	
-                        // Lets try to build up a more informative error message.
-                        ITeamRepository repo = (ITeamRepository) workspaceConnection.getResolvedWorkspace().getOrigin();
-                        IContributor contributor = repo.loggedInContributor();
-                        IComponent component = null;
-                        try {
-                            component = (IComponent) repo.itemManager().fetchCompleteItem(componentHandle, IItemManager.DEFAULT, monitor.newChild(10));
-                        } catch (TeamRepositoryException e2) {
-                            // Just throw the original error.
-                            throw e1;
-                        }
-                        if (contributor != null && component != null) {
-                            throw new TeamRepositoryException(Messages.getDefault().BuildConfiguration_load_rule_access_failed(
-                                    contributor.getUserId(), component.getName(), e1.getMessage()), e1);
-                        } else {
-                            throw e1;
-                        }
-                    }
-                }
-                
-  		    }else {
-				ComponentLoadRules rules = new ComponentLoadRules(loadRuleUUIDs);
-				Map<IComponentHandle, IFileItemHandle> ruleFiles = rules.getLoadRuleFiles();
+				monitor.setWorkRemaining(20 * ruleFiles.size());
+				for (Map.Entry<IComponentHandle, IFileItemHandle> entry : ruleFiles.entrySet()) {
+					IComponentHandle componentHandle = entry.getKey();
+					try {
+						Object rule = NonValidatingLoadRuleFactory.getLoadRule(workspaceConnection, componentHandle, entry.getValue(),
+								isLoadPolicySetToUseLoadRules(), buildLog, monitor.newChild(10), clientLocale);
+						allLoadRules.put(componentHandle.getItemId().getUuidValue(), rule);
+					} catch (TeamRepositoryException e1) {
+						// Generalized to handle more than just the VersionablePermissionException
+						// That exception can't be handled directly because its not defined in older releases
+						// which would cause class loading issues.
+
+						// Lets try to build up a more informative error message.
+						ITeamRepository repo = (ITeamRepository)workspaceConnection.getResolvedWorkspace().getOrigin();
+						IContributor contributor = repo.loggedInContributor();
+						IComponent component = null;
+						try {
+							component = (IComponent)repo.itemManager().fetchCompleteItem(componentHandle, IItemManager.DEFAULT, monitor.newChild(10));
+						} catch (TeamRepositoryException e2) {
+							// Just throw the original error.
+							throw e1;
+						}
+						if (contributor != null && component != null) {
+							throw new TeamRepositoryException(Messages.getDefault().BuildConfiguration_load_rule_access_failed(
+									contributor.getUserId(), component.getName(), e1.getMessage()), e1);
+						} else {
+							throw e1;
+						}
+					}
+				}
+
+			} else {
 				for (Map.Entry<IComponentHandle, IFileItemHandle> entry : ruleFiles.entrySet()) {
 					IComponentHandle componentHandle = entry.getKey();
 					try {
 						Map<IComponentHandle, IFileItemHandle> cFile = new HashMap<IComponentHandle, IFileItemHandle>(1);
 						cFile.put(entry.getKey(), entry.getValue());
+						// check if load rule is in xml format. ComponentLoadRules.getLoadRules in turn invokes
+						// filesystem utilities to construct the loadrules instance, so do the validation before hand
+						NonValidatingLoadRuleFactory.checkForObsoleteLoadRuleFormat(workspaceConnection, componentHandle, entry.getValue(),
+								isLoadPolicySetToUseLoadRules(), buildLog, monitor, clientLocale);
 						ComponentLoadRules cRule = new ComponentLoadRules(cFile);
 						Collection<ILoadRule2> cRuleObj = cRule.getLoadRules(workspaceConnection, monitor.newChild(1));
 						if (cRuleObj != null && cRuleObj.size() == 1) {
@@ -595,44 +720,16 @@ public class BuildConfiguration {
 						throw new TeamRepositoryException(e);
 					}
 				}
-            }
-			
-			//consolidate the loadrules, load rules provided via extension override the pre defined ones
-			if (customLoadRules != null && customLoadRules.size() > 0) {
-				LOGGER.finest("BuildConfiguration.getComponentLoadRules: there are load rules provided through extension."); //$NON-NLS-1$
-				for (Map.Entry<String, Object> cRule : customLoadRules.entrySet()) {
-					Object rule = cRule.getValue();
-					if(rule instanceof ILoadRule2) {
-						LOGGER.finest("BuildConfiguration.getComponentLoadRules: using load rules provided through extension for component '" + cRule.getKey() + "'."); //$NON-NLS-1$ //$NON-NLS-2$
-						allLoadRules.put(cRule.getKey(), rule);
-					}
-				}
 			}
-			if(allLoadRules != null && allLoadRules.size() > 0) {
+
+			if (allLoadRules != null && allLoadRules.size() > 0) {
 				loadRules = allLoadRules.values();
 			}
-	        return loadRules;
-        }else if (compLoadRules != null && compLoadRules.size() > 0) {
-        	//no predefine load rules defined  use the custom load rules
-         	Collection<Object> loadRules = new ArrayList<Object>();
-            Map<String, Object> customLoadRules = getCustomLoadRules(workspaceConnection, compLoadRules, clientLocale);
-        	if(customLoadRules != null && customLoadRules.size() > 0) {
-        		LOGGER.finest("BuildConfiguration.getComponentLoadRules: there are load rules provided through extension."); //$NON-NLS-1$
-        		for (Map.Entry<String, Object> cRule : customLoadRules.entrySet()) {
-					Object rule = cRule.getValue();
-					if(rule instanceof ILoadRule2) {
-						LOGGER.finest("BuildConfiguration.getComponentLoadRules: using load rules provided through extension for component '" + cRule.getKey() + "'."); //$NON-NLS-1$ //$NON-NLS-2$
-						loadRules.add(rule);
-					}
-				}
-        	}
-        	if(loadRules.size() > 0) {
-        		return loadRules;
-        	}
-        }
-        return Collections.EMPTY_LIST;
-    }
-    
+			return loadRules;
+		}
+		return Collections.EMPTY_LIST;
+	}
+       
     /**
      * Finalizer for a {@link BuildConfiguration} object
      * 
@@ -669,49 +766,75 @@ public class BuildConfiguration {
 		}
 	}
 
-	// TODO: Check if Object can be changed to ILoadRule2
-	private Map<String, Object> getCustomLoadRules(IWorkspaceConnection connection, Map<String, String> compLoadRules, Locale clientLocale)
+	public ILoadRule2 getCustomLoadRules(IWorkspaceConnection connection, String pathToDynamicLoadRuleFile, PrintStream buildLog, Locale clientLocale)
 			throws Exception {
-		Map<String, Object> lRules = new HashMap<String, Object>();
+		ILoadRule2 lRules = null;
+		if (pathToDynamicLoadRuleFile != null && pathToDynamicLoadRuleFile.trim().length() > 0) {
+			File fileHandle = new File(pathToDynamicLoadRuleFile.trim());
+			if (!fileHandle.exists()) {
+				throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_does_not_exist(
+						pathToDynamicLoadRuleFile));
+			}
+			if (!fileHandle.isFile()) {
+				throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_not_file(pathToDynamicLoadRuleFile));
+			}
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("BuildConfiguration.getCustomLoadRules: reading load rule ' from '" + pathToDynamicLoadRuleFile + "'."); //$NON-NLS-1$ //$NON-NLS-2$
+			}
+
+			lRules = NonValidatingLoadRuleFactory.getLoadRule(connection, pathToDynamicLoadRuleFile, true, buildLog, null, clientLocale);
+		}
+
+		return lRules;
+	}
+	
+	public Collection<ILoadRule2> getCustomLoadRules(IWorkspaceConnection connection, Map<String, String> compLoadRules, PrintStream buildLog,
+			Locale clientLocale) throws Exception {
+		Collection<ILoadRule2> lRules = new ArrayList<ILoadRule2>();
 		if (compLoadRules != null && compLoadRules.size() > 0) {
 			for (String comp : compLoadRules.keySet()) {
 				String lrFile = compLoadRules.get(comp);
 				if (lrFile == null || lrFile.trim().length() == 0) {
-					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_path_empty_or_null(comp));
+					continue;
 				}
 
 				File fileHandle = new File(lrFile);
 				if (!fileHandle.exists()) {
-					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_does_not_exist(lrFile, comp));
+					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_does_not_exist(lrFile));
 				}
 				if (!fileHandle.isFile()) {
-					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_not_file(lrFile, comp));
+					throw new IllegalArgumentException(Messages.get(clientLocale).BuildConfiguration_load_rule_file_not_file(lrFile));
 				}
 				if (LOGGER.isLoggable(Level.FINEST)) {
 					LOGGER.finest("BuildConfiguration.getCustomLoadRules: reading load rule for component '" + comp + "' from '" + lrFile + "'."); //$NON-NLS-1$ //$NON-NLS-2$//$NON-NLS-3$
 				}
-				lRules.put(comp, NonValidatingLoadRuleFactory.getLoadRule(connection, lrFile, null));
+
+				lRules.add(NonValidatingLoadRuleFactory
+						.getLoadRule(connection, lrFile, false, buildLog, null, clientLocale));
 			}
 		}
 		return lRules;
 	}
 
 	private boolean getIncludeComponents(IBuildDefinitionInstance instance) {
-        IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_INCLUDE_COMPONENTS);
-        if (property != null && property.getValue().length() > 0) {
-            return Boolean.valueOf(property.getValue());
-        }
-        return false;
-    }
+		IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_INCLUDE_COMPONENTS);
+		if (property != null && property.getValue().length() > 0
+				&& (!isLoadPolicySet() || isLoadPolicySetToUseComponentLoadConfig() && isComponentLoadConfigSetToExcludeSomeComponents())) {
+			return Boolean.valueOf(property.getValue());
+		}
+		return false;
+	}
 
-    private Collection<IComponentHandle> getLoadComponents(IBuildDefinitionInstance instance) {
-        IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS);
-        if (property != null && property.getValue().length() > 0) {
-            return new LoadComponents(getTeamRepository(), property.getValue()).getComponentHandles();
+	@SuppressWarnings("unchecked")
+	private Collection<IComponentHandle> getLoadComponents(IBuildDefinitionInstance instance) {
+		IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS);
+		if (property != null && property.getValue().length() > 0
+				&& (!isLoadPolicySet() || isLoadPolicySetToUseComponentLoadConfig() && isComponentLoadConfigSetToExcludeSomeComponents())) {
+			return new LoadComponents(getTeamRepository(), property.getValue()).getComponentHandles();
 
-        }
-        return Collections.EMPTY_LIST;
-    }
+		}
+		return Collections.EMPTY_LIST;
+	}
     
     private boolean getDeleteBeforeFetch(IBuildDefinitionInstance instance) {
         IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH);
@@ -721,13 +844,13 @@ public class BuildConfiguration {
         return false;
     }
 
-    private boolean getCreateFoldersForComponents(IBuildDefinitionInstance instance) {
-        IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS);
-        if (property != null && property.getValue().length() > 0) {
-            return Boolean.valueOf(property.getValue());
-        }
-        return false;
-    }
+	private boolean getCreateFoldersForComponents(IBuildDefinitionInstance instance) {
+		IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS);
+		if (property != null && property.getValue().length() > 0 && (!isLoadPolicySet() || isLoadPolicySetToUseComponentLoadConfig())) {
+			return Boolean.valueOf(property.getValue());
+		}
+		return false;
+	}
 
     private boolean getAcceptBeforeFetch(IBuildDefinitionInstance instance) {
         IBuildProperty property = instance.getProperty(IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH);
@@ -736,8 +859,25 @@ public class BuildConfiguration {
         }
         return false;
     }
+    
+    private String getLoadPolicy(IBuildDefinitionInstance instance) {
+        IBuildProperty property = instance.getProperty(Constants.PROPERTY_LOAD_POLICY);
+        if (property != null && property.getValue().length() > 0) {
+            return property.getValue();
+        }
+        return null;
+    }
+    
+    private String getComponentLoadConfig(IBuildDefinitionInstance instance) {
+        IBuildProperty property = instance.getProperty(Constants.PROPERTY_COMPONENT_LOAD_CONFIG);
+        if (property != null && property.getValue().length() > 0) {
+            return property.getValue();
+        }
+        return null;
+    }
+   
 
-	private ITeamRepository getTeamRepository() {
+	public ITeamRepository getTeamRepository() {
 		return teamRepository;
 	}
 
@@ -828,7 +968,31 @@ public class BuildConfiguration {
 	public boolean createFoldersForComponents() {
 		return createFoldersForComponents;
 	}
+	
+	public boolean isLoadPolicySetToUseLoadRules() {
+		return loadPolicy != null && Constants.LOAD_POLICY_USE_LOAD_RULES.equals(loadPolicy);
+	}
 
+	public boolean isLoadPolicySetToUseComponentLoadConfig() {
+		return loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy);
+	}
+	
+	public boolean isLoadPolicySetToUseDynamicLoadRules() {
+		return loadPolicy != null && Constants.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES.equals(loadPolicy);
+	}
+
+	public boolean isLoadPolicySet() {
+		return loadPolicy != null;
+	}
+
+	public boolean isComponentLoadConfigSetToExcludeSomeComponents() {
+		return componentLoadConfig != null && Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS.equals(componentLoadConfig);
+	}
+	
+	public boolean isBuildDefinitionConfiguration() {
+		return isBuildDefinitionConfiguration;
+	}
+	
 	/**
 	 * @return The name to give the snapshot created. Never <code>null</code>
 	 */
@@ -1010,7 +1174,7 @@ public class BuildConfiguration {
 			monitor.done();
 		}
 	}
-
+	
 	/**
 	 * Supply a different timeout for testing
 	 * 

@@ -455,6 +455,9 @@ public class SCMUtil {
 		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_1));
 		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_2));
 		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_PB_STREAM_ITEM_ID));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_LOAD_RULE_STREAM_ITEM_ID));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_LOAD_RULE_STREAM_WS_ITEM_ID));
+		deleteWorkspace(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_LOAD_RULE_SS_WS_ITEM_ID));
 	}
     
 	public static void deleteWorkspace(ITeamRepository repo,

@@ -167,6 +167,13 @@ public class RTCTestingFacade extends RTCFacade {
 		Map<String, String> setup = testClient.setupTestBuildStream_basic(connectionDetails, buildStreamName, getProgressMonitor());
 		return setup;
 	}
+	
+	public Map<String, String> setupTestBuildStream_toTestLoadPolicy(String serverURL, String userId, String password, int timeout, String buildStreamName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupTestBuildStream_toTestLoadPolicy(connectionDetails, buildStreamName, getProgressMonitor());
+		return setup;
+	}
 
 	public Map<String, String> setupTestBuildSnapshot_basic(String serverURL, String userId, String password, int timeout, String projectAreaName,
 			String streamName, String workspaceName, String snapshotName) throws Exception {
@@ -220,7 +227,16 @@ public class RTCTestingFacade extends RTCFacade {
 				componentName, buildDefinitionId, getProgressMonitor());
 		return setup;
 	}
-
+	
+	public Map<String, String> setupBuildResultContributions_toTestLoadPolicy(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String buildDefinitionId) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupBuildResultContributions_toTestLoadPolicy(connectionDetails, workspaceName,
+				componentName, buildDefinitionId, getProgressMonitor());
+		return setup;
+	}
+	
 	public Map<String, String> setupBuildResultContributionsInQueuedBuild(String serverURL, String userId, String password, int timeout,
 			String workspaceName, String componentName, String buildDefinitionId) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
@@ -341,6 +357,104 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		return testClient.testOldLoadRules(connectionDetails, workspaceName, componentName, hjPath, getProgressMonitor());
+	}
+	
+	public Map<String, String> testOldLoadRules_setAllLoadOptions(String serverURL,
+			String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testOldLoadRules_setAllLoadOptions(connectionDetails, workspaceName, componentName, hjPath, getProgressMonitor());
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_loadRulesWithNoLoadPolicy(String serverURL, String userId, String password,
+			int timeout, String workspaceName, String componentName, String hjPath, String buildPath, boolean configureLoadRules,
+			boolean setLoadPolicy) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_loadRulesWithNoLoadPolicy(connectionDetails, workspaceName, componentName, hjPath,
+				buildPath, configureLoadRules, setLoadPolicy, getProgressMonitor());
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules(String serverURL, String userId, String password,
+			int timeout, String workspaceName, String componentName, String hjPath, String buildPath, boolean configureLoadRules) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules(connectionDetails, workspaceName, componentName, hjPath,
+				buildPath, configureLoadRules, getProgressMonitor());
+	}
+	
+	public Map<String, String> testBuildDefinitionConfig_createFoldersForComponents(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath, boolean shouldCreateFoldersForComponents,
+			String loadPolicy, String componentLoadConfig) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_createFoldersForComponents(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				shouldCreateFoldersForComponents, loadPolicy, componentLoadConfig, getProgressMonitor());
+	}
+	
+	public Map<String, String> testBuildDefinitionConfig_createFoldersForComponents_usingLoadRules(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_createFoldersForComponents_usingLoadRules(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				getProgressMonitor());
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_componentsToExclude(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath, boolean shouldExcludeComponents, String loadPolicy,
+			String componentLoadConfig) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_componentsToExclude(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				shouldExcludeComponents, loadPolicy, componentLoadConfig, getProgressMonitor());
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_includeComponents(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath, boolean addLoadComponents, String valueOfIncludeComponents,
+			String loadPolicy, String componentLoadConfig) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_includeComponents(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				addLoadComponents, valueOfIncludeComponents, loadPolicy, componentLoadConfig, getProgressMonitor());
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_multipleLoadRuleFiles(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath, boolean setLoadPolicyToUseLoadRules) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_multipleLoadRuleFiles(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				 setLoadPolicyToUseLoadRules, getProgressMonitor());
+	}
+	
+	public Map<String, String> testBuildDefinitionConfig_oldLoadRulesFormat(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath, boolean setLoadPolicyToUseLoadRules) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_oldLoadRulesFormat(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				setLoadPolicyToUseLoadRules, getProgressMonitor());
+	}
+	
+	public Map<String, String> testRepositoryWorkspaceConfig_loadPolicy(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testRepositoryWorkspaceConfig_loadPolicy(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				getProgressMonitor());
+	} 
+
+	public Map<String, String> testStreamConfig_loadPolicy(String serverURL, String userId, String password, int timeout, String workspaceName,
+			String componentName, String hjPath, String buildPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testStreamConfig_loadPolicy(connectionDetails, workspaceName, componentName, hjPath, buildPath, getProgressMonitor());
+	}
+
+	public Map<String, String> testSnapshotConfig_loadPolicy(String serverURL, String userId, String password, int timeout, String workspaceName,
+			String componentName, String hjPath, String buildPath) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testSnapshotConfig_loadPolicy(connectionDetails, workspaceName, componentName, hjPath, buildPath, getProgressMonitor());
 	}
 	
 	public Map<String, String> testPersonalBuild(String serverURL,

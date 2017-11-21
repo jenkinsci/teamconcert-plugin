@@ -145,6 +145,10 @@ public class Messages {
     	return MessageFormat.format(getString("RepositoryConnection_build_definition_not_found"), arg1);
     }
 
+	public String RepositoryConnection_load_rules_pre_603_build_toolkit() {
+		return getString("RepositoryConnection_load_rules_pre_603_build_toolkit");
+	}
+
     public String RTCSnapshotUtils_snapshot_not_found(String arg1) {
     	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found"), arg1);
     }
@@ -190,15 +194,22 @@ public class Messages {
         return MessageFormat.format(getString("ChangeReportBuilder.unable_to_get_work_items"), arg1);
     }
     
-    /**
-     * 
-     * 
-     */
-    
     public String RTCWorkspaceUtils_cannot_delete_workspace(String arg1, String arg2) {
     	return MessageFormat.format(getString("RTCWorkspaceUtils_cannot_delete_workspace"), arg1, arg2);
     }
+    
+    public String RTCWorkspaceUtils_path_to_load_rule_file_invalid_format(String arg1) {
+    	return MessageFormat.format(getString("RTCWorkspaceUtils_path_to_load_rule_file_invalid_format"), arg1);
+    }
 
+	public String RTCWorkspaceUtils_path_to_load_rule_file_no_component_name(String arg1) {
+		return MessageFormat.format(getString("RTCWorkspaceUtils_path_to_load_rule_file_no_component_name"), arg1);
+	}
+
+	public String RTCWorkspaceUtils_path_to_load_rule_file_no_file_path(String arg1) {
+		return MessageFormat.format(getString("RTCWorkspaceUtils_path_to_load_rule_file_no_file_path"), arg1);
+	}
+    
     /**
      * RTC Checkout : unable to determine authors of change sets for the change log : {0}
      * 
@@ -459,21 +470,6 @@ public class Messages {
 	public String RepositoryConnection_using_build_stream_configuration() {
 		return getString("RepositoryConnection.using_build_stream_configuration");
 	}
-	
-	/**
-	 * Specify the componentsToExclude value.
-	 */
-	public String RepositoryConnection_components_to_exclude_required() {
-		return getString("RepositoryConnection.components_to_exclude_required");
-	}
-	
-	/**
-	 * The component item id "{0}" specified in the list of components to
-	 * exclude is not valid.
-	 */
-	public String RepositoryConnection_components_to_exclude_invalid_uuid(String arg1) {
-		return MessageFormat.format(getString("RepositoryConnection.components_to_exclude_invalid_uuid"), arg1);
-	}
 
 	/**
 	 * A component with item ID "{0}" cannot be found.
@@ -558,27 +554,11 @@ public class Messages {
 	public String RepositoryConnection_component_id_or_name_required() {
 		return getString("RepositoryConnection.component_id_or_name_required");
 	}
-	
-	/**
-	 * Specify the loadRules value. 
-	 */
-	public String RepositoryConnection_load_rules_required() {
-		return getString("RepositoryConnection.load_rules_required");
+
+	public String RepositoryConnection_load_rule_file_invalid_component_uuid(String arg1, String arg2) {
+		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_invalid_component_uuid"), arg1, arg2);
 	}
 
-
-	/**
-	 * The component item id "{0}" specified in the component load rules mapping
-	 * file is not valid.
-	 */
-	public String RepositoryConnection_load_rule_file_invalid_component_uuid(String arg1) {
-		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_invalid_component_uuid"), arg1);
-	}
-
-	/**
-	 * The file item id "{0}" specified in the component load rules mapping file
-	 * for the component "{1}", is not valid.
-	 */
 	public String RepositoryConnection_load_rule_file_invalid_item_uuid(String arg1, String arg2) {
 		return MessageFormat.format(getString("RepositoryConnection.load_rule_file_invalid_item_uuid"), arg1, arg2);
 	}
@@ -918,32 +898,39 @@ public class Messages {
     	return getString("PropertyVariableHelper_cycle_description");
     }
 
-	/**
-	 * The file path specified by the dynamic load rule provider for the component "{0}" is either empty or null.
-	 */
-	public String BuildConfiguration_load_rule_file_path_empty_or_null(String arg1) {
-		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_path_empty_or_null"), arg1);
+	public String BuildConfiguration_load_rule_file_not_file(String arg1) {
+		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_not_file"), arg1);
 	}
 
-	/**
-	 * The file path "{0}" specified by the dynamic load rule provider for the component "{1}" does not resolve to a file.
-	 */
-	public String BuildConfiguration_load_rule_file_not_file(String arg1, String arg2) {
-		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_not_file"), arg1, arg2);
+	public String BuildConfiguration_load_rule_file_does_not_exist(String arg1) {
+		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_does_not_exist"), arg1);
 	}
 
-	/**
-	 * The file path "{0}" specified by the dynamic load rule provider for the component "{1}" does not exist.
-	 */
-	public String BuildConfiguration_load_rule_file_does_not_exist(String arg1, String arg2) {
-		return MessageFormat.format(getString("BuildConfiguration_load_rule_file_does_not_exist"), arg1, arg2);
+	public String BuildConfiguration_loadrule2_class_not_found() {
+		return getString("BuildConfiguration_loadrule2_class_not_found");
+	}
+
+	public String BuildConfiguration_multiple_load_rule_files_deprecated() {
+		return getString("BuildConfiguration_multiple_load_rule_files_deprecated");
+	}
+
+	public String BuildConfiguration_multiple_load_rule_files_not_supported() {
+		return getString("BuildConfiguration_multiple_load_rule_files_not_supported");
+	}
+
+	public String NonValidatingLoadRuleFactory_old_load_rules_format_deprecated() {
+		return getString("NonValidatingLoadRuleFactory_old_load_rules_format_deprecated");
+	}
+
+	public String NonValidatingLoadRuleFactory_load_rules_not_in_XML_format() {
+		return getString("NonValidatingLoadRuleFactory_load_rules_not_in_XML_format");
 	}
 
 	/**
 	 * The user, {0} ({1}), does not have permissions to access the load rule file for component "{2}".
 	 */
-	public String RepositoryConnection_private_load_rule(String arg1, String arg2, String arg3) {
-		return MessageFormat.format(getString("RepositoryConnection_private_load_rule"), arg1, arg2, arg3);
+	public String RTCWorkspaceUtils_private_load_rule(String arg1, String arg2, String arg3, String arg4) {
+		return MessageFormat.format(getString("RTCWorkspaceUtils_private_load_rule"), arg1, arg2, arg3, arg4);
 	}
 	
 	

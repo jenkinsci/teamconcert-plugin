@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2016, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -56,10 +56,12 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 	private String parentActivityId;
 	private String connectorId;
 	private RtcExtensionProvider extProvider;
+	private String loadPolicy;
+	private String componentLoadConfig;
+	private String componentsToExclude;
+	private String pathToLoadRuleFile;
 	private boolean isDeleteNeeded;
 	private boolean createFoldersForComponents;
-	private String componentsToExclude;
-	private String loadRules;
 	private boolean acceptBeforeLoad;
 	private Map<String,String> buildStreamData;
 	private String temporaryWorkspaceComment;
@@ -101,20 +103,24 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 	 * @param clientLocale The locale of the requesting client
 	 * @param extProvider The extension provider can be <code>null</code>
 	 * @param isDeleteNeeded true if Jenkins job is configured to delete load directory before fetching
+	 * @param loadPolicy Determines whether to use load rules
+	 * @param componentLoadConfig When load policy is set to useComponentLoadConfig this value determines whether to
+	 *            load all components or exclude some components
+	 * @param componentsToExclude Comma separated list of id/name of components to be excluded from load
+	 * @param pathToLoadRuleFile path to the load rule file. Right now only remote path of the format <component
+	 *            name>/<remote path to load rule file> is supported
 	 * @param createFoldersForComponents create folders for components if true
-	 * @param componentsToExclude json text representing the list of components to exclude during load
-	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param temporaryWorkspaceComment
 	 * @param deleteTemporaryWorkspace - whether the temporary workspace create for snapshot build or already created
-	 *         							for stream build should be deleted at the end of load
+	 *            for stream build should be deleted at the end of load
 	 * @throws Exception
 	 */
 	public RTCLoadTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
 			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
 			Map<String, String> buildStreamData, boolean isCustomSnapshotName, String snaspshotName, TaskListener listener, boolean isRemote,
-			boolean debug, Locale clientLocale, String parentActivityId, String connectorId, RtcExtensionProvider extProvider,
-			boolean isDeleteNeeded, boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad,
-			String temporaryWorkspaceComment, boolean deleteTemporaryWorkspace) {
+			boolean debug, Locale clientLocale, String parentActivityId, String connectorId, RtcExtensionProvider extProvider, String loadPolicy,
+			String componentLoadConfig, String componentsToExclude, String pathToLoadRuleFile, boolean isDeleteNeeded,
+			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkspaceComment, boolean deleteTemporaryWorkspace) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -140,9 +146,11 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
     	this.connectorId = connectorId;
     	this.extProvider = extProvider;
     	this.isDeleteNeeded = isDeleteNeeded;
-    	this.createFoldersForComponents = createFoldersForComponents;
+    	this.loadPolicy = loadPolicy;
+    	this.componentLoadConfig = componentLoadConfig;
     	this.componentsToExclude = componentsToExclude;
-    	this.loadRules = loadRules;
+    	this.pathToLoadRuleFile = pathToLoadRuleFile;
+    	this.createFoldersForComponents = createFoldersForComponents;
     	this.acceptBeforeLoad = acceptBeforeLoad;
     	this.temporaryWorkspaceComment = temporaryWorkspaceComment;
     	this.shouldDeleteTemporaryWorkspace = deleteTemporaryWorkspace;
@@ -176,6 +184,10 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 			debug("Running remote " + isRemote); //$NON-NLS-1$
 			debug("buildToolkit property " + buildToolkit); //$NON-NLS-1$
 			debug("parentActivityId " + parentActivityId); // $NON-NLS-1$
+			debug("loadPolicy " + loadPolicy); // $NON-NLS-1$
+			debug("componentLoadConfig " + componentLoadConfig); // $NON-NLS-1$
+			debug("componentsToExclude " + componentsToExclude); // $NON-NLS-1$
+			debug("pathToLoadRuleFile " + pathToLoadRuleFile); //$NON-NLS-1$
 			debug("temporaryWorkspaceComment " + temporaryWorkspaceComment); // $NON-NLS-1$
 			debug("shouldDeleteTemporaryWorkspace " + shouldDeleteTemporaryWorkspace); // $NON-NLS-1$
 		}
@@ -208,10 +220,12 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 					String.class, // connectorId
 					Object.class, //extension provider
 					PrintStream.class, //print stream
+					String.class, // load policy
+					String.class, // component load config
+					String.class, // components to exclude
+					String.class, // path to load rule file
 					boolean.class, // isDeleteNeeded
 					boolean.class, // createFoldersForComponents
-					String.class, // componentsToBeExcluded
-					String.class, // loadRules
 					boolean.class, // acceptBeforeLoad
 					String.class, // temporaryWorkspaceComment
 					boolean.class // shouldDeleteTemporaryWorkspace
@@ -221,9 +235,10 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 					workspace.getAbsolutePath(), isCustomSnapshotName,
 					snapshotName,
 					listener, clientLocale, parentActivityId, connectorId,
-					extProvider, listener.getLogger(), isDeleteNeeded, 
-					createFoldersForComponents, componentsToExclude, loadRules,
-					acceptBeforeLoad, temporaryWorkspaceComment, shouldDeleteTemporaryWorkspace);
+					extProvider, listener.getLogger(), loadPolicy, componentLoadConfig, 
+					componentsToExclude, pathToLoadRuleFile, isDeleteNeeded, 
+					createFoldersForComponents, acceptBeforeLoad, temporaryWorkspaceComment, 
+					shouldDeleteTemporaryWorkspace);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

@@ -23,6 +23,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
+
 /**
  * An action that is associated with a Hudson/Jenkins build. Serialized so that it can contribute
  * information to the Hudson/Jenkins build result.
@@ -31,7 +34,20 @@ import java.util.logging.Logger;
  * Contributes to the environment properties that come from the RTC build definition & engine
  * Contains information about the RTC build result so that other extensions to the build can 
  * access it (example: RunListener to be able to terminate the RTC build result).
+ * 
+ * The following attributes are exposed
+ * a) buildResultUUID
+ * b) displayName
+ * c) serverURI
+ * d) urlName - The URL of the build result
+ * 
+ * The visibility parameter of the Exported annotation ensures that the attributes are available 
+ * when getting information about the build without using the depth query parameter.
+ * 
+ * For instance, /job_name/<buildnumber>/api/xml should return information about RTCBuildResultAction
+ * 
  */
+@ExportedBean
 public class RTCBuildResultAction implements Serializable, Action, EnvironmentContributingAction {
 
     private static final Logger LOGGER = Logger.getLogger(RTCBuildResultAction.class.getName());
@@ -84,6 +100,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	/**
 	 * @return The build result UUID for the RTC build result
 	 */
+	@Exported(visibility=3)
 	public String getBuildResultUUID() {
 		return buildResultUUID;
 	}
@@ -113,6 +130,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	}
 
 	@Override
+	@Exported(visibility=3)
 	public String getDisplayName() {
 		if (serverURI != null && buildResultUUID != null) {
 			return Messages.RTCBuildResultAction_display_name();
@@ -121,6 +139,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	}
 
 	@Override
+	@Exported(visibility=3)
 	public String getUrlName() {
 		if (serverURI != null && buildResultUUID != null) {
 			return serverURI + ITEM_OID + buildResultUUID;
@@ -159,6 +178,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	/**
 	 * @return return the server uri
 	 */
+	@Exported(visibility=3)
 	public String getServerURI() {
 		return serverURI;
 	}

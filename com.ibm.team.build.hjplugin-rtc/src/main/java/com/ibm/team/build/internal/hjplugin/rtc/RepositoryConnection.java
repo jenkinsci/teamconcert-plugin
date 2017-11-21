@@ -14,12 +14,11 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -41,6 +40,7 @@ import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils.BuildSnapshotContext;
+import com.ibm.team.build.internal.hjplugin.rtc.RTCWorkspaceUtils.LoadConfigurationDescriptor;
 import com.ibm.team.build.internal.publishing.WorkItemPublisher;
 import com.ibm.team.build.internal.scm.AcceptReport;
 import com.ibm.team.build.internal.scm.BuildWorkspaceDescriptor;
@@ -54,8 +54,7 @@ import com.ibm.team.filesystem.client.ISharingManager;
 import com.ibm.team.filesystem.client.internal.SharingManager;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaEvent;
 import com.ibm.team.filesystem.client.internal.copyfileareas.ICorruptCopyFileAreaListener;
-import com.ibm.team.filesystem.common.IFileItem;
-import com.ibm.team.filesystem.common.IFileItemHandle;
+import com.ibm.team.filesystem.client.operations.ILoadRule2;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.ServerVersionCheckException;
@@ -64,8 +63,6 @@ import com.ibm.team.repository.common.IContributor;
 import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
-import com.ibm.team.repository.common.json.JSONArray;
-import com.ibm.team.repository.common.json.JSONObject;
 import com.ibm.team.repository.transport.client.AuthenticationException;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.SCMPlatform;
@@ -74,13 +71,9 @@ import com.ibm.team.scm.common.IBaselineSet;
 import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IComponent;
 import com.ibm.team.scm.common.IComponentHandle;
-import com.ibm.team.scm.common.IVersionable;
-import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
-import com.ibm.team.scm.common.VersionablePermissionDeniedException;
 import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
-import com.ibm.team.scm.common.dto.IComponentSearchCriteria;
 
 /**
  * A connection to the Jazz repository.
@@ -96,18 +89,6 @@ public class RepositoryConnection {
 	private final RepositoryManager fRepositoryManager;
 	private final ITeamRepository fRepository;
 	private BuildConnection fBuildConnection;
-	
-	// field names expected in the json text passed from the RTC jenkins extension
-	private static final String COMPONENTS_TO_EXCLUDE = "componentsToExclude"; //$NON-NLS-1$
-	private static final String LOAD_RULES = "loadRules"; //$NON-NLS-1$
-	private static final String COMPONENT_ID = "componentId"; //$NON-NLS-1$
-	private static final String COMPONENT_NAME = "componentName"; //$NON-NLS-1$
-	private static final String FILE_ITEM_ID = "fileItemId"; //$NON-NLS-1$
-	private static final String FILE_PATH = "filePath"; //$NON-NLS-1$
-	
-	// file path segment to be used when specifying the load rule file path
-	private static final String SEPARATOR = "/"; //$NON-NLS-1$
-
 	
 	public RepositoryConnection(AbstractBuildClient buildClient, ConnectionDetails connectionDetails, RepositoryManager repositoryManager, ITeamRepository repository) {
 		this.fBuildClient = buildClient;
@@ -432,12 +413,14 @@ public class RepositoryConnection {
 		// Otherwise, the build workspace on the Jenkins definition is used.
 		IBuildResultHandle buildResultHandle = null;
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
-			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-	        buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, listener, monitor.newChild(1), clientLocale);
+			buildResultHandle = (IBuildResultHandle)IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+			buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, false, listener, monitor.newChild(1), clientLocale);
 
 		} else {
-			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(), monitor.newChild(1), clientLocale);
-			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad);
+			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
+					monitor.newChild(1), clientLocale);
+			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad, null, null, false, null, null, listener,
+					clientLocale, monitor.newChild(1));
 		}
 
 		Map<String, String> buildProperties = buildConfiguration.getBuildProperties();
@@ -561,12 +544,12 @@ public class RepositoryConnection {
 	 * Load the build workspace. This call is expected to follow a call to accept method.
 	 * 
 	 * @param processAreaName - the name of the owning project or team area. May be <code>null</code>
-	 * @param buildResultUUID The id of the build result (which also contains the build request & build definition instance)
-	 * May be <code>null</code> if buildWorkspaceName is supplied. Only one of buildResultUUID/buildWorkspaceName should be
-	 * supplied
-	 * @param buildWorkspaceName Name of the RTC build workspace (changes will be accepted into it)
-	 * May be <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName should be
-	 * supplied
+	 * @param buildResultUUID The id of the build result (which also contains the build request & build definition
+	 *            instance) May be <code>null</code> if buildWorkspaceName is supplied. Only one of
+	 *            buildResultUUID/buildWorkspaceName should be supplied
+	 * @param buildWorkspaceName Name of the RTC build workspace (changes will be accepted into it) May be
+	 *            <code>null</code> if buildResultUUID is supplied. Only one of buildResultUUID/buildWorkspaceName
+	 *            should be supplied
 	 * @param buildSnapshotContext Object containing the snapshot owner details. May be <code>null</code>
 	 * @param buildSnapshot The name or UUID of the RTC build snapshot.
 	 * @param buildStream The name or UUID of the RTC build stream.
@@ -578,28 +561,35 @@ public class RepositoryConnection {
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
 	 * @param buildProperties buildProperties created so far by accept call
-	 * @param connectorId CallConnector id to retrieve shared data (workspaceConnection) from, that was created by accept call
+	 * @param connectorId CallConnector id to retrieve shared data (workspaceConnection) from, that was created by
+	 *            accept call
 	 * @param extProvider Extension provider
 	 * @param logger logger object
+	 * @param loadPolicy load policy value that determines whether to use a load rule file or component load
+	 *            configuration. We expect a null value or a non-null trimmed value.
+	 * @param componentLoadConfig when load policy is set to use component load config this field determines whether to
+	 *            load all components or exclude some components. We expect a non-null value or a null trimmed value.
+	 * @param componentsToExclude List of components to exclude
+	 * @param pathToLoadRuleFile Path to the load rule file.
 	 * @param isDeleteNeeded true if Jenkins job is configured to delete load directory before fetching
 	 * @param createFoldersForComponents create folders for components if true
-	 * @param componentsToExclude json text representing the list of components to exclude during load
-	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
-	 * @param temporaryWorkspaceComment 
-	 * @param shouldDeleteTemporaryWorkspace whether the temporary workspace created for snapshot/stream
-	 * 						case should be deleted before returning(irrespective of failure or not)
+	 * @param temporaryWorkspaceComment
+	 * @param shouldDeleteTemporaryWorkspace whether the temporary workspace created for snapshot/stream case should be
+	 *            deleted before returning(irrespective of failure or not)
 	 * @throws Exception Thrown if anything goes wrong
 	 */
-	public Map<String, Object> load(String processAreaName, String buildResultUUID, String buildWorkspaceName, BuildSnapshotContext buildSnapshotContext,
-			String buildSnapshot, String buildStream, Map<String, String> buildStreamData, String hjFetchDestination, boolean isCustomSnapshotName,
-			String snapshotName, final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String parentActivityId,
-			String connectorId, Object extProvider, final PrintStream logger, boolean isDeleteNeeded, boolean createFoldersForComponents,
-			String componentsToExclude, String loadRules, boolean acceptBeforeLoad, 
-			String temporaryWorkspaceComment, boolean shouldDeleteTemporaryWorkspace) throws Exception {
-		 LOGGER.finest("RepositoryConnection.load : Enter");
-		
-        // Lets get same workspaceConnection as created by accept call so that if 
+	@SuppressWarnings("unchecked")
+	public Map<String, Object> load(String processAreaName, String buildResultUUID, String buildWorkspaceName,
+			BuildSnapshotContext buildSnapshotContext, String buildSnapshot, String buildStream, Map<String, String> buildStreamData,
+			String hjFetchDestination, boolean isCustomSnapshotName, String snapshotName, final IConsoleOutput listener, IProgressMonitor progress,
+			Locale clientLocale, String parentActivityId, String connectorId, Object extProvider, final PrintStream logger, String loadPolicy,
+			String componentLoadConfig, String componentsToExclude, String pathToLoadRuleFile, boolean isDeleteNeeded,
+			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkspaceComment, boolean shouldDeleteTemporaryWorkspace)
+			throws Exception {
+		LOGGER.finest("RepositoryConnection.load : Enter");
+
+		// Lets get same workspaceConnection as created by accept call so that if
         // we are synchronizing, we use the same cached sync times.
         IWorkspaceConnection workspaceConnection = null;
         if (connectorId != null &&  !("".equals(connectorId))) { //$NON-NLS-1$
@@ -617,19 +607,22 @@ public class RepositoryConnection {
 		IBuildResultHandle buildResultHandle = null;
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_definition_configuration());
-			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-                        buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, listener, monitor.newChild(1), clientLocale);
+			buildResultHandle = (IBuildResultHandle)IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+			buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, loadPolicy != null
+					&& Constants.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES.equals(loadPolicy), listener, monitor.newChild(1), clientLocale);
 		} else if (buildWorkspaceName != null && buildWorkspaceName.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_workspace_configuration());
 			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
 					monitor.newChild(1), clientLocale);
-			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad);
+			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad, loadPolicy, componentLoadConfig,
+					createFoldersForComponents, componentsToExclude, pathToLoadRuleFile, listener, clientLocale, monitor.newChild(1));
 		} else if (buildSnapshot != null && buildSnapshot.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_snapshot_configuration());
 			String workspaceNamePrefix = getWorkspaceNamePrefix();
 			IBaselineSet baselineSet = RTCSnapshotUtils.getSnapshot(getTeamRepository(), buildSnapshotContext, buildSnapshot, monitor.newChild(1), clientLocale);
 			IContributor contributor = fRepository.loggedInContributor();
-			buildConfiguration.initialize(baselineSet, contributor, workspaceNamePrefix, temporaryWorkspaceComment, listener, clientLocale, monitor.newChild(3));
+			buildConfiguration.initialize(baselineSet, contributor, workspaceNamePrefix, temporaryWorkspaceComment, loadPolicy, componentLoadConfig,
+					createFoldersForComponents, componentsToExclude, pathToLoadRuleFile, listener, clientLocale, monitor.newChild(3));
 		} else if (buildStream != null && buildStream.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_stream_configuration());
 			String workspaceUUID = buildStreamData.get(Constants.STREAM_DATA_WORKSPACEUUID);
@@ -646,8 +639,8 @@ public class RepositoryConnection {
 				workspace = RTCWorkspaceUtils.getInstance().getWorkspace(UUID.valueOf(workspaceUUID), getTeamRepository(), monitor.newChild(3), clientLocale);
 				IContributor contributor = fRepository.loggedInContributor();
 				IWorkspaceHandle streamHandle = getBuildStream(processAreaName, buildStream, monitor.newChild(1), clientLocale);
-				buildConfiguration.initialize(streamHandle, buildStream, workspace, baselineSet, 
-						shouldDeleteTemporaryWorkspace, contributor, monitor.newChild(3));
+				buildConfiguration.initialize(streamHandle, buildStream, workspace, baselineSet, shouldDeleteTemporaryWorkspace, contributor,
+						loadPolicy, componentLoadConfig, createFoldersForComponents, componentsToExclude, pathToLoadRuleFile, listener, clientLocale, monitor.newChild(3));
 			} catch (Exception exp) {
 				if (workspace != null) {
 					RTCWorkspaceUtils.getInstance().deleteSilent(workspace,
@@ -688,25 +681,7 @@ public class RepositoryConnection {
 	        }
 	        
 			listener.log(Messages.get(clientLocale).RepositoryConnection_fetching_files_from_workspace(workspaceConnection.getName()));
-	        
-	       // If this is a not a build definition based build type, set the following
-	        if (buildResultUUID == null || (buildResultUUID != null && buildResultUUID.length() == 0)) {
-	            if (createFoldersForComponents) {
-	             buildConfiguration.setCreateFoldersForComponents(true);
-				}
-				
-				if (componentsToExclude != null && componentsToExclude.trim().length() > 0) {
-					buildConfiguration.setIncludeComponents(false);
-					buildConfiguration.setComponents(new LoadComponents(getTeamRepository(), getComponentsToExclude(new LoadConfigurationDescriptor(
-							buildConfiguration), workspaceConnection, componentsToExclude, clientLocale, monitor.newChild(1))).getComponentHandles());
-				}
-	
-				if (loadRules != null && loadRules.trim().length() > 0) {
-					buildConfiguration.setLoadRules(getComponentLoadRules(new LoadConfigurationDescriptor(buildConfiguration), workspaceConnection,
-							loadRules, clientLocale, monitor.newChild(1)));
-				}
-	        }
-	        
+     
 			ISharingManager manager = FileSystemCore.getSharingManager();
 	        final ILocation fetchLocation = buildConfiguration.getFetchDestinationPath();
 	        ISandbox sandbox = manager.getSandbox(fetchLocation, false);
@@ -796,31 +771,99 @@ public class RepositoryConnection {
 	            Collection<IComponentHandle> components = buildConfiguration.getComponents();
 	            String snapshotUUID = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID);
 	        	Map<String, String> componentInfo = getComponentInfoFromWorkspace(workspaceConnection.getComponents(), monitor.newChild(2));
-	            if(extProvider != null) {
-					compLoadRules = RtcExtensionProviderUtil.getComponentLoadRules(
-							extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
-							buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
-							fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
-					excludeComponents = RtcExtensionProviderUtil.getExcludeComponentList(
-							extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
-							buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
-							fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+	        	boolean isLoadPolicySetToUseDynamicLoadRules = buildConfiguration.isLoadPolicySetToUseDynamicLoadRules();
+
+				if (extProvider != null && isLoadPolicySetToUseDynamicLoadRules) {
+					compLoadRules = RtcExtensionProviderUtil.getComponentLoadRules(extProvider, logger, workspace.getWorkspaceHandle().getItemId()
+							.getUuidValue(), workspaceConnection.getName(), snapshotUUID, buildResultUUID, componentInfo,
+							fConnectionDetails.getRepositoryAddress(), fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+					excludeComponents = RtcExtensionProviderUtil.getExcludeComponentList(extProvider, logger, workspace.getWorkspaceHandle()
+							.getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, buildResultUUID, componentInfo,
+							fConnectionDetails.getRepositoryAddress(), fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+
+					if (excludeComponents != null && excludeComponents.trim().length() > 0) {
+						includedComponents = false;
+						components = new LoadComponents(getTeamRepository(), excludeComponents).getComponentHandles();
+					}
 				}
-	            
-	            if(excludeComponents != null && excludeComponents.trim().length() > 0) {
-	            	includedComponents = false;
-	            	components = new LoadComponents(getTeamRepository(), excludeComponents).getComponentHandles();
-	            }
 	            
 	    		if (LOGGER.isLoggable(Level.FINER)) {
 					LOGGER.finer("RepositoryConnection.load : updatingFileCopyArea");
 				}
-	
-	            SourceControlUtility.updateFileCopyArea(workspaceConnection,
-	                    fetchDestinationFile.getCanonicalPath(), includedComponents,
-	                    components,
-	                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, compLoadRules, monitor.newChild(1), clientLocale),
-	                    buildConfiguration.createFoldersForComponents(), monitor.newChild(39));
+	    		
+				// if load policy is set to useLoadRules or (useDynamicLoadRules && old interface for component load
+				// rules doesn't return load rules), drive the load exclusively using load rules
+				if (buildConfiguration.isLoadPolicySetToUseLoadRules() || (isLoadPolicySetToUseDynamicLoadRules && compLoadRules == null)) {
+					if (LOGGER.isLoggable(Level.FINER)) {
+						LOGGER.finer("If load rules are specified only those components included in the load rules will be loaded");
+					}
+					
+					String pathToDynamicLoadRuleFile = null;
+					if (extProvider != null && isLoadPolicySetToUseDynamicLoadRules) {
+						pathToDynamicLoadRuleFile = RtcExtensionProviderUtil.getPathToLoadRuleFile(extProvider, logger, workspace
+								.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, buildResultUUID,
+								componentInfo, fConnectionDetails.getRepositoryAddress(), fConnectionDetails.getUserId(),
+								fConnectionDetails.getPassword());
+					}
+		            
+					Collection<ILoadRule2> loadRulesInstance = buildConfiguration.getComponentLoadRules(workspaceConnection, pathToDynamicLoadRuleFile, logger,
+							monitor.newChild(1), clientLocale);
+					// if load rules are configured we need a 603 or above build toolkit
+					if (loadRulesInstance.size() > 0 && VersionCheckerUtil.isPre603BuildToolkit()) {
+						throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rules_pre_603_build_toolkit());
+					}
+					// if load rules are specified use the interface introduced in 603
+					if (loadRulesInstance.size() > 0) {
+						if (LOGGER.isLoggable(Level.FINER)) {
+							LOGGER.finer("RepositoryConnection.load : Load rules are specified. Using 603 interface of SourceControlUtility.updateFileCopyArea");
+						}
+						// we will always have a single entry in the loadRules collection, as specifying multiple load
+						// rules file will result in an error
+						SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), synchronizeLoad,
+								loadRulesInstance.iterator().next(), false, monitor.newChild(39));
+					} else {
+						if (LOGGER.isLoggable(Level.FINER)) {
+							LOGGER.finer("RepositoryConnection.load : Load rules are not specified. Using pre-603 interface of SourceControlUtility.updateFileCopyArea");
+						}
+						SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), false,
+								Collections.EMPTY_LIST, synchronizeLoad, Collections.EMPTY_LIST, false, monitor.newChild(39));
+					}
+				} else {
+					// either load policy is not set or it is set to use component load config or load policy is set to
+					// useDynamicLoadRules and the dynamic load rule generator still returns the load rules using the
+					// deprecated getComponentLoadRules interface
+					if (LOGGER.isLoggable(Level.FINER)) {
+						if (buildConfiguration.isLoadPolicySet()) {
+							if (buildConfiguration.isLoadPolicySetToUseComponentLoadConfig()) {
+								LOGGER.finer("RepositoryConnection.load: Load Policy is set to " + Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG
+										+ ". Any specified load rules will be ignored.");
+								if (buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents()) {
+									LOGGER.finer("RepositoryConnection.load: Component load config set to "
+											+ Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS
+											+ ". All components in the workspace will be loaded.");
+								} else {
+									LOGGER.finer("RepositoryConnection.load: Component load config set to "
+											+ Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS
+											+ ". Components specified to be excluded will not be loaded.");
+								}
+							} else if (buildConfiguration.isLoadPolicySetToUseDynamicLoadRules()) {
+								LOGGER.finer("RepositoryConnection.load: Load Policy is set to " + Constants.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES
+										+ " and dynamic load rules are provided by the deprecated getComponentLoadRules method");
+							}
+						} else {
+							LOGGER.finer("RepositoryConnection.load: Load policy is not set. "
+									+ "All components in the workspace will be loaded. If load rules are specified then components included "
+									+ "in the load rules will be loaded according to the load rules ");
+						}
+					}
+					// dynamic load rules take precedence over configured load rules
+					Collection<ILoadRule2> lRules = buildConfiguration.isLoadPolicySetToUseDynamicLoadRules() ? buildConfiguration
+							.getCustomLoadRules(workspaceConnection, compLoadRules, logger, clientLocale) : buildConfiguration.getComponentLoadRules(
+							workspaceConnection, null, logger, monitor.newChild(1), clientLocale);
+					SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), includedComponents,
+							components, synchronizeLoad, lRules, buildConfiguration.createFoldersForComponents(), monitor.newChild(39));
+				}
+	         
 	         
 	            listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_complete());
 	            
@@ -913,7 +956,7 @@ public class RepositoryConnection {
 		IBuildResultHandle buildResultHandle = null;
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
 			buildResultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-	        buildConfiguration.initialize(buildResultHandle, false, defaultSnapshotName, listener, monitor.newChild(1), clientLocale);
+	        buildConfiguration.initialize(buildResultHandle, false, defaultSnapshotName, false, listener, monitor.newChild(1), clientLocale);
 
 		} else {
 			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
@@ -925,7 +968,6 @@ public class RepositoryConnection {
 
         workspace = buildConfiguration.getBuildWorkspaceDescriptor();
 
-        listener.log(Messages.getDefault().RepositoryConnection_checkout_setup());
         String parentActivityId = getBuildConnection().startBuildActivity(buildResultHandle,
                 Messages.getDefault().RepositoryConnection_pre_build_activity(), null, false, monitor.newChild(1));
 
@@ -1080,33 +1122,22 @@ public class RepositoryConnection {
             	throw new InterruptedException();
             }
             
-            Map<String, String> compLoadRules = null;
-            String excludeComponents = null;
+            String pathToDynamicLoadRuleFile = null;
             boolean includedComponents = buildConfiguration.includeComponents();
             Collection<IComponentHandle> components = buildConfiguration.getComponents();
             String snapshotUUID = buildProperties.get(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID);
         	Map<String, String> componentInfo = getComponentInfoFromWorkspace(workspaceConnection.getComponents(), monitor.newChild(2));
             if(extProvider != null) {
-				compLoadRules = RtcExtensionProviderUtil.getComponentLoadRules(
-						extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
-						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
-						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
-				excludeComponents = RtcExtensionProviderUtil.getExcludeComponentList(
+				pathToDynamicLoadRuleFile = RtcExtensionProviderUtil.getPathToLoadRuleFile(
 						extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
 						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
 						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
 			}
             
-            if(excludeComponents != null && excludeComponents.trim().length() > 0) {
-            	includedComponents = false;
-            	components = new LoadComponents(getTeamRepository(), excludeComponents).getComponentHandles();
-            }
-            
-            SourceControlUtility.updateFileCopyArea(workspaceConnection,
-                    fetchDestinationFile.getCanonicalPath(), includedComponents,
-                    components,
-                    synchronizeLoad, buildConfiguration.getComponentLoadRules(workspaceConnection, compLoadRules, monitor.newChild(1), clientLocale),
-                    buildConfiguration.createFoldersForComponents(), monitor.newChild(39));
+			SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), includedComponents, components,
+					synchronizeLoad,
+					buildConfiguration.getComponentLoadRules(workspaceConnection, pathToDynamicLoadRuleFile, logger, monitor.newChild(1), clientLocale),
+					buildConfiguration.createFoldersForComponents(), monitor.newChild(39));
 
             listener.log(Messages.getDefault().RepositoryConnection_checkout_fetch_complete());
             
@@ -1559,50 +1590,17 @@ public class RepositoryConnection {
 	}
 	
 	/**
-	 * Validate if the specified components exist in the repository and included in the given workspace.
+	 * Validate if load rule file exists in the specified component.
 	 * 
 	 * @param processAreaName - the name of the owning project or team area
 	 * @param isStreamConfiguration Flag that determines if the <code>workspaceName</code> corresponds to a workspace or a stream
 	 * @param workspaceName Name of the workspace specified in the build configuration
-	 * @param componentsToExclude Json text specifying the list of components to exclude
+	 * @param pathToLoadRuleFile Path to the load rule file of the format <component name>/<remote path of the load rule file>
 	 * @param progress Progress monitor
 	 * @param clientLocale The locale of the requesting client
 	 * @throws Exception
 	 */
-	public void testComponentsToExclude(String processAreaName, boolean isStreamConfiguration, String workspaceName, String componentsToExclude,
-			IProgressMonitor progress,
-			Locale clientLocale) throws Exception {
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		ensureLoggedIn(monitor.newChild(40));
-		try {
-			IWorkspaceHandle workspaceHandle = isStreamConfiguration ? getBuildStream(processAreaName, workspaceName, monitor.newChild(40),
-					clientLocale)
-					: RTCWorkspaceUtils.getInstance().getWorkspace(workspaceName, getTeamRepository(), monitor.newChild(40), clientLocale);
-			BuildWorkspaceDescriptor wsDescriptor = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(),
-					workspaceName);
-			IWorkspaceConnection wsConnection = wsDescriptor.getConnection(fRepositoryManager, false, monitor.newChild(5));
-			getComponentsToExclude(new LoadConfigurationDescriptor(isStreamConfiguration, workspaceName), wsConnection, componentsToExclude,
-					clientLocale, monitor.newChild(5));
-
-		} catch (RTCConfigurationException e) {
-			throw new RTCValidationException(e.getMessage());
-		} catch (IllegalArgumentException e) {
-			throw new RTCValidationException(e.getMessage());
-		}
-	}
-	
-	/**
-	 * Validate if the specified components/load rule files exist in the repository and included in the given workspace.
-	 * 
-	 * @param processAreaName - the name of the owning project or team area
-	 * @param isStreamConfiguration Flag that determines if the <code>workspaceName</code> corresponds to a workspace or a stream
-	 * @param workspaceName Name of the workspace specified in the build configuration
-	 * @param loadRules Json text specifying the component-to-load-rule file mapping
-	 * @param progress Progress monitor
-	 * @param clientLocale The locale of the requesting client
-	 * @throws Exception
-	 */
-	public void testLoadRules(String processAreaName, boolean isStreamConfiguration, String workspaceName, String loadRules,
+	public void testLoadRules(String processAreaName, boolean isStreamConfiguration, String workspaceName, String pathToLoadRuleFile,
 			IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(40));
@@ -1613,7 +1611,7 @@ public class RepositoryConnection {
 			BuildWorkspaceDescriptor wsDescriptor = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(),
 					workspaceName);
 			IWorkspaceConnection wsConnection = wsDescriptor.getConnection(fRepositoryManager, false, monitor.newChild(5));
-			getComponentLoadRules(new LoadConfigurationDescriptor(isStreamConfiguration, workspaceName), wsConnection, loadRules, clientLocale,
+			RTCWorkspaceUtils.getInstance().getComponentLoadRuleString(new LoadConfigurationDescriptor(isStreamConfiguration, workspaceName), wsConnection, pathToLoadRuleFile, clientLocale,
 					monitor.newChild(5));
 
 		} catch (RTCConfigurationException e) {
@@ -1683,476 +1681,6 @@ public class RepositoryConnection {
 		}
 		return result;
 	}
-
-	/**
-	 * This method parses the json text expected in the following format
-	 * 
-	 * <code>
-	 * 	{
-	 * 		"componentsToExclude":[
-	 * 			{
-	 * 				"componentId":"_ITkVUNlIEeWHquPepBzvOQ",
-	 * 				"componentName":"JUnit"
-	 * 			},
-	 * 			{
-	 * 				"componentId":"_xYEzgdlTEeWHquPepBzvOQ",
-	 * 				"componentName":"JUnit Component1",
-	 * 			}
-	 * 		]
-	 * 	}
-	 * </code>
-	 * 
-	 * and returns a list of space separated component ids.
-	 * 
-	 * When only 'componentName' is given, the component id is determined by looking for the component instance by the
-	 * given name in the given workspace.
-	 * 
-	 * When both 'componentId' and 'componentName' are given then the specified componentId is added to the final list
-	 * and the componentName is ignored
-	 * 
-	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
-	 *            configured to load from a workspace, snapshot, or a stream.
-	 * @param wsConnection workspace connection object
-	 * @param excludedComponents json text representing the components to exclude during load
-	 * @param clientLocale locale
-	 * @param progress progress monitor
-	 * 
-	 * @return space separated list of component ids
-	 * 
-	 * @throws Exception
-	 */
-	@SuppressWarnings("unchecked")
-	private String getComponentsToExclude(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection, String excludedComponents,
-			Locale clientLocale, IProgressMonitor progress) throws Exception {
-		
-		LOGGER.finer("RepositoryConnection.getComponentsToExclude: resolving components to exclude specified in the job configuration"); //$NON-NLS-1$
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		StringBuffer result = new StringBuffer();
-		// excludedComponents is always non-null here
-		JSONObject json = (JSONObject)JSONObject.parse(new StringReader(excludedComponents));
-		if (json.get(COMPONENTS_TO_EXCLUDE) == null) {
-			throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_components_to_exclude_required());
-		}
-		JSONArray componentArray = JSONArray.parse(new StringReader(json.get(COMPONENTS_TO_EXCLUDE).toString()));		
-		if (componentArray.size() == 0) {
-			throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_components_to_exclude_required());
-		}
-		HashMap<String, IComponent> nameToComponentMap = new HashMap<String, IComponent>();
-		HashMap<String, IComponent> uuidToComponentMap = new HashMap<String, IComponent>();
-		List<String> duplicateComponentNames = new ArrayList<String>();
-		List<IComponent> components = fRepository.itemManager().fetchCompleteItems(wsConnection.getComponents(), IItemManager.DEFAULT,
-				monitor.newChild(50));
-		for (IComponent component : components) {
-			if (component != null) {
-				if (nameToComponentMap.get(component.getName()) != null) {
-					duplicateComponentNames.add(component.getName());
-				}
-				nameToComponentMap.put(component.getName(), component);
-				uuidToComponentMap.put(component.getItemId().getUuidValue(), component);
-			}
-		}
-
-		// iterate through the list of specified component ids
-		for (int i = 0; i < componentArray.size(); i++) {
-
-			JSONObject inner = (JSONObject)componentArray.get(i);
-			String componentId = (String)inner.get(COMPONENT_ID);
-			if (componentId != null) {
-				// validate component id
-				validateComponentWithIdExistsInWorkspace(loadConfigurationDescriptor, wsConnection, componentId, uuidToComponentMap, clientLocale,
-						monitor.newChild(50));
-			} else if (inner.get(COMPONENT_NAME) != null) {
-				// if componentId is not given and only componentName is given
-				// lookup by the component name in the given workspace and get the component id
-				String componentName = inner.get(COMPONENT_NAME).toString();
-				componentId = validateComponentWithNameExistsInWorkspace(loadConfigurationDescriptor, wsConnection, componentName,
-						nameToComponentMap, duplicateComponentNames, clientLocale, monitor.newChild(50));
-
-			} else {
-				// no id or name specified
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_id_or_name_required());
-			}
-			result.append(componentId);
-
-			if (i < componentArray.size() - 1) {
-				result.append(" "); //$NON-NLS-1$
-			}
-		}
-		return result.toString();
-	}
-
-	/**
-	 * This method parses the json text expected in the following format
-	 * 
-	 * <code>
-	 * 	{ 
-	 * 		"loadRules":[ 
-	 * 			{ 
-	 * 				"componentId":"_xYEzgdlTEeWHquPepBzvOQ",
-	 * 				"componentName":"JUnit Component1",
-	 * 				"fileItemId":"_oxfJMNn4EeW6lec1vN4vpA",
-	 * 				"filePath":"JUnit Component1 Project1/JUnit-Component1-lr.loadrule" 
-	 * 			}, 
-	 * 			{
-	 * 				"componentId":"_xZBOsdlTEeWHquPepBzvOQ",
-	 * 				"componentName":"JUnit Component2",
-	 * 				"fileItemId":"_9-qRkNn4EeW6lec1vN4vpA",
-	 * 				"filePath":"JUnit Component2 Project1/JUnit-Component2-lr.loadrule" 
-	 * 			} 
-	 * 		]
-	 *  }
-	 *  </code>
-	 * 
-	 * and returns a list of LoadRule objects representing the component to load rule file mapping.
-	 * 
-	 * The load rule file is expected to be contained in the component.
-	 * 
-	 * When both componentId and componentName are given, componentName is ignored and the componentId is set on the
-	 * LoadRule object.
-	 * 
-	 * When only 'componentName' is given, the component id is determined by looking for the component instance by the
-	 * given name in the given workspace.
-	 * 
-	 * When both fileItemId and filePath are given, filePath is ignored and the fileItemId is set on the LoadRule
-	 * object.
-	 * 
-	 * When only filePath is given, the file item id is determined by looking for the file versionable by the
-	 * 
-	 * 
-	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
-	 *            configured to load from a workspace, snapshot, or a stream.
-	 * @param wsConnection workspace connection object
-	 * @param loadRules json text representing the component to load rule file mapping
-	 * @param clientLocale locale of the requesting client
-	 * @param progress progress monitor
-	 * 
-	 * @return a string that represent the component to load rule file mapping as expected by the build tool kit
-	 * 
-	 * @throws Exception
-	 */
-	@SuppressWarnings("unchecked")
-	private String getComponentLoadRules(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection, String loadRules,
-			Locale clientLocale, IProgressMonitor progress) throws Exception {
-		
-		LOGGER.finer("RepositoryConnection.getComponentLoadRules: resolving load rules specified in the job configuration"); //$NON-NLS-1$
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		List<LoadRule> loadRuleObjects = new ArrayList<LoadRule>();
-		JSONObject json = (JSONObject)JSONObject.parse(new StringReader(loadRules));
-		if (json.get(LOAD_RULES) == null) {
-			throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rules_required());
-		}
-		JSONArray loadRulesArray = JSONArray.parse(new StringReader(json.get(LOAD_RULES).toString()));
-		if (loadRulesArray.size() == 0) {
-			throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rules_required());
-		}
-		HashMap<String, IComponent> nameToComponentMap = new HashMap<String, IComponent>();
-		HashMap<String, IComponent> uuidToComponentMap = new HashMap<String, IComponent>();
-		List<String> duplicateComponentNames = new ArrayList<String>();
-		List<IComponent> components = fRepository.itemManager().fetchCompleteItems(wsConnection.getComponents(), IItemManager.DEFAULT,
-				monitor.newChild(50));
-		for (IComponent component : components) {
-			if (component != null) {
-				if (nameToComponentMap.get(component.getName()) != null) {
-					duplicateComponentNames.add(component.getName());
-				}
-				nameToComponentMap.put(component.getName(), component);
-				uuidToComponentMap.put(component.getItemId().getUuidValue(), component);
-			}
-		}
-
-		for (int i = 0; i < loadRulesArray.size(); i++) {
-			LoadRule lr = new LoadRule();
-			JSONObject inner = (JSONObject)loadRulesArray.get(i);
-			String componentId = (String)inner.get(COMPONENT_ID);
-			if (componentId != null) {
-				// validate component id
-				validateComponentWithIdExistsInWorkspace(loadConfigurationDescriptor, wsConnection, componentId, uuidToComponentMap, clientLocale,
-						monitor.newChild(25));
-			} else if (inner.get(COMPONENT_NAME) != null) {
-				String componentName = inner.get(COMPONENT_NAME).toString();
-				componentId = validateComponentWithNameExistsInWorkspace(loadConfigurationDescriptor, wsConnection, componentName,
-						nameToComponentMap, duplicateComponentNames, clientLocale, monitor.newChild(25));
-			} else {
-				// component id or name should be specified
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_id_or_name_required());
-			}
-			// set the determined/specified component id
-			lr.setComponentId(componentId);
-			// we know that the specified component exists in the given workspace
-			IComponent component = uuidToComponentMap.get(componentId);
-
-			String fileItemId = (String)inner.get(FILE_ITEM_ID);
-			try {
-				if (fileItemId != null) {
-					// validate file item id
-					validateFileWithIdExistsInWorkspace(loadConfigurationDescriptor, wsConnection, component, fileItemId, clientLocale,
-							monitor.newChild(25));
-				} else if (inner.get(FILE_PATH) != null) {
-					// validate file path and get the file item id
-					String filePath = inner.get(FILE_PATH).toString();
-					fileItemId = validateFileInPathExistsInWorkspace(loadConfigurationDescriptor, wsConnection, component, filePath, clientLocale,
-							monitor.newChild(25));
-				} else {
-					// fileItemId or filePath should be specified
-					throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_file_item_id_or_name_required());
-				}
-			} catch (VersionablePermissionDeniedException e1) {
-				// Lets try to build up a more informative error message.
-				ITeamRepository repo = (ITeamRepository)wsConnection.getResolvedWorkspace().getOrigin();
-				IContributor contributor = repo.loggedInContributor();
-				if (contributor != null && component != null) {
-					throw new VersionablePermissionDeniedException(Messages.get(clientLocale).RepositoryConnection_private_load_rule(
-							contributor.getName(), contributor.getUserId(), component.getName()), e1);
-				} else {
-					throw e1;
-				}
-			}
-			lr.setFileItemId(fileItemId);
-			loadRuleObjects.add(lr);
-		}
-
-		StringBuffer res = new StringBuffer();
-		for (LoadRule lr : loadRuleObjects) {
-			res.append(((LoadRule)lr).getLoadRuleAsExpectedByToolkit()).append(" "); //$NON-NLS-1$
-		}
-		return res.toString();
-	}
-
-	/**
-	 * Validate if a component with the given item ID exists in the repository and included in the specified workspace.
-	 * 
-	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
-	 *            configured to load from a workspace, snapshot, or a stream.
-	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
-	 * @param componentId Item ID of the component
-	 * @param uuidToComponentMap Item ID to IComponent mapping for the components present in the workspace in context
-	 * @param clientLocale locale of the requesting client
-	 * @param progress progress monitor
-	 * @throws TeamRepositoryException
-	 */
-	private void validateComponentWithIdExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection,
-			String componentId, HashMap<String, IComponent> uuidToComponentMap, Locale clientLocale, IProgressMonitor progress)
-			throws TeamRepositoryException {
-
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		UUID componentItemId = null;
-		try {
-			// validate UUID
-			componentItemId = UUID.valueOf(componentId);
-		} catch (IllegalArgumentException ex) {
-			// invalid component uuid
-			throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_invalid_component_uuid(componentId), ex);
-		}
-		if (uuidToComponentMap.get(componentId) == null) {
-			// if the component is not found in the workspace, check if it exists in the repository
-			IComponentHandle componentHandle = (IComponentHandle)IComponent.ITEM_TYPE.createItemHandle(fRepository, componentItemId, null);
-			try {
-				fRepository.itemManager().fetchCompleteItem(componentHandle, ItemManager.DEFAULT, monitor);
-			} catch (ItemNotFoundException e) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found(componentId));
-			} 
-			
-			// the component exists in the repository, but not included in the workspace/snapshot
-			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found_snapshot(componentId,
-						loadConfigurationDescriptor.getSnapshotName()));
-			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found_stream(componentId,
-						loadConfigurationDescriptor.getStreamName()));
-			} else {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found_ws(componentId,
-						wsConnection.getName()));
-			}
-		}
-
-	}
-
-	/**
-	 * Validate if a component with the given item ID exists in the repository and included in the specified workspace.
-	 * 
-	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
-	 *            configured to load from a workspace, snapshot, or a stream.
-	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
-	 * @param componentName Name of the component
-	 * @param nameToComponentMap Name to IComponent mapping for the components present in the workspace in context
-	 * @param duplicateComponentNames Names associated with more than one component in the workspace
-	 * @param clientLocale Locale of the requesting client
-	 * @param progress progress monitor
-	 * @return
-	 * @throws TeamRepositoryException
-	 */
-	private String validateComponentWithNameExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection,
-			String componentName, HashMap<String, IComponent> nameToComponentMap, List<String> duplicateComponentNames, Locale clientLocale,
-			IProgressMonitor progress) throws TeamRepositoryException {
-
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		String componentId = null;
-		// first eliminate the duplicate components with same name case
-		if (duplicateComponentNames.contains(componentName)) {
-			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_multiple_components_with_name_in_snapshot(
-						componentName, loadConfigurationDescriptor.getSnapshotName()));
-			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_multiple_components_with_name_in_stream(
-						componentName, loadConfigurationDescriptor.getStreamName()));
-			} else {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_multiple_components_with_name_in_ws(componentName,
-						wsConnection.getName()));
-			}
-		}
-
-		// if component exists in workspace then we are fine
-		if (nameToComponentMap.get(componentName) != null) {
-			componentId = nameToComponentMap.get(componentName).getItemId().getUuidValue();
-		} else {
-			// see if a component with the given name exists in the repository
-			IComponentSearchCriteria componentSearchCriteria = IComponentSearchCriteria.FACTORY.newInstance();
-			componentSearchCriteria.setExactName(componentName);
-			Collection<IComponentHandle> components = SCMPlatform.getWorkspaceManager(fRepository).findComponents(componentSearchCriteria,
-					Integer.MAX_VALUE, monitor);
-			if (components.size() == 0) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found(componentName));
-			} else {
-				// component with the given name exists in the repository but not included in the workspace/snapshot
-				if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
-					throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found_snapshot(
-							componentName, loadConfigurationDescriptor.getSnapshotName()));
-				} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
-					throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found_stream(
-							componentName, loadConfigurationDescriptor.getStreamName()));
-				} else {
-					throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found_ws(
-							componentName, wsConnection.getName()));
-				}
-			}
-
-		}
-		return componentId;
-
-	}
-
-	/**
-	 * Validate if the load rule file with the given id exists in the repository and included in the specified
-	 * workspace/component context.
-	 * 
-	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
-	 *            configured to load from a workspace, snapshot, or a stream.
-	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
-	 * @param component Component in context
-	 * @param fileItemId UUID of the load rule file
-	 * @param clientLocale Locale of the requesting client
-	 * @param progress progress monitor
-	 * @throws TeamRepositoryException
-	 */
-	private void validateFileWithIdExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection, IComponent component,
-			String fileItemId, Locale clientLocale, IProgressMonitor progress) throws TeamRepositoryException {
-
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		UUID uuid = null;
-		try {
-			uuid = UUID.valueOf(fileItemId);
-		} catch (IllegalArgumentException ex) {
-			// invalid file item id
-			throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_invalid_item_uuid(fileItemId,
-					component.getName()), ex);
-		}
-
-		// check if a file with the given item id exists in the workspace/component
-		// we can't check for the existence of the file in the repository using itemManager as it is an unmanaged item
-		IFileItemHandle fileItemHandle = (IFileItemHandle)IFileItem.ITEM_TYPE.createItemHandle(fRepository, uuid, null);
-		try {
-			IVersionable versionable = wsConnection.configuration(component).fetchCompleteItem(fileItemHandle, monitor.newChild(50));
-			// The item exists in the workspace/component context but not a file
-			if (!(versionable instanceof IFileItem)) {
-				if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
-					throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_with_id_not_a_file_snapshot(
-							fileItemId, component.getName(), loadConfigurationDescriptor.getSnapshotName()));
-
-				} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
-					throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_with_id_not_a_file_stream(
-							fileItemId, component.getName(), loadConfigurationDescriptor.getStreamName()));
-				} else {
-					throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_with_id_not_a_file_ws(fileItemId,
-							component.getName(), wsConnection.getName()));
-				}
-
-			}
-		} catch (ItemNotFoundException e) {
-			// The item does not exist in the workspace/component context
-			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_with_id_not_found_snapshot(
-						fileItemId, component.getName(), loadConfigurationDescriptor.getSnapshotName()));
-
-			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_with_id_not_found_stream(fileItemId,
-						component.getName(), loadConfigurationDescriptor.getStreamName()));
-			} else {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_with_id_not_found_ws(fileItemId,
-						component.getName(), wsConnection.getName()));
-			}
-		}
-	}
-
-	/**
-	 * Validate if the load rule file in the given path exists in the workspace/component context.
-	 * 
-	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
-	 *            configured to load from a workspace, snapshot, or a stream.
-	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
-	 * @param component Component in context
-	 * @param filePath Path to the load file in the repository
-	 * @param clientLocale Locale of the requesting client
-	 * @param progress progress monitor
-	 * @return Item ID of the load rule file
-	 * @throws TeamRepositoryException
-	 */
-	private String validateFileInPathExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection,
-			IComponent component, String filePath, Locale clientLocale, IProgressMonitor progress) throws TeamRepositoryException {
-
-		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		// empty file path
-		if (filePath.length() == 0) {
-			throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_path_empty(component.getName()));
-		}
-		String tmpFilePath = filePath;
-		// Having "/" at the beginning results in an empty path segment which is not accepted in resolvePath
-		if (tmpFilePath.startsWith(SEPARATOR)) {
-			tmpFilePath = tmpFilePath.substring(1);
-		}
-		String[] pathSegments = tmpFilePath.split(SEPARATOR);
-		IVersionableHandle versionableHandle = wsConnection.configuration(component).resolvePath(component.getRootFolder(), pathSegments, monitor.newChild(50));
-		// This call is required to validate if the user has read access to the load rule file
-		wsConnection.configuration(component).fetchCompleteItem(versionableHandle, monitor.newChild(50));
-
-		if (versionableHandle == null) {
-			// file not found
-			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_not_found_snapshot(filePath,
-						component.getName(), loadConfigurationDescriptor.getSnapshotName()));
-
-			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_not_found_stream(filePath,
-						component.getName(), loadConfigurationDescriptor.getStreamName()));
-			} else {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_not_found_ws(filePath,
-						component.getName(), wsConnection.getName()));
-			}
-		} else if (!(versionableHandle instanceof IFileItemHandle)) {
-			// path doesn't resolve to a file
-			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_not_a_file_snapshot(filePath,
-						component.getName(), loadConfigurationDescriptor.getSnapshotName()));
-
-			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_not_a_file_stream(filePath,
-						component.getName(), loadConfigurationDescriptor.getStreamName()));
-			} else {
-				throw new IllegalArgumentException(Messages.get(clientLocale).RepositoryConnection_load_rule_not_a_file_ws(filePath,
-						component.getName(), wsConnection.getName()));
-			}
-		}
-		return versionableHandle.getItemId().getUuidValue();
-	}
 	
 	private String getWorkspaceNamePrefix() {
 		return DEFAULTWORKSPACEPREFIX; 
@@ -2176,55 +1704,4 @@ public class RepositoryConnection {
 		return changesCount;
 	}
 
-	/**
-	 * Inner class is used to represent the type of load configured in the build in both the build execution and field
-	 * validation scenarios. We use different parameters to determine the load configuration across these two scenarios.
-	 * This class acts wraps those parameters and provides an uniform interface to determine the load type.
-	 */
-	private static class LoadConfigurationDescriptor {
-		@SuppressWarnings("unused")
-		private BuildConfiguration buildConfiguration;
-		private boolean isSnapshotConfiguration;
-		private boolean isStreamConfiguration;
-		private String snapshotName;
-		private String streamName;
-		
-		/**
-		 * Use build configuration to construct this instance. This constructor is used when the build is being executed.
-		 */
-		public LoadConfigurationDescriptor(BuildConfiguration buildConfiguration) {
-			this.buildConfiguration = buildConfiguration;
-			if (buildConfiguration != null && buildConfiguration.isSnapshotLoad()) {
-				this.isSnapshotConfiguration = true;
-				this.snapshotName = buildConfiguration.getBuildSnapshotDescriptor().getSnapshotName();
-			} else if (buildConfiguration != null && buildConfiguration.isStreamLoad()) {
-				this.isStreamConfiguration = true;
-				this.streamName = buildConfiguration.getBuildStreamDescriptor().getName();
-			}
-		}
-		
-		/**
-		 * Use the flag and stream name to construct this instance. This constructor is used during field validation.
-		 */
-		public LoadConfigurationDescriptor(boolean isStreamConfiguration, String streamName) {
-			this.isStreamConfiguration = isStreamConfiguration;
-			this.streamName = streamName;
-		}
-
-		public boolean isSnapshotConfiguration() {
-			return isSnapshotConfiguration;
-		}
-
-		public boolean isStreamConfiguration() {
-			return isStreamConfiguration;
-		}
-
-		public String getSnapshotName() {
-			return snapshotName;
-		}
-
-		public String getStreamName() {
-			return streamName;
-		}
-	}
 }

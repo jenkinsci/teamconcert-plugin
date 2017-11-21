@@ -16,21 +16,48 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import hudson.model.FreeStyleBuild;
+import hudson.model.Result;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
+import hudson.tools.ToolProperty;
+import hudson.util.FormValidation;
+import hudson.util.IOUtils;
+import hudson.util.Secret;
+import net.sf.json.JSONObject;
+
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.WithTimeout;
+import org.kohsuke.stapler.StaplerRequest;
+import org.mockito.Mockito;
 
+import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.Messages;
@@ -40,6 +67,7 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemDesc;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCRepositoryBrowser;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
@@ -48,29 +76,25 @@ import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.Result;
-import hudson.model.StringParameterDefinition;
-import hudson.model.StringParameterValue;
-import hudson.scm.PollingResult;
-import hudson.scm.PollingResult.Change;
-import hudson.tools.ToolProperty;
-import hudson.util.FormValidation;
-import hudson.util.Secret;
-
 public class RTCScmIT extends AbstractTestCase {
-
+	private static final String CONFIGURE = "configure";
+	private static final String CONFIG = "config";
 	private static final String BUILD_TOOLKIT = "buildToolkit";
-	
+
+	private static final String SERVER_URI = "serverURI";
+	private static final String OVERRIDE_GLOBAL = "overrideGlobal";
 	private static final String USER_ID = "userId";
 	private static final String PASSWORD = "password";
 	private static final String PASSWORD_FILE = "passwordFile";
 	private static final String CREDENTIALS_ID = "_.credentialsId";
+	private static final String CREDENTIALS_ID_NON_FORM = "credentialsId";
 	private static final String TIMEOUT = "timeout";
+	private static final String AVOID_USING_TOOLKIT = "avoidUsingToolkit";
+
+	private static final String TEST_GLOBAL_SERVER_URI = "https://localhost:9443/ccm";
+	private static final String TEST_GLOBAL_CRED_ID = "1234";
+	private static final String TEST_GLOBAL_TIMEOUT = "480";
+
 
 	private static final String TEST_SERVER_URI = "https://localhost:9443/jazz";
 	private static final String TEST_TIMEOUT = "480";
@@ -111,7 +135,7 @@ public class RTCScmIT extends AbstractTestCase {
 	private RTCScm createTestOverrideGlobalRTCScm(boolean useCreds) {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE, TEST_BUILD_SNAPSHOT, TEST_BUILD_STREAM);
 		return new RTCScm(true, "", TEST_SERVER_URI, Integer.parseInt(TEST_TIMEOUT), TEST_USER_ID, Secret.fromString(TEST_PASSWORD), TEST_PASSWORD_FILE,
-				useCreds ? TEST_CRED_ID : null, buildSource, false);
+				useCreds ? TEST_CRED_ID : "", buildSource, false);
 	}
 
 	@Before
@@ -163,7 +187,7 @@ public class RTCScmIT extends AbstractTestCase {
 			scm = createTestOverrideGlobalRTCScm(false);
 			assertEquals(TEST_SERVER_URI, scm.getServerURI());
 			assertEquals(Integer.parseInt(TEST_TIMEOUT), scm.getTimeout());
-			assertEquals(null, scm.getCredentialsId());
+			assertEquals("", scm.getCredentialsId());
 			assertEquals(TEST_USER_ID, scm.getUserId());
 			assertEquals(TEST_PASSWORD, scm.getPassword());
 			assertEquals(TEST_PASSWORD_FILE, scm.getPasswordFile());
@@ -407,6 +431,53 @@ public class RTCScmIT extends AbstractTestCase {
 		assertEquals("Expected timeout validation " + kind + ": " + TIMEOUT + "=\"" + timeout + "\"", kind, validation.kind);
 	}
 
+	@Test 
+	public void testJobConfigRoundtripWithCredentials() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			org.jvnet.hudson.test.JenkinsRule.WebClient webClient = r.createWebClient();
+
+			FreeStyleProject project = r.createFreeStyleProject();
+			RTCScm rtcScm = createEmptyRTCScm();
+			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
+			project.setScm(rtcScm);
+	
+			StaplerRequest mockedReq = Mockito.mock(StaplerRequest.class);
+			JSONObject mockJSON = new JSONObject();
+			mockJSON.element(AVOID_USING_TOOLKIT, new JSONObject());
+			mockJSON.element(CREDENTIALS_ID_NON_FORM, TEST_GLOBAL_CRED_ID);
+			mockJSON.element(SERVER_URI, TEST_GLOBAL_SERVER_URI);
+			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
+			descriptor.configure(mockedReq, mockJSON);
+	
+	
+			// Get the page to configure the project
+			HtmlPage page = webClient.getPage(project, CONFIGURE);
+	
+			// Get the config form
+			HtmlForm form = page.getFormByName(CONFIG);
+	
+			// Get the inputs
+			HtmlCheckBoxInput overrideGlobalInput = form.getInputByName(OVERRIDE_GLOBAL);
+	
+			// Set the input values
+			overrideGlobalInput.setChecked(false);
+	
+			// Submit the config form
+			r.submit(form);
+	
+			// check submitted SCM result
+			RTCScm newRtcScm = (RTCScm) project.getScm();
+			assertEquals(false, newRtcScm.getOverrideGlobal());
+			assertEquals(TEST_GLOBAL_SERVER_URI, newRtcScm.getServerURI());
+			assertEquals(TEST_GLOBAL_TIMEOUT, String.valueOf(newRtcScm.getTimeout()));
+			assertEquals(null, newRtcScm.getUserId());
+			assertEquals(null, newRtcScm.getPassword());
+			assertEquals(null, newRtcScm.getPasswordFile());
+			assertEquals(TEST_GLOBAL_CRED_ID, newRtcScm.getCredentialsId());
+			assertTrue(newRtcScm.getAvoidUsingToolkit());
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	@Test public void testDoValidateBuildWorkspaceConfiguration() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
@@ -422,31 +493,31 @@ public class RTCScmIT extends AbstractTestCase {
 		DescriptorImpl descriptor = (DescriptorImpl)project.getDescriptorByName(RTCScm.class.getName());
 		// buildWorkspace - null
 		FormValidation result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password,
-				null, null, "false", null);
+				null, null, "false", null, null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_workspace_empty(), result.renderHtml());
 
 		// buildWorkspace - empty string
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "");
+				"false", "", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_workspace_empty(), result.renderHtml());
 
 		// buildWorkspace - blank string
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "   ");
+				"false", "   ", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_workspace_empty(), result.renderHtml());
 
 		// invalid connect info
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, null, password, null, null,
-				"false", "test");
+				"false", "test", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCLoginInfo_missing_userid(), result.renderHtml());
 
 		// valid connect info - using build toolkit and invalid workspace
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "test");
+				"false", "test", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals("Unable to find a workspace with name &quot;test&quot;", result.renderHtml());
 		
@@ -463,38 +534,94 @@ public class RTCScmIT extends AbstractTestCase {
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid workspace - multiple workspace
 			// warning connect info and error workspace - only error should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", "Multiple Occurrence=WS");
+					"true", "Multiple Occurrence=WS", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("More than 1 repository workspace has the name &quot;Multiple Occurrence=WS&quot;", result.renderHtml());
 			
 			// valid connect info - using build toolkit and warning workspace (parameterized values) 
 			// only warning should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "${rtcRepositoryWorkspace}");
+					"false", "${rtcRepositoryWorkspace}", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_repository_workspace_not_validated(), result.renderHtml());
 
 			// warning connect info - avoidUsingBuildToolkit and warning workspace (parameterized values) 
 			// both the warnings should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
-					"true", "${rtcRepositoryWorkspace}");
+					"true", "${rtcRepositoryWorkspace}", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job() + "<br/>" + Messages.RTCScm_repository_workspace_not_validated(),
 					result.renderHtml());
 
 			// valid connect info - using build toolkit and valid workspace
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "Singly Occuring=WS");
+					"false", "Singly Occuring=WS", null, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid workspace
 			// warning connect info and valid workspace - only warning should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", "Singly Occuring=WS");
+					"true", "Singly Occuring=WS", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job(), result.renderHtml());
 			
+			// valid connect info - using build toolkit 
+			// valid workspace
+			// error path to load rule file - invalid path to load rule file 
+			// load policy is not set to useLoadRules
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "Singly Occuring=WS", "useComponentLoadConfig", "/comp1/f/ws.loadrule");
+			assertEquals(FormValidation.Kind.OK, result.kind);
+			
+			// valid connect info - using build toolkit 
+			// valid workspace
+			// error path to load rule file - invalid path to load rule file 
+			// error should be displayed
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "Singly Occuring=WS", "useLoadRules", "/comp1/f/ws.loadrule");
+			assertEquals("Path to the load rule file &quot;/comp1/f/ws.loadrule&quot; does not include the component name. "
+					+ "Please specify the path in the following format: &lt;component name>/&lt;remote path to the load rule file>.",
+					result.renderHtml());
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null
+			// valid workspace
+			// error path to load rule file - build toolkit required for validation 
+			// error should be displayed
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
+					"true", "Singly Occuring=WS", "useLoadRules", "/comp1/f/ws.loadrule");
+			assertEquals("A build toolkit is required to validate the path to the load rule file.", result.renderHtml());
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null
+			// warning workspace (parameterized values) 
+			// warning path to load rule file (parameterized workspace value)
+			// all the warnings should be displayed
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
+					"true", "${rtcRepositoryWorkspace}", "useLoadRules", "Singly Occuring=WS-comp1/Singly Occuring=WS-comp1/f/ws.loadrule");
+			assertEquals("A build toolkit is required to perform builds.<br/>Cannot validate the parameterized "
+					+ "value for repository workspace.<br/>Cannot validate the path to the load rule file"
+					+ " with the parameterized value for repository workspace.", result.renderHtml());
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+
+			// warning connect info - avoidUsingBuildToolkit
+			// valid workspace
+			// warning path to load rule file (parameterized path to load rule file)
+			// all the warnings should be displayed
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null, "true",
+					"Singly Occuring=WS", "useLoadRules", "${pathToLoadRuleFile}");
+			assertEquals("Cannot validate the parameterized value for the path to the load rule file.", result.renderHtml());
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			
+			// valid connect info - using build toolkit 
+			// valid workspace
+			// valid path to load rule file
+			// validation success
+			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "Singly Occuring=WS", "useLoadRules", "Singly Occuring=WS-comp1/Singly Occuring=WS-comp1/f/ws.loadrule");
+			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
+			assertEquals(FormValidation.Kind.OK, result.kind);
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
 		}
@@ -608,25 +735,25 @@ public class RTCScmIT extends AbstractTestCase {
 		DescriptorImpl descriptor = (DescriptorImpl)project.getDescriptorByName(RTCScm.class.getName());
 		// buildStream - null
 		FormValidation result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password,
-				null, null, "false", null, null);
+				null, null, "false", null, null, null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_stream_empty(), result.renderHtml());
 
 		// buildStream - empty string
 		result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", null, "");
+				"false", null, "", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_stream_empty(), result.renderHtml());
 
 		// buildStream - blank string
 		result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", null, "   ");
+				"false", null, "   ", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_stream_empty(), result.renderHtml());
 		
 		// invalid connect info
 		result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, null, password, null, null,
-				"false", null, "testStream");
+				"false", null, "testStream", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCLoginInfo_missing_userid(), result.renderHtml());
 		
@@ -646,161 +773,225 @@ public class RTCScmIT extends AbstractTestCase {
 		try {
 			// valid connect info - using build toolkit and non-null invalid process area, valid stream
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "testProject", streamName);
+					"false", "testProject", streamName, null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
 			
 			// valid connect info - avoidUsingBuildToolkiit and build toolkit is provided and non-null invalid process area, valid stream
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", "testProject", streamName);
+					"true", "testProject", streamName, null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, non-null invalid process area, valid stream
 			// warning connect info and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", "testProject", streamName);
+					"true", "testProject", streamName, null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 			
 			// valid connect info - using build toolkit and non-null invalid process area, warning stream (parameterized value)
 			// only error message should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "testProject", "${rtcStream}");
+					"false", "testProject", "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
 
 			// valid connect info - avoidUsingBuildToolkiit and build toolkit is provided and non-null invalid process area, warning stream (parameterized value)
 			// only error message should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", "testProject", "${rtcStream}");
+					"true", "testProject", "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A project area with name &quot;testProject&quot; cannot be found.", result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, non-null invalid process area, warning stream (parameterized value)
 			// warning connect info, warning stream and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", "testProject", "${rtcStream}");
+					"true", "testProject", "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 
 			// valid connect info - using build tool kit, valid process area, invalid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", projectAreaName, "testStream");
+					"false", projectAreaName, "testStream", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);			
 			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the project area &quot;" + projectAreaName + "&quot;.", result.renderHtml());
 			
 			// valid connect info - avoidUsingBuildToolkit and buildTool is provided, valid process area, invalid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", projectAreaName, "testStream");
+					"true", projectAreaName, "testStream", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);			
 			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the project area &quot;" + projectAreaName + "&quot;.", result.renderHtml());
 			
 			// valid connect info - using build tool kit, valid process area(null), invalid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", null, "testStream");
+					"false", null, "testStream", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);			
 			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the repository.", result.renderHtml());
 			
 			// valid connect info - avoidUsingBuildToolkit and buildTool is provided, valid process area(empty), invalid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", "   ", "testStream");
+					"true", "   ", "testStream", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);			
 			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the repository.", result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid process area, invalid stream value
 			// warning connect info and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", projectAreaName, "testStream");
+					"true", projectAreaName, "testStream", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 			
 			// warning connect info avoidUsingBuildToolkit and buildTool is invalid, valid(null) process area, invalid stream value
 			// warning connect info and error stream - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", "test", serverURI, timeout, userId, password, null, null,
-					"true", null, "testStream");
+					"true", null, "testStream", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A stream with name &quot;testStream&quot; cannot be found in the repository.", result.renderHtml());
 			
 			// valid connectinfo - using build toolkit, valid process area, warning stream value (parameterized value)
 			// only warning message should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", projectAreaName, "${rtcStream}");
+					"false", projectAreaName, "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());
 				
 			// valid connectinfo - avoidUsingBuildToolkit and buildTool is provided, valid process area, warning stream value (parameterized value)
 			// only warning message should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", projectAreaName, "${rtcStream}");
+					"true", projectAreaName, "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());			
 
 			// valid connectinfo - using build toolkit, valid process area (null), warning stream value (parameterized value)
 			// only warning message should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", null, "${rtcStream}");
+					"false", null, "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());
 
 			// valid connectinfo - avoidUsingBuildToolkit and a buildTool is provided, valid process area (null), warning stream value (parameterized value)
 			// only warning message should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", null, "${rtcStream}");
+					"true", null, "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_stream_not_validated(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool, valid process area, warning stream value (parameterized value)
 			// warning connect info, warning stream value and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", projectAreaName, "${rtcStream}");
+					"true", projectAreaName, "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool, valid (null) process area, warning stream value (parameterized value)
 			// warning connect info, warning stream value and validation success - both the warning messages should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", null, "${rtcStream}");
+					"true", null, "${rtcStream}", null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job() + "<br/>" + Messages.RTCScm_stream_not_validated(), result.renderHtml());
 			
 			// valid connectinfo - using build toolkit, valid process area, valid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", projectAreaName, streamName);
+					"false", projectAreaName, streamName, null, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// valid connectinfo - avoidUsingBuildToolkit and buildTool is provided, valid process area, valid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", projectAreaName, streamName);
+					"true", projectAreaName, streamName, null, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 
 			// valid connectinfo - using build toolkit, valid process area (null), valid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", null, streamName);
+					"false", null, streamName, null, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// valid connectinfo - avoidUsingBuildToolkit and a buildTool is provided, valid process area (null), valid stream value
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"true", null, streamName);
+					"true", null, streamName, null, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 
 			// warning connect info - avoidUsingBuildToolkit and buildTool, valid process area, valid stream value
 			// warning connect info and error project area - only error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", projectAreaName, streamName);
+					"true", projectAreaName, streamName, null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_process_area(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool, valid (null) process area, valid stream value
 			// warning connect info and validation success - only warning should be displayed 
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", null, streamName);
+					"true", null, streamName, null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job(), result.renderHtml());
+			
+			// valid connectinfo - avoidUsingBuildToolkit and a buildTool is provided
+			// valid process area (null)
+			// valid stream value
+			// error path to load rule file - invalid path
+			// load policy not set to load rules
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", null, streamName, "useComponentLoadConfig", "/comp1/f/ws.loadrule");
+			assertEquals(FormValidation.Kind.OK, result.kind);
+			
+			// valid connectinfo - avoidUsingBuildToolkit and a buildTool is provided
+			// valid process area (null)
+			// valid stream value
+			// error path to load rule file - invalid path
+			// error should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", null, streamName, "useLoadRules", "/comp1/f/ws.loadrule");
+			assertEquals("Path to the load rule file &quot;/comp1/f/ws.loadrule&quot; does not include the component name. "
+					+ "Please specify the path in the following format: &lt;component name>/&lt;remote path to the load rule file>.",
+					result.renderHtml());
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null
+			// valid process area(null)
+			// valida stream
+			// error path to load rule file - build toolkit required for validation 
+			// error should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
+					"true", null, streamName, "useLoadRules", "/comp1/f/ws.loadrule");
+			assertEquals("A build toolkit is required to validate the path to the load rule file.", result.renderHtml());
+			assertEquals(FormValidation.Kind.ERROR, result.kind);
+			
+			// warning connect info - avoidUsingBuildToolkit and buildTool is null
+			// valid process area(null)
+			// warning stream (parameterized values) 
+			// warning path to load rule file (parameterized stream value)
+			// all the warnings should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
+					"true", null, "${rtcStream}", "useLoadRules", "Singly Occuring=WS-comp1/Singly Occuring=WS-comp1/f/ws.loadrule");
+			assertEquals("A build toolkit is required to perform builds.<br/>Cannot validate the parameterized "
+					+ "value for stream.<br/>Cannot validate the path to the load rule file"
+					+ " with the parameterized value for stream.", result.renderHtml());
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+
+			// warning connect info - avoidUsingBuildToolkit
+			// valid process area(null)
+			// valid stream
+			// warning path to load rule file (parameterized path to load rule file)
+			// all the warnings should be displayed
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null, "true",
+					null, streamName, "useLoadRules", "${pathToLoadRuleFile}");
+			assertEquals("Cannot validate the parameterized value for the path to the load rule file.", result.renderHtml());
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			
+			// valid connect info - using build toolkit 
+			// valid process area(null)
+			// valid stream
+			// valid path to load rule file
+			// validation success
+			String componentName = setupArtifacts.get(Utils.ARTIFACT_COMPONENT_NAME);
+			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", null, streamName, "useLoadRules", componentName + "/" + componentName + "/f/ws.loadrule");
+			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
+			assertEquals(FormValidation.Kind.OK, result.kind);
 
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
@@ -822,25 +1013,25 @@ public class RTCScmIT extends AbstractTestCase {
 		DescriptorImpl descriptor = (DescriptorImpl)project.getDescriptorByName(RTCScm.class.getName());
 		// buildSnapshot - null
 		FormValidation result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password,
-				null, null, "false", "", "", "", "", null);
+				null, null, "false", "", "", "", "", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_snapshot_empty(), result.renderHtml());
 
 		// buildSnapshot - empty string
 		result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "", "", "", "", "");
+				"false", "", "", "", "", "", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_snapshot_empty(), result.renderHtml());
 
 		// buildSnapshot - blank string
 		result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "", "", "", "", "   ");
+				"false", "", "", "", "", "   ", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_snapshot_empty(), result.renderHtml());
 
 		// invalid connect info
 		result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, null, password, null, null, "false",
-				"", "", "", "", "testStream");
+				"", "", "", "", "testStream", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCLoginInfo_missing_userid(), result.renderHtml());
 
@@ -867,7 +1058,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid snapshot value
 			// warning connect info and cannot validate snapshot error - only error should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
-					"", "", "", "", snapshotName);
+					"", "", "", "", snapshotName, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_snapshot(), result.renderHtml());
 
@@ -875,72 +1066,72 @@ public class RTCScmIT extends AbstractTestCase {
 			// property)
 			// warning connect info and cannot validate snapshot error - only error should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
-					"", "", "", "", "${rtcBuildSnapshot}");
+					"", "", "", "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_snapshot(), result.renderHtml());
 
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid snapshot value
 			// warning connect info and error snapshot - only error should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null, "true",
-					"", "", "", "", "testSnapshot");
+					"", "", "", "", "testSnapshot", null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals(Messages.RTCScm_build_toolkit_required_to_validate_snapshot(), result.renderHtml());
 
 			// valid connect info, invalid snapshot value
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "", "", "", "", "testSnapshot");
+					"false", "", "", "", "", "testSnapshot", null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A snapshot with name &quot;testSnapshot&quot; cannot be found in the repository.", result.renderHtml());
 
 			// valid connectinfo, valid snapshot value
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "", "", "", "", snapshotName);
+					"false", "", "", "", "", snapshotName, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 
 			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to none
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "none", "", "", "", snapshotName);
+					"false", "none", "", "", "", snapshotName, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to workspace
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "workspace", "", "", workspaceName, wsSnapshotName);
+					"false", "workspace", "", "", workspaceName, wsSnapshotName, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 
 			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to stream without specifying project
 			// area, but having a workspace name
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", "", streamName, "ignoreWorkspaceName", snapshotName);
+					"false", "stream", "", streamName, "ignoreWorkspaceName", snapshotName, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 
 			// valid connectinfo, valid snapshot value, with snapshotOwnerType set to stream with specifying project
 			// area
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", projectAreaName, streamName, "", snapshotName);
+					"false", "stream", projectAreaName, streamName, "", snapshotName, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to workspace
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "workspace", "", "", workspaceName + "invalid", wsSnapshotName);
+					"false", "workspace", "", "", workspaceName + "invalid", wsSnapshotName, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("Unable to find a workspace with name &quot;" + workspaceName + "invalid&quot;", result.renderHtml());
 
 			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream without specifying
 			// project area, but having a workspace name
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", "", streamName + "invalid", "ignoreWorkspaceName", snapshotName);
+					"false", "stream", "", streamName + "invalid", "ignoreWorkspaceName", snapshotName, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the repository.", result.renderHtml());
 
 			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream with specifying project
 			// area
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", projectAreaName, streamName + "invalid", "", snapshotName);
+					"false", "stream", projectAreaName, streamName + "invalid", "", snapshotName, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the project area &quot;" + projectAreaName
 					+ "&quot;.", result.renderHtml());
@@ -948,35 +1139,35 @@ public class RTCScmIT extends AbstractTestCase {
 			// valid connectinfo, valid snapshot value, invalid snapshotOwnerType set to stream with specifying project
 			// area
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", projectAreaName + "invalid", streamName + "invalid", "", snapshotName);
+					"false", "stream", projectAreaName + "invalid", streamName + "invalid", "", snapshotName, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A project area with name &quot;" + projectAreaName + "invalid&quot; cannot be found.", result.renderHtml());
 			
 			// valid connectinfo, warning snapshot value(job property)
 			// only warning should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", null, "", "", "", "${rtcBuildSnapshot}");
+					"false", null, "", "", "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
 
 			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to none
 			// only warning should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "none", "", "", "", "${rtcBuildSnapshot}");
+					"false", "none", "", "", "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
 
 			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to workspace
 			// only warning should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "workspace", "", "", workspaceName, "${rtcBuildSnapshot}");
+					"false", "workspace", "", "", workspaceName, "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
 			
 			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to workspace no workspaceName
 			// only warning should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "workspace", "", "", "", "${rtcBuildSnapshot}");
+					"false", "workspace", "", "", "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
 
@@ -985,7 +1176,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// specifying project area, but having a workspace name
 			// only warning should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", "", streamName, "ignoreWorkspaceName", "${rtcBuildSnapshot}");
+					"false", "stream", "", streamName, "ignoreWorkspaceName", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
 			
@@ -994,22 +1185,22 @@ public class RTCScmIT extends AbstractTestCase {
 			// specifying project area and stream name
 			// only warning should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", "", "", "", "${rtcBuildSnapshot}");
+					"false", "stream", "", "", "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
 
-			// valid connectinfo, valid snapshot value, valid snapshotOwnerType set to stream with specifying project
+			// valid connectinfo, warning snapshot value(job property), valid snapshotOwnerType set to stream with specifying project
 			// area
 			// only warning should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", projectAreaName, streamName, "", "${rtcBuildSnapshot}");
+					"false", "stream", projectAreaName, streamName, "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_snapshot_not_validated(), result.renderHtml());
 
 			// valid connectinfo, warning snapshot value(job property), invalid snapshotOwnerType set to workspace
 			// only error should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "workspace", "", "", workspaceName + "invalid", "${rtcBuildSnapshot}");
+					"false", "workspace", "", "", workspaceName + "invalid", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("Unable to find a workspace with name &quot;" + workspaceName + "invalid&quot;", result.renderHtml());
 
@@ -1017,7 +1208,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// specifying project area, but having a workspace name
 			// only error should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", "", streamName + "invalid", "ignoreWorkspaceName", "${rtcBuildSnapshot}");
+					"false", "stream", "", streamName + "invalid", "ignoreWorkspaceName", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the repository.", result.renderHtml());
 
@@ -1025,7 +1216,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// area
 			// only error should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", projectAreaName, streamName + "invalid", "", "${rtcBuildSnapshot}");
+					"false", "stream", projectAreaName, streamName + "invalid", "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A stream with name &quot;" + streamName + "invalid&quot; cannot be found in the project area &quot;" + projectAreaName
 					+ "&quot;.", result.renderHtml());
@@ -1034,9 +1225,18 @@ public class RTCScmIT extends AbstractTestCase {
 			// area
 			// only error should be displayed
 			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "stream", projectAreaName + "invalid", streamName + "invalid", "", "${rtcBuildSnapshot}");
+					"false", "stream", projectAreaName + "invalid", streamName + "invalid", "", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("A project area with name &quot;" + projectAreaName + "invalid&quot; cannot be found.", result.renderHtml());
+			
+			// valid connectinfo, valid snapshot value, valid snapshotOwnerType set to stream with specifying project
+			// area
+			// warning load rules - can't be validated 
+			// only warning should be displayed
+			result = descriptor.doValidateBuildSnapshotConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
+					"false", "stream", projectAreaName, streamName, "", snapshotName, "comp1/f/ws.loadrule");
+			assertEquals(FormValidation.Kind.WARNING, result.kind);
+			assertEquals(Messages.RTCScm_path_to_load_rule_not_validated_snapshot(), result.renderHtml());
 
 		} finally {
 			testingFacade.invoke("tearDown", new Class[] { String.class, // serverURI
@@ -1476,6 +1676,637 @@ public class RTCScmIT extends AbstractTestCase {
 		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}
+	}	
+
+	/**
+	 * Validate invocation of dynamic load rules for build definition configuration.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void testBuildDefinitionConfiguration_dynamicLoadRules() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
+		Map<String, String> setupArtifacts = Utils.setupBuildDefinition_toTestLoadPolicy(testingFacade, defaultC, buildDefinitionId, workspaceName, componentName);
+		try {
+			// Create a basic project configuration
+			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
+			
+			// set useDynamicLoadRules to true and validate that the workspace is loaded according to the dynamic load
+			// rules
+			RTCScm rtcScm = (RTCScm)prj.getScm();
+			File tempDir = new File(System.getProperty("java.io.tmpdir"));
+			File buildTestDir = new File(tempDir, "HJPluginTests");
+			File loadDir = new File(buildTestDir, getFileUniqueName());
+			loadDir.mkdirs();
+			loadDir.deleteOnExit();
+			Assert.assertTrue(loadDir.exists());
+			BuildType buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(true);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID, action.getBuildResultUUID());
+
+			String[] children = null;
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				boolean isPre603BuildToolkit = Boolean.valueOf(setupArtifacts.get("isPre603BuildToolkit"));
+				String buildToolkitVersionString = "FATAL: RTC : checkout failure: Please check the version of the build toolkit. Build toolkit version 6.0.3 or above is required to load components using load rules.";
+
+				if (!isPre603BuildToolkit || (isPre603BuildToolkit && Utils.getMatch(build.getLogFile(), buildToolkitVersionString) == null)) {
+					Assert.fail("Failure not expected");
+				}
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(2, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/c.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/d.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/n.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree/e.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree/newFile.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+			}
+			
+			ParametersDefinitionProperty useExtensionProperty = new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] { new StringParameterDefinition(
+					RTCJobProperties.USE_DYNAMIC_LOAD_RULE, " ") }));
+			
+			// set useDynamicLoadRules to false, set useExtension parameter to true and validate that the workspace is
+			// loaded according to dynamic load rules
+			// set useOldLoadRuleGenerator property to true so that the deprecated method getComponentLoadRules()
+			// returns load rules
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+			
+			prj.addProperty(useExtensionProperty);			
+			List<ParametersAction> pAction = new ArrayList<ParametersAction>();
+			pAction.addAll(Utils.getPactionsWithEmptyBuildResultUUID());
+			pAction.add(new ParametersAction(new StringParameterValue(RTCJobProperties.USE_DYNAMIC_LOAD_RULE, "true")));
+			pAction.add(new ParametersAction(new StringParameterValue("useOldDynamicLoadRuleGenerator", "true")));
+			build = Utils.runBuild(prj, pAction);
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "1", action.getBuildResultUUID());
+
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				Assert.fail("Failure not expected");
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(3, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/c.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/d.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/n.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree/e.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree/newFile.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f/c.txt").exists());
+			}
+			prj.removeProperty(useExtensionProperty);
+			
+			// set useDynamicLoadRules to true, set useExtension parameter to false and validate that the workspace is
+			// loaded according to dynamic load rules
+			// set useOldLoadRuleGenerator property to true so that the deprecated method getComponentLoadRules()
+			// returns load rules
+			// set excludeComponents property so that the deprecated method getExcludeComponents() returns components to
+			// exclude
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(true);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			prj.addProperty(useExtensionProperty);
+
+			pAction = new ArrayList<ParametersAction>();
+			pAction.addAll(Utils.getPactionsWithEmptyBuildResultUUID());
+			pAction.add(new ParametersAction(new StringParameterValue(RTCJobProperties.USE_DYNAMIC_LOAD_RULE, "false")));
+			pAction.add(new ParametersAction(new StringParameterValue("useOldDynamicLoadRuleGenerator", "true")));
+			pAction.add(new ParametersAction(new StringParameterValue("excludeComponents", "true")));
+			build = Utils.runBuild(prj, pAction);
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "2", action.getBuildResultUUID());
+
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				Assert.fail("Failure not expected");
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(2, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/c.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/d.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/n.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree/e.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree/newFile.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+			}
+			prj.removeProperty(useExtensionProperty);
+			
+			// set useDynamicLoadRules to false and validate that the whole workspace is loaded
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "3", action.getBuildResultUUID());
+
+			children = loadDir.list();
+			Assert.assertEquals(4, children.length); 
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			Assert.assertTrue(new File(loadDir, "newTree2").exists());
+			Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+			File newTree2Dir = new File(loadDir, "newTree2");
+			children = newTree2Dir.list();
+			Assert.assertEquals(257, children.length);
+			File rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree/newFile.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			rootDir = new File(loadDir, componentName + "c2");
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			
+			// do not set useDynamicLoadRules and validate that the whole workspace is loaded
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "4", action.getBuildResultUUID());
+
+			children = loadDir.list();
+			Assert.assertEquals(4, children.length);
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+			Assert.assertTrue(new File(loadDir, "newTree2").exists());
+			newTree2Dir = new File(loadDir, "newTree2");
+			children = newTree2Dir.list();
+			Assert.assertEquals(257, children.length);
+			rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree/newFile.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			rootDir = new File(loadDir, componentName + "c2");
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			
+			// set useDynamicLoadRules to false, loadPolicy to useDynamicLoadrules and validate that the whole workspace
+			// is loaded
+			// loadPolicy field is not applicable for build definition configuration
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "5", action.getBuildResultUUID());
+
+			children = loadDir.list();
+			Assert.assertEquals(4, children.length); 
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+			Assert.assertTrue(new File(loadDir, "newTree2").exists());
+			newTree2Dir = new File(loadDir, "newTree2");
+			children = newTree2Dir.list();
+			Assert.assertEquals(257, children.length);
+			rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree/newFile.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			rootDir = new File(loadDir, componentName + "c2");
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * Validate invocation of dynamic load rules for repository workspace configuration.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void testRepositoryWorkspaceConfiguration_dynamicLoadRules() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream_toTestLoadPolicy(testingFacade, defaultC, streamName);
+		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
+		String componentName = setupArtifacts.get(Utils.ARTIFACT_COMPONENT_NAME);
+
+		try {
+			// Create a basic project configuration
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
+			
+			// set loadPolicy to useDynamicLoadRules and validate that the workspace is loaded according to the dynamic
+			// load rules
+			RTCScm rtcScm = (RTCScm)prj.getScm();
+			File tempDir = new File(System.getProperty("java.io.tmpdir"));
+			File buildTestDir = new File(tempDir, "HJPluginTests");
+			File loadDir = new File(buildTestDir, getFileUniqueName());
+			loadDir.mkdirs();
+			loadDir.deleteOnExit();
+			Assert.assertTrue(loadDir.exists());
+			BuildType buildType = rtcScm.getBuildType();
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES + " "); // validate that white space is trimmed
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setAcceptBeforeLoad(true);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+			
+			String[] children = null;
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				boolean isPre603BuildToolkit = Boolean.valueOf(setupArtifacts.get("isPre603BuildToolkit"));
+				String buildToolkitVersionString = "FATAL: RTC : checkout failure: Please check the version of the build toolkit. Build toolkit version 6.0.3 or above is required to load components using load rules.";
+
+				if (!isPre603BuildToolkit || (isPre603BuildToolkit && Utils.getMatch(build.getLogFile(), buildToolkitVersionString) == null)) {
+					Assert.fail("Failure not expected");
+				}
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(2, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/c.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/d.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/n.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/ws.loadrule").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree/e.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+			}
+			
+			// set useDynamicLoadRules to true, loadPolicy to useComponentLoadConfig and validate that the whole workspace
+			// is loaded
+			// useDynamicLoadRules is not applicable for non-buildDefinition configuration
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(true);
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			Utils.runBuild(prj, null);
+
+			children = loadDir.list();
+			Assert.assertEquals(2, children.length); 
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			File rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());			
+			Assert.assertTrue(new File(rootDir, "f/ws.loadrule").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			
+			// set loadPolicy to useLoadRules and validate that the whole workspace
+			// is loaded, as no load rule file is specified
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_LOAD_RULES);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			Utils.runBuild(prj, null);
+
+			children = loadDir.list();
+			Assert.assertEquals(2, children.length); 
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/ws.loadrule").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * Validate that empty values are trimmed for loadPolicy and componentLoadConfig
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void testEmptyLoadPolicyAndComponentLoadConfig() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream_toTestLoadPolicy(testingFacade, defaultC, streamName);
+		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
+		String componentName = setupArtifacts.get(Utils.ARTIFACT_COMPONENT_NAME);
+
+		try {
+			// Create a basic project configuration
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
+			
+			// set loadPolicy to useDynamicLoadRules and validate that the workspace is loaded according to the dynamic
+			// load rules
+			RTCScm rtcScm = (RTCScm)prj.getScm();
+			File tempDir = new File(System.getProperty("java.io.tmpdir"));
+			File buildTestDir = new File(tempDir, "HJPluginTests");
+			File loadDir = new File(buildTestDir, getFileUniqueName());
+			loadDir.mkdirs();
+			loadDir.deleteOnExit();
+			Assert.assertTrue(loadDir.exists());
+			BuildType buildType = rtcScm.getBuildType();
+			buildType.setLoadPolicy("   "); // validate that empty values are considered as null
+			buildType.setComponentLoadConfig("   "); // validate that empty values are considered as null 
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setAcceptBeforeLoad(true);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+			
+			String[] children = null;
+			Utils.runBuild(prj, null);
+			children = loadDir.list();
+			Assert.assertEquals(2, children.length); 
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			File rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());			
+			Assert.assertTrue(new File(rootDir, "f/ws.loadrule").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+	
+	/**
+	 * Validate invocation of dynamic load rules for snapshot configuration.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void testSnapshotConfiguration_dynamicLoadRules() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		
+		Config defaultC = Config.DEFAULT;
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String snapshotName = getSnapshotUniqueName();
+		String componentName = getComponentUniqueName();
+		
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		
+		Map<String, String> setupArtifacts = Utils.setupBuildSnapshot(loginInfo, workspaceName, snapshotName, componentName, testingFacade);
+		try {
+			String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
+			// setup a free style project and start a build
+			// verify that the temporary workspace created during the build is deleted
+			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, snapshotUUID);
+			// set loadPolicy to useDynamicLoadRules and validate that the workspace is loaded according to the dynamic
+			// load rules
+			RTCScm rtcScm = (RTCScm)prj.getScm();
+			File tempDir = new File(System.getProperty("java.io.tmpdir"));
+			File buildTestDir = new File(tempDir, "HJPluginTests");
+			File loadDir = new File(buildTestDir, getFileUniqueName());
+			loadDir.mkdirs();
+			loadDir.deleteOnExit();
+			Assert.assertTrue(loadDir.exists());
+			BuildType buildType = rtcScm.getBuildType();
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(true);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+			
+			String[] children = null;
+			FreeStyleBuild build = Utils.runBuild(prj, null);
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				boolean isPre603BuildToolkit = Boolean.valueOf(setupArtifacts.get("isPre603BuildToolkit"));
+				String buildToolkitVersionString = "FATAL: RTC : checkout failure: Please check the version of the build toolkit. Build toolkit version 6.0.3 or above is required to load components using load rules.";
+
+				if (!isPre603BuildToolkit || (isPre603BuildToolkit && Utils.getMatch(build.getLogFile(), buildToolkitVersionString) == null)) {
+					Assert.fail("Failure not expected");
+				}
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(2, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+			}
+			
+			// set useDynamicLoadRules to true, loadPolicy to useComponentLoadConfig and validate that the whole workspace
+			// is loaded
+			// useDynamicLoadRules is not applicable for non-buildDefinition configuration
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(true);
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			Utils.runBuild(prj, null);
+
+			children = loadDir.list();
+			Assert.assertEquals(2, children.length);
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			File rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			
+			// set loadPolicy to useLoadRules and validate that the whole workspace
+			// is loaded, as no load rule file is specified
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_LOAD_RULES);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			Utils.runBuild(prj, null);
+
+			children = loadDir.list();
+			Assert.assertEquals(2, children.length);
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+
+	/**
+	 * Validate that the build fails with an appropriate error message when invalid values are provided for loadPolicy
+	 * and componentLoadConfig attributes.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void testInvalidLoadPolicyAndComponentLoadConfigValues() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String streamName = getStreamUniqueName();
+		Map<String, String> setupArtifacts = Utils.setUpBuildStream_toTestLoadPolicy(testingFacade, defaultC, streamName);
+		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
+
+		// Create a basic project configuration
+		FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
+
+		// set loadPolicy to useDynamicLoadRules and validate that the workspace is loaded according to the dynamic
+		// load rules
+		RTCScm rtcScm = (RTCScm)prj.getScm();
+		BuildType buildType = rtcScm.getBuildType();
+		buildType.setLoadPolicy("useLoadRules1");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		FreeStyleBuild build = Utils.runBuild(prj, null);
+		
+		String invalidLoadPolicyString = "ERROR: RTC : checkout failure: The value for loadPolicy attribute must be one of \"" + RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG
+				+ "\", \"" + RTCScm.LOAD_POLICY_USE_LOAD_RULES + "\", or \"" + RTCScm.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES
+				+ "\". The specified value is \"useLoadRules1\".";
+
+		if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+			assertNotNull(Utils.getMatch(build.getLogFile(),invalidLoadPolicyString));
+		} else {
+			Assert.fail("Failure expected");
+		}
+
+		buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG);
+		buildType.setComponentLoadConfig("loadAllComponents1");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+			assertNotNull(Utils.getMatch(build.getLogFile(), "ERROR: " + Messages.RTCScm_checkout_failure4(Messages.RTCScm_invalid_value_for_componentLoadConfig(
+					RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, "loadAllComponents1"))));
+		} else {
+			Assert.fail("Failure expected");
+		}
+		
+		buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_LOAD_RULES);
+		buildType.setComponentLoadConfig("loadAllComponents1");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+			Assert.fail("Failure not expected");
+		}
+		
+		buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES);
+		buildType.setComponentLoadConfig("loadAllComponents1");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+			boolean isPre603BuildToolkit = Boolean.valueOf(setupArtifacts.get("isPre603BuildToolkit"));
+			String buildToolkitVersionString = "FATAL: RTC : checkout failure: Please check the version of the build toolkit. Build toolkit version 6.0.3 or above is required to load components using load rules.";
+
+			if (!isPre603BuildToolkit || (isPre603BuildToolkit && Utils.getMatch(build.getLogFile(), buildToolkitVersionString) == null)) {
+				Assert.fail("Failure not expected");
+			}
+		}
+		
+		buildType.setLoadPolicy("   ");
+		buildType.setComponentLoadConfig("   ");
+		prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+		build = Utils.runBuild(prj, null);
+
+		if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+			Assert.fail("Failure not expected");
+		}
 	}
 
 	/**
@@ -1647,8 +2478,10 @@ public class RTCScmIT extends AbstractTestCase {
 	 * Check for 
 	 * team_scm_snapshotUUID, 
 	 * repositoryAddress, 
-	 * team.scm.acceptPhaseOver,
-	 * team.scm.changesAccepted may be non zero from the very first build
+	 * team_scm_acceptPhaseOver,
+	 * team_scm_changes Accepted may be non zero from the very first build
+	 * team_scm_workspaceUUID - The UUID of the repository workspace.
+	 * 
 	 * @throws Exception
 	 */
 	@Test
@@ -1678,10 +2511,69 @@ public class RTCScmIT extends AbstractTestCase {
 						buildProperties.get(Utils.REPOSITORY_ADDRESS));
 			assertNotNull(buildProperties.get(Utils.TEAM_SCM_SNAPSHOTUUID));
 			assertNotNull(buildProperties.get(Utils.TEAM_SCM_ACCEPT_PHASE_OVER));
+			
+			// Check whether the workspace UUID is available in the build properties
+			// Get the workspace item id from setupArtifacts and compare
+			String workspaceItemIdFromArtifacts = hudson.Util.fixEmptyAndTrim(setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_ITEM_ID));
+			String workspaceItemIdFromBuildAction = hudson.Util.fixEmptyAndTrim(buildProperties.get(Utils.TEAM_SCM_WORKSPACE_UUID));
+			// Ensure that it is not null or empty and a valid UUID
+			assertTrue(workspaceItemIdFromBuildAction != null && workspaceItemIdFromArtifacts != null);
+			assertEquals("WorksapceItemId From Artifacts" + workspaceItemIdFromArtifacts
+					+ "WorkspaceItemId From BA " + workspaceItemIdFromBuildAction,
+					workspaceItemIdFromArtifacts, workspaceItemIdFromBuildAction);
+			
 			// Changes would have been dropped since the stream doesn't have some 
-			// change sets
-
+			// change sets and hence we see that the accepted changesets number is 
+			// greater than zero.
 			assertTrue(Integer.parseInt(buildProperties.get(Utils.TEAM_SCM_CHANGES_ACCEPTED))>0);
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
+	}
+
+	/**
+	 * Test {@link RTCBuildResultAction}'s properties exposed through API for a build
+	 * 
+	 */
+	@Test
+	public void testRTCBuildResultActionPropertiesInBuildAPI() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
+		Map<String, String> setupArtifacts = Utils.setupBuildDefinition(testingFacade, defaultC, 
+					buildDefinitionId, workspaceName, componentName);
+		
+		try {
+			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
+			// Run a build
+			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			Utils.dumpLogFile(build, "log" , "testRTCBuildResultActionPropertiesInBuildAPI", "file");		
+
+			// Verify
+			Utils.verifyRTCScmInBuild(build, true);
+			RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID, action.getBuildResultUUID());
+			
+			// Construct the build API URL. Use HTTPURLConnection to get the XML data
+			URL url = new URL(r.getURL() + "/" + build.getUrl() + "api/xml");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+			conn.connect();
+			
+			assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+			
+			InputStream is = conn.getInputStream();
+			String output = IOUtils.toString(is);
+			assertTrue(output.contains("<buildResultUUID>"+action.getBuildResultUUID()+"</buildResultUUID>"));
+			assertTrue(output.contains("<displayName>"+action.getDisplayName()+"</displayName>"));
+			assertTrue(output.contains("<serverURI>"+action.getServerURI()+"</serverURI>"));
+			assertTrue(output.contains("<urlName>"+action.getUrlName()+"</urlName>"));
 		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}

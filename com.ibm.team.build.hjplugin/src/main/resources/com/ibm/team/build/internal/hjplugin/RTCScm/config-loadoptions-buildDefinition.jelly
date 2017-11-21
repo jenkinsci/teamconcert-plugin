@@ -1,0 +1,19 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2017 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+	<f:section name="LoadOptions" title="${%loadOptions.title}" />       
+	<!-- Use dynamic load rules -->        
+    <f:optionalBlock name="useDynamicLoadRules" title="${%load.useDynamicLoadRules.title}" field="useDynamicLoadRules" checked="${instance.useDynamicLoadRules}" inline="true"/>                   
+ </j:jelly>

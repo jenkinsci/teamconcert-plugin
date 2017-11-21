@@ -22,7 +22,6 @@ import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
-import com.ibm.team.build.client.ITeamBuildClient;
 import com.ibm.team.build.common.builddefinition.IAutoDeliverConfigurationElement;
 import com.ibm.team.build.common.builddefinition.UDeployConfigurationElement.TriggerPolicy;
 import com.ibm.team.build.common.model.BuildState;
@@ -35,6 +34,7 @@ import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCWorkspaceUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
+import com.ibm.team.build.internal.hjplugin.rtc.VersionCheckerUtil;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
 import com.ibm.team.process.common.IProcessAreaHandle;
@@ -62,8 +62,6 @@ import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
-import com.ibm.team.scm.common.WorkspaceComparisonFlags;
-import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 import com.ibm.team.scm.common.dto.IItemConflictReport;
 import com.ibm.team.scm.common.dto.IUpdateReport;
 import com.ibm.team.workitem.common.model.IWorkItem;
@@ -82,17 +80,25 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_PB_STREAM_ITEM_ID = "pbStreamItemId";
 	public static final String ARTIFACT_PB_STREAM_NAME = "pbStreamName";
 	public static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
+	public static final String ARTIFACT_COMPONENT2_ITEM_ID = "component2ItemId";
 	public static final String ARTIFACT_COMPONENT_ADDED_ITEM_ID = "componentAddedItemId";
 	public static final String ARTIFACT_BASELINE_SET_ITEM_ID = "baselineSetItemId";
 	public static final String ARTIFACT_BUILD_DEFINITION_ITEM_ID = "buildDefinitionItemId";
 	public static final String ARTIFACT_BUILD_DEFINITION_ID = "buildDefinitionId";
 	public static final String ARTIFACT_BUILD_ENGINE_ITEM_ID = "buildEngineItemId";
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
-	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_1= "buildResultItemId1";
-	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_2 = "buildResultItemId2";
-	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID_3 = "buildResultItemId3";
 	public static final String ARTIFACT_PROJECT_AREA_ITEM_ID = "projectAreaItemId";
 	public static final String ARTIFACT_PROCESS_DEFINITION_ITEM_ID = "processDefinitionItemId";
+	public static final String ARTIFACT_LOAD_RULE_FILE_ITEM_ID = "loadRuleFileItemId";
+	public static final String COMPONENT_NAME = "componentName";
+	public static final String ARTIFACT_TEST_FOLDER_ITEM_ID = "testFolderItemId";
+	public static final String ARTIFACT_LOAD_RULE_FILE_PATH = "loadRuleFilePath";
+	public static final String ARTIFACT_LOAD_RULE_STREAM_ITEM_ID = "lrStreamItemId";
+	public static final String ARTIFACT_LOAD_RULE_STREAM_NAME = "lrStreamName";
+	public static final String ARTIFACT_LOAD_RULE_STREAM_WS_ITEM_ID = "lrStreamWSItemId";
+	public static final String ARTIFACT_LOAD_RULE_STREAM_SS_ITEM_ID = "lrStreamSSItemId";
+	public static final String ARTIFACT_LOAD_RULE_SS_ITEM_ID = "lrSnapshotItemId";
+	public static final String ARTIFACT_LOAD_RULE_SS_WS_ITEM_ID = "lrSSWSId";
 	
 	public TestSetupTearDownUtil() {
 		
@@ -414,6 +420,20 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
 		IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, singleWorkspaceName);
+		String componentName = singleWorkspaceName + "-comp1";
+		String c1 = "/" + componentName;
+		SCMUtil.addComponent(workspaceManager, buildWorkspace, componentName, new String[] {
+				c1 + "/",
+				c1 + "/f/",
+				c1 + "/f/a.txt",
+				c1 + "/f/b.txt",
+				c1 + "/f/c.txt",
+				c1 + "/f/d.txt",
+				c1 + "/f/ws.loadrule",
+				c1 + "/f/tree/",
+				c1 + "/f/tree/e.txt",
+				c1 + "/f2/",
+				});
 		IWorkspaceConnection buildWorkspace2 = SCMUtil.createWorkspace(workspaceManager, multipleWorkspaceName);
 		IWorkspaceConnection buildWorkspace3 = SCMUtil.createWorkspace(workspaceManager, multipleWorkspaceName);
 		
@@ -826,6 +846,52 @@ public class TestSetupTearDownUtil extends BuildClient {
 				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 				IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 				IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+		
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+	
+	@SuppressWarnings("restriction")
+	public Map<String, String> setupBuildResultContributions_toTestLoadPolicy(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String buildDefinitionId, IProgressMonitor progress) throws Exception {
+
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+
+		Map<String, String> artifactIds = new HashMap<String, String>();
+
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		String c1 = "/" + componentName;
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] { c1 + "/",
+				c1 + "/f/", c1 + "/f/a.txt", c1 + "/f/b.txt", c1 + "/f/c.txt", c1 + "/f/d.txt", c1 + "/f/n.txt", c1 + "/f/tree/",
+				c1 + "/f/tree/e.txt", c1 + "/f2/", });
+		
+		String c2 = c1 + "c2";
+		SCMUtil.addComponent(workspaceManager, buildStream, componentName + "c2", new String[] { c2 + "/",
+				c2 + "/f/", c2 + "/f/a.txt", c2 + "/f/b.txt", c2 + "/f/c.txt"});
+
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream, workspaceName);
+		IComponent component = (IComponent)pathToHandle.get(componentName);
+
+		// capture interesting uuids to verify against
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/a.txt", pathToHandle.get(c1 + "/f/a.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/c.txt", pathToHandle.get(c1 + "/f/c.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/tree/e.txt", pathToHandle.get(c1 + "/f/tree/e.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/tree/", pathToHandle.get(c1 + "/f/tree/").getItemId().getUuidValue());
+
+		createChangeSet3(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
+		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
+
+		BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+				buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+				IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
+
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
 		return artifactIds;
 	}
 
@@ -900,10 +966,12 @@ public class TestSetupTearDownUtil extends BuildClient {
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
 		IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, workspaceName);
+		String c1 = "/" + componentName;
 		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildWorkspace, componentName, new String[] {
-				"/",
-				"/f/",
-				"/f/a.txt",
+				c1 + "/",
+				c1 + "/f/",
+				c1 + "/f/a.txt",
+				c1 + "/f2"
 				});
 		
 		IComponentHandle component = (IComponentHandle) pathToHandle.get(componentName);
@@ -914,6 +982,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		IBaselineSetHandle buildSnapshot = SCMUtil.createSnapshot(buildWorkspace, snapshotName);
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BASELINE_SET_ITEM_ID, buildSnapshot.getItemId().getUuidValue());
+		
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
 
 		return artifactIds;
 
@@ -1048,6 +1118,268 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
+	public Map<String, String> testOldLoadRules_setAllLoadOptions(ConnectionDetails connectionDetails, String workspaceName, String componentName,
+			String hjPath, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		Map<String, String> artifactIds = buildConfigurationTests.setupOldLoadRules_setAllLoadOptions(workspaceName, componentName, hjPath);
+		try {
+			buildConfigurationTests.testOldLoadRules_setAllLoadOptions(workspaceName, componentName, hjPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_loadRulesWithNoLoadPolicy(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean configureLoadRules, boolean setLoadPolicy,
+			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_loadRulesWithNoLoadPolicy(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, configureLoadRules, setLoadPolicy);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_loadRulesWithNoLoadPolicy(workspaceName, buildDefinitionId, hjPath, buildPath,
+					artifactIds, configureLoadRules, setLoadPolicy);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		return artifactIds;
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean configureLoadRules, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_loadRulesWithLoadPolicySetToLoadRules(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, configureLoadRules);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules(workspaceName, buildDefinitionId, hjPath, buildPath,
+					artifactIds, configureLoadRules);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_createFoldersForComponents(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean shouldCreateFoldersForComponents, String loadPolicy,
+			String componentLoadConfig, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_toTestCreateFolderForComponents(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, shouldCreateFoldersForComponents, loadPolicy, componentLoadConfig);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_createFoldersForComponents(workspaceName, buildDefinitionId, hjPath, buildPath,
+					artifactIds, shouldCreateFoldersForComponents, loadPolicy, componentLoadConfig);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_createFoldersForComponents_usingLoadRules(ConnectionDetails connectionDetails,
+			String workspaceName, String componentName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_toTestCreateFoldersForComponents_usingLoadRules(workspaceName,
+				componentName, buildDefinitionId, hjPath, buildPath);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_createFoldersForComponents_usingLoadRules(workspaceName, buildDefinitionId, hjPath,
+					buildPath, artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_componentsToExclude(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean shouldExcludeComponents, String loadpolicy, String componentLoadConfig,
+			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_toTestComponentsToExclude(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, shouldExcludeComponents, loadpolicy, componentLoadConfig);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_componentsToExclude(workspaceName, buildDefinitionId, hjPath, buildPath, artifactIds,
+					shouldExcludeComponents, loadpolicy, componentLoadConfig);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_includeComponents(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean addLoadComponents, String valueOfIncludeComponents,
+			String loadPolicy, String componentLoadConfig, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_toTestIncludeComponents(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, addLoadComponents, valueOfIncludeComponents, loadPolicy, componentLoadConfig);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_includeComponents(workspaceName, buildDefinitionId, hjPath, buildPath, artifactIds,
+					addLoadComponents, valueOfIncludeComponents, loadPolicy, componentLoadConfig);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}	
+
+	public Map<String, String> testBuildDefinitionConfig_multipleLoadRuleFiles(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean setLoadPolicyToUseLoadRules, IProgressMonitor progress)
+			throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_toTestMultipleLoadRuleFiles(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, setLoadPolicyToUseLoadRules);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_multipleLoadRuleFiles(workspaceName, buildDefinitionId, hjPath, buildPath, artifactIds,
+					setLoadPolicyToUseLoadRules);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_oldLoadRulesFormat(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean setLoadPolicyToUseLoadRules, IProgressMonitor progress)
+			throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_toTestOldLoadRulesFormat(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, setLoadPolicyToUseLoadRules);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_oldLoadRulesFormat(workspaceName, buildDefinitionId, hjPath, buildPath, artifactIds,
+					setLoadPolicyToUseLoadRules);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+
+	public Map<String, String> testRepositoryWorkspaceConfig_loadPolicy(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+
+		Map<String, String> artifactIds = buildConfigurationTests.setupRepositoryWorkspaceConfig_toTestLoadPolicy(workspaceName, componentName);
+		try {
+			buildConfigurationTests.testRepositoryWorkspaceConfig_toTestLoadPolicy(workspaceName, componentName, hjPath, buildPath,
+					componentName + "1/" + artifactIds.get(ARTIFACT_LOAD_RULE_FILE_PATH), artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+	
+	public Map<String, String> testStreamConfig_loadPolicy(ConnectionDetails connectionDetails, String workspaceName, String componentName,
+			String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+
+		Map<String, String> artifactIds = buildConfigurationTests.setupStreamConfig_toTestLoadPolicy(workspaceName, componentName);
+		try {
+			buildConfigurationTests.testStreamConfig_loadPolicy(workspaceName, componentName, hjPath, buildPath,
+					componentName + "1/" + artifactIds.get(ARTIFACT_LOAD_RULE_FILE_PATH), artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+	
+	public Map<String, String> testSnapshotConfig_loadPolicy(ConnectionDetails connectionDetails, String workspaceName, String componentName,
+			String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+
+		Map<String, String> artifactIds = buildConfigurationTests.setupSnapshotConfig_toTestLoadPolicy(workspaceName, componentName);
+		try {
+			buildConfigurationTests.testSnapshotConfig_loadPolicy(workspaceName, componentName, hjPath, buildPath,
+					componentName + "1/" + artifactIds.get(ARTIFACT_LOAD_RULE_FILE_PATH), artifactIds);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+
 	public Map<String, String> testPersonalBuild(
 			ConnectionDetails connectionDetails, String workspaceName,
 			String componentName, String hjPath, String buildPath, IProgressMonitor progress) throws Exception {
@@ -1153,8 +1485,49 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 		IWorkspaceConnection buildStream = SCMUtil.createStream(workspaceManager, projectAreaHandle, streamName);
 
+		String componentName = TestUtils.getComponentUniqueName();
+		String workspaceName = TestUtils.getRepositoryWorkspaceUniqueName();
+		
+		String c1 = "/" + componentName;
+		Map<String, IItemHandle> pathToHandle = setupWorkspaceWithComponent(repo, buildStream, 
+				workspaceName, componentName, 
+				new String[] {
+					c1 + "/",
+					c1 + "/f/",
+					c1 + "/f/a.txt",
+					c1 + "/f/b.txt",
+					c1 + "/f/c.txt",
+					c1 + "/f/d.txt",
+					c1 + "/f/n.txt",
+					c1 + "/f/ws.loadrule",
+					c1 + "/f/tree/",
+					c1 + "/f/tree/e.txt",
+					c1 + "/f2/",
+					});
+		
+		IComponent component = (IComponent) pathToHandle.get(componentName);
+		IWorkspace buildWorkspace = (IWorkspace) pathToHandle.get(workspaceName);
+		IWorkspaceConnection buildWorkspaceConnection = workspaceManager.getWorkspaceConnection(buildWorkspace, null);
+		
+		// Add the component to the stream
+		IComponentAdditionOp componentOp = buildStream.componentOpFactory().addComponent(component, buildWorkspaceConnection, false);
+		buildStream.applyComponentOperations(Collections.singletonList(componentOp), null);
+		
+		// Get the change set out of the artifacts
+		IChangeSetHandle csH = (IChangeSetHandle)pathToHandle.get("changeSet1");
+
+		// Deliver the changes
+//		IChangeHistorySyncReport report = buildWorkspaceConnection.compareTo(buildStream, WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,
+//				Collections.EMPTY_LIST, null);		
+//		buildWorkspaceConnection.deliver(buildStream, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
+
 		// capture interesting uuids to verify against
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getItemId().getUuidValue());
+		artifactIds.put(COMPONENT_NAME, componentName);
+		
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
 
 		return artifactIds;
 	}
@@ -1222,6 +1595,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 					c1 + "/f/c.txt",
 					c1 + "/f/d.txt",
 					c1 + "/f/n.txt",
+					c1 + "/f/ws.loadrule",
 					c1 + "/f/tree/",
 					c1 + "/f/tree/e.txt",
 					c1 + "/f2/",
@@ -1239,11 +1613,10 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IChangeSetHandle csH = (IChangeSetHandle) pathToHandle.get("changeSet1");
 
 		//Deliver the changes
-		IChangeHistorySyncReport report = buildWorkspaceConnection.compareTo(buildStreamConnection, 
-					WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,  
-					Collections.EMPTY_LIST, null);
-		// TODO  disabled for now until we use a modified process spec for the project area
-		//buildWorkspaceConnection.deliver(buildStreamConnection, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
+//		IChangeHistorySyncReport report = buildWorkspaceConnection.compareTo(buildStreamConnection, 
+//					WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,  
+//					Collections.EMPTY_LIST, null);
+//		buildWorkspaceConnection.deliver(buildStreamConnection, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
 		
 		// capture interesting uuids to verify against
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStreamConnection.getContextHandle().getItemId().getUuidValue());
@@ -1251,6 +1624,69 @@ public class TestSetupTearDownUtil extends BuildClient {
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getItemId().getUuidValue());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_NAME, buildWorkspace.getName());
+		artifactIds.put(COMPONENT_NAME, componentName);
+		
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		return artifactIds;
+	}
+	
+	public Map<String, String> setupTestBuildStream_toTestLoadPolicy(ConnectionDetails connectionDetails, String streamName,
+			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		
+		String workspaceName = TestUtils.getRepositoryWorkspaceUniqueName();
+		String componentName = TestUtils.getComponentUniqueName();
+
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		IProcessAreaHandle projectAreaHandle = ProcessUtil.getDefaultProjectArea(repo);
+
+		IWorkspaceConnection buildStreamConnection = SCMUtil.createStream(workspaceManager, projectAreaHandle, streamName);
+		String c1 = "/" + componentName;
+		Map<String, IItemHandle> pathToHandle = setupWorkspaceWithComponent(repo, buildStreamConnection, 
+				workspaceName, componentName, 
+				new String[] {
+					c1 + "/",
+					c1 + "/f/",
+					c1 + "/f/a.txt",
+					c1 + "/f/b.txt",
+					c1 + "/f/c.txt",
+					c1 + "/f/d.txt",
+					c1 + "/f/n.txt",
+					c1 + "/f/ws.loadrule",
+					c1 + "/f/tree/",
+					c1 + "/f/tree/e.txt",
+					c1 + "/f2/",
+					});
+		
+		IComponent component = (IComponent) pathToHandle.get(componentName);
+		IWorkspace buildWorkspace = (IWorkspace) pathToHandle.get(workspaceName);
+		IWorkspaceConnection buildWorkspaceConnection = workspaceManager.getWorkspaceConnection(buildWorkspace, null);
+
+		// Add the component to the stream
+		IComponentAdditionOp componentOp = buildStreamConnection.componentOpFactory().addComponent(component, buildWorkspaceConnection, false);
+		buildStreamConnection.applyComponentOperations(Collections.singletonList(componentOp), null);
+		
+		// Get the change set out of the artifacts
+		IChangeSetHandle csH = (IChangeSetHandle) pathToHandle.get("changeSet1");
+
+		//Deliver the changes
+//		IChangeHistorySyncReport report = buildStreamConnection.compareTo(buildWorkspaceConnection, 
+//					WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,  
+//					Collections.EMPTY_LIST, null);
+//		buildWorkspaceConnection.deliver(buildStreamConnection, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
+		
+		// capture interesting uuids to verify against
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStreamConnection.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_NAME, streamName);
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getItemId().getUuidValue());
+		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_NAME, buildWorkspace.getName());
+		artifactIds.put(COMPONENT_NAME, componentName);
+		
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
 		return artifactIds;
 	}
 

@@ -126,6 +126,9 @@
 				        <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}" value="${instance.buildDefinition}" />
 				    </f:entry>
 				    
+				     <!-- Include the controls to specify load options -->
+				    <st:include page="config-loadoptions-buildDefinition.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+				    
 				    <!-- Include the option to specify custom snapshot name -->
 				    <st:include page="config-snapshotoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 				    
@@ -154,7 +157,7 @@
 			        <f:optionalBlock name="acceptBeforeLoad" title="${%acceptOptions.acceptBeforeLoad}" field="acceptBeforeLoad" checked="${instance == null || (instance != null &amp;&amp; instance.acceptBeforeLoad)}" inline="true" />
 
 				    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
-				        method="validateBuildWorkspaceConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace" />
+				        method="validateBuildWorkspaceConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace,loadPolicy,pathToLoadRuleFile" />
 		    	                        
 				</f:dropdownListBlock>
 
@@ -226,7 +229,7 @@
 				    <st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 
 					<f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
-						method="validateBuildSnapshotConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,currentSnapshotOwnerType,processAreaOfOwningStream,owningStream,owningWorkspace,buildSnapshot" />   
+						method="validateBuildSnapshotConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,currentSnapshotOwnerType,processAreaOfOwningStream,owningStream,owningWorkspace,buildSnapshot,pathToLoadRuleFile" />   
 				                        
 				</f:dropdownListBlock>
 
@@ -254,7 +257,7 @@
 				    <f:section name="changelogOptions" title="${%changelogOptions.title}"/>
 					<f:optionalBlock name="generateChangelogWithGoodBuild" title="${%changelog.compareWithGoodBuild}" field="generateChangelogWithGoodBuild" checked="${instance.generateChangelogWithGoodBuild}" inline="true" />
                     <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
-                        method="validateBuildStreamConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,processArea,buildStream" />         
+                        method="validateBuildStreamConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,processArea,buildStream,loadPolicy,pathToLoadRuleFile" />         
 
 				</f:dropdownListBlock>
 			</f:dropdownList>

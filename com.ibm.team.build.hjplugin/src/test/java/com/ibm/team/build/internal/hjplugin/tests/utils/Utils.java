@@ -71,6 +71,7 @@ public class Utils {
 	public static final String ARTIFACT_STREAM_NAME = "streamName";
 	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
 	public static final String ARTIFACT_COMPONENT_ADDED_ITEM_ID = "componentAddedItemId";
+	public static final String ARTIFACT_COMPONENT_NAME = "componentName";
 
 	public static final String ARTIFACT_BUILDDEFINITION_ITEM_ID = "buildDefinitionItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_ID = "buildResultItemId";
@@ -85,6 +86,7 @@ public class Utils {
 	public static final String TEAM_SCM_SNAPSHOTUUID = "team_scm_snapshotUUID";
 	public static final String TEAM_SCM_STREAM_CHANGES_DATA = "team_scm_streamChangesData";
 	public static final String TEAM_SCM_SNAPSHOT_OWNER = "team_scm_snapshotOwner";
+	public static final String TEAM_SCM_WORKSPACE_UUID = "team_scm_workspaceUUID";
 
 	public static final Object REPOSITORY_ADDRESS = "repositoryAddress";
 	
@@ -225,10 +227,12 @@ public class Utils {
 					String.class, //connectorId
 					Object.class, //extProvider
 					PrintStream.class, // logger
+					String.class, // loadPolicy
+					String.class, // componentLoadConfig
+					String.class, // componentsToExclude
+					String.class, // pathToLoadRuleFile
 					boolean.class, // isDeleteNeeded
 					boolean.class, //createFoldersForComponents
-					String.class, // componentsToBeExcluded
-					String.class, //loadRules
 					boolean.class, // acceptBeforeLoad
 					String.class, // workspaceComment
 					boolean.class},
@@ -252,10 +256,12 @@ public class Utils {
 					callConnectorId, 
 					null, 
 					listener.getLogger(),
+					options.loadPolicy,
+					options.componentLoadConfig,
+					options.componentsToExclude,
+					options.pathToLoadRuleFile,
 					options.isDeleteNeeded, 
 					options.createFoldersForComponents, 
-					options.componentsToBeExcluded, 
-					options.loadRules,
 					options.acceptBeforeLoad,
 					null,
 					true);
@@ -396,6 +402,29 @@ public class Utils {
 		
 		return setupArtifacts;
 	}
+	 
+	/**
+	 * Set up a stream and a repository workspace flowing to that stream.
+	 * 
+	 * @param testingFacade - The {@link RTCTestingFacade} for the build toolkit
+	 * @param c - configuration options for this test run
+	 * @param streamName - The name of the stream
+	 * @return - a map of artifact ids and their UUIDs. Artifact ids are declared in TestSetupTearDownUtil in -rtc
+	 *         plugin.
+	 * @throws Exception
+	 */
+	public static Map<String, String> setUpBuildStream_toTestLoadPolicy(RTCFacadeWrapper testingFacade, Config c, String streamName) throws Exception {
+		// Setup a build stream with a component
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildStream_toTestLoadPolicy", new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class }, // streamName
+				c.getServerURI(), c.getUserID(), c.getPassword(), c.getTimeout(), streamName);
+
+		return setupArtifacts;
+		}
 	
 	/**
 	 * Sets up a build definition with the given buildDefinitionId. Also create a build repository workspace with a
@@ -432,6 +461,27 @@ public class Utils {
 						componentName, buildDefinitionId);
 		return setupArtifacts;
 	}
+	
+	public static Map<String, String> setupBuildDefinition_toTestLoadPolicy(RTCFacadeWrapper testingFacade, Config c,
+			String buildDefinitionId, String workspaceName, String componentName) throws Exception {
+	RTCLoginInfo loginInfo = c.getLoginInfo();
+	@SuppressWarnings("unchecked")
+	Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			.invoke("setupBuildResultContributions_toTestLoadPolicy",
+					new Class[] { String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							int.class, // timeout,
+							String.class, // workspaceName,
+							String.class, // componentName
+							String.class}, // buildDefinitionId
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(), workspaceName,
+					componentName, buildDefinitionId);
+	return setupArtifacts;
+}
 	
 	/**
 	 * Sets up a build definition with the given buildDefinitionId. Also create a build repository workspace with a

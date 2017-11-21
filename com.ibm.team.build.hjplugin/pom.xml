@@ -80,7 +80,7 @@
         <excludeTests>**/UnknownTests.java</excludeTests>
         <includeTests>**/*IT.java</includeTests>
         <dumpLogFiles>false</dumpLogFiles>
-        <rtcJarVersion>1.2.3</rtcJarVersion>
+        <rtcJarVersion>1.2.4</rtcJarVersion>
     </properties>
 
 	<!-- get every artifact through repo.jenkins-ci.org, which proxies all the 

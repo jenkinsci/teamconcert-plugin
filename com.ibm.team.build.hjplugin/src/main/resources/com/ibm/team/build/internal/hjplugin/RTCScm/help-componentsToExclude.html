@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,27 +15,6 @@
 
 <div>
   <p>
-   If only some components in the workspace will be built, you can exclude components that do not need to load.
-  </p>
-  <p>
-  	To exclude components, list them in the following JSON format, save the list to a file on disk, and specify the path to the file in this field.
-  </p>
-  <p>
-  <pre>
-  {
-    "componentsToExclude":[
-      {
-	    "componentName":"JUnit"
-      },
-      {
-	    "componentName":"Releng"
-      }
-    ]
-  }
-  </pre>
-  </p>
-  <p>
-  	You can also specify "componentId" instead of "componentName." The "componentId" is the item ID (UUID) of the component. 
-  	If you specify both "componentName" and "componentId", the lookup occurs only by "componentId."
+   Specify the names of the components to exclude in a comma-separated list.
   </p>
 </div>

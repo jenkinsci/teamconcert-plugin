@@ -26,8 +26,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Stack;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
@@ -36,18 +39,24 @@ import java.util.logging.Logger;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.build.internal.scm.ComponentLoadRules;
 import com.ibm.team.filesystem.client.internal.utils.FlowTableUtil;
+import com.ibm.team.filesystem.common.IFileItem;
+import com.ibm.team.filesystem.common.IFileItemHandle;
 import com.ibm.team.process.client.IProcessClientService;
 import com.ibm.team.process.common.IProcessArea;
 import com.ibm.team.process.common.IProcessItem;
 import com.ibm.team.process.common.IProjectArea;
 import com.ibm.team.process.common.ITeamArea;
 import com.ibm.team.process.common.ProcessCommon;
+import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.internal.ItemManager;
+import com.ibm.team.repository.common.IContributor;
 import com.ibm.team.repository.common.IContributorHandle;
 import com.ibm.team.repository.common.IItem;
 import com.ibm.team.repository.common.IItemHandle;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
 import com.ibm.team.scm.client.IWorkspaceConnection;
@@ -55,8 +64,14 @@ import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.client.internal.RepositoryItemProvider;
 import com.ibm.team.scm.common.IBaselineSet;
+import com.ibm.team.scm.common.IComponent;
+import com.ibm.team.scm.common.IComponentHandle;
+import com.ibm.team.scm.common.IVersionable;
+import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
+import com.ibm.team.scm.common.VersionablePermissionDeniedException;
+import com.ibm.team.scm.common.dto.IComponentSearchCriteria;
 import com.ibm.team.scm.common.dto.IWorkspaceSearchCriteria;
 import com.ibm.team.scm.common.internal.ChangeHistoryHandle;
 import com.ibm.team.scm.common.internal.ComponentEntry;
@@ -64,18 +79,76 @@ import com.ibm.team.scm.common.internal.ComponentEntry;
 /**
  * Provides utility methods to retrieve information on a RTC SCM Streams and Workspaces
  */
+@SuppressWarnings("restriction")
 public class RTCWorkspaceUtils {
 	private static final String [] hexToStringMap = {"0","1","2","3","4", "5", "6", "7","8", "9","a", "b", "c", "d", "e" ,"f"};
 	private static RTCWorkspaceUtils instance = null;
     private static final Logger LOGGER = Logger.getLogger(RTCWorkspaceUtils.class.getName());
     private static final String MD5_ALG = "MD5"; //$NON-NLS1$
-
+    
+	// file path segment to be used when specifying the load rule file path
+	private static final String LOAD_RULE_FILE_PATH_SEPARATOR = "/"; //$NON-NLS-1$
+	
+	private static final String LOAD_COMPONENTS_LIST_SEPARATOR = ","; //$NON-NLS-1$
+	
 	static {
 		instance = new RTCWorkspaceUtils();
 	}
 	
 	private RTCWorkspaceUtils() {
 		
+	}
+	
+	/**
+	 * Inner class is used to represent the type of load configured in the build in both the build execution and field
+	 * validation scenarios. We use different parameters to determine the load configuration across these two scenarios.
+	 * This class wraps those parameters and provides an uniform interface to determine the load type.
+	 */
+	public static class LoadConfigurationDescriptor {
+		@SuppressWarnings("unused")
+		private BuildConfiguration buildConfiguration;
+		private boolean isSnapshotConfiguration;
+		private boolean isStreamConfiguration;
+		private String snapshotName;
+		private String streamName;
+		
+		/**
+		 * Use build configuration to construct this instance. This constructor is used when the build is being executed.
+		 */
+		public LoadConfigurationDescriptor(BuildConfiguration buildConfiguration) {
+			this.buildConfiguration = buildConfiguration;
+			if (buildConfiguration != null && buildConfiguration.isSnapshotLoad()) {
+				this.isSnapshotConfiguration = true;
+				this.snapshotName = buildConfiguration.getBuildSnapshotDescriptor().getSnapshotName();
+			} else if (buildConfiguration != null && buildConfiguration.isStreamLoad()) {
+				this.isStreamConfiguration = true;
+				this.streamName = buildConfiguration.getBuildStreamDescriptor().getName();
+			}
+		}
+		
+		/**
+		 * Use the flag and stream name to construct this instance. This constructor is used during field validation.
+		 */
+		public LoadConfigurationDescriptor(boolean isStreamConfiguration, String streamName) {
+			this.isStreamConfiguration = isStreamConfiguration;
+			this.streamName = streamName;
+		}
+
+		public boolean isSnapshotConfiguration() {
+			return isSnapshotConfiguration;
+		}
+
+		public boolean isStreamConfiguration() {
+			return isStreamConfiguration;
+		}
+
+		public String getSnapshotName() {
+			return snapshotName;
+		}
+
+		public String getStreamName() {
+			return streamName;
+		}
 	}
 	
 	/**
@@ -405,7 +478,6 @@ public class RTCWorkspaceUtils {
 	 * @throws NoSuchAlgorithmException
 	 * @throws IOException
 	 */
-	@SuppressWarnings("restriction")
 	public String getDigest(ITeamRepository repository, IWorkspaceHandle workspaceHandle, IProgressMonitor progress) throws TeamRepositoryException, NoSuchAlgorithmException, IOException {
 		LOGGER.finest("RTCWorkspaceUtils.getDigest: Enter");
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
@@ -498,7 +570,6 @@ public class RTCWorkspaceUtils {
 	 * @param monitor A progress monitor to report progress
 	 * @throws TeamRepositoryException If there is any error setting the flow target
 	 */
-	@SuppressWarnings("restriction")
 	public void setFlowTarget(ITeamRepository repository, IWorkspace source, IWorkspaceHandle target, IProgressMonitor monitor) throws TeamRepositoryException {
 		SubMonitor progress = SubMonitor.convert(monitor, 10);
 		try {
@@ -511,6 +582,448 @@ public class RTCWorkspaceUtils {
 	}
 	
 	/**
+	 * Given a path to a load rule file in the format <component name>/<path to load rule file> this method validates
+	 * the given path and returns the load rules in the format used in build definitions.
+	 * 
+	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
+	 *            configured to load from a workspace, snapshot, or a stream.
+	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
+	 * @param pathToLoadRuleFile Path to the load rule file. Can be <code>null</code>
+	 * @param clientLocale Locale of the requesting client
+	 * @param progress Progress monitor
+	 * 
+	 * @return if path to load rule file is specified, then return the load rules in the same format used in build
+	 *         definitions.
+	 * 
+	 * @throws Exception in the path is not specified in the expected format or if the component/load rule file does not
+	 *             exist
+	 */
+	@SuppressWarnings("unchecked")
+	public String getComponentLoadRuleString(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection,
+			String pathToLoadRuleFile, Locale clientLocale, IProgressMonitor progress) throws Exception {
+		LOGGER.finer("RTCWorkspaceUtils.getComponentLoadRules: resolving load rule file specified in the job configuration"); //$NON-NLS-1$
+		if (pathToLoadRuleFile == null || pathToLoadRuleFile.trim().length() == 0) {
+			return null;
+		}
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		pathToLoadRuleFile = pathToLoadRuleFile.trim();
+		// validate if the path is specified in the expected format
+		int separatorIndex = pathToLoadRuleFile.indexOf(LOAD_RULE_FILE_PATH_SEPARATOR);
+		if (separatorIndex == -1) {
+			throw new RTCConfigurationException(Messages.get(clientLocale).RTCWorkspaceUtils_path_to_load_rule_file_invalid_format(pathToLoadRuleFile));
+		}
+		String componentNameOrId = pathToLoadRuleFile.substring(0, separatorIndex);
+		if (componentNameOrId == null || componentNameOrId.trim().length() == 0) {
+			throw new RTCConfigurationException(Messages.get(clientLocale).RTCWorkspaceUtils_path_to_load_rule_file_no_component_name(
+					pathToLoadRuleFile));
+		}
+		String loadRuleFilePathOrId = pathToLoadRuleFile.substring(separatorIndex + 1);
+		if (loadRuleFilePathOrId == null || loadRuleFilePathOrId.trim().length() == 0) {
+			throw new RTCConfigurationException(Messages.get(clientLocale).RTCWorkspaceUtils_path_to_load_rule_file_no_file_path(pathToLoadRuleFile));
+		}
+		HashMap<String, IComponent> nameToComponentMap = new HashMap<String, IComponent>();
+		HashMap<String, IComponent> uuidToComponentMap = new HashMap<String, IComponent>();
+		List<String> duplicateComponentNames = new ArrayList<String>();
+		List<IComponent> components = wsConnection.teamRepository().itemManager()
+				.fetchCompleteItems(wsConnection.getComponents(), IItemManager.DEFAULT, monitor.newChild(50));
+		for (IComponent component : components) {
+			if (component != null) {
+				if (nameToComponentMap.get(component.getName()) != null) {
+					duplicateComponentNames.add(component.getName());
+				}
+				nameToComponentMap.put(component.getName(), component);
+				uuidToComponentMap.put(component.getItemId().getUuidValue(), component);
+			}
+		}
+		
+		String componentId = null;
+		if (isUUID(componentNameOrId)) {
+			// validate component id
+			validateComponentWithIdExistsInWorkspace(loadConfigurationDescriptor, wsConnection, componentNameOrId, uuidToComponentMap, clientLocale,
+					monitor.newChild(25));
+			componentId = componentNameOrId;
+		} else {
+			// validate component name
+			componentId = validateComponentWithNameExistsInWorkspace(loadConfigurationDescriptor, wsConnection, componentNameOrId,
+					nameToComponentMap, duplicateComponentNames, clientLocale, monitor.newChild(25));
+		}
+		IComponent component = uuidToComponentMap.get(componentId);
+		String fileItemId = null;
+		try {
+			if (isUUID(loadRuleFilePathOrId)) {
+				// validate file item id
+				validateFileWithIdExistsInWorkspace(loadConfigurationDescriptor, wsConnection, component, loadRuleFilePathOrId, pathToLoadRuleFile,
+						clientLocale, monitor.newChild(25));
+				fileItemId = loadRuleFilePathOrId;
+			} else {
+				// validate file path
+				fileItemId = validateFileInPathExistsInWorkspace(loadConfigurationDescriptor, wsConnection, component, loadRuleFilePathOrId, clientLocale,
+						monitor.newChild(25));
+			}
+		} catch (VersionablePermissionDeniedException e1) {
+			// Lets try to build up a more informative error message.
+			ITeamRepository repo = (ITeamRepository)wsConnection.getResolvedWorkspace().getOrigin();
+			IContributor contributor = repo.loggedInContributor();
+			if (contributor != null && component != null) {
+				throw new VersionablePermissionDeniedException(Messages.get(clientLocale).RTCWorkspaceUtils_private_load_rule(contributor.getName(),
+						contributor.getUserId(), loadRuleFilePathOrId, component.getName()), e1);
+			} else {
+				throw e1;
+			}
+		}
+		// construct load rule string in the same format like in RTC build definition
+		Map<IComponentHandle, IFileItemHandle> componentLoadRuleMap = new HashMap<IComponentHandle, IFileItemHandle>();
+		componentLoadRuleMap.put(component, (IFileItemHandle)IFileItem.ITEM_TYPE.createItemHandle(UUID.valueOf(fileItemId), null));
+		ComponentLoadRules compLoadRules = new ComponentLoadRules(componentLoadRuleMap);
+		return compLoadRules.getBuildPropertySetting();
+	}
+	
+	/**
+	 * Given a list of comma separated id/name of components, return a list of component handles. 
+	 * 
+	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
+	 *            configured to load from a workspace, snapshot, or a stream.
+	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
+	 * @param components Comma separated list of id/name of components
+	 * @param failOnError determines whether to error out when a component is not found 
+	 * @param listener A listener that will be notified of the progress and errors encountered.
+	 * @param clientLocale Locale of the requesting client
+	 * @param progress Progress monitor
+	 * @return List of component handles
+	 * 
+	 * @throws Exception if component is not found and fail on error is true
+	 */
+	@SuppressWarnings("unchecked")
+	public Collection<IComponentHandle> getComponentHandles(LoadConfigurationDescriptor loadConfigurationDescriptor,
+			IWorkspaceConnection wsConnection, String components, boolean failOnError, IConsoleOutput listener, Locale clientLocale,
+			IProgressMonitor progress) throws Exception {
+		LOGGER.finer("RepositoryConnection.getComponentsToExclude: resolving components to exclude specified in the job configuration"); //$NON-NLS-1$
+		if (components == null || components.trim().length() == 0) {
+			return Collections.EMPTY_LIST;
+		}
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+
+		ITeamRepository repository = wsConnection.teamRepository();
+
+		HashMap<String, IComponent> nameToComponentMap = new HashMap<String, IComponent>();
+		HashMap<String, IComponent> uuidToComponentMap = new HashMap<String, IComponent>();
+		List<String> duplicateComponentNames = new ArrayList<String>();
+		List<IComponent> wsComponents = repository.itemManager()
+				.fetchCompleteItems(wsConnection.getComponents(), IItemManager.DEFAULT, monitor.newChild(50));
+		for (IComponent component : wsComponents) {
+			if (component != null) {
+				if (nameToComponentMap.get(component.getName()) != null) {
+					duplicateComponentNames.add(component.getName());
+				}
+				nameToComponentMap.put(component.getName(), component);
+				uuidToComponentMap.put(component.getItemId().getUuidValue(), component);
+			}
+		}
+		String excludedComponentsStr = components.trim();
+
+		Collection<IComponentHandle> result = new ArrayList<IComponentHandle>();
+		HashSet<String> componentIds = new HashSet<String>();
+		boolean done = false;
+		while (!done) {
+			int index = excludedComponentsStr.indexOf(LOAD_COMPONENTS_LIST_SEPARATOR); //$NON-NLS-1$
+			String uuidValue = null;
+			if (index == -1) {
+				done = true;
+				uuidValue = excludedComponentsStr;
+			} else {
+				uuidValue = excludedComponentsStr.substring(0, index);
+				excludedComponentsStr = excludedComponentsStr.substring(index + 1).trim();
+			}
+			if (uuidValue != null && uuidValue.trim().length() > 0) {
+				String componentId = null;
+				uuidValue = uuidValue.trim();
+				if (isUUID(uuidValue)) {
+					// validate component id
+					try {
+						validateComponentWithIdExistsInWorkspace(loadConfigurationDescriptor, wsConnection, uuidValue, uuidToComponentMap,
+								clientLocale, monitor.newChild(25));
+					} catch (RTCConfigurationException ex) {
+						if (failOnError) {
+							throw ex;
+						} else {
+							listener.log(ex.getMessage(), ex);
+						}
+					}
+					componentId = uuidValue;
+				} else {
+					// validate component name
+					try {
+						componentId = validateComponentWithNameExistsInWorkspace(loadConfigurationDescriptor, wsConnection, uuidValue,
+								nameToComponentMap, duplicateComponentNames, clientLocale, monitor.newChild(25));
+					} catch (RTCConfigurationException ex) {
+						if (failOnError || duplicateComponentNames.contains(uuidValue)) {
+							throw ex;
+						} else {
+							listener.log(ex.getMessage(), ex);
+						}
+					}
+				}
+				if (componentId != null && !componentIds.contains(componentId)) {
+					componentIds.add(componentId);
+					UUID itemId = UUID.valueOf(componentId);
+					result.add((IComponentHandle)IComponent.ITEM_TYPE.createItemHandle(repository, itemId, null));
+				}
+			}
+		}
+
+		return result;
+	}
+
+	
+	/**
+	 * Validate if the given value is an UUID.
+	 * 
+	 * @param value String to be validated
+	 * @return true if the value is an UUID otherwise false
+	 */
+	public static boolean isUUID(String value) {
+		try {
+			UUID.valueOf(value);
+			return true;
+		} catch (IllegalArgumentException e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Validate if a component with the given item ID exists in the repository and included in the specified workspace.
+	 * 
+	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
+	 *            configured to load from a workspace, snapshot, or a stream.
+	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
+	 * @param componentId Item ID of the component
+	 * @param uuidToComponentMap Item ID to IComponent mapping for the components present in the workspace in context
+	 * @param clientLocale locale of the requesting client
+	 * @param progress progress monitor
+	 * @throws TeamRepositoryException
+	 */
+	private void validateComponentWithIdExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection,
+			String componentId, HashMap<String, IComponent> uuidToComponentMap, Locale clientLocale, IProgressMonitor progress)
+			throws TeamRepositoryException, RTCConfigurationException {
+
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		UUID componentItemId = UUID.valueOf(componentId);
+		if (uuidToComponentMap.get(componentId) == null) {
+			// if the component is not found in the workspace, check if it exists in the repository
+			IComponentHandle componentHandle = (IComponentHandle)IComponent.ITEM_TYPE.createItemHandle(wsConnection.teamRepository(),
+					componentItemId, null);
+			try {
+				wsConnection.teamRepository().itemManager().fetchCompleteItem(componentHandle, ItemManager.DEFAULT, monitor);
+			} catch (ItemNotFoundException e) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found(componentId));
+			}
+
+			// the component exists in the repository, but not included in the workspace/snapshot
+			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found_snapshot(componentId,
+						loadConfigurationDescriptor.getSnapshotName()));
+			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found_stream(componentId,
+						loadConfigurationDescriptor.getStreamName()));
+			} else {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_id_not_found_ws(componentId,
+						wsConnection.getName()));
+			}
+		}
+
+	}
+
+	/**
+	 * Validate if a component with the given item ID exists in the repository and included in the specified workspace.
+	 * 
+	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
+	 *            configured to load from a workspace, snapshot, or a stream.
+	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
+	 * @param componentName Name of the component
+	 * @param nameToComponentMap Name to IComponent mapping for the components present in the workspace in context
+	 * @param duplicateComponentNames Names associated with more than one component in the workspace
+	 * @param clientLocale Locale of the requesting client
+	 * @param progress progress monitor
+	 * @return
+	 * @throws TeamRepositoryException
+	 */
+	private String validateComponentWithNameExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor,
+			IWorkspaceConnection wsConnection, String componentName, HashMap<String, IComponent> nameToComponentMap,
+			List<String> duplicateComponentNames, Locale clientLocale, IProgressMonitor progress) throws TeamRepositoryException,
+			RTCConfigurationException {
+
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		String componentId = null;
+		// first eliminate the duplicate components with same name case
+		if (duplicateComponentNames.contains(componentName)) {
+			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_multiple_components_with_name_in_snapshot(
+						componentName, loadConfigurationDescriptor.getSnapshotName()));
+			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_multiple_components_with_name_in_stream(
+						componentName, loadConfigurationDescriptor.getStreamName()));
+			} else {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_multiple_components_with_name_in_ws(componentName,
+						wsConnection.getName()));
+			}
+		}
+
+		// if component exists in workspace then we are fine
+		if (nameToComponentMap.get(componentName) != null) {
+			componentId = nameToComponentMap.get(componentName).getItemId().getUuidValue();
+		} else {
+			// see if a component with the given name exists in the repository
+			IComponentSearchCriteria componentSearchCriteria = IComponentSearchCriteria.FACTORY.newInstance();
+			componentSearchCriteria.setExactName(componentName);
+			Collection<IComponentHandle> components = SCMPlatform.getWorkspaceManager(wsConnection.teamRepository()).findComponents(
+					componentSearchCriteria, Integer.MAX_VALUE, monitor);
+			if (components.size() == 0) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found(componentName));
+			} else {
+				// component with the given name exists in the repository but not included in the workspace/snapshot
+				if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
+					throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found_snapshot(
+							componentName, loadConfigurationDescriptor.getSnapshotName()));
+				} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
+					throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found_stream(
+							componentName, loadConfigurationDescriptor.getStreamName()));
+				} else {
+					throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_component_with_name_not_found_ws(
+							componentName, wsConnection.getName()));
+				}
+			}
+		}
+		return componentId;
+	}
+
+	/**
+	 * Validate if the load rule file with the given id exists in the repository and included in the specified
+	 * workspace/component context.
+	 * 
+	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
+	 *            configured to load from a workspace, snapshot, or a stream.
+	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
+	 * @param component Component in context
+	 * @param fileItemId UUID of the load rule file
+	 * @param pathToLoadRuleFile Path to the load rule file
+	 * @param clientLocale Locale of the requesting client
+	 * @param progress progress monitor
+	 * @throws TeamRepositoryException
+	 */
+	private void validateFileWithIdExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection,
+			IComponent component, String fileItemId, String pathToLoadRuleFile, Locale clientLocale, IProgressMonitor progress)
+			throws TeamRepositoryException, RTCConfigurationException {
+
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		UUID uuid = null;
+		try {
+			uuid = UUID.valueOf(fileItemId);
+		} catch (IllegalArgumentException ex) {
+			// invalid file item id
+			throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_invalid_item_uuid(fileItemId,
+					pathToLoadRuleFile));
+		}
+
+		// check if a file with the given item id exists in the workspace/component
+		// we can't check for the existence of the file in the repository using itemManager as it is an unmanaged item
+		IFileItemHandle fileItemHandle = (IFileItemHandle)IFileItem.ITEM_TYPE.createItemHandle(wsConnection.teamRepository(), uuid, null);
+		try {
+			IVersionable versionable = wsConnection.configuration(component).fetchCompleteItem(fileItemHandle, monitor.newChild(50));
+			// The item exists in the workspace/component context but not a file
+			if (!(versionable instanceof IFileItem)) {
+				if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
+					throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_with_id_not_a_file_snapshot(
+							fileItemId, component.getName(), loadConfigurationDescriptor.getSnapshotName()));
+
+				} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
+					throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_with_id_not_a_file_stream(
+							fileItemId, component.getName(), loadConfigurationDescriptor.getStreamName()));
+				} else {
+					throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_with_id_not_a_file_ws(fileItemId,
+							component.getName(), wsConnection.getName()));
+				}
+
+			}
+		} catch (ItemNotFoundException e) {
+			// The item does not exist in the workspace/component context
+			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_with_id_not_found_snapshot(
+						fileItemId, component.getName(), loadConfigurationDescriptor.getSnapshotName()));
+
+			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_with_id_not_found_stream(
+						fileItemId, component.getName(), loadConfigurationDescriptor.getStreamName()));
+			} else {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_with_id_not_found_ws(fileItemId,
+						component.getName(), wsConnection.getName()));
+			}
+		}
+	}
+
+	/**
+	 * Validate if the load rule file in the given path exists in the workspace/component context.
+	 * 
+	 * @param loadConfigurationDescriptor Descriptor instance that represents load configuration. A build can be
+	 *            configured to load from a workspace, snapshot, or a stream.
+	 * @param wsConnection Workspace connection corresponding to the workspace in context/configured in the build
+	 * @param component Component in context
+	 * @param filePath Path to the load file in the repository
+	 * @param clientLocale Locale of the requesting client
+	 * @param progress progress monitor
+	 * @return Item ID of the load rule file
+	 * @throws TeamRepositoryException
+	 */
+	private String validateFileInPathExistsInWorkspace(LoadConfigurationDescriptor loadConfigurationDescriptor, IWorkspaceConnection wsConnection,
+			IComponent component, String filePath, Locale clientLocale, IProgressMonitor progress) throws TeamRepositoryException,
+			RTCConfigurationException {
+
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		// empty file path
+		if (filePath.length() == 0) {
+			throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_path_empty(component.getName()));
+		}
+		String tmpFilePath = filePath;
+		// Having "/" at the beginning results in an empty path segment which is not accepted in resolvePath
+		if (tmpFilePath.startsWith(LOAD_RULE_FILE_PATH_SEPARATOR)) {
+			tmpFilePath = tmpFilePath.substring(1);
+		}
+		String[] pathSegments = tmpFilePath.split(LOAD_RULE_FILE_PATH_SEPARATOR);
+		IVersionableHandle versionableHandle = wsConnection.configuration(component).resolvePath(component.getRootFolder(), pathSegments,
+				monitor.newChild(50));
+
+		if (versionableHandle == null) {
+			// file not found
+			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_not_found_snapshot(filePath,
+						component.getName(), loadConfigurationDescriptor.getSnapshotName()));
+
+			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_not_found_stream(filePath,
+						component.getName(), loadConfigurationDescriptor.getStreamName()));
+			} else {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_file_not_found_ws(filePath,
+						component.getName(), wsConnection.getName()));
+			}
+		} else if (!(versionableHandle instanceof IFileItemHandle)) {
+			// path doesn't resolve to a file
+			if (loadConfigurationDescriptor.isSnapshotConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_not_a_file_snapshot(filePath,
+						component.getName(), loadConfigurationDescriptor.getSnapshotName()));
+
+			} else if (loadConfigurationDescriptor.isStreamConfiguration()) {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_not_a_file_stream(filePath,
+						component.getName(), loadConfigurationDescriptor.getStreamName()));
+			} else {
+				throw new RTCConfigurationException(Messages.get(clientLocale).RepositoryConnection_load_rule_not_a_file_ws(filePath,
+						component.getName(), wsConnection.getName()));
+			}
+		}
+		// This call is required to validate if the user has read access to the load rule file
+		wsConnection.configuration(component).fetchCompleteItem(versionableHandle, monitor.newChild(50));
+		return versionableHandle.getItemId().getUuidValue();
+	}
+
+	/**
 	 * Returns a String that represents the state of the given workspace, derived from its components
 	 *  
 	 * @param compEntries
@@ -518,7 +1031,6 @@ public class RTCWorkspaceUtils {
 	 * @throws IOException
 	 * @throws NoSuchAlgorithmException
 	 */
-	@SuppressWarnings("restriction")
 	private String getDigest(final ArrayList<ComponentEntry> compEntries) throws IOException, NoSuchAlgorithmException {
 		LOGGER.finest("RTCWorkspaceUtils.getDigest for component Entries : Begin");
 		MessageDigest d = MessageDigest.getInstance(MD5_ALG);
@@ -568,7 +1080,6 @@ public class RTCWorkspaceUtils {
 		return streamDataHashS.toString();
 	}
 
-	@SuppressWarnings("restriction")
 	private void sort(ArrayList<ComponentEntry> compEntries) {
 		Collections.sort(compEntries, new Comparator<ComponentEntry>() {
 			@Override

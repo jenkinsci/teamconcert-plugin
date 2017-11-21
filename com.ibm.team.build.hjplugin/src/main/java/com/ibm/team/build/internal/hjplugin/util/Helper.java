@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2016 IBM Corporation and others.
+ * Copyright (c) 2014, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -23,10 +23,7 @@ import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.util.FormValidation;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -34,27 +31,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-
-import org.apache.commons.io.IOUtils;
 
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
-import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 
 public class Helper {
 	private static final Logger LOGGER = Logger.getLogger(Helper.class.getName());
 	
-	public static final String COMPONENTS_TO_EXCLUDE = "componentsToExclude"; //$NON-NLS-1$
-	public static final String LOAD_RULES = "loadRules"; //$NON-NLS-1$
-	public static final String COMPONENT_ID = "componentId"; //$NON-NLS-1$
-	public static final String COMPONENT_NAME = "componentName"; //$NON-NLS-1$
-	public static final String FILE_ITEM_ID = "fileItemId"; //$NON-NLS-1$
-	public static final String FILE_PATH = "filePath"; //$NON-NLS-1$
 	private static final String previousSnapshotOwner = "team_scm_snapshotOwner"; //$NON-NLS-1$
 
 	/** 
@@ -134,76 +121,6 @@ public class Helper {
 		 return value;
 	}
 	
-	/**
-	 * Reads the json text, specifying the components to exclude during load, from the given path on disk and validates
-	 * that required fields are provided.
-	 * 
-	 * @param componentsToExcludefilePath path to a file on disk
-	 * @return json text specifying the components to exclude during load
-	 * @throws Exception
-	 */
-	public static String validateAndGetComponentsToExcludeJson(String componentsToExcludefilePath) throws Exception {
-		String componentsToExcludeJsonStr = readJsonFromFile(componentsToExcludefilePath);
-		if (componentsToExcludeJsonStr != null) {
-			LOGGER.finer("Helper.validateAndGetComponentsToExcludeJson: stepping through and validating components to exclude json"); //$NON-NLS-1$
-			JSONObject json = JSONObject.fromObject(componentsToExcludeJsonStr);
-			if (!json.has(COMPONENTS_TO_EXCLUDE)) {
-				throw new IllegalArgumentException(Messages.Helper_components_to_exclude_required());
-			}
-			JSONArray componentsArray = json.getJSONArray(COMPONENTS_TO_EXCLUDE);
-			if (componentsArray.isEmpty()) {
-				throw new IllegalArgumentException(Messages.Helper_components_to_exclude_required());
-			}
-			for (int i = 0; i < componentsArray.size(); i++) {
-				JSONObject inner = (JSONObject)componentsArray.get(i);
-				if (!inner.has(COMPONENT_ID) && !inner.has(COMPONENT_NAME)) {
-					throw new IllegalArgumentException(Messages.Helper_component_id_or_name_required());
-				}
-				if (!inner.has(COMPONENT_ID) && inner.has(COMPONENT_NAME) && inner.getString(COMPONENT_NAME).trim().length() == 0) {
-					throw new IllegalArgumentException(Messages.Helper_component_name_empty_components_to_exclude());
-				}
-			}
-		}
-		return componentsToExcludeJsonStr;
-	}
-
-	/**
-	 * Reads the json text, specifying the component-to-load-rule-mapping to be enforced during load, from the given
-	 * path on disk and validates that the required fields are provided.
-	 * 
-	 * 
-	 * @param loadRulesFilePath path to a file on disk
-	 * @return json text specifying the component-to-load-rule-mapping to be enforced during load
-	 * @throws Exception
-	 */
-	public static String validateAndGetLoadRulesJson(String loadRulesFilePath) throws Exception {
-		String loadRulesJsonStr = readJsonFromFile(loadRulesFilePath);
-		if (loadRulesJsonStr != null) {
-			LOGGER.finer("Helper.validateAndGetLoadRulesJson: stepping through and validating load rules json"); //$NON-NLS-1$
-			JSONObject json = JSONObject.fromObject(loadRulesJsonStr);
-			if (!json.has(LOAD_RULES)) {
-				throw new IllegalArgumentException(Messages.Helper_load_rules_required());
-			}
-			JSONArray loadRulesArray = json.getJSONArray(LOAD_RULES);
-			if (loadRulesArray.isEmpty()) {
-				throw new IllegalArgumentException(Messages.Helper_load_rules_required());
-			}
-			for (int i = 0; i < loadRulesArray.size(); i++) {
-				JSONObject inner = (JSONObject)loadRulesArray.get(i);
-				if (!inner.has(COMPONENT_ID) && !inner.has(COMPONENT_NAME)) {
-					throw new IllegalArgumentException(Messages.Helper_component_id_or_name_required());
-				}
-				if (!inner.has(COMPONENT_ID) && inner.has(COMPONENT_NAME) && inner.getString(COMPONENT_NAME).trim().length() == 0) {
-					throw new IllegalArgumentException(Messages.Helper_component_name_empty_load_rules());
-				}
-				if (!inner.has(FILE_ITEM_ID) && !inner.has(FILE_PATH)) {
-					throw new IllegalArgumentException(Messages.Helper_file_item_id_or_name_required());
-				}
-			}
-		}
-		return loadRulesJsonStr;
-	}
-
 	private static String getValueFromParametersAction(Run<?, ?> build, String key) {
 		LOGGER.finest("Helper.getValueFromParametersAction : Begin"); //$NON-NLS-1$
 		String value = null;
@@ -587,31 +504,6 @@ public class Helper {
 			}
 		}
 		return paramValue;
-	}
-
-
-	/**
-	 * Reads and returns the json text from the specified file
-	 * 
-	 * @param filePath path to the file on disk containing the json text
-	 * @return json text specified in the file
-	 * @throws Exception
-	 */
-	private static String readJsonFromFile(String filePath) throws Exception {
-		if (Util.fixEmptyAndTrim(filePath) != null) {
-			File fileHandle = new File(filePath);
-			if (!fileHandle.exists()) {
-				throw new IllegalArgumentException(Messages.Helper_file_not_found(filePath));
-			}
-			if (!fileHandle.isFile()) {
-				throw new IllegalArgumentException(Messages.Helper_not_a_file(filePath));
-			}
-			InputStream is = new FileInputStream(fileHandle);
-			String jsonTxt = IOUtils.toString(is);
-			is.close();
-			return jsonTxt;
-		}
-		return null;
 	}
 
 	private interface IJenkinsBuildIterator {

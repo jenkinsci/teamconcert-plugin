@@ -499,60 +499,66 @@ public class RTCFacade {
 
 	/**
 	 * Load the contents of the updated build workspace at hjWorkspacePath.
+	 * 
 	 * @param serverURI The address of the repository server
 	 * @param userId The user id to use when logging into the server
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param processArea The name of the project or team area
-	 * @param buildResultUUID The build result to relate build results with. It also specifies the
-	 * build configuration. May be <code>null</code> if buildWorkspace or buildSnapshot or buildStream is supplied. Only one of
-	 * buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
-	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a
-	 * buildResultUUID or buildSnapshot or buildStream is supplied. Only one of buildWorkspace/buildResultUUID/buildSnapshot/buildStream
-	 * should be supplied.
+	 * @param buildResultUUID The build result to relate build results with. It also specifies the build configuration.
+	 *            May be <code>null</code> if buildWorkspace or buildSnapshot or buildStream is supplied. Only one of
+	 *            buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
+	 * @param buildWorkspace The name of the RTC build workspace. May be <code>null</code> if a buildResultUUID or
+	 *            buildSnapshot or buildStream is supplied. Only one of
+	 *            buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
 	 * @param buildSnapshotContextMap Name-Value pairs representing the snapshot owner details
-	 * @param buildSnapshot The name or UUID of the RTC build snapshot. May be <code>null</code> if a
-	 * buildResultUUID or buildWorkspace or buildStream is supplied. Only one of buildWorkspace/buildResultUUID/buildSnapshot/buildStream
-	 * should be supplied.
-	 * @param buildStream The name or UUID of the RTC build stream. May be <code>null</code> if a buildResultUUID or 
-	 * buildWorkspace or buildSnapshot is supplied. Only one of buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
-	 * @param buildStreamData The additional stream data for stream load. 
+	 * @param buildSnapshot The name or UUID of the RTC build snapshot. May be <code>null</code> if a buildResultUUID or
+	 *            buildWorkspace or buildStream is supplied. Only one of
+	 *            buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
+	 * @param buildStream The name or UUID of the RTC build stream. May be <code>null</code> if a buildResultUUID or
+	 *            buildWorkspace or buildSnapshot is supplied. Only one of
+	 *            buildWorkspace/buildResultUUID/buildSnapshot/buildStream should be supplied.
+	 * @param buildStreamData The additional stream data for stream load.
 	 * @param hjWorkspacePath The path where the contents of the RTC workspace should be loaded.
 	 * @param isCustomSnapshotName Indicates if a custom snapshot name is configured in the Job
 	 * @param snapshotName The name of the snapshot created during accept.
-	 * @param listener A listener that will be notified of the progress and errors encountered.
-	 * This is defined as an Object due to class loader issues. It is expected to implement
-	 * {@link TaskListener}.
+	 * @param listener A listener that will be notified of the progress and errors encountered. This is defined as an
+	 *            Object due to class loader issues. It is expected to implement {@link TaskListener}.
 	 * @param clientLocale The locale of the requesting client
 	 * @param parentActivityId id for parent activity under which load has to be performed.
 	 * @param connectorId id to locate the connector to retrieve object created by accept call.
+	 * @param loadPolicy load policy value that determines whether to use a load rule file or component load
+	 *            configuration
+	 * @param componentLoadConfig when load policy is set to use component load config this field determines whether to
+	 *            load all components or exclude some components
+	 * @param componentsToExclude List of components to exclude
+	 * @param pathToLoadRuleFile Path to the load rule file.
 	 * @param isDeleteNeeded true if Jenkins job is configured to delete load directory before fetching
 	 * @param createFoldersForComponents Create folders for components if true
-	 * @param componentsToExclude json text representing the list of components to exclude during load
-	 * @param loadRules json text representing the component to load rule file mapping
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 * @param temporaryWorkpsaceComment
-	 * @param shouldDeleteTemporaryWorkspace whether load should delete the temporary workspace 
-	 * 			before returning
+	 * @param shouldDeleteTemporaryWorkspace whether load should delete the temporary workspace before returning
 	 * @throws Exception If any non-recoverable error occurs.
 	 */
 	public Map<String, Object> load(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
 			String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
 			Map<String, String> buildStreamData, String hjWorkspacePath, boolean isCustomSnapshotName, String snapshotName, final Object listener,
-			Locale clientLocale, String parentActivityId, String connectorId, Object extProvider, PrintStream logger, boolean isDeleteNeeded,
-			boolean createFoldersForComponents, String componentsToExclude, String loadRules, boolean acceptBeforeLoad,
-			String temporaryWorkpsaceComment, boolean shouldDeleteTemporaryWorkspace) throws Exception {
+			Locale clientLocale, String parentActivityId, String connectorId, Object extProvider, PrintStream logger, String loadPolicy,
+			String componentLoadConfig, String componentsToExclude, String pathToLoadRuleFile, boolean isDeleteNeeded,
+			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkpsaceComment, boolean shouldDeleteTemporaryWorkspace)
+			throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
-		AbstractBuildClient buildClient = getBuildClient(); 
+		AbstractBuildClient buildClient = getBuildClient();
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		IConsoleOutput clientConsole = getConsoleOutput(listener);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try	{
 			// create the BuildSnapshotContext instance from the Map and pass it to load
-			return repoConnection.load(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap), buildSnapshot, buildStream, buildStreamData, hjWorkspacePath,
-					isCustomSnapshotName, snapshotName, clientConsole, monitor, clientLocale, parentActivityId, connectorId, extProvider, logger, isDeleteNeeded,
-					createFoldersForComponents, componentsToExclude, loadRules,
-					acceptBeforeLoad, temporaryWorkpsaceComment, shouldDeleteTemporaryWorkspace);
+			return repoConnection.load(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap),
+					buildSnapshot, buildStream, buildStreamData, hjWorkspacePath, isCustomSnapshotName, snapshotName, clientConsole, monitor,
+					clientLocale, parentActivityId, connectorId, extProvider, logger, loadPolicy, componentLoadConfig, componentsToExclude,
+					pathToLoadRuleFile, isDeleteNeeded, createFoldersForComponents, acceptBeforeLoad, temporaryWorkpsaceComment,
+					shouldDeleteTemporaryWorkspace);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -675,81 +681,6 @@ public class RTCFacade {
 	}
 
 	/**
-	 * Validate the list of components to exclude.
-	 * 
-	 * @param serverURI The address of the repository server
-	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server.
-	 * @param timeout The timeout period for requests made to the server
-	 * @param processArea The name of the project or team area
-	 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or stream
-	 * @param buildWorkspace Name of the workspace configured in the build
-	 * @param componentsToExclude Json text specifying the list of components to exclude during load
-	 * @param clientLocale The locale of the requesting client
-	 * @return an error message to display or null if there is no problem
-	 * @throws Exception
-	 */
-	public String testComponentsToExclude(String serverURI, String userId, String password, int timeout, String processArea,
-			boolean isStreamConfiguration, String buildWorkspace, String componentsToExclude, Locale clientLocale) throws Exception {
-		SubMonitor monitor = getProgressMonitor();
-		String errorMessage = null;
-		try {
-			AbstractBuildClient buildClient = getBuildClient(); 
-			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
-			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
-			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testComponentsToExclude(processArea, isStreamConfiguration, buildWorkspace, componentsToExclude, monitor.newChild(50),
-					clientLocale);
-		} catch (RTCConfigurationException e) {
-			errorMessage = e.getMessage();
-		} catch (RTCValidationException e) {
-			errorMessage = e.getMessage();
-		} catch (OperationCanceledException e) {
-			throw Utils.checkForCancellation(e);
-		} catch (TeamRepositoryException e) {
-			throw Utils.checkForCancellation(e);
-		}
-		return errorMessage;
-	}
-	
-	/**
-	 * Validate the component-to-load-rule file mapping.
-	 * 
-	 * @param serverURI The address of the repository server
-	 * @param userId The user id to use when logging into the server
-	 * @param password The password to use when logging into the server.
-	 * @param timeout The timeout period for requests made to the server
-	 * @param processArea The name of the project or team area
-	 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or a stream
-	 * @param buildWorkspace Name of the workspace configured in the build
-	 * @param loadRules Json text specifying the component to load rule file mapping
-	 * @param clientLocale The locale of the requesting client
-	 * @return an error message to display or null if there is no problem
-	 * @throws Exception
-	 */
-	public String testLoadRules(String serverURI, String userId, String password, int timeout, String processArea, boolean isStreamConfiguration,
-			String buildWorkspace, String loadRules, Locale clientLocale) throws Exception {
-		SubMonitor monitor = getProgressMonitor();
-		String errorMessage = null;
-		try {
-			AbstractBuildClient buildClient = getBuildClient(); 
-			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
-			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
-			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testLoadRules(processArea, isStreamConfiguration, buildWorkspace, loadRules, monitor.newChild(50), clientLocale);
-		} catch (RTCConfigurationException e) {
-			errorMessage = e.getMessage();
-		} catch (RTCValidationException e) {
-			errorMessage = e.getMessage();
-		} catch (OperationCanceledException e) {
-			throw Utils.checkForCancellation(e);
-		} catch (TeamRepositoryException e) {
-			throw Utils.checkForCancellation(e);
-		}
-		return errorMessage;
-	}
-
-	/**
 	 * Validate if the project area/team area exists.
 	 * 
 	 * @param serverURI The address of the repository server
@@ -773,6 +704,43 @@ public class RTCFacade {
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCConfigurationException e) {
+			errorMessage = e.getMessage();
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+		return errorMessage;
+	}
+	
+	/**
+	 * Validate if load rule file exists in the specified component.
+	 * 
+	 * @param serverURI The address of the repository server
+	 * @param userId The user id to use when logging into the server
+	 * @param password The password to use when logging into the server.
+	 * @param timeout The timeout period for requests made to the server
+	 * @param processArea The name of the project or team area
+	 * @param isStreamConfiguration Flag that determines if the <code>buildWorkspace</code> corresponds to a workspace or a stream
+	 * @param buildWorkspace Name of the workspace configured in the build
+	 * @param pathToLoadRuleFile Path to the load rule file of the format <component name>/<remote path of the load rule file>
+	 * @param clientLocale The locale of the requesting client
+	 * @return an error message to display or null if there is no problem
+	 * @throws Exception
+	 */
+	public String testLoadRules(String serverURI, String userId, String password, int timeout, String processArea, boolean isStreamConfiguration,
+			String buildWorkspace, String pathToLoadRuleFile, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor();
+		String errorMessage = null;
+		try {
+			AbstractBuildClient buildClient = getBuildClient(); 
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
+			repoConnection.testConnection(monitor.newChild(50));
+			repoConnection.testLoadRules(processArea, isStreamConfiguration, buildWorkspace, pathToLoadRuleFile, monitor.newChild(50), clientLocale);
+		} catch (RTCConfigurationException e) {
+			errorMessage = e.getMessage();
+		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);

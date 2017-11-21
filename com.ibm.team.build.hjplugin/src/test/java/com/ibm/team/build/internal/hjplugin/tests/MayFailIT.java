@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -10,18 +10,16 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Map;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
-import org.junit.Assert;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-
 import org.kohsuke.stapler.StaplerRequest;
 import org.mockito.Mockito;
 
@@ -92,61 +90,6 @@ public class MayFailIT extends AbstractTestCase {
 	
 			j.assertEqualBeans(rtcScm, newRtcScm, OVERRIDE_GLOBAL + "," + SERVER_URI + "," + USER_ID + "," + PASSWORD + "," + PASSWORD_FILE + ","
 					+ BUILD_TYPE + "," + BUILD_DEFINITION);
-		}
-	}
-
-	
-	@Test public void testJobConfigRoundtripWithCredentials() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = j.createFreeStyleProject();
-			RTCScm rtcScm = createEmptyRTCScm();
-			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
-			project.setScm(rtcScm);
-	
-			StaplerRequest mockedReq = Mockito.mock(StaplerRequest.class);
-			Mockito.when(mockedReq.getParameter(BUILD_TOOLKIT)).thenReturn(TEST_GLOBAL_BUILD_TOOLKIT);
-			Mockito.when(mockedReq.getParameter(SERVER_URI)).thenReturn(TEST_GLOBAL_SERVER_URI);
-			Mockito.when(mockedReq.getParameter(USER_ID)).thenReturn(TEST_GLOBAL_USER_ID);
-			Mockito.when(mockedReq.getParameter(TIMEOUT)).thenReturn(TEST_GLOBAL_TIMEOUT);
-			Mockito.when(mockedReq.getParameter(PASSWORD)).thenReturn(TEST_GLOBAL_PASSWORD);
-			Mockito.when(mockedReq.getParameter(PASSWORD_FILE)).thenReturn(TEST_GLOBAL_PASSWORD_FILE);
-			Mockito.when(mockedReq.getParameter(CREDENTIALS_ID)).thenReturn(TEST_GLOBAL_CRED_ID);
-			JSONObject mockJSON = new JSONObject();
-			mockJSON.element(AVOID_USING_TOOLKIT, new JSONObject());
-			mockJSON.element(CREDENTIALS_ID, TEST_GLOBAL_CRED_ID);
-			mockJSON.element(SERVER_URI, TEST_GLOBAL_SERVER_URI);
-			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
-			descriptor.configure(mockedReq, mockJSON);
-	
-			descriptor.configure(mockedReq, mockJSON);
-	
-			WebClient webClient = j.createWebClient();
-	
-			// Get the page to configure the project
-			HtmlPage page = webClient.getPage(project, CONFIGURE);
-	
-			// Get the config form
-			HtmlForm form = page.getFormByName(CONFIG);
-	
-			// Get the inputs
-			HtmlCheckBoxInput overrideGlobalInput = form.getInputByName(OVERRIDE_GLOBAL);
-	
-			// Set the input values
-			overrideGlobalInput.setChecked(false);
-	
-			// Submit the config form
-			j.submit(form);
-	
-			// check submitted SCM result
-			RTCScm newRtcScm = (RTCScm) project.getScm();
-			assertEquals(false, newRtcScm.getOverrideGlobal());
-			assertEquals(TEST_GLOBAL_SERVER_URI, newRtcScm.getServerURI());
-			assertEquals(TEST_GLOBAL_TIMEOUT, String.valueOf(newRtcScm.getTimeout()));
-			assertEquals(null, newRtcScm.getUserId());
-			assertEquals(null, newRtcScm.getPassword());
-			assertEquals(null, newRtcScm.getPasswordFile());
-			assertEquals(TEST_GLOBAL_CRED_ID, newRtcScm.getCredentialsId());
-			assertTrue(newRtcScm.getAvoidUsingToolkit());
 		}
 	}
 

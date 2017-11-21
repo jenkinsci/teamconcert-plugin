@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,6 +17,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
@@ -24,6 +25,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -71,14 +73,28 @@ public class NonValidatingLoadRuleFactory {
     private static final Logger LOGGER = Logger.getLogger(NonValidatingLoadRuleFactory.class.getName());
 
     
-    private static ILoadRule2 getLoadRule(IWorkspaceConnection connection, IComponentHandle potentialComponentContext, Reader input, IProgressMonitor progress) throws TeamRepositoryException {
+	private static ILoadRule2 getLoadRule(IWorkspaceConnection connection, IComponentHandle potentialComponentContext, Reader input,
+			boolean supportOnlyXMLFormat, PrintStream buildLog, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException {
         
         BufferedReader bufferedInput = new BufferedReader(input);
         try {
-            // if known to be xml, just parse out the load rules
-            if (potentialComponentContext == null || isXMLInput(bufferedInput)) {
-                return getLoadRule(connection, bufferedInput, progress);
-            } else {
+			boolean isXMLInput = isXMLInput(bufferedInput);
+			// if not XML then fail or add a warning message
+			if (!isXMLInput) {
+				if (supportOnlyXMLFormat) {
+					throw new RTCConfigurationException(Messages.get(clientLocale).NonValidatingLoadRuleFactory_load_rules_not_in_XML_format());
+				} else {
+					String messageString = Messages.get(clientLocale).NonValidatingLoadRuleFactory_old_load_rules_format_deprecated();
+					buildLog.println(messageString);
+					if (LOGGER.isLoggable(Level.WARNING)) {
+						LOGGER.warning(messageString);
+					}
+				}
+			}
+			// if known to be xml, just parse out the load rules
+			if (potentialComponentContext == null || isXMLInput) {
+				return getLoadRule(connection, bufferedInput, progress);
+			} else {
                 // if not xml assume oldstyle xml
                 LoadRule oldRule = new LoadRule(connection, potentialComponentContext);
                 oldRule.addLoadRules(bufferedInput, progress);
@@ -173,7 +189,8 @@ public class NonValidatingLoadRuleFactory {
         return handler.getLoadRule(connection, progress);
 	}
 
-	public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, String filePath, IProgressMonitor progress) throws Exception {
+	public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, String filePath, boolean supportOnlyXMLFormat,
+			PrintStream buildLog, IProgressMonitor progress, Locale clientLocale) throws Exception {
 		// we expect the validation of filePath to be done by the caller
 		File lFile = new File(filePath);
 		if (LOGGER.isLoggable(Level.FINEST)) {
@@ -183,15 +200,53 @@ public class NonValidatingLoadRuleFactory {
 		CharsetDecoder decoder = Charset.forName(IFileContent.ENCODING_UTF_8).newDecoder().onMalformedInput(CodingErrorAction.REPORT)
 				.onUnmappableCharacter(CodingErrorAction.REPORT);
 		Reader reader = new InputStreamReader(new FileInputStream(lFile), decoder);
-		return getLoadRule(connection, null, reader, null);
+		return getLoadRule(connection, null, reader, supportOnlyXMLFormat, buildLog, null, clientLocale);
 	}
     
-    public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, IComponentHandle componentHandle, IFileItemHandle fileVersionable,
-            IProgressMonitor progress) throws TeamRepositoryException {
+	public static ILoadRule2 getLoadRule(IWorkspaceConnection connection, IComponentHandle componentHandle, IFileItemHandle fileVersionable,
+			boolean supportOnlyXMLFormat, PrintStream buildLog, IProgressMonitor progress, Locale clientLocale)
+			throws TeamRepositoryException, RTCConfigurationException {
 
         SubMonitor monitor = SubMonitor.convert(progress, 100);
-        IFileItem file = (IFileItem) connection.configuration(componentHandle).fetchCompleteItem(fileVersionable, monitor.newChild(1));
-        InputStream stream = FileSystemCore.getContentManager(connection.teamRepository()).retrieveContentStream(file, file.getContent(), monitor.newChild(1));
+        Reader reader = getLoadRuleReader(connection, componentHandle, fileVersionable, monitor);
+		return getLoadRule(connection, componentHandle, reader, supportOnlyXMLFormat, buildLog, monitor.newChild(98), clientLocale);
+    }
+
+	public static void checkForObsoleteLoadRuleFormat(IWorkspaceConnection connection, IComponentHandle componentHandle,
+			IFileItemHandle fileVersionable, boolean supportOnlyXMLFormat, PrintStream buildLog, IProgressMonitor progress,
+			Locale clientLocale) throws TeamRepositoryException, RTCConfigurationException {
+		boolean isXMLLoadRuleFormat = false;
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		Reader reader = getLoadRuleReader(connection, componentHandle, fileVersionable, monitor);
+		BufferedReader bufferedInput = new BufferedReader(reader);
+		try {
+			isXMLLoadRuleFormat = isXMLInput(bufferedInput);
+			if (!isXMLLoadRuleFormat) {
+				if (supportOnlyXMLFormat) {
+					throw new RTCConfigurationException(Messages.get(clientLocale).NonValidatingLoadRuleFactory_load_rules_not_in_XML_format());
+				} else {
+					String messageString = Messages.get(clientLocale).NonValidatingLoadRuleFactory_old_load_rules_format_deprecated();
+					buildLog.println(messageString);
+					if (LOGGER.isLoggable(Level.WARNING)) {
+						LOGGER.warning(messageString);
+					}
+				}
+			}
+		} catch (IOException e) {
+			throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_load_rule_type_failure(e.getMessage()), e);
+		} finally {
+			try {
+				bufferedInput.close();
+			} catch (IOException e) {
+				// we tried
+			}
+		}
+	}
+	
+	private static Reader getLoadRuleReader(IWorkspaceConnection connection, IComponentHandle componentHandle, IFileItemHandle fileVersionable, IProgressMonitor progress) throws TeamRepositoryException {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+        IFileItem file = (IFileItem) connection.configuration(componentHandle).fetchCompleteItem(fileVersionable, monitor.newChild(50));
+        InputStream stream = FileSystemCore.getContentManager(connection.teamRepository()).retrieveContentStream(file, file.getContent(), monitor.newChild(50));
 
         Reader reader;
         if (file.getContent().getCharacterEncoding() == null || file.getContent().getCharacterEncoding() == "") { //$NON-NLS-1$
@@ -206,10 +261,9 @@ public class NonValidatingLoadRuleFactory {
             } catch (UnsupportedEncodingException e) {
                 throw new FileSystemException(Messages.getDefault().NonValidatingLoadRuleFactory_bad_encoding(file.getName(), file.getContent().getCharacterEncoding()), e);
             }
-        }
-        
-        return getLoadRule(connection, componentHandle, reader, monitor.newChild(98));
-    }
+        }		
+        return reader;
+	}
 
 
     private static boolean isXMLInput(BufferedReader input) throws IOException {

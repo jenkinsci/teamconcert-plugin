@@ -27,7 +27,6 @@ import com.ibm.team.build.common.model.IBuildDefinition;
 import com.ibm.team.build.common.model.IBuildDefinitionHandle;
 import com.ibm.team.build.common.model.IBuildEngine;
 import com.ibm.team.build.common.model.IBuildEngineHandle;
-import com.ibm.team.build.common.model.IBuildItem;
 import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
@@ -187,12 +186,11 @@ public class BuildUtil {
 		}
 	}
 
-	public static void deleteBuildArtifacts(ITeamRepository repo,
-			Map<String, String> artifactIds) throws Exception {
+	public static void deleteBuildArtifacts(ITeamRepository repo, Map<String, String> artifactIds) throws Exception {
 		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID));
-		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID_1));
-		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID_2));
-		BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID_3));
+		for (int i = 1; i < 10; i++) {
+			BuildUtil.deleteBuildResult(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID + i));
+		}
 		BuildUtil.deleteBuildDefinition(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ITEM_ID));
 		BuildUtil.deleteBuildEngine(repo, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_ENGINE_ITEM_ID));
 	}
@@ -270,5 +268,16 @@ public class BuildUtil {
 	public static void save(ITeamRepository repo, IBuildResult item) throws IllegalArgumentException, TeamRepositoryException  {
 		ITeamBuildClient buildClient = getTeamBuildClient(repo);
 		buildClient.save(item, null);
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static void addPropertyToBuildDefiniion(ITeamRepository repo, String buildDefinitionId, String propertyName, String propertyValue) throws TeamRepositoryException {
+		IBuildDefinition buildDefinition = (IBuildDefinition) getBuildDefinition(repo, buildDefinitionId).getWorkingCopy();
+        IBuildProperty property = BuildItemFactory.createBuildProperty();
+        property.setName(propertyName);
+        property.setValue(propertyValue);
+        buildDefinition.getProperties().add(property);
+		ITeamBuildClient buildClient = getTeamBuildClient(repo);
+		buildClient.save(buildDefinition, null);      
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2016, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -10,14 +10,12 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.extensions.impl;
 
-import java.io.File;
-import java.io.PrintStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import hudson.Extension;
 import hudson.model.Run;
+
+import java.io.File;
+import java.io.PrintStream;
+import java.util.Map;
 
 import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
 
@@ -63,10 +61,10 @@ public class DefaultExtensionProvider extends RtcExtensionProvider {
 	} 
 
 	@Override
-	public Map<String, String> getComponentLoadRules(String workspaceUUID, String workspaceName, String buildResultUUID, Map<String, String> componentInfo, String repoURL, String userId, String password, PrintStream logger) {
+	public String getPathToLoadRuleFile(String workspaceUUID, String workspaceName, String buildResultUUID, Map<String, String> componentInfo, String repoURL, String userId, String password, PrintStream logger) {
 		
 		if(logger != null) {
-			logger.println("In getComponentLoadRules method");
+			logger.println("In getPathToLoadRuleFile method");
 			logger.println("workspaceUUID= "+workspaceUUID);
 			logger.println("workspace name= "+workspaceName);
 			logger.println("buildResultUUID= "+buildResultUUID);
@@ -74,25 +72,6 @@ public class DefaultExtensionProvider extends RtcExtensionProvider {
 			logger.println("UserId= "+userId);
 			logger.println("Password= "+password);
 		}
-		
-		//example comp id: _WZRnMD82EeW_ELO0EF5Bag
-		Map<String, String> rMap = new HashMap<String, String>();
-		rMap.put("_WZRnMD82EeW_ELO0EF5Bag", "/Users/kk/jenkins_ws/lr1.loadrule");
-		return rMap;
+		return "/Users/kk/jenkins_ws/lr1.loadrule";
 	}
-	
-	@Override
-	public List<String> getExcludeComponents(String workspaceUUID, String workspaceName, String buildResultUUID, Map<String, String> componentInfo, String repoURL, String userId, String password, PrintStream logger) {
-		if(logger != null) {
-			logger.println("In getExcludeComponents method");
-			logger.println("workspaceUUID= "+workspaceUUID);
-			logger.println("workspace name= "+workspaceName);
-			logger.println("buildResultUUID= "+buildResultUUID);
-			logger.println("repoURL= "+repoURL);
-			logger.println("UserId= "+userId);
-			logger.println("Password= "+password);
-		}
-		return null;
-	}
-
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2016, 2017 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -61,7 +61,7 @@ public class RtcExtensionProviderUtil {
 			}
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public static Map<String, String> getComponentLoadRules(final Object lrProvider, final PrintStream logger, final String workspaceUUID,
 			final String workspaceName, final String snapshotUUID, final String buildResultUUID, Map<String, String> componentInfo,
@@ -114,6 +114,28 @@ public class RtcExtensionProviderUtil {
 			}
 			if (LOGGER.isLoggable(Level.FINEST)) {
 				LOGGER.finest("RtcExtensionProviderUtil.getExcludeComponentList: invoking getExcludeComponents on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
+			}
+		}
+		return null;
+	}
+	
+	public static String getPathToLoadRuleFile(final Object lrProvider, final PrintStream logger, final String workspaceUUID,
+			final String workspaceName, final String snapshotUUID, final String buildResultUUID, Map<String, String> componentInfo,
+			final String repoURL, String userId, String password) throws Exception {
+		if (lrProvider != null) {
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.getPathToLoadRuleFile: invoking getPathToLoadRuleFile on '" + lrProvider.getClass().getName() + "' - Begin"); //$NON-NLS-1$//$NON-NLS-2$
+			}
+			Method getPathToLoadRuleFile = lrProvider
+					.getClass()
+					.getMethod(
+							"getPathToLoadRuleFile", String.class, String.class, String.class, Map.class, String.class, String.class, String.class, PrintStream.class);//$NON-NLS-1$
+			if (getPathToLoadRuleFile != null) {
+				return (String)getPathToLoadRuleFile.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, componentInfo, repoURL,
+						userId, password, logger);
+			}
+			if (LOGGER.isLoggable(Level.FINEST)) {
+				LOGGER.finest("RtcExtensionProviderUtil.getPathToLoadRuleFile: invoking getPathToLoadRuleFile on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
 			}
 		}
 		return null;

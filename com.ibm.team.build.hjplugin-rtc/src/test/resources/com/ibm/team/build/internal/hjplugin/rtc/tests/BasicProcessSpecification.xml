@@ -75,6 +75,9 @@
                 <operation id="com.ibm.team.scm.server.modifySnapshot">
                     <action id="any"/>
                 </operation>
+                <operation id="com.ibm.team.scm.server.deliver">
+                    <action id="any"/>
+                </operation>
             </role>
         </permissions>
         <timeline id="development">
