@@ -1711,6 +1711,7 @@ public class RTCScmIT extends AbstractTestCase {
 			BuildType buildType = rtcScm.getBuildType();
 			buildType.setUseDynamicLoadRules(true);
 			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(true);
 			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 
 			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -1751,6 +1752,7 @@ public class RTCScmIT extends AbstractTestCase {
 			buildType = rtcScm.getBuildType();
 			buildType.setUseDynamicLoadRules(false);
 			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(true);
 			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 			
 			prj.addProperty(useExtensionProperty);			
@@ -1795,6 +1797,7 @@ public class RTCScmIT extends AbstractTestCase {
 			buildType = rtcScm.getBuildType();
 			buildType.setUseDynamicLoadRules(true);
 			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(true);
 			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 
 			prj.addProperty(useExtensionProperty);
@@ -1831,6 +1834,7 @@ public class RTCScmIT extends AbstractTestCase {
 			buildType = rtcScm.getBuildType();
 			buildType.setUseDynamicLoadRules(false);
 			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(true);
 			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 
 			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -1861,12 +1865,13 @@ public class RTCScmIT extends AbstractTestCase {
 			Assert.assertTrue(new File(rootDir, "f").exists());
 			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
 			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
-			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
-			
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());			
+
 			// do not set useDynamicLoadRules and validate that the whole workspace is loaded
 			rtcScm = (RTCScm)prj.getScm();
 			buildType = rtcScm.getBuildType();
 			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(true);
 			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 
 			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -1898,15 +1903,15 @@ public class RTCScmIT extends AbstractTestCase {
 			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
 			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
 			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
-			
-			// set useDynamicLoadRules to false, loadPolicy to useDynamicLoadrules and validate that the whole workspace
-			// is loaded
-			// loadPolicy field is not applicable for build definition configuration
+
+			// set useDynamicLoadRules to false, loadPolicy to useDynamicLoadrules and validate that the whole
+			// workspace is loaded loadPolicy field is not applicable for build definition configuration
 			rtcScm = (RTCScm)prj.getScm();
 			buildType = rtcScm.getBuildType();
 			buildType.setUseDynamicLoadRules(false);
 			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES);
 			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(true);
 			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
 
 			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -1914,7 +1919,7 @@ public class RTCScmIT extends AbstractTestCase {
 			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "5", action.getBuildResultUUID());
 
 			children = loadDir.list();
-			Assert.assertEquals(4, children.length); 
+			Assert.assertEquals(4, children.length);
 			Assert.assertTrue(new File(loadDir, componentName).exists());
 			Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
 			Assert.assertTrue(new File(loadDir, "newTree2").exists());
@@ -1938,6 +1943,7 @@ public class RTCScmIT extends AbstractTestCase {
 			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
 			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
 			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+
 		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
 		}
