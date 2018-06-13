@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,7 +17,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 import com.ibm.team.foundation.common.text.XMLString;
-import com.ibm.team.process.common.IProjectArea;
+import com.ibm.team.process.common.IProjectAreaHandle;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.workitem.client.IWorkItemClient;
@@ -70,11 +70,11 @@ public class WorkItemUtil {
      * @param summary
      *            the summary for the work item
      * @return the handle for the new work item
-     * @throws Exception
+     * @throws TeamRepositoryException - 
      *             Throw all exceptions back to JUnit.
      */
-    public static IWorkItemHandle createWorkItem(ITeamRepository teamRepository, final IProjectArea projectArea,
-            final String summary) throws Exception {
+    public static IWorkItemHandle createWorkItem(ITeamRepository teamRepository, final IProjectAreaHandle projectArea,
+            final String summary) throws TeamRepositoryException {
         final IWorkItemClient workItemClient = (IWorkItemClient) teamRepository.getClientLibrary(IWorkItemClient.class);
 
         WorkItemOperation operation = new WorkItemOperation("Create work item", IWorkItem.FULL_PROFILE) { //$NON-NLS-1$

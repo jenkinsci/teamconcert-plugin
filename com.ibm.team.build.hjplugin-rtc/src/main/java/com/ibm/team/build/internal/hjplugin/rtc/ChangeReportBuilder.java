@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -125,7 +125,7 @@ public class ChangeReportBuilder {
 	 * @param acceptReport - the {@link IChangeHistorySyncReport} 
 	 * @param listener - a {@link IConsoleOutput} to which messages should be written to
 	 * @param progress - a {@link IProgressMonitor} to report progress
-	 * @throws TeamRepositoryException
+	 * @throws TeamRepositoryException if anything goes wrong
 	 */
 	public void populateChangeReport(ChangeReport changeReport,
 			IWorkspaceHandle workspaceHandle, String streamName, 
@@ -666,7 +666,6 @@ public class ChangeReportBuilder {
 						workItems.put(workItem.getItemId(), workItem);
 					}
 				}
-		        
 				// now populate the change report
 				for (ChangeSetReport changeSetReport : changeSetReports) {
 					IChangeSetLinkSummary changeSetLinkSummary = linkSummaryByChangeSet.get(UUID.valueOf(changeSetReport.getItemId()));
@@ -678,13 +677,17 @@ public class ChangeReportBuilder {
 								if (target instanceof IWorkItemHandle) {
 									IWorkItem workItem = workItems.get(((IWorkItemHandle) target).getItemId());
 									if (workItem != null) {
+										String workItemSummary = workItem.getHTMLSummary().getPlainText();
+										// Remove XML control characters from the plain text
+										workItemSummary = Utils.fixControlCharacters(workItemSummary);
 										ChangeSetReport.WorkItemEntry workItemEntry = new WorkItemEntry(workItem.getId(),
-												workItem.getHTMLSummary().getPlainText());
+												workItemSummary);
 										changeSetReport.addWorkItem(workItemEntry);
 									} else {
-										// TODO we could record the summary that is in the link instead...
+										// We could record the summary that is in the link instead...
 										// Not sure if its a good idea as if it is null it is either deleted
-										// or user doesn't have permission to see it
+										// or user doesn't have permission to see it. Either way, we don't 
+										// put the work item in the ChangeSetReport 
 										LOGGER.finer("Unable to resolve work item summary " + changeSetLinkSummary.getSummary() //$NON-NLS-1$
 												+ " for change set " + changeSetReport.getItemId()); //$NON-NLS-1$
 									}

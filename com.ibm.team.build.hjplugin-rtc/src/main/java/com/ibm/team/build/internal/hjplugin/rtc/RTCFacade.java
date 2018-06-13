@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -18,6 +18,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -466,7 +467,8 @@ public class RTCFacade {
 	 * @param clientLocale The locale of the requesting client
 	 * @param callConnectorTimeout user defined value for call connector timeout
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
-	 * @param previousBuildUrl - URL to the previous Jenkins build. This is written into the change log.
+	 * @param buildURLMap - URL to the previous and current Jenkins build. The previous build URL is added to the 
+	 *                change log.
 	 * @param temporaryWorkspaceComment 
 	 * @return Map<String, Object> returns a map of objects see RepositoryConnection#accept for more details.
 	 * @throws Exception
@@ -474,7 +476,7 @@ public class RTCFacade {
 	public Map<String, Object> accept(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
 			String buildWorkspace, Map<String, String> buildSnapshotContextMap, final String buildSnapshot, final String buildStream,
 			String hjWorkspacePath, OutputStream changeLog, boolean isCustomSnapshotName, String snapshotName, final String previousSnapshotUUID,
-			final Object listener, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad, String previousBuildUrl,
+			final Object listener, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad, Map<String, String> buildURLMap,
 			String temporaryWorkspaceComment) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
@@ -486,10 +488,13 @@ public class RTCFacade {
 			report = new ChangeReport(changeLog);
 		}
 		try	{
+			if (buildURLMap == null) {
+				buildURLMap = new HashMap<String, String>();
+			}
 			// create the BuildSnaphotContextMap instance from the context map and pass it to accept
 			return repoConnection.accept(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap),
 					buildSnapshot, buildStream, hjWorkspacePath, report, isCustomSnapshotName, snapshotName, previousSnapshotUUID, clientConsole, monitor, clientLocale,
-					callConnectorTimeout, acceptBeforeLoad, previousBuildUrl, temporaryWorkspaceComment);
+					callConnectorTimeout, acceptBeforeLoad, buildURLMap, temporaryWorkspaceComment);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -1017,6 +1022,24 @@ public class RTCFacade {
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+	
+   /**
+	 * Get the version of build toolkit 
+	 * 
+	 * @param buildtoolkitPath The path to the build toolkit on the given node.
+	 * @param listener - For sending messages to the build.
+	 * @param clientLocale The client locale.
+	 * @return A human readable string that represents the build toolkit version. 
+	 * @throws Exception If anything goes wrong while computing the build toolkit version.
+	 */
+	@SuppressWarnings("static-method")
+	public String getBuildToolkitVersion(String buildtoolkitPath, Object listener, Locale clientLocale) throws Exception {
+		try {
+			return VersionCheckerUtil.getBuildToolkitVersion(clientLocale);
+		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		}
 	}

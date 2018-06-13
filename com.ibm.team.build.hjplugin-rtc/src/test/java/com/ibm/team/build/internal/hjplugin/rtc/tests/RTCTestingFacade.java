@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -133,6 +133,34 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		Map<String, String> setup = testClient.setupAcceptDiscardChanges(connectionDetails, workspaceName, componentName, getProgressMonitor());
+		return setup;
+	}
+
+	/**
+	 * 
+	 * Sets up a target workspace and some change sets in it. One of the these change sets 
+	 * will have a new work item with the summary passed in to this method. 
+	 * It sets up a build workspace that flows to the target workspace.
+	 * 
+	 * @param serverURL - The URL of RTC server
+	 * @param userId - The user id 
+	 * @param password - The password
+	 * @param timeout - The timeout when connecting to the server
+	 * @param workspaceName  - The name of the build workspace to create
+	 * @param componentName - THe name for the component to be added to build and target worskpace 
+	 * @param loadDirectory - The directory in which the workspace will be loaded 
+	 * @param createWorkItem - <code> true</code> if work item has to be created for one of the change sets
+	 * @param workItemSummary - The summary to be used for the work item.
+	 * @return a map that has the predefined name for the artifact and its UUID 
+	 * @throws Exception if anything goes wrong in setup.
+	 */
+	public Map<String,String> setupAcceptChanges(String serverURL, String userId, String password, int timeout, 
+			String workspaceName,
+			String componentName, String loadDirectory, boolean createWorkItem, String workItemSummary) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupAcceptChanges(connectionDetails, workspaceName, componentName,
+				loadDirectory, createWorkItem, workItemSummary, getProgressMonitor());
 		return setup;
 	}
 	

@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Válasszon ki egy betöltési szabályfájlt a lerakat munkaterület betöltési módjának megadásához. Ha a Dinamikus betöltési szabályok beállítás van megadva egy kiterjesztés használatával, akkor azok előnyt élveznek az itt megadottakkal szemben.
+</p>
+  <p>
+  	A betöltési szabályok alkalmazásához sorolja fel azokat a következő JSON formátumban, mentse a listát egy fájlba a lemezen, és adja meg a fájl útvonalát ebben a mezőben.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	A "componentName" helyett megadhat egy "componentId"  elemet. A "componentId" a komponens elemazonosítója (UUID).
+ Ha a "componentName" és a "componentId" elemet egyaránt megadja, akkor a kikeresés csak a "componentId" alapján történik.
+  </p>
+  <p>
+  	A "filePath" érték a betöltési szabályfájl teljes útvonala a lerakatban; vagyis a távoli útvonal.
+  	A "filePath" helyett megadhat egy "fileItemId" elemet. A "fileItemId" a betöltési szabály fájl elemazonosítója (UUID).
+   A fájlútvonal megadásakor használjon törtvonalakat (/) az útvonalszegmensek elválasztásához. Ha a "filePath" és a "fileItemId" elemet egyaránt megadja, akkor a kikeresés csak a "fileItemId" alapján történik.
+  </p>
+
+</div>

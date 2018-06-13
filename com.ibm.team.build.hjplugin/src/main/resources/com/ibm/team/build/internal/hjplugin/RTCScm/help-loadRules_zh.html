@@ -1,0 +1,43 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+选择装入规则文件以指定如何装入存储库工作空间。如果使用扩展名指定了“动态装入规则”，那么这些规则将优先于此处所指定的规则。</p>
+  <p>
+  	要应用装入规则，请按以下 JSON 格式列示它们，将该列表保存到磁盘上的文件，并在此字段中指定该文件的路径。
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	您还可以指定“componentId”，而不指定“componentName”。“componentId”是组件的项标识 (UUID)。如果您同时指定“componentName”和“componentId”，那么只能通过“componentId”进行查找。</p>
+  <p>
+  	“filePath”值是存储库中的装入规则文件的完整路径；即，远程路径。您还可以指定“fileItemId”，而不指定“filePath”。“fileItemId”是装入规则文件的项标识 (UUID)。当您指定文件路径时，请使用正斜杠 (/) 来分隔各路径段。如果您同时指定“filePath”和“fileItemId”，那么只能通过“fileItemId”进行查找。</p>
+
+</div>

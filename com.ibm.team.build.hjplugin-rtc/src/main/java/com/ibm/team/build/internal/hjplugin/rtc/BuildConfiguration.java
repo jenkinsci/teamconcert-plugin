@@ -93,6 +93,7 @@ public class BuildConfiguration {
 	private String loadPolicy;
 	private String componentLoadConfig;
 	private boolean isBuildDefinitionConfiguration = false;
+	private boolean isRepositoryWorkspaceConfiguration = false;
 
 	/**
 	 * Basic build configuration. Caller should also initialize prior to calling
@@ -115,7 +116,7 @@ public class BuildConfiguration {
 	 */
 	@Deprecated
 	public void initialize(IWorkspaceHandle workspaceHandle, String workspaceName, String snapshotName) throws IOException {
-		LOGGER.finest("BuildConfiguration.initialize for workspaceHandle : Enter");
+		LOGGER.finest("BuildConfiguration.initialize for workspaceHandle : Enter"); //$NON-NLS-1$
 
 		this.workspace = new BuildWorkspaceDescriptor(getTeamRepository(), workspaceHandle.getItemId().getUuidValue(), workspaceName);
 		this.snapshotName = snapshotName;
@@ -123,10 +124,10 @@ public class BuildConfiguration {
 		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
-			LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName);
+			LOGGER.finer("Building workspace: " + workspaceName + " snapshotName " + snapshotName); //$NON-NLS-1$
 		}
 	}
-
+	
 	/**
 	 * Initialize a configuration that describes how to load from a RTC SCM snapshot
 	 * 
@@ -217,6 +218,7 @@ public class BuildConfiguration {
 		this.fetchDestinationPath = new Path(fetchDestinationFile.getCanonicalPath());
 		this.acceptBeforeFetch = acceptBeforeLoad;
 		this.includeComponents = false;
+		this.isRepositoryWorkspaceConfiguration = true;
 		setLoadPolicy(loadPolicy);
 		setComponentLoadConfig(componentLoadConfig);
 		IWorkspaceConnection wsConnection = SCMPlatform.getWorkspaceManager(teamRepository).getWorkspaceConnection(workspaceHandle,
@@ -991,6 +993,10 @@ public class BuildConfiguration {
 	
 	public boolean isBuildDefinitionConfiguration() {
 		return isBuildDefinitionConfiguration;
+	}
+	
+	public boolean isRepositoryWorkspaceConfiguration() {
+		return isRepositoryWorkspaceConfiguration;
 	}
 	
 	/**

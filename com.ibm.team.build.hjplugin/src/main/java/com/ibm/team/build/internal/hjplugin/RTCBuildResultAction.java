@@ -52,9 +52,8 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 
     private static final Logger LOGGER = Logger.getLogger(RTCBuildResultAction.class.getName());
 
-	private static final String RTC_BUILD_RESULT_UUID = "RTCBuildResultUUID";
 	private static final String SLASH = "/"; //$NON-NLS-1$
-	private static final String ITEM_OID = "resource/itemOid/com.ibm.team.build.BuildResult/";
+	private static final String ITEM_OID = "resource/itemOid/com.ibm.team.build.BuildResult/"; //$NON-NLS-1$
 
 	private static final long serialVersionUID = 1L;
 
@@ -90,7 +89,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
         this.scm = scm;
         
         if (buildResultUUID != null) {
-        	this.buildProperties.put(RTC_BUILD_RESULT_UUID, buildResultUUID);
+        	this.buildProperties.put(RTCJobProperties.RTC_BUILD_RESULT_UUID, buildResultUUID);
         	if (LOGGER.isLoggable(Level.FINER)) {
         		LOGGER.finer("RTCBuildResultAction : Received build result uuid " + buildResultUUID); //$NON-NLS-1$
         	}
@@ -102,19 +101,19 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 */
 	@Exported(visibility=3)
 	public String getBuildResultUUID() {
-		return buildResultUUID;
+		return this.buildResultUUID;
 	}
 	
 	/**
 	 * @return the current map of build properties associated with this build result action.
 	 */
 	public Map<String, String> getBuildProperties() {
-		return buildProperties;
+		return this.buildProperties;
 	}
 
 	public void buildEnvVars(AbstractBuild<?, ?> build, EnvVars env) {
 		LOGGER.finest("RTCBuildResultAction.buildEnvVars : Enter"); //$NON-NLS-1$
-		for (Map.Entry<String, String> entry : buildProperties.entrySet()) {
+		for (Map.Entry<String, String> entry : this.buildProperties.entrySet()) {
 			env.put(entry.getKey(), entry.getValue());
 		}
 	}
@@ -122,7 +121,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	@Override
 	public String getIconFileName() {
 		// TODO Use a Jenkins one for now
-		if (serverURI != null && buildResultUUID != null) {
+		if (this.serverURI != null && this.buildResultUUID != null) {
 			return "star-gold.gif"; //$NON-NLS-1$
 		}
 		// show nothing in task list
@@ -132,7 +131,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	@Override
 	@Exported(visibility=3)
 	public String getDisplayName() {
-		if (serverURI != null && buildResultUUID != null) {
+		if (this.serverURI != null && this.buildResultUUID != null) {
 			return Messages.RTCBuildResultAction_display_name();
 		}
 		return null;
@@ -141,8 +140,8 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	@Override
 	@Exported(visibility=3)
 	public String getUrlName() {
-		if (serverURI != null && buildResultUUID != null) {
-			return serverURI + ITEM_OID + buildResultUUID;
+		if (this.serverURI != null && this.buildResultUUID != null) {
+			return this.serverURI + ITEM_OID + this.buildResultUUID;
 		}
 		return null;
 	}
@@ -156,7 +155,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 * <code>false</code> if the build result lifecycle is not owned by this build.
 	 */
 	public boolean ownsBuildResultLifecycle() {
-		return createdBuildResult;
+		return this.createdBuildResult;
 	}
 	
 	/**
@@ -170,7 +169,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 		}
 		LOGGER.finest("RTCBuildResultAction.addBuildProperties : Enter"); //$NON-NLS-1$
 		for (Map.Entry<String, String> entry : buildProperties.entrySet()) {
-			LOGGER.finest("Key : "  + entry.getKey() + " Value : " + entry.getValue());
+			LOGGER.finest("Key : "  + entry.getKey() + " Value : " + entry.getValue());  //$NON-NLS-1$//$NON-NLS-2$
 			this.buildProperties.put(entry.getKey(), entry.getValue());
 		}
 	}
@@ -180,13 +179,13 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 */
 	@Exported(visibility=3)
 	public String getServerURI() {
-		return serverURI;
+		return this.serverURI;
 	}
 	
 	/**
 	 * @return The SCM configuration for the build that created this action
 	 */
 	public RTCScm getScm() {
-		return scm;
+		return this.scm;
 	}
 }

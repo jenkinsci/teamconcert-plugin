@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -1003,7 +1003,22 @@ public class Messages {
 	public String RTCBuildUtils_unexpected_zero_requests() {
 		return getString("RTCBuildUtils_unexpected_zero_requests");
 	}
+	
+	public String VersionCheckerUtil_missing_expected_content_in_plugin_xml() {
+		return getString("VersionCheckerUtil_missing_expected_content_in_plugin_xml");
+	}
+	
+	public String VersionCheckerUtil_class_not_found(String arg1) {
+		return MessageFormat.format(getString("VersionCheckerUtil_class_not_found"), arg1);
+	}
 
+	public String VersionCheckerUtil_io_error(String arg1) {
+		return MessageFormat.format(getString("VersionCheckerUtil_io_error"), arg1);
+	}
+	
+	public String VersionCheckerUtil_parser_error(String arg1) {
+		return MessageFormat.format(getString("VersionCheckerUtil_parser_error"), arg1);
+	}
 	/**
      * Get the message from the bundle
      * 

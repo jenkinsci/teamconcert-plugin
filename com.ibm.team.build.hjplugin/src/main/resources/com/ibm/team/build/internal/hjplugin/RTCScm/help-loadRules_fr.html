@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Sélectionnez un fichier de règles de chargement pour indiquer comment charger l'espace de travail de référentiel. Si des règles de chargement dynamiques ont été indiquées en utilisant une extension, elles ont la priorité sur celles indiquées ici.
+  </p>
+  <p>
+  	Pour appliquer les règles de chargement, listez-les au format JSON suivant, sauvegardez la liste dans un fichier sur le disque et indiquez le chemin d'accès au fichier dans cette zone.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	Vous pouvez également indiquer "componentId" au lieu de "componentName." "componentId" est l'ID élément (identificateur unique universel) du composant. 
+	Si vous indiquez à la fois "componentName" et "componentId", la recherche se produit uniquement par "componentId."
+  </p>
+  <p>
+  	La valeur "filePath" est le chemin d'accès complet au fichier de règles de chargement, à savoir, le chemin d'accès distant. 
+  	Vous pouvez également indiquer "fileItemId" au lieu de "filePath." "fileItemId" est l'ID élément (identificateur unique universel) du fichier de règles de chargement. 
+  	Lorsque vous indiquez le chemin d'accès au fichier, utilisez des barres obliques (/) pour en séparer les segments. Si vous indiquez à la fois "filePath" et "fileItemId," la recherche se produit uniquement par "fileItemId."
+  </p>
+
+</div>

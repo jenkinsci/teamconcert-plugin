@@ -290,6 +290,29 @@ public class ChangeReport {
 		return changeSets;
 	}
 
+	/**
+	 * Helper method to get all work items from the change sets
+	 * 
+	 * @return A list of work item ids. 
+	 * May be empty.
+	 * Never <code>null<code>
+	 */
+	public List<Integer> getWorkItems() {
+		if (this.changeSets == null) {
+			return new ArrayList<Integer>();
+		}
+		List<Integer> workItems = new ArrayList<Integer>();
+		for (ChangeSetReport changeSetReport : this.changeSets) {
+			List<WorkItemEntry> changeSetWorkItems = changeSetReport.getWorkItems();
+			if (changeSetWorkItems != null) {
+				for(WorkItemEntry workItemEntry : changeSetWorkItems) {
+					workItems.add(Integer.valueOf(workItemEntry.getNumber()));
+				}
+			}
+		}
+		return workItems;
+	}
+
 	public BaselineSetReport getBaselineSet() {
 		return baselineSet;
 	}

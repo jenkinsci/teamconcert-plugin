@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -37,8 +38,10 @@ import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.build.internal.hjplugin.rtc.VersionCheckerUtil;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
+import com.ibm.team.process.common.IProcessArea;
 import com.ibm.team.process.common.IProcessAreaHandle;
 import com.ibm.team.process.common.IProjectArea;
+import com.ibm.team.process.common.IProjectAreaHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.client.internal.ItemManager;
@@ -166,7 +169,22 @@ public class TestSetupTearDownUtil extends BuildClient {
 	
 	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
 			String componentName, String buildDefinitionId, String loadDirectory, boolean createBuildDefinition,
-			boolean createBuildResult, boolean isPersonalBuild, IProgressMonitor progress) throws Exception {			
+			boolean createBuildResult, boolean isPersonalBuild, IProgressMonitor progress) throws Exception {
+		return setupAcceptChanges(connectionDetails, name, componentName, buildDefinitionId, loadDirectory,
+				createBuildDefinition, createBuildResult, isPersonalBuild, false, null, progress);
+	}
+	
+	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String loadDirectory, boolean createWorkItem, String workItemSummary, 
+			IProgressMonitor progress) throws Exception {
+		return setupAcceptChanges(connectionDetails, workspaceName, componentName, null, loadDirectory,
+				false, false, false, true, workItemSummary, progress);
+	}
+	
+	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
+			String componentName, String buildDefinitionId, String loadDirectory, boolean createBuildDefinition,
+			boolean createBuildResult, boolean isPersonalBuild, boolean createWorkItem, 
+			String workItemSummary, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository(); 
@@ -211,6 +229,11 @@ public class TestSetupTearDownUtil extends BuildClient {
 				}
 			}
 		}
+		IWorkItemHandle workItemHandle = null;
+		if (createWorkItem) {
+			IProjectArea projectArea = ProcessUtil.getDefaultProjectArea(repo);
+			workItemHandle = WorkItemUtil.createWorkItem(repo, projectArea, workItemSummary);
+		}
 		
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
@@ -226,7 +249,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		createChangeSet1(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
 		createChangeSet2(repo, buildStream, component, c1, pathToHandle, artifactIds);
-		createChangeSet3(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
+		createChangeSet3(repo, buildStream, component, c1, pathToHandle,artifactIds, workItemHandle, false);
 		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
 		createEmptyChangeSets(repo, buildStream, component, artifactIds, 5, 1);
 		createNoopChangeSets(repo, buildStream, component, c1, pathToHandle, artifactIds, 6);
@@ -307,6 +330,44 @@ public class TestSetupTearDownUtil extends BuildClient {
 			IWorkspaceConnection workspace, IComponent component, String root,
 			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts, boolean forDiscard)
 			throws TeamRepositoryException {
+		List<IWorkItemHandle> workItems = WorkItemUtil.findSomeWorkItems(repo, 1);
+		createChangeSet3(repo, workspace, component, root, pathToHandle, artifacts, 
+				workItems, forDiscard);		
+	}
+	/**
+	 * Creates a change set, creates a work item with the specified summary and 
+	 * links the work item to the change set.
+	 * 
+	 * @param repo - The repository connection 
+	 * @param workspace - The repository workspace in which change sets are being created 
+	 * @param component - The component in which change set is created
+	 * @param root - The path to the root folder in the workspace 
+	 * @param pathToHandle - A map with the name of the file and its item handle
+	 * @param artifacts - The list of artifacts created up to this point
+	 * @param workItem - The work item to be associated with the change set
+	 * @param forDiscard  - Whether the change set is setup for discarding in the build workspace 
+	 * @throws TeamRepositoryException - if anything goes wrong
+	 */
+	private void createChangeSet3(ITeamRepository repo,
+			IWorkspaceConnection workspace, IComponent component, String root,
+			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts,
+			IWorkItemHandle workItem,
+			boolean forDiscard)
+			throws TeamRepositoryException {
+		if (workItem == null) {
+			createChangeSet3(repo, workspace, component, root, pathToHandle, artifacts, 
+					forDiscard);
+		} else {
+			createChangeSet3(repo, workspace, component, root, pathToHandle, artifacts, 
+				Arrays.asList(new IWorkItemHandle[] {workItem}), forDiscard);	
+		}
+	}
+	
+	
+	private void createChangeSet3(ITeamRepository repo,
+			IWorkspaceConnection workspace, IComponent component, String root,
+			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts,
+			List<IWorkItemHandle> workItems, boolean forDiscard) throws TeamRepositoryException {
 		
 		// cs3 adds newTree/ newTree/newFile.txt
 		// cs3 has a work item associated with it but no comment
@@ -316,7 +377,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 				root + "/f/newTree/",
 				root + "/f/newTree/newFile.txt"
 		}, "createChangeSet3");
-		List<IWorkItemHandle> workItems = WorkItemUtil.findSomeWorkItems(repo, 1);
 		if (!workItems.isEmpty()) {
 			SCMUtil.createWorkItemChangeSetLink(repo, new IWorkItemHandle[] { workItems.get(0) }, cs3);
 			IWorkItem fullWorkItem = (IWorkItem) repo.itemManager().fetchCompleteItem(workItems.get(0), IItemManager.DEFAULT, null);

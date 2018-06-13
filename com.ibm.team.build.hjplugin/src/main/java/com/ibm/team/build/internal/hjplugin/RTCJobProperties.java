@@ -15,9 +15,10 @@ public class RTCJobProperties {
 	public static final String BUILD_RESULT_UUID = "buildResultUUID"; //$NON-NLS-1$
 	public static final String USE_DYNAMIC_LOAD_RULE = "com.ibm.team.build.useExtension"; //$NON-NLS-1$
 	public static final String RTC_BUILD_SNAPSHOT = "rtcBuildSnapshot"; //$NON-NLS-1$ 
-	public static final String TEMPORARY_WORKSPACE_NAME = "rtcTempRepoWorkspaceName";
-	public static final String TEMPORARY_WORKSPACE_UUID = "rtcTempRepoWorkspaceUUID";
-	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData";
+	public static final String TEMPORARY_WORKSPACE_NAME = "rtcTempRepoWorkspaceName"; //$NON-NLS-1$
+	public static final String TEMPORARY_WORKSPACE_UUID = "rtcTempRepoWorkspaceUUID"; //$NON-NLS-1$
+	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData"; //$NON-NLS-1$
 	public static final String DEBUG_PROPERTY = "com.ibm.team.build.debug"; //$NON-NLS-1$
-	public static final String POST_BUILD_DELIVER_HANDLED = "rtcPostBuildDeliverHandled";
+	public static final String POST_BUILD_DELIVER_HANDLED = "rtcPostBuildDeliverHandled"; //$NON-NLS-1$
+	public static final String RTC_BUILD_RESULT_UUID = "RTCBuildResultUUID"; //$NON-NLS-1$
 }

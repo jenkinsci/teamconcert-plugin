@@ -15,9 +15,13 @@
 
 <div>
   <p>
-  	Değişiklikler kabul edildikten sonra yaratılan anlık görüntüye verilen adı belirtir. </p>
+  	Değişiklikler kabul edildikten sonra yaratılan anlık görüntüye verilen adı belirtir.
+  </p>
   <p>
-  	Bu alan, ortam değişkenleri ve oluşturma parametrelerine başvuran, kullanıcı tanımlı bir dizgi olarak ayarlanabilir. Art arda oluşturmaların farklı adlarla anlık görüntüler yaratmasını sağlamak için BUILD_NUMBER, BUILD_ID ya da BUILD_URL gibi her oluşturma için benzersiz değeri olan en az bir değişken içermesi önerilir. Bu alan boşsa, yerine varsayılan bir anlık görüntü adı kullanılır. Bir Oluşturma Tanımı kullanan işler için, anlık görüntü adı varsayılan değeri "${buildDefinitionId}_#${BUILD_NUMBER}" olur. Bir Akış ya da Havuz Çalışma Alanı kullanan işler için anlık görüntü adı varsayılan değeri "${JOB_NAME}_#${BUILD_NUMBER}" olur.</p>
+  	Bu alan, ortam değişkenleri ve oluşturma parametrelerine başvuran, kullanıcı tanımlı bir dizgi olarak ayarlanabilir. Art arda oluşturmaların farklı adlarla anlık görüntüler yaratmasını sağlamak için BUILD_NUMBER, BUILD_ID ya da BUILD_URL gibi her oluşturma için benzersiz değeri olan en az bir değişken içermesi önerilir. 
+	Bu alan boşsa, yerine varsayılan bir anlık görüntü adı kullanılır. Bir Oluşturma Tanımı kullanan işler için, anlık görüntü adı varsayılan değeri "${buildDefinitionId}_#${BUILD_NUMBER}" olur. 
+	Bir Akış ya da Havuz Çalışma Alanı kullanan işler için anlık görüntü adı varsayılan değeri "${JOB_NAME}_#${BUILD_NUMBER}" olur.
+  </p>
   <p>
   	Örneğin, "JUnit Integration Build" adlı bir iş için, bu alan "${JOB_NAME}_#${BUILD_NUMBER}_Snapshot" olarak ayarlanmışsa, ilk oluşturma tarafından yaratılan anlık görüntünün adı "JUnit Integration Build_#1_Snapshot" olur.
   </p>

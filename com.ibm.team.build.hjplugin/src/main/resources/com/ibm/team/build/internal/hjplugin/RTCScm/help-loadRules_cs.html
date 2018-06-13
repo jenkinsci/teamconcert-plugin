@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Vyberte soubor pravidel načtení k určení způsobu načítání pracovního prostoru úložiště. Jestliže byla dynamická pravidla načtení určena pomocí rozšíření, mají tato pravidla přednost před zde určenými.
+  </p>
+  <p>
+  	Chcete-li použít pravidla načtení, vypište je v následujícím formátu JSON, uložte seznam do souboru na disku a určete v tomto poli cestu k souboru.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	Rovněž můžete určit "componentId" namísto "componentName." Hodnota "componentId" je ID položky (UUID) komponenty. 
+	Určíte-li obě hodnoty "componentName" a "componentId", dojde k vyhledání pouze podle "componentId."
+  </p>
+  <p>
+  	Hodnota "filePath" je úplná cesta k souboru pravidel načtení v úložišti; např. vzdálená cesta. 
+  	Rovněž můžete určit "fileItemId" namísto "filePath." Hodnota "fileItemId" je ID položky (UUID) souboru pravidel načtení. 
+  	Když určíte cestu k souboru, použijte k oddělení segmentů cesty dopředná lomítka (/). Určíte-li obě hodnoty "filePath" a "fileItemId", je vyhledávání provedeno pouze podle "fileItemId."
+  </p>
+
+</div>

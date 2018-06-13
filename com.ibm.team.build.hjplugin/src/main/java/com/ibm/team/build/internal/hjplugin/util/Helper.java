@@ -10,27 +10,15 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.util;
 
-import hudson.Util;
-import hudson.model.ParameterValue;
-import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
-import hudson.model.Job;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.Run;
-import hudson.model.StringParameterDefinition;
-import hudson.model.StringParameterValue;
-import hudson.util.FormValidation;
-
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import jenkins.model.Jenkins;
+import javax.annotation.Nonnull;
 
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
@@ -39,7 +27,27 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 
+import hudson.Util;
+import hudson.model.AbstractBuild;
+import hudson.model.Job;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.model.TaskListener;
+import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
+
 public class Helper {
+	private static final String TEAM_SCM_STREAM_CHANGES_DATA = "team_scm_streamChangesData"; //$NON-NLS-1$
+	private static final String PREVIOUS_BUILD_URL_KEY = "previousBuildUrl"; //$NON-NLS-1$
+	private static final String CURRENT_BUILD_URL_KEY = "currentBuildUrl"; //$NON-NLS-1$
+	private static final String CURRENT_BUILD_FULL_URL_KEY = "currentBuildFullUrl"; //$NON-NLS-1$
+	private static final String CURRENT_BUILD_LABEL_KEY = "currentBuildLabel"; //$NON-NLS-1$
+
 	private static final Logger LOGGER = Logger.getLogger(Helper.class.getName());
 	
 	private static final String previousSnapshotOwner = "team_scm_snapshotOwner"; //$NON-NLS-1$
@@ -342,7 +350,7 @@ public class Helper {
 			@Override
 			public Run<?, ?> firstBuild() {
 				return job.getLastBuild();
-			}}, toolkit, loginInfo, processArea, buildStream, false, "team_scm_streamChangesData", clientLocale);
+			}}, toolkit, loginInfo, processArea, buildStream, false, TEAM_SCM_STREAM_CHANGES_DATA, clientLocale);
 		if (LOGGER.isLoggable(Level.FINEST)) {
 			LOGGER.finest("Helper.getStreamChangesDataFromLastBuild : " + 
 						((streamChangesData.getSecond() == null) ? "No stream changes data found from a previous build" : streamChangesData.getSecond()));
@@ -410,7 +418,42 @@ public class Helper {
 	public static boolean isDebugEnabled(Run<?, ?> build, TaskListener listener) throws IOException, InterruptedException {
 		return Boolean.parseBoolean(Helper.getStringBuildParameter(build, RTCJobProperties.DEBUG_PROPERTY, listener));
 	}
+	
+	/**
+	 * Get Jenkins Build URLs and labels info a map
+	 * 
+	 * @param build The current build
+	 * @return a map of build URLs and labels.
+	 */
+	@Nonnull
+	public static Map<String, String> constructBuildURLMap(Run<?, ?> build) {
+		// Add the following entries
+		// previousBuildUrl and currentBuildUrl is relative
+		// currentFullBuildUrl is a complete URL.
+		Map<String, String> buildURLMap = new HashMap<String, String>();
+		if (build.getPreviousBuild() != null) { 
+			buildURLMap.put(PREVIOUS_BUILD_URL_KEY, build.getPreviousBuild().getUrl());
+		}
+		buildURLMap.put(CURRENT_BUILD_URL_KEY, build.getUrl());
+		buildURLMap.put(CURRENT_BUILD_FULL_URL_KEY, Util.encode(Jenkins.getInstance().getRootUrl() + build.getUrl()));
+		buildURLMap.put(CURRENT_BUILD_LABEL_KEY, build.getFullDisplayName());
+		return buildURLMap;
+	}
 
+	/**
+	 * Get the value of snapshotUUID property from the previous build
+	 *   
+	 * @param iterator
+	 * @param toolkit
+	 * @param loginInfo
+	 * @param processArea
+	 * @param buildStream
+	 * @param onlyGoodBuild
+	 * @param key
+	 * @param clientLocale
+	 * @return
+	 * @throws Exception
+	 */
 	private static Tuple<Run<?,?>, String> getValueForBuildStream(IJenkinsBuildIterator iterator, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, boolean onlyGoodBuild, String key, Locale clientLocale) throws Exception {
 		if (buildStream == null) {
 			return null;

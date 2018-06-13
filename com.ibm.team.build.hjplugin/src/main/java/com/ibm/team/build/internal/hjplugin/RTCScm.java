@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -54,6 +54,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -189,6 +190,8 @@ public class RTCScm extends SCM {
 	// When set to true, the loadPolicy value is set to useDynamicLoadRules, irrespective of the value already set in
 	// build definition
 	private boolean useDynamicLoadRules;
+
+	private RTCBuildResultAction buildResultAction = null;
 	
 	/**
 	 * Class defining the snapshot context configuration data.
@@ -1915,6 +1918,9 @@ public class RTCScm extends SCM {
 		nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
 
 		boolean debug = Helper.isDebugEnabled(build, listener);
+		
+		// Before proceeding, log the details of master and node buildtoolkit
+		logBuildToolkitVersions(workspacePath, listener, localBuildToolkit, nodeBuildToolkit, debug);
 
 		RTCLoginInfo loginInfo;
 		try {
@@ -1937,8 +1943,6 @@ public class RTCScm extends SCM {
 		if (buildResultUUID != null) {
 			listener.getLogger().println(Messages.RTCScm_build_initiated_by());
 		}
-		
-		RTCBuildResultAction buildResultAction;
 		
 		try {
 			
@@ -2022,8 +2026,8 @@ public class RTCScm extends SCM {
 			
 			// add the build result information (if any) to the build through an action
 			// properties may later be added to this action
-			buildResultAction = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this);
-			build.addAction(buildResultAction);
+			setBuildResultAction(new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, buildResultInfo.ownLifeCycle(), this));
+			build.addAction(getBuildResultAction());
 
 			RemoteOutputStream changeLog = null;
 			if (changeLogFile != null) {
@@ -2073,8 +2077,9 @@ public class RTCScm extends SCM {
 			String connectorId = "";
 			Map<String, String> streamData = new HashMap<String, String>();
 			Map<String, String> buildSnapshotContextMap = buildSnapshotContext != null ? buildSnapshotContext.getContextMap() : null;
+			Map<String, String> buildUrls = Helper.constructBuildURLMap(build);
 			RTCAcceptTask acceptTask = new RTCAcceptTask(
-					build.getNumber() + " " + build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
+					 build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
 					nodeBuildToolkit, loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
 					getProcessArea(), 
 					buildResultUUID,
@@ -2086,7 +2091,8 @@ public class RTCScm extends SCM {
 					listener, changeLog,
 					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, getAcceptBeforeLoad(),
 					// If you are not comparing with any snapshot, no need to put the previous build URL
-					(previousSnapshotUUIDForChangeLog != null && previousBuild != null) ? Util.fixEmptyAndTrim(previousBuild.getUrl()): null,
+					buildUrls,
+					//(previousSnapshotUUIDForChangeLog != null && previousBuild != null) ? Util.fixEmptyAndTrim(previousBuild.getUrl()): null,
 					Helper.getTemporaryWorkspaceComment(build));
 
 			// publish in the build result links to the project and the build
@@ -2203,6 +2209,55 @@ public class RTCScm extends SCM {
     	}
 		finally {
 			LOGGER.finer("RTCScm.checkout : End");
+		}
+	}
+
+	/**
+	 * 
+	 * Logs the build toolkit version for the local build toolkit (master) and node build toolkit
+	 * If checkout happens on the master, then local and node build toolkit are the same.
+	 * 
+	 * If debug is <code>false</code>, then this method does not print anything on the console
+	 * 
+	 * @param workspacePath The Jenkins workspace path, used to determine if the checkout is happening 
+	 *  					on a node or on master
+	 * @param listener Log messages 
+	 * @param localBuildToolkit The build toolkit on master 
+	 * @param nodeBuildToolkit The build toolkit on node 
+	 * @param debug Is debug turned on, this detemines whether this method will log the versions
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
+	private void logBuildToolkitVersions(FilePath workspacePath, TaskListener listener, String localBuildToolkit,
+			String nodeBuildToolkit, boolean debug) throws InterruptedException, IOException {
+		if (!debug) {
+			return;
+		}
+		String nodeName = workspacePath.getParent().toComputer().getDisplayName();
+		String masterBuildToolkitVersion = BuildToolkitVersionTask.getBuildToolkitVersion(localBuildToolkit, 
+							 "master", debug, LocaleProvider.getLocale(), listener); //$NON-NLS-1$
+		String nodeBuildToolkitVersion = ""; //$NON-NLS-1$
+		if (workspacePath.isRemote()) {
+			BuildToolkitVersionTask task = new BuildToolkitVersionTask(nodeBuildToolkit,
+						nodeName, 
+						debug, LocaleProvider.getLocale(), listener);
+			nodeBuildToolkitVersion = workspacePath.act(task);
+		}
+		if (masterBuildToolkitVersion != null) {
+			listener.getLogger().println(Messages.RTCScm_buildtoolkit_version_on_master(
+					localBuildToolkit, masterBuildToolkitVersion));
+		} else {
+			listener.getLogger().println(
+					Messages.RTCScm_buildtoolkit_version_master_failure(localBuildToolkit));
+		}
+		if (workspacePath.isRemote()) {
+			if (nodeBuildToolkitVersion != null) {
+				listener.getLogger().println(
+					Messages.RTCScm_buildtoolkit_version_on_node(nodeBuildToolkit, nodeName, nodeBuildToolkitVersion));		
+			} else {
+				listener.getLogger().println(
+					Messages.RTCScm_buildtoolkit_version_on_node_failure(nodeBuildToolkit, nodeName));
+			}
 		}
 	}
 
@@ -2442,6 +2497,25 @@ public class RTCScm extends SCM {
 	public RTCRepositoryBrowser getBrowser() {
 		LOGGER.finest("RTCScm.getBrowser : Begin");
 		return new RTCRepositoryBrowser(getServerURI());
+	}
+	
+	/**
+	 * This is actually an override. We are building against 1.580.1 and this method does 
+	 * not exist till 2.60. 
+	 */
+	//@Override
+	public void buildEnvironment(Run<?,?> build, Map<String, String> environment) {
+		LOGGER.log(Level.FINEST, "Entering RTCScm:buildEnvironment");
+		if (getBuildResultAction() == null) {
+			return;
+		}
+		if (getBuildResultAction().getBuildProperties() == null) {
+			return;
+		}
+		for (Entry<String, String> entry : getBuildResultAction().getBuildProperties().entrySet()) {
+			environment.put(entry.getKey(), entry.getValue());
+		}
+		LOGGER.log(Level.FINEST, "Exiting RTCScm:buildEnvironment");
 	}
 
 	public boolean getOverrideGlobal() {
@@ -2751,7 +2825,7 @@ public class RTCScm extends SCM {
 	}
 
 	private boolean validateBuildToolkitPath(String buildToolkitPath) {
-		// Check whether buildtoolkit on master is valid
+		// Check whether build toolkit on master is valid
 		FormValidation buildToolkitCheck = RTCBuildToolInstallation.validateBuildToolkit(false, buildToolkitPath);
 
 		if (buildToolkitCheck.kind.equals(FormValidation.Kind.OK)) {
@@ -2760,4 +2834,12 @@ public class RTCScm extends SCM {
 		return false;
 	}
 
+	private void setBuildResultAction(RTCBuildResultAction action) {
+		this.buildResultAction = action;
+	}
+	
+	private RTCBuildResultAction getBuildResultAction() {
+		return buildResultAction;
+	}
+	
 }

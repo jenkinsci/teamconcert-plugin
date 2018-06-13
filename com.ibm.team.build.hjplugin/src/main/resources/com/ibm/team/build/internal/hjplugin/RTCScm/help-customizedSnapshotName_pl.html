@@ -15,18 +15,22 @@
 
 <div>
   <p>
-  	Określa nazwę obrazu stanu, który jest tworzony po zaakceptowaniu zmian. </p>
+  	Określa nazwę obrazu stanu, który jest tworzony po zaakceptowaniu zmian.
+  </p>
   <p>
   	To pole można ustawić na dowolny łańcuch podany przez użytkownika,
 przywoływane zmienne środowiskowe i parametry budowania. Zalecane jest
 dołączenie do każdego budowania co najmniej jednej zmiennej o wartości
 unikalnej, na przykład BUILD_NUMBER, BUILD_ID lub BUILD_URL, aby zapewnić, że
-kolejne operacje budowania utworzą obrazy stanu o innych nazwach. Jeśli to pole
+kolejne operacje budowania utworzą obrazy stanu o innych nazwach. 
+	Jeśli to pole
 będzie puste, zamiast niego zostanie użyta domyślna nazwa obrazu stanu. W
 przypadku zadań, które korzystają z definicji budowania, domyślna nazwa obrazu
-stanu to ${buildDefinitionId}_#${BUILD_NUMBER}. W przypadku zadań, które
+stanu to ${buildDefinitionId}_#${BUILD_NUMBER}. 
+	W przypadku zadań, które
 używają strumienia lub obszaru roboczego repozytorium, domyślna nazwa obrazu
-stanu to ${JOB_NAME}_#${BUILD_NUMBER}. </p>
+stanu to ${JOB_NAME}_#${BUILD_NUMBER}.
+  </p>
   <p>
   	Na przykład jeśli dla zadania o nazwie „Budowanie integracyjne JUnit” to pole
 zostanie ustawione na wartość ${JOB_NAME}_#${BUILD_NUMBER}_Obraz_stanu, nazwą

@@ -151,7 +151,7 @@ public class Utils {
 							Locale.class, // locale
 							String.class, // callConnectorTimeout
 							boolean.class,// acceptBeforeLoad
-							String.class,// previousBuildUrl
+							Map.class, // jenkinsBuildUrls
 							String.class} , // workspaceComment
 							serverURI,
 							userId,

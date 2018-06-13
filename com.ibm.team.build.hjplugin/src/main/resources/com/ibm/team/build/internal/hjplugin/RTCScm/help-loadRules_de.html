@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Wählen Sie eine Datei mit Laderegeln aus, um anzugeben, wie der Repository-Arbeitsbereich geladen werden soll. Wenn dynamische Laderegeln mithilfe einer Erweiterung angegeben wurden, haben diese Vorrang vor den hier angegebenen Laderegeln.
+  </p>
+  <p>
+  	Um Laderegeln anzuwenden, listen Sie sie im folgenden JSON-Format auf, speichern Sie die Liste in einer Datei auf einem Datenträger und geben Sie den Pfad zur Datei in diesem Feld an.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	Sie können auch "componentId" (Komponenten-ID) anstelle von "componentName" (Komponentenname) angeben. Bei "componentId" handelt es sich um die Element-ID (UUID) der Komponente.
+	Wenn Sie sowohl "componentName" als auch "componentId" angeben, erfolgt die Suche nur für "componentId."
+  </p>
+  <p>
+  	Der Wert für "filePath" (Dateipfad) ist der vollständige Pfad zur Datei mit Laderegeln im Repository, d. h. der ferne Pfad.
+  	Sie können auch "fileItemId" (Dateielement-ID) anstelle von "filePath" (DateiPfad) angeben. Bei "fileItemId" handelt es sich um die Element-ID (UUID) der Datei mit Laderegeln.
+  	Wenn Sie den Dateipfad angeben, verwenden Sie normale Schrägstriche (/) zum Trennen der Pfadsegmente. Wenn Sie sowohl "filePath" als auch "fileItemId" angeben, erfolgt die Suche nur für "fileItemId."
+  </p>
+
+</div>

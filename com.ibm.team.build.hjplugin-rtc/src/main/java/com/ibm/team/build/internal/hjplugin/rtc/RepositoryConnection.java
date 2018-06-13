@@ -381,7 +381,8 @@ public class RepositoryConnection {
 	 * @param clientLocale The locale of the requesting client
 	 * @param callConnectorTimeout user defined call connector timeout
 	 * @param acceptBeforeLoad Accept latest changes before loading if true
-	 * @param previousBuildUrl The url of the previous Jenkins build used for comparison. The url is persisted into the changelog
+	 * @param jenkinsBuildUrl The URL of the previous and current Jenkins builds. 
+	 * 					The URL of the previous Jenkins build used for comparison and is persisted into the changelog
 	 * @param temporaryWorkspaceComment
 	 * @return <code>Map<String, Object></code> containing build properties, and CallConnector details
 	 * @throws Exception Thrown if anything goes wrong
@@ -390,16 +391,21 @@ public class RepositoryConnection {
 			BuildSnapshotContext buildSnapshotContext, String buildSnapshot, String buildStream, String hjFetchDestination,
 			ChangeReport changeReport, boolean isCustomSnapshotName, String snapshotName, final String previousSnapshotUUID,
 			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad,
-			String previousBuildUrl, String temporaryWorkspaceComment)
+			Map<String, String> jenkinsBuildUrls, String temporaryWorkspaceComment)
 			throws Exception {
 		LOGGER.finest("RepositoryConnection.accept : Enter");
+
+		// TODO extract constants here
+		String previousBuildUrl = (jenkinsBuildUrls.containsKey(Constants.PREVIOUS_BUILD_URL)) ? jenkinsBuildUrls.get(Constants.PREVIOUS_BUILD_URL) : null;
+		String currentBuildFullUrl = (jenkinsBuildUrls.containsKey(Constants.CURRENT_BUILD_URL)) ? jenkinsBuildUrls.get(Constants.CURRENT_BUILD_FULL_URL) : null;
+		String currentBuildLabel = (jenkinsBuildUrls.containsKey(Constants.CURRENT_BUILD_LABEL)) ? jenkinsBuildUrls.get(Constants.CURRENT_BUILD_LABEL) : Constants.GENERIC_JENKINS_BUILD;
 
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(1));
 		
 		if (buildStream != null) {
 			return acceptForBuildStream(processAreaName, buildStream, changeReport, snapshotName, previousSnapshotUUID, previousBuildUrl,
-					temporaryWorkspaceComment, listener, monitor, clientLocale);
+					currentBuildFullUrl, currentBuildLabel, temporaryWorkspaceComment, listener, monitor, clientLocale);
 		}
 		else if (buildSnapshot != null) {
 			return acceptForBuildSnapshot(buildSnapshotContext, buildSnapshot, changeReport, listener, progress, clientLocale);
@@ -478,7 +484,7 @@ public class RepositoryConnection {
             	WorkItemPublisher workItemPublisher = new WorkItemPublisher();
             	workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), getTeamRepository());
             }
-
+            
             if (monitor.isCanceled()) {
             	throw new InterruptedException();
             }
@@ -506,8 +512,26 @@ public class RepositoryConnection {
 	            		listener);
         	}
         }
+
         if ( changeReport != null ) {
         	changeReport.prepareChangeSetLog();
+        	
+        	// Create a link in all the work items to the current jenkins build url if it is a build from repository worksapce
+        	if (buildConfiguration.isRepositoryWorkspaceConfiguration() && 
+        			currentBuildFullUrl != null) {
+        		LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
+        		// Get the work items
+        		List<Integer> workItems = changeReport.getWorkItems();
+        		try {
+	        		// Create a link to the current Jenkins build in the work items
+	        		WorkItemUtils.addRelatedLinkToWorkItems(this.fRepository, workItems, currentBuildFullUrl, currentBuildLabel);
+        		} catch (Exception exp) {
+        			// Log the exception but do not fail the build
+        			LOGGER.log(Level.WARNING, 
+        					String.format("Error adding Jenkins build URL as \"Related Artifacts\" to work items %s", workItems.toString()), //$NON-NLS-1$ 
+        					exp);
+        		}
+        	}
         }
 
         buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
@@ -1419,7 +1443,8 @@ public class RepositoryConnection {
 	 * @param changeReport - the change report to which the change log has to be written into
 	 * @param snapshotName The name to set on the snapshot that is created during accept 
 	 * @param previousSnapshotUUID - the UUID of the previous snapshot
-	 * @param previousBuildUrl - the url of the previous Jenkins build from which the previous snapshot uuid was taken
+	 * @param previousBuildURL - the URL of the previous Jenkins build from which the previous snapshot uuid was taken
+	 * @param currentBuildURL - the URL of the current Jenkins build
 	 * @param temporaryWorkspaceComment -
 	 * @param listener
 	 * @param progress
@@ -1428,7 +1453,8 @@ public class RepositoryConnection {
 	 * @throws {@link Exception} - if there is any error during the operation
 	 */
 	private Map<String, Object> acceptForBuildStream(final String processAreaName, final String buildStream, final ChangeReport changeReport,
-			final String snapshotName, final String previousSnapshotUUID, final String previousBuildUrl, String temporaryWorkspaceComment,
+			final String snapshotName, final String previousSnapshotUUID, final String previousBuildURL, 
+			String currentBuildURL, String currentBuildLabel, String temporaryWorkspaceComment,
 			final IConsoleOutput listener, final IProgressMonitor progress, final Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
@@ -1443,7 +1469,9 @@ public class RepositoryConnection {
 		/*
 		 *  Create a workspace from the stream
 		 *  Take a snapshot on the workspace
-		 *  Change the snapshot owner to the stream 
+		 *  Change the snapshot owner to the stream
+		 *  Generate the change report
+		 *  Create a link in the work items to the Jenkins build  
 		 */
 
     	// Get the workspace connection for the stream
@@ -1485,7 +1513,6 @@ public class RepositoryConnection {
 			// If the previousSnapshot is not null, then compare 
 			// Otherwise skip the compare put the link to the current snapshot in the change report
 			if (previousSnapshot != null) {
-				// TODO do we need to exclude components from components to exclude
 				// Create the changeReport
 				IChangeHistorySyncReport compareReport = SCMPlatform.getWorkspaceManager(getTeamRepository()).compareBaselineSets(baselineSet, previousSnapshot, null, monitor.newChild(2));
 				if (changeReport != null) {
@@ -1494,15 +1521,28 @@ public class RepositoryConnection {
 		            changeReportBuilder.populateChangeReport(changeReport,
 		            		streamConnection.getResolvedWorkspace(), streamConnection.getName(), 
 		            		baselineSet, snapshotName, compareReport,
-		            		previousBuildUrl, listener, monitor.newChild(2));
+		            		previousBuildURL, listener, monitor.newChild(2));
 		        	changeReport.prepareChangeSetLog();
 		        	
-		        	// From the compareReport, get the list of accepted, discarded, components added/removed count
+		        	// From the compareReport, get the count of accepted, discarded, components added/removed count
 		        	int acceptCount = getAcceptChangesCount(changeReport);
 		        	if (acceptCount > 0) {
 		        		buildProperties.put(IJazzScmConfigurationElement.PROPERTY_CHANGES_ACCEPTED, String.valueOf(acceptCount));
 		        	}
-
+		        	
+		        	LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
+		        	// From the compareReport, get the list of work items included in this build.
+		        	// We will create link to the current Jenkins build in those work items
+		        	List<Integer> workItemIds = changeReport.getWorkItems();
+		        	try {
+		        		WorkItemUtils.addRelatedLinkToWorkItems(fRepository, workItemIds, currentBuildURL,
+		        				currentBuildLabel);
+		        	} catch (Exception exp) {
+	        			// Log the exception but do not fail the build
+	        			LOGGER.log(Level.WARNING, 
+	        					String.format("Error adding Jenkins build URL as \"Related Artifacts\" to work items %s", workItemIds.toString()), //$NON-NLS-1$ 
+	        					exp);
+		        	}
 				}
 			} else { // Fill in just the snapshot UUID in the change log
 				ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
@@ -1516,6 +1556,15 @@ public class RepositoryConnection {
 			buildProperties.put(Constants.TEAM_SCM_STREAM_DATA_HASH, streamDataHashS.toString());
 			
 			// Put the snapshotUUID in the buildProperties and add it to result
+			// Put the snapshotUUID in the buildProperties and add it to result
+			// Put the previous snapshot UUID into buildProperties and add it to the result
+			// This will be added in 1.2.0.5. Older builds will not have this property.
+			// For repository workspaces, capture operation history state of the workspace before 
+			// accepting/discarding/adding/removing components. That is actually a lightweight 
+			// previous snapshot UUID 
+			if (previousSnapshotUUID != null) {
+				buildProperties.put(Constants.TEAM_SCM_PREVIOUS_SNAPSHOT_UUID, previousSnapshotUUID);
+			}
 			buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, baselineSet.getItemId().getUuidValue());
 			buildProperties.put(Constants.TEAM_SCM_SNAPSHOT_OWNER, streamConnection.getResolvedWorkspace().getItemId().getUuidValue());
 	        buildProperties.put(Constants.TEAM_SCM_ACCEPT_PHASE_OVER, "true");

@@ -18,8 +18,8 @@
   	Indique le nom donné à l'image instantanée qui est créée après l'acceptation des modifications.
   </p>
   <p>
-  	Cette zone peut être définie sur toute chaîne utilisateur faisant référence à des variables d'environnement et à des paramètres de génération. 
-Incluez au moins une variable de valeur spécifique à chaque génération (par exemple, BUILD_NUMBER, BUILD_ID ou BUILD_URL) pour garantir que les versions suivantes créent des images instantanées portant des noms différents.	Si cette zone est vide, un nom d'image instantanée par défaut est utilisé. Pour les travaux qui utilisent une définition de génération, le nom d'image instantanée par défaut est "${buildDefinitionId}_#${BUILD_NUMBER}".
+  	Cette zone peut être définie sur toute chaîne utilisateur faisant référence à des variables d'environnement et à des paramètres de génération. Incluez au moins une variable de valeur spécifique à chaque génération (par exemple, BUILD_NUMBER, BUILD_ID ou BUILD_URL) pour garantir que les versions suivantes créent des images instantanées portant des noms différents. 
+	Si cette zone est vide, un nom d'image instantanée par défaut est utilisé. Pour les travaux qui utilisent une définition de génération, le nom d'image instantanée par défaut est "${buildDefinitionId}_#${BUILD_NUMBER}". 
 	Pour les travaux qui utilisent un flux ou un espace de travail de référentiel, le nom d'image instantanée par défaut est "${JOB_NAME}_#${BUILD_NUMBER}".
   </p>
   <p>

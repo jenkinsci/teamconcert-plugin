@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   選取載入規則檔，以指定如何載入儲存庫工作區。如果使用副檔名指定了「動態載入規則」，則那些規則的優先順序高於這裡指定的規則。
+  </p>
+  <p>
+  	如果要套用載入規則，請以下列 JSON 格式列出它們，將清單儲存成磁碟上的檔案，並在這個欄位中指定該檔案的路徑。
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	您也可以指定 "componentId"，而非指定 "componentName"。"componentId" 是元件的項目 ID (UUID)。
+	如果您同時指定了 "componentName" 和 "componentId"，只會依 "componentId" 進行查閱。
+  </p>
+  <p>
+  	"filePath" 值是儲存庫中載入規則檔的完整路徑；亦即，遠端路徑。
+  	您也可以指定 "fileItemId"，而非指定 "filePath"。"fileItemId" 是載入規則檔的項目 ID (UUID)。
+  	當您指定檔案路徑時，請使用正斜線 (/) 來區隔路徑區段。如果您同時指定了 "filePath" 和 "fileItemId"，只會依 "fileItemId" 進行查閱。
+  </p>
+
+</div>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -16,34 +16,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import hudson.model.FreeStyleBuild;
-import hudson.model.Result;
-import hudson.model.FreeStyleProject;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.StringParameterDefinition;
-import hudson.model.StringParameterValue;
-import hudson.scm.PollingResult;
-import hudson.scm.PollingResult.Change;
-import hudson.tools.ToolProperty;
-import hudson.util.FormValidation;
-import hudson.util.IOUtils;
-import hudson.util.Secret;
-import net.sf.json.JSONObject;
-
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -75,6 +58,22 @@ import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
+
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
+import hudson.tools.ToolProperty;
+import hudson.util.FormValidation;
+import hudson.util.IOUtils;
+import hudson.util.Secret;
+import net.sf.json.JSONObject;
 
 public class RTCScmIT extends AbstractTestCase {
 	private static final String CONFIGURE = "configure";
@@ -581,7 +580,7 @@ public class RTCScmIT extends AbstractTestCase {
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
 					"false", "Singly Occuring=WS", "useLoadRules", "/comp1/f/ws.loadrule");
 			assertEquals("Path to the load rule file &quot;/comp1/f/ws.loadrule&quot; does not include the component name. "
-					+ "Please specify the path in the following format: &lt;component name>/&lt;remote path to the load rule file>.",
+					+ "Please specify the path in the following format: &lt;component name&gt;/&lt;remote path to the load rule file&gt;.",
 					result.renderHtml());
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			
@@ -946,7 +945,7 @@ public class RTCScmIT extends AbstractTestCase {
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
 					"false", null, streamName, "useLoadRules", "/comp1/f/ws.loadrule");
 			assertEquals("Path to the load rule file &quot;/comp1/f/ws.loadrule&quot; does not include the component name. "
-					+ "Please specify the path in the following format: &lt;component name>/&lt;remote path to the load rule file>.",
+					+ "Please specify the path in the following format: &lt;component name&gt;/&lt;remote path to the load rule file&gt;.",
 					result.renderHtml());
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			

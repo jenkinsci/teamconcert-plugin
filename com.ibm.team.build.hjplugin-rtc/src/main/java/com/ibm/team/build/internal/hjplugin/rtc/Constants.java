@@ -28,6 +28,7 @@ public class Constants {
 	public static final String TEMPORARY_WORKSPACE_UUID = "rtcTempRepoWorkspaceUUID";
 	public static final String TEMPORARY_REPO_WORKSPACE_DATA = "temporaryRepoWorkspaceData";
 	public static final String REPOSITORY_ADDRESS = "repositoryAddress";
+	public static final String TEAM_SCM_PREVIOUS_SNAPSHOT_UUID="team.scm.previousSnapshotUUID";
 
 	/**
 	 * Build Definition Info constants
@@ -103,4 +104,17 @@ public class Constants {
      * component load configuration in the build definition.
      */
     public static final String PROPERTY_COMPONENT_LOAD_CONFIG = "team.scm.componentLoadConfig"; //$NON-NLS-1$
+    
+    /**
+     * Constants related to build URL map sent by RTCScm
+     */
+	public static final String GENERIC_JENKINS_BUILD = "Jenkins Build"; //$NON-NLS-1$
+	
+	public static final String CURRENT_BUILD_FULL_URL = "currentBuildFullUrl"; //$NON-NLS-1$
+	
+	public static final String CURRENT_BUILD_LABEL = "currentBuildLabel"; //$NON-NLS-1$
+	
+	public static final String CURRENT_BUILD_URL = "currentBuildUrl"; //$NON-NLS-1$
+	
+	public static final String PREVIOUS_BUILD_URL = "previousBuildUrl"; //$NON-NLS-1$     
 }

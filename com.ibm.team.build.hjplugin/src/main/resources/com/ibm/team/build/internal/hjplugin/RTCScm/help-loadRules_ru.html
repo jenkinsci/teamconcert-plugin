@@ -1,0 +1,49 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2016 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+  <p>
+   Выберите файл правил загрузки, определяющий способ загрузки рабочей области хранилища. Если с помощью расширения были заданы динамические правила загрузки, то они имеют больший приоритет, чем указанные здесь правила.
+  </p>
+  <p>
+  	Для применения правил загрузки создайте их список в следующем формате JSON, сохраните список в файле на диске и укажите путь к файлу в данном поле.
+  </p>
+  <p>
+  <pre>
+  {
+    "loadRules":[
+      {
+        "componentName":"JUnit",
+        "filePath":"JUnit Project/junit-project.loadrule"
+      },
+      {
+        "componentName":"Releng",
+        "filePath":"Releng Project/releng-project.loadrule"
+      }
+    ]
+  }
+  </pre>
+  </p>
+  <p>
+	Вместо "componentName" можно указать "componentId". "componentId" задает присвоенный компоненту ИД элемента (UUID). 
+	Если задано как "componentName", так и "componentId", используется только "componentId".
+  </p>
+  <p>
+  	Значение "filePath" задает полный путь к файлу правил загрузки в хранилище, то есть удаленный путь. 
+  	Вместо "filePath" можно указать "fileItemId". "fileItemId" задает ИД элемента (UUID), присвоенный файлу правил загрузки. 
+  	Сегменты пути к файлу следует разделять косой чертой (/). Если задано как "filePath", так и "fileItemId", будет использоваться только "fileItemId".
+  </p>
+
+</div>
