@@ -521,7 +521,7 @@ public class RepositoryConnection {
         			currentBuildFullUrl != null) {
         		LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
         		// Get the work items
-        		List<Integer> workItems = changeReport.getWorkItems();
+        		List<Integer> workItems = changeReport.getAcceptedWorkItems();
         		try {
 	        		// Create a link to the current Jenkins build in the work items
 	        		WorkItemUtils.addRelatedLinkToWorkItems(this.fRepository, workItems, currentBuildFullUrl, currentBuildLabel);
@@ -1533,7 +1533,7 @@ public class RepositoryConnection {
 		        	LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
 		        	// From the compareReport, get the list of work items included in this build.
 		        	// We will create link to the current Jenkins build in those work items
-		        	List<Integer> workItemIds = changeReport.getWorkItems();
+		        	List<Integer> workItemIds = changeReport.getAcceptedWorkItems();
 		        	try {
 		        		WorkItemUtils.addRelatedLinkToWorkItems(fRepository, workItemIds, currentBuildURL,
 		        				currentBuildLabel);
