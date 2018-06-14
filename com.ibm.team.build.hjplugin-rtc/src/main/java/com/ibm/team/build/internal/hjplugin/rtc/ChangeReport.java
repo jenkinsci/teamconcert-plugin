@@ -327,7 +327,7 @@ public class ChangeReport {
 		List<Integer> workItems = new ArrayList<Integer>();
 		for (ChangeSetReport changeSetReport : this.changeSets) {
 			List<WorkItemEntry> changeSetWorkItems = changeSetReport.getWorkItems();
-			if (changeSetWorkItems != null) {
+			if (changeSetWorkItems != null && changeSetReport.isAccepted()) {
 				for(WorkItemEntry workItemEntry : changeSetWorkItems) {
 					workItems.add(Integer.valueOf(workItemEntry.getNumber()));
 				}
