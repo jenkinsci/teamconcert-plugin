@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2017 IBM Corporation and others.
+ * Copyright © 2014, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -257,10 +257,9 @@ public class Helper {
 	/**
 	 * Resolve a given build parameter to its value
 	 * @param build - the Jenkins build. Never <code>null</code>
-	 * @param parameter - the job parameter. Never <code>null</code>
+	 * @param parameter - the build parameter. Never <code>null</code>
 	 * @param listener - task listener. Never <code>null</code>
-	 * @return the value of the job parameter or <code>property</code> if the job parameter is not defined or 
-	 * if the given property is not a job parameter 
+	 * @return the value of the build parameter or <code>property</code>. All first level property references resolved. May be <code>null</code>.
 	 * @throws InterruptedException 
 	 * @throws IOException 
 	 */
@@ -273,11 +272,11 @@ public class Helper {
 	}
 
 	/**
-	 * 
-	 * @param job
-	 * @param jobParameter
-	 * @param listener
-	 * @return
+	 *  Resolve a given build property to its value
+	 * @param job The Jenkins job. Never <code>null</code>
+	 * @param jobParameter The parameter (also known as property) in the job. Never <code>null</code>
+	 * @param listener task listener. Never <code>null</code>
+	 * @return the value of the build parameter or <code>property</code>. All first level property references resolved. May be <code>null</code>.
 	 */
 	public static String resolveJobParameter(Job <?,?> job, String jobParameter, TaskListener listener) {
 		if (jobParameter == null) {
@@ -289,13 +288,15 @@ public class Helper {
 	
 	/**
 	 * Returns the snapshot UUID from the previous build, sometimes only a successful build
-	 * @param build
-	 * @param facade
-	 * @param loginInfo
-	 * @param streamName
-	 * @param clientLocale
-	 * @return
-	 * @throws Exception
+	 * 
+	 * @param build The Jenkins build.
+	 * @param toolkit The build toolkit to use. This should be a valid build toolkit on the master.
+	 * @param loginInfo Login information for RTC
+	 * @param streamName The name of the stream that owns the current snapshot (and the previous snapshot)
+	 * @param clientLocale Locale of the client
+	 * @return a tuple. First member is the build which contains the snapshot and the second is the snapshot UUID. 
+	 * 			tuple is never <code>null<code> but its members may be <code>null</code> 
+	 * @throws Exception If anything goes wrong when fetching the snapshot details
 	 */
 	public static Tuple<Run<?,?>, String> getSnapshotUUIDFromPreviousBuild(final Run<?,?> build, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, final boolean onlyGoodBuild, Locale clientLocale) throws Exception {
 		Tuple<Run<?,?>, String> snapshotDetails = new Tuple<Run<?,?>, String>(null, null);
@@ -317,24 +318,26 @@ public class Helper {
 			public Run<?, ?> firstBuild() {
 				return build;
 			}
-		}, toolkit, loginInfo, processArea, buildStream, onlyGoodBuild, "team_scm_snapshotUUID", clientLocale);
+		}, toolkit, loginInfo, processArea, buildStream, onlyGoodBuild, "team_scm_snapshotUUID", clientLocale); //$NON-NLS-1$
 		if (LOGGER.isLoggable(Level.FINEST)) {
-			LOGGER.finest("Helper.getSnapshotUUIDFromPreviousBuild : " + 
-						((snapshotDetails.getSecond() == null) ? "No snapshotUUID found from a previous build" : snapshotDetails.getSecond()));
+			LOGGER.finest("Helper.getSnapshotUUIDFromPreviousBuild : " +  //$NON-NLS-1$
+						((snapshotDetails.getSecond() == null) ? "No snapshotUUID found from a previous build" : snapshotDetails.getSecond())); //$NON-NLS-1$
 		}
 		return snapshotDetails;
 	}
 	
 	/**
-	 * Returns the stream change data from the previous build irrespective of its status
-	 * @param job
-	 * @param toolkit
-	 * @param loginInfo
-	 * @param processArea
-	 * @param buildStream
-	 * @param clientLocale
-	 * @return
-	 * @throws Exception
+	 * Returns the stream change data from the last build of a job irrespective of whether the build succeeded or failed
+	 * 
+	 * @param job The Jenkins job
+	 * @param toolkit The build toolkit to use. This should be a valid build toolkit on the master
+	 * @param loginInfo RTC login information
+	 * @param processArea The owner of the stream. The processArea name.
+	 * @param buildStream The name of the stream
+	 * @param clientLocale The locale of the client
+	 * @return a tuple. First member is the build which contains the snapshot and the second is the snapshot UUID. 
+	 * 			tuple is never <code>null<code> but its members may be <code>null</code> 
+	 * @throws Exception If anything goes wrong when fetching the snapshot details
 	 */
 	public static Tuple<Run<?,?>, String> getStreamChangesDataFromLastBuild(final Job<?,?> job, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, Locale clientLocale) throws Exception {
 		Tuple<Run<?,?>, String> streamChangesData = new Tuple<Run<?,?>, String>(null, null);
@@ -441,18 +444,20 @@ public class Helper {
 	}
 
 	/**
-	 * Get the value of snapshotUUID property from the previous build
+	 * Get the value of the property from a previous build's RTCBuildResultAction property map.
+	 * The builds are enumerated by the iterator.
 	 *   
-	 * @param iterator
-	 * @param toolkit
-	 * @param loginInfo
-	 * @param processArea
-	 * @param buildStream
-	 * @param onlyGoodBuild
-	 * @param key
-	 * @param clientLocale
-	 * @return
-	 * @throws Exception
+	 * @param iterator The iterator that goes through previous builds.
+	 * @param toolkit The build toolkit to use. This should be a valid build toolkit on master
+	 * @param loginInfo The RTC login information
+	 * @param processArea The owner of the stream
+	 * @param buildStream The name of the stream
+	 * @param onlyGoodBuild Whether only a previous good build should be considered
+	 * @param key The property name for which the value has to be retrieved 
+	 * @param clientLocale The locale of the client
+	 * @return a tuple. First member is the build which contains the snapshot and the second is the snapshot UUID. 
+	 * 			tuple is never <code>null<code> but its members may be <code>null</code>  
+	 * @throws Exception If something goes wrong when fetching stream information
 	 */
 	private static Tuple<Run<?,?>, String> getValueForBuildStream(IJenkinsBuildIterator iterator, String toolkit, RTCLoginInfo loginInfo, String processArea, String buildStream, boolean onlyGoodBuild, String key, Locale clientLocale) throws Exception {
 		if (buildStream == null) {
@@ -526,9 +531,9 @@ public class Helper {
 	}
 	
 	/**
-	 * 
+	 * Returns the value of the given parameter from the job configuration
 	 **/
-	private static String getStringBuildParameter(Job<?,?> job, String parameter, TaskListener listener) {
+	public static String getStringBuildParameter(Job<?,?> job, String parameter, TaskListener listener) {
 
 		ParametersDefinitionProperty prop = job.getProperty(ParametersDefinitionProperty.class);
 		String paramValue = null;

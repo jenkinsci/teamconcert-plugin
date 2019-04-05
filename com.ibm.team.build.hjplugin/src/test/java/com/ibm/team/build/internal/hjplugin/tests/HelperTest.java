@@ -1,17 +1,17 @@
+/*******************************************************************************
+ * Copyright © 2016, 2018 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+
 package com.ibm.team.build.internal.hjplugin.tests;
 
 import static org.junit.Assert.assertEquals;
-import hudson.EnvVars;
-import hudson.model.FreeStyleBuild;
-import hudson.model.TaskListener;
-import hudson.model.BooleanParameterDefinition;
-import hudson.model.Job;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.Run;
-import hudson.model.StringParameterDefinition;
-import hudson.model.StringParameterValue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,20 +20,30 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
+import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 
-import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
+import hudson.EnvVars;
+import hudson.model.BooleanParameterDefinition;
+import hudson.model.FreeStyleBuild;
+import hudson.model.Job;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.model.TaskListener;
 
 /**
  * Tests for {@link Helper} class
  *
  */
+@SuppressWarnings({"nls", "static-method"})
 public class HelperTest extends AbstractTestCase {
 	
 	

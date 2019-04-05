@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,15 +22,15 @@ import com.ibm.team.build.internal.hjplugin.rtc.RTCFacade;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 
-
+@SuppressWarnings({"nls"})
 public class RTCTestingFacade extends RTCFacade {
 	private TestSetupTearDownUtil fTestSetupTearDownUtil;
 	
 	private synchronized TestSetupTearDownUtil getTestSetupTearDownUtil() {
-		if (fTestSetupTearDownUtil == null) {
-			 fTestSetupTearDownUtil = new TestSetupTearDownUtil();
+		if (this.fTestSetupTearDownUtil == null) {
+			 this.fTestSetupTearDownUtil = new TestSetupTearDownUtil();
 		}
-		return fTestSetupTearDownUtil;
+		return this.fTestSetupTearDownUtil;
 	}
 	
 	/**
@@ -192,7 +192,8 @@ public class RTCTestingFacade extends RTCFacade {
 	public Map<String, String> setupTestBuildStream_basic(String serverURL, String userId, String password, int timeout, String buildStreamName) throws Exception {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
-		Map<String, String> setup = testClient.setupTestBuildStream_basic(connectionDetails, buildStreamName, getProgressMonitor());
+		Map<String, String> setup = testClient.setupTestBuildStream_acceptChanges(connectionDetails, buildStreamName,
+					"Regular setup build stream", getProgressMonitor());
 		return setup;
 	}
 	
@@ -200,6 +201,28 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		Map<String, String> setup = testClient.setupTestBuildStream_toTestLoadPolicy(connectionDetails, buildStreamName, getProgressMonitor());
+		return setup;
+	}
+	
+	/**
+	 * Sets up a stream and a repository workspace that flows to the stream.
+	 * In the repository workspace, change sets are added to a component and a work item
+	 *  is associated with the change sets.
+	 * The change sets are NOT delivered to the stream.
+	 * @param serverURL
+	 * @param userId
+	 * @param password
+	 * @param timeout
+	 * @param buildStreamName
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> setupTestBuildStream_acceptChanges(String serverURL, String userId, String password, int timeout,
+			 String buildStreamName, String workItemSummary) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupTestBuildStream_acceptChanges(connectionDetails, buildStreamName, 
+					workItemSummary, getProgressMonitor());
 		return setup;
 	}
 
@@ -344,6 +367,20 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		testClient.verifyBuildResultDeleted(connectionDetails, artifactIds);
+	}
+	
+	public void testMetronomeLogsInBuildResult(String serverURL, String userId, String passwordToUse, int timeout,
+			String buildResultUUID) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
+		testClient.testMetronomeLogsInBuildResult(connectionDetails, buildResultUUID);
+	}
+	
+	public void testNoMetronomeLogsInBuildResult(String serverURL, String userId, String passwordToUse, int timeout,
+			String buildResultUUID) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, passwordToUse, timeout);
+		testClient.testNoMetronomeLogsInBuildResult(connectionDetails, buildResultUUID);
 	}
 
 	public void testBuildStart(String serverURL, String userId, String password,
@@ -590,7 +627,8 @@ public class RTCTestingFacade extends RTCFacade {
 	public Map<String, String> setupBuildDefinitionWithJazzScmAndPBDeliver(String serverURL, String userId, String password, int timeout,
 						String workspaceName, String componentName, String buildDefinitionId, 
 						String loadDirectory, boolean createBuildResult, boolean isPersonalBuild, 
-						Map<String, String> configOrGenericProperties) throws Exception {
+						Map<String, String> configOrGenericPropertiesParam) throws Exception {
+		Map<String, String> configOrGenericProperties = configOrGenericPropertiesParam;
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		if (configOrGenericProperties == null) {
@@ -602,7 +640,8 @@ public class RTCTestingFacade extends RTCFacade {
 	
 	public Map<String, String> setupBuildDefinitionWithoutJazzScmWithPBDeliver(String serverURL, String userId, String password, int timeout,
 						String workspaceName, String componentName, String buildDefinitionId, boolean createBuildResult,
-						Map<String, String> configOrGenericProperties) throws Exception {
+						Map<String, String> configOrGenericPropertiesParam) throws Exception {
+		Map<String, String> configOrGenericProperties = configOrGenericPropertiesParam;
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		if (configOrGenericProperties == null) {
@@ -610,5 +649,33 @@ public class RTCTestingFacade extends RTCFacade {
 		}
 		return testClient.setupBuildDefinitionWithoutJazzScmWithPBDeliver(connectionDetails, workspaceName, componentName, buildDefinitionId, 
 									createBuildResult, configOrGenericProperties, getProgressMonitor());
+	}
+	
+	public void testWorkItemHasRelatedArtifactLink(String serverURL, String userId, String password, int timeout, 
+					String workItemid, String url) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		testClient.testWorkItemHasRelatedArtifactLink(connectionDetails, workItemid, url);
+	}
+	
+	public void testWorkItemHasNoRelatedArtifactLink(String serverURL, String userId, String password, int timeout, 
+					String workItemId) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		testClient.testWorkItemHasNoRelatedArtifactLink(connectionDetails, workItemId);
+	}
+	
+	public int deliverChangesFromWorkspaceToStream(String serverURL, String userId, String password, int timeout,
+					String streamUUID, String workspaceUUID) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.deliverChangesFromWorkspaceToStream(connectionDetails, streamUUID, workspaceUUID);
+	}
+	
+	public Map<String, String> createEmptyChangeSets(String serverURL, String userId, String password, int timeout, 
+			String workspaceUUID, String componentUUID, int count) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.createEmptyChangeSets(connectionDetails, workspaceUUID, componentUUID, count, getProgressMonitor());
 	}
 }

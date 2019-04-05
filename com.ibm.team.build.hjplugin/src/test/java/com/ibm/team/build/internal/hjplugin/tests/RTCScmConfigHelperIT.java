@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2016 IBM Corporation and others.
+ * Copyright © 2014, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -32,6 +32,7 @@ import com.ibm.team.build.internal.hjplugin.util.RTCScmConfigHelper;
 import hudson.model.FreeStyleProject;
 import hudson.util.Secret;
 
+@SuppressWarnings("nls")
 public class RTCScmConfigHelperIT extends AbstractTestCase {
 
 	private static final String DEFN_SERVER_URI = "https://localHost:4321/jazz";
@@ -50,7 +51,7 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 	public void testGetCurrentConfigs() throws Exception {
 		
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = j.createFreeStyleProject();
+			FreeStyleProject project = this.j.createFreeStyleProject();
 			
 			// no scm
 			Set<RTCScm> currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
@@ -92,7 +93,7 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 			assertEquals("Expected Workspace RTCScm instance", rtcScm, currentConfigs.iterator().next());
 			
 			// non RTC Scm
-			project = j.createFreeStyleProject();
+			project = this.j.createFreeStyleProject();
 			project.setScm(new MockScm("mocking"));
 
 			currentConfigs = RTCScmConfigHelper.getCurrentConfigs(project);
@@ -109,6 +110,9 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 	}
 
 	@Test public void testFindRTCScm() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
 		Set<RTCScm> multipleConfigs = new HashSet<RTCScm>();
 		RTCScm defnRTCScm = createBuildDefnRTCScm();
 		RTCScm wsRTCScm = createWorkspaceRTCScm();
@@ -156,16 +160,19 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 
 	}
 
+	@SuppressWarnings("static-method")
 	private RTCScm createUninitializedRTCScm() {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "", "", "", "");
 		return new RTCScm(true, "", null, 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 
+	@SuppressWarnings("static-method")
 	private RTCScm createWorkspaceRTCScm() {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace", "", "");
 		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 	
+	@SuppressWarnings("static-method")
 	private RTCScm createWorkspaceWithLoadDirectoryRTCScm() {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace", "", "");
 		buildSource.setLoadDirectory("testLoadDirectory");
@@ -173,6 +180,7 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 	
+	@SuppressWarnings("static-method")
 	private RTCScm createWorkspaceWithDeleteDirectoryRTCScm() {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "AnotherWorkspace", "", "");
 		buildSource.setLoadDirectory("");
@@ -180,11 +188,13 @@ public class RTCScmConfigHelperIT extends AbstractTestCase {
 		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);
 	}
 	
+	@SuppressWarnings("static-method")	
 	private RTCScm createSnapshotRTCScm() {
 		BuildType buildType = new BuildType(RTCScm.BUILD_SNAPSHOT_TYPE, "", "", SNAPSHOT_NAME, "");
 		return new RTCScm(true, "", "https://localHost:1234", 0, "ADMIN", Secret.fromString(""), "", "", buildType, false);
 	}
 
+	@SuppressWarnings("static-method")
 	private RTCScm createBuildDefnRTCScm() {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "AnotherBuildDefinition", "", "", "");
 		return new RTCScm(true, "", DEFN_SERVER_URI, 0, "ADMIN", Secret.fromString(""), "", "", buildSource, false);

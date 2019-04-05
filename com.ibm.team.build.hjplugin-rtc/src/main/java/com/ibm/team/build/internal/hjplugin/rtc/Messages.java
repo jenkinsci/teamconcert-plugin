@@ -370,6 +370,10 @@ public class Messages {
     	return getString("RepositoryConnection.accept_unable_to_start_call_connector");
     }
     
+    public String RepositoryConnection_metronome_data_might_be_unavailable() {
+    	return getString("RepositoryConnection_metronome_data_might_be_unavailable");
+    }
+    
     /**
      * RTC Load : Unable to find WorkspaceConnection created by Accept
      * 
@@ -1018,6 +1022,10 @@ public class Messages {
 	
 	public String VersionCheckerUtil_parser_error(String arg1) {
 		return MessageFormat.format(getString("VersionCheckerUtil_parser_error"), arg1);
+	}
+
+	public String RepositoryConnection_unable_to_publish_metronome_log() {
+		return getString("RepositoryConnection_unable_to_publish_metronome_log");
 	}
 	/**
      * Get the message from the bundle

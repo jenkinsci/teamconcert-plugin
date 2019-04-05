@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2016 IBM Corporation and others.
+ * Copyright © 2014, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -20,6 +20,7 @@ import com.ibm.team.build.internal.hjplugin.RTCChangeLogComponentEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCRepositoryBrowser;
 
+@SuppressWarnings({"nls", "static-method"})
 public class RTCRepositoryBrowserIT  {
 	
 	private static final String WORK_ITEM_NUMBER = "2";
@@ -59,7 +60,7 @@ public class RTCRepositoryBrowserIT  {
 	 * @param browser The browser to test
 	 * @throws Exception If the test fails
 	 */
-	private void exerciseBrowser(String serverURI, RTCRepositoryBrowser browser) throws Exception {
+	private static void exerciseBrowser(String serverURI, RTCRepositoryBrowser browser) throws Exception {
 		RTCChangeLogSet changeLogSet = setupChangeLogSet();
 		
 		assertEquals(serverURI + "/resource/itemOid/com.ibm.team.scm.BaselineSet/" + BASELINE_SET_ITEMID, browser.getBaselineSetLink(changeLogSet).toString());
@@ -92,7 +93,7 @@ public class RTCRepositoryBrowserIT  {
 	 * @param browser The browser to test
 	 * @throws Exception If the tests fails
 	 */
-	private void exerciseBrowser(RTCRepositoryBrowser browser) throws Exception {
+	private static void exerciseBrowser(RTCRepositoryBrowser browser) throws Exception {
 		RTCChangeLogSet changeLogSet = setupChangeLogSet();
 		
 		assertEquals(null, browser.getBaselineSetLink(changeLogSet));
@@ -112,7 +113,7 @@ public class RTCRepositoryBrowserIT  {
 	 * @return A simple ChangeLog structure with a discarded change set (with a file change and a work item),
 	 *  a component change and a baseline set.
 	 */
-	private RTCChangeLogSet setupChangeLogSet() {
+	private static RTCChangeLogSet setupChangeLogSet() {
 		RTCChangeLogSet changeLogSet = new RTCChangeLogSet(null, null);
 		changeLogSet.setBaselineSetItemId(BASELINE_SET_ITEMID);
 		

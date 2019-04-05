@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -75,6 +76,7 @@ import hudson.util.IOUtils;
 import hudson.util.Secret;
 import net.sf.json.JSONObject;
 
+@SuppressWarnings({"nls", "static-method"})
 public class RTCScmIT extends AbstractTestCase {
 	private static final String CONFIGURE = "configure";
 	private static final String CONFIG = "config";
@@ -141,12 +143,12 @@ public class RTCScmIT extends AbstractTestCase {
 	public void setUp() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
 			Config config = Config.DEFAULT;
-			buildTool = CONFIG_TOOLKIT_NAME;
-			serverURI = config.getServerURI();
-			timeoutInt = config.getTimeout();
-			timeout = String.valueOf(config.getTimeout());
-			userId = config.getUserID();
-			password = config.getPassword();
+			this.buildTool = CONFIG_TOOLKIT_NAME;
+			this.serverURI = config.getServerURI();
+			this.timeoutInt = config.getTimeout();
+			this.timeout = String.valueOf(config.getTimeout());
+			this.userId = config.getUserID();
+			this.password = config.getPassword();
 		}
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
@@ -341,7 +343,7 @@ public class RTCScmIT extends AbstractTestCase {
 
 	@Test public void testDoCheckPasswordFile() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			File testPasswordFileFile = Utils.getTemporaryFile();
+			File testPasswordFileFile = Utils.getTemporaryFile(true);
 			String testPasswordFile = testPasswordFileFile.getAbsolutePath();
 	
 			FreeStyleProject project = r.createFreeStyleProject();
@@ -535,7 +537,7 @@ public class RTCScmIT extends AbstractTestCase {
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
 					"true", "Multiple Occurrence=WS", null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
-			assertEquals("More than 1 repository workspace has the name &quot;Multiple Occurrence=WS&quot;", result.renderHtml());
+			assertEquals("More than one repository workspace has the name &quot;Multiple Occurrence=WS&quot;", result.renderHtml());
 			
 			// valid connect info - using build toolkit and warning workspace (parameterized values) 
 			// only warning should be displayed
@@ -951,7 +953,7 @@ public class RTCScmIT extends AbstractTestCase {
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null
 			// valid process area(null)
-			// valida stream
+			// validate stream
 			// error path to load rule file - build toolkit required for validation 
 			// error should be displayed
 			result = descriptor.doValidateBuildStreamConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
@@ -1492,7 +1494,7 @@ public class RTCScmIT extends AbstractTestCase {
 				setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID, action.getBuildResultUUID());
 
 				// Run polling and check the log file
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
 				
 				// Ensure that there are no changes and polling happened successfully
@@ -1504,17 +1506,26 @@ public class RTCScmIT extends AbstractTestCase {
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
 				
-				// Verify that build failed and there is a check ut failure message
+				// Verify that build failed and there is a checkout failure message
 				assertEquals(Result.FAILURE, build.getResult());
-				Utils.getMatch(build.getLogFile(), "RTC : checkout failure: The parameter \"buildDefinitionId\" must not be null");
+				Utils.dumpLogFile(build, "tmp", "buildDefinitionCheckoutAndPollingWithBuildtoolkit", "log");
+				String match1 = Utils.getMatch(build.getLogFile(), ".*RTC : checkout failure: The parameter \"buildDefinitionId\" must not be null.*");
+				String match2 = Utils.getMatch(build.getLogFile(), ".*More than one repository workspace has the name \"\".*");
+				assertTrue("Expecting checkout failure message" +
+							Files.toString(build.getLogFile(), Charset.forName("UTF-8"))
+									, match1 != null || match2 != null);
 				
 				// Run polling and check the log file
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
-				
+				if (Config.DEFAULT.isDumpLogFiles()) {
+					Utils.dumpFile(pollingFile, "buildDefinitionCheckoutAndPollingWithBuildtoolkit");
+				}
 				// Ensure that there are no changes and polling happened successfully
 				assertEquals(Change.NONE, pollingResult.change);
-				Utils.getMatch(pollingFile, "RTC : checking for changes failure: More than one repository workspace has the name \"\"");
+				assertNotNull("Expecting checking for failure message" +
+						Files.toString(pollingFile, Charset.forName("UTF-8"))
+						, Utils.getMatch(pollingFile, ".*RTC : checking for changes failure: More than one repository workspace has the name \"\".*"));
 			}
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
@@ -1553,7 +1564,7 @@ public class RTCScmIT extends AbstractTestCase {
 				
 				// Start polling and check whether there are no changes and polling ran successfully
 				// Run polling and check the log file
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
 				
 				// Verify
@@ -1567,15 +1578,26 @@ public class RTCScmIT extends AbstractTestCase {
 				
 				// Verify that build failed and there is a checkout failure message
 				assertEquals(Result.FAILURE, build.getResult());
-				Utils.getMatch(build.getLogFile(), "RTC : checkout failure: More than one repository workspace has the name \"null\"");
+				Utils.dumpLogFile(build, "tmp", "repositoryWorkspaceCheckoutAndPollingWithBuildtoolkit", "log");
+				String match1 = Utils.getMatch(build.getLogFile(), ".*RTC : checkout failure: More than one repository workspace has the name \"null\".*");
+				String match2 = Utils.getMatch(build.getLogFile(), ".*RTC : checkout failure: More than one repository workspace has the name \"\".*"); 
+				assertTrue("Expecting checkout failure message" + 
+									Files.toString(build.getLogFile(), Charset.forName("UTF-8")),
+									(match1 != null) || (match2 != null)); 
 				
 				// Run polling and check the log file
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
-				
+				if (Config.DEFAULT.isDumpLogFiles()) {
+					Utils.dumpFile(pollingFile, "repositoryWorkspaceCheckoutAndPollingWithBuildtoolkit");
+				}
 				// Ensure that there are no changes and polling happened successfully
 				assertEquals(Change.NONE, pollingResult.change);
-				Utils.getMatch(pollingFile, "RTC : checking for changes failure: More than one repository workspace has the name \"null\"");
+				match1 = Utils.getMatch(pollingFile, ".*RTC : checking for changes failure: More than one repository workspace has the name \"null\".*");
+				match2 = Utils.getMatch(pollingFile, ".*RTC : cchecking for changes failure: More than one repository workspace has the name \"\".*"); 
+				assertTrue("Expecting checking for failure message" +
+						Files.toString(pollingFile, Charset.forName("UTF-8")),
+						match1 != null || match2 != null);
 			}
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
@@ -1621,7 +1643,7 @@ public class RTCScmIT extends AbstractTestCase {
 				assertEquals(snapshotUUID, action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID));
 				
 				// polling when snapshotUUID is a valid one
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
 				
 				assertEquals(Change.NONE, pollingResult.change);
@@ -1636,7 +1658,7 @@ public class RTCScmIT extends AbstractTestCase {
 				assertEquals(Result.FAILURE, build.getResult());
 				
 				// polling when snapshotUUID is a valid one
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
 				
 				assertEquals(Change.NONE, pollingResult.change);
@@ -2172,7 +2194,7 @@ public class RTCScmIT extends AbstractTestCase {
 				String buildToolkitVersionString = "FATAL: RTC : checkout failure: Please check the version of the build toolkit. Build toolkit version 6.0.3 or above is required to load components using load rules.";
 
 				if (!isPre603BuildToolkit || (isPre603BuildToolkit && Utils.getMatch(build.getLogFile(), buildToolkitVersionString) == null)) {
-					Assert.fail("Failure not expected");
+					Assert.fail(build.getLogFile() + ".Failure not expected");
 				}
 			} else {
 				children = loadDir.list();

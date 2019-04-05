@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright © 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -78,10 +78,9 @@ import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 /**
  * A connection to the Jazz repository.
  */
-@SuppressWarnings("restriction")
 public class RepositoryConnection {
 
-    private static final Logger LOGGER = Logger.getLogger(RepositoryConnection.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(RepositoryConnection.class.getName());
     private static final String DEFAULTWORKSPACEPREFIX = "HJP"; //$NON-NLS-1$
 
 	private final AbstractBuildClient fBuildClient;
@@ -380,9 +379,12 @@ public class RepositoryConnection {
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
 	 * @param callConnectorTimeout user defined call connector timeout
-	 * @param acceptBeforeLoad Accept latest changes before loading if true
-	 * @param jenkinsBuildUrl The URL of the previous and current Jenkins builds. 
-	 * 					The URL of the previous Jenkins build used for comparison and is persisted into the changelog
+     * @param acceptBeforeLoad If <code>true</code> then, the changes from the flow target is synced to the repository workspace
+     * @param addLinksToWorkItems If <code>true</code> then, Jenkins build link will be added to all the work items 
+     * 							  in the accepted change sets
+	 * @param jenkinsBuildUrls 
+	 * 				The URL of the previous and current Jenkins builds. 
+	 * 				The URL of the previous Jenkins build used for comparison and is persisted into the changelog
 	 * @param temporaryWorkspaceComment
 	 * @return <code>Map<String, Object></code> containing build properties, and CallConnector details
 	 * @throws Exception Thrown if anything goes wrong
@@ -390,178 +392,216 @@ public class RepositoryConnection {
 	public Map<String, Object> accept(String processAreaName, String buildResultUUID, String buildWorkspaceName,
 			BuildSnapshotContext buildSnapshotContext, String buildSnapshot, String buildStream, String hjFetchDestination,
 			ChangeReport changeReport, boolean isCustomSnapshotName, String snapshotName, final String previousSnapshotUUID,
-			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad,
-			Map<String, String> jenkinsBuildUrls, String temporaryWorkspaceComment)
+			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout,
+			boolean acceptBeforeLoad, boolean addLinksToWorkItems,
+			Map<String, String> jenkinsBuildUrls, String temporaryWorkspaceComment, Map<String, Object> options)
 			throws Exception {
-		LOGGER.finest("RepositoryConnection.accept : Enter");
+		LOGGER.finest("RepositoryConnection.accept : Enter"); //$NON-NLS-1$
 
-		// TODO extract constants here
 		String previousBuildUrl = (jenkinsBuildUrls.containsKey(Constants.PREVIOUS_BUILD_URL)) ? jenkinsBuildUrls.get(Constants.PREVIOUS_BUILD_URL) : null;
-		String currentBuildFullUrl = (jenkinsBuildUrls.containsKey(Constants.CURRENT_BUILD_URL)) ? jenkinsBuildUrls.get(Constants.CURRENT_BUILD_FULL_URL) : null;
-		String currentBuildLabel = (jenkinsBuildUrls.containsKey(Constants.CURRENT_BUILD_LABEL)) ? jenkinsBuildUrls.get(Constants.CURRENT_BUILD_LABEL) : Constants.GENERIC_JENKINS_BUILD;
-
+		String currentBuildFullUrl = (jenkinsBuildUrls.containsKey(Constants.CURRENT_BUILD_URL)) ?
+					jenkinsBuildUrls.get(Constants.CURRENT_BUILD_FULL_URL) : null;
+		String currentBuildLabel = (jenkinsBuildUrls.containsKey(Constants.CURRENT_BUILD_LABEL)) ?
+					jenkinsBuildUrls.get(Constants.CURRENT_BUILD_LABEL) : Constants.GENERIC_JENKINS_BUILD;
+		
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		ensureLoggedIn(monitor.newChild(1));
 		
+		Map<String, Object> metronomeOptions = (Map<String,Object>)getMetronomeOptions(options);
+		boolean shouldCreateMetronomeReport = shouldCreateMetronomeReport(metronomeOptions);
+        MetronomeReporter reporter = null;
+        if (shouldCreateMetronomeReport) {
+        	reporter = new MetronomeReporter(getTeamRepository()); 
+        }
+        
+		// Because of this return, we will put the metronome reporter into call connector
+        // Since we have started setting call connector for stream and snapshot configuration, 
+        // in load() method, these should deal with null workspaceConnection.
+        // Also set call connector for build stream and snapshot only if metronome should be created.
+        // Therefore, metronome reporter will be null whether shouldReportMetronome is false
 		if (buildStream != null) {
 			return acceptForBuildStream(processAreaName, buildStream, changeReport, snapshotName, previousSnapshotUUID, previousBuildUrl,
-					currentBuildFullUrl, currentBuildLabel, temporaryWorkspaceComment, listener, monitor, clientLocale);
+					currentBuildFullUrl, currentBuildLabel, temporaryWorkspaceComment, 
+						addLinksToWorkItems, reporter, callConnectorTimeout,
+					listener, monitor, clientLocale);
 		}
 		else if (buildSnapshot != null) {
-			return acceptForBuildSnapshot(buildSnapshotContext, buildSnapshot, changeReport, listener, progress, clientLocale);
-		}
-		
-		BuildWorkspaceDescriptor workspace;
-		
-		BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), hjFetchDestination);	
-
-		// If we have a build result, the build definition that describes what is to be accepted into & how to load
-		// Otherwise, the build workspace on the Jenkins definition is used.
-		IBuildResultHandle buildResultHandle = null;
-		if (buildResultUUID != null && buildResultUUID.length() > 0) {
-			buildResultHandle = (IBuildResultHandle)IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
-			buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, false, listener, monitor.newChild(1), clientLocale);
-
+			return acceptForBuildSnapshot(buildSnapshotContext, buildSnapshot, changeReport, reporter, 
+						callConnectorTimeout, listener, progress, clientLocale);
 		} else {
-			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
-					monitor.newChild(1), clientLocale);
-			buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad, null, null, false, null, null, listener,
-					clientLocale, monitor.newChild(1));
-		}
-
-		Map<String, String> buildProperties = buildConfiguration.getBuildProperties();
-
-		workspace = buildConfiguration.getBuildWorkspaceDescriptor();
 		
-        listener.log(Messages.getDefault().RepositoryConnection_checkout_setup());
-        String parentActivityId = getBuildConnection().startBuildActivity(buildResultHandle,
-                Messages.getDefault().RepositoryConnection_pre_build_activity(), null, false, monitor.newChild(1));
-
-        AcceptReport acceptReport = null;
-        
-        getBuildConnection().addWorkspaceContribution(workspace.getWorkspace(fRepositoryManager, monitor.newChild(1)),
-        		buildResultHandle, monitor.newChild(1));
-
-        // Ensure we hang onto this between the accept and the load steps so that if 
-        // we are synchronizing, we use the same cached sync times.
-        IWorkspaceConnection workspaceConnection = workspace.getConnection(fRepositoryManager, false, monitor.newChild(1));
-        
-        // Warn if the build user id can't see all the components in the build workspace
-        if (!workspaceConnection.getUnreadableComponents().isEmpty()) {
-            listener.log(Messages.getDefault().RepositoryConnection_hidden_components(
-                    workspaceConnection.getName(), workspaceConnection.getUnreadableComponents().size()));
-        }
-
-        if (!buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch()) {
-            listener.log(Messages.getDefault().RepositoryConnection_checkout_accept(
-            		workspaceConnection.getName()));
-
-            getBuildConnection().startBuildActivity(buildResultHandle,
-                    Messages.getDefault().RepositoryConnection_activity_accepting_changes(), parentActivityId, true,
-                    monitor.newChild(1));
-
-            if (monitor.isCanceled()) {
-            	throw new InterruptedException();
-            }
-            
-            acceptReport = SourceControlUtility.acceptAllIncoming(
-                    fRepositoryManager, workspace, buildConfiguration.getSnapshotName(),
-                    monitor.newChild(40));
-            buildProperties.put(Constants.TEAM_SCM_ACCEPT_PHASE_OVER, "true"); //$NON-NLS-1$
-            getBuildConnection().addSnapshotContribution(acceptReport.getSnapshot(), buildResultHandle, monitor.newChild(1));
-            
-            int acceptCount = acceptReport.getChangesAcceptedCount();
-            if (acceptCount > 0) {
-                buildProperties.put(IJazzScmConfigurationElement.PROPERTY_CHANGES_ACCEPTED, String.valueOf(acceptCount));
-            }
-
-            IBaselineSet snapshot = acceptReport.getSnapshot();
-            if (snapshot != null) {
-            	buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, snapshot.getItemId().getUuidValue());
-            }
-            
-            if (buildResultHandle != null) {
-            	WorkItemPublisher workItemPublisher = new WorkItemPublisher();
-            	workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), getTeamRepository());
-            }
-            
-            if (monitor.isCanceled()) {
-            	throw new InterruptedException();
-            }
-            if (changeReport != null) {
-	            	IBuildDefinition definition = null;
-	        		if (buildResultHandle != null) {
-	        			IBuildResult result = (IBuildResult) fRepository.itemManager().fetchPartialItem(buildResultHandle, ItemManager.REFRESH, Arrays.asList(new String[] {IBuildResult.PROPERTY_BUILD_DEFINITION}), monitor.newChild(1) );
-	        			definition = (IBuildDefinition) fRepository.itemManager().fetchPartialItem(result.getBuildDefinition(), ItemManager.REFRESH, Arrays.asList(new String[] {IBuildDefinition.PROPERTY_ID}), monitor.newChild(1));
-	        		}
+			BuildWorkspaceDescriptor workspace;
+			
+			BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), hjFetchDestination);	
+	
+			// If we have a build result, the build definition that describes what is to be accepted into & how to load
+			// Otherwise, the build workspace on the Jenkins definition is used.
+			IBuildResultHandle buildResultHandle = null;
+			if (buildResultUUID != null && buildResultUUID.length() > 0) {
+				buildResultHandle = (IBuildResultHandle)IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
+				buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, false, listener, monitor.newChild(1),
+						clientLocale);
+				// If Jenkins build says don't create metronome report,
+				// then check whether build definition says create metronome report
+				// If that is true, then initialize metronome reporter.
+				if (shouldCreateMetronomeReport == false) {
+					shouldCreateMetronomeReport =  shouldCreateMetronomeReport(buildConfiguration);
+					// If Build Definition says that metronome log has to be created, then create it now
+					if (shouldCreateMetronomeReport) {
+			        	reporter = new MetronomeReporter(getTeamRepository()); 
+			        }
+				}
+			} else {
+				IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
+						monitor.newChild(1), clientLocale);
+				buildConfiguration.initialize(workspaceHandle, buildWorkspaceName, snapshotName, acceptBeforeLoad, null, null, false, null, null, listener,
+						clientLocale, monitor.newChild(1));
+			}
+	
+			Map<String, String> buildProperties = buildConfiguration.getBuildProperties();
+	
+			workspace = buildConfiguration.getBuildWorkspaceDescriptor();
+			
+	        listener.log(Messages.getDefault().RepositoryConnection_checkout_setup());
+	        String parentActivityId = getBuildConnection().startBuildActivity(buildResultHandle,
+	                Messages.getDefault().RepositoryConnection_pre_build_activity(), null, false, monitor.newChild(1));
+	
+	        AcceptReport acceptReport = null;
+	        
+	        getBuildConnection().addWorkspaceContribution(workspace.getWorkspace(fRepositoryManager, monitor.newChild(1)),
+	        		buildResultHandle, monitor.newChild(1));
+	
+	        // Ensure we hang onto this between the accept and the load steps so that if 
+	        // we are synchronizing, we use the same cached sync times.
+	        IWorkspaceConnection workspaceConnection = workspace.getConnection(fRepositoryManager, false, monitor.newChild(1));
+	        
+	        // Warn if the build user id can't see all the components in the build workspace
+	        if (!workspaceConnection.getUnreadableComponents().isEmpty()) {
+	            listener.log(Messages.getDefault().RepositoryConnection_hidden_components(
+	                    workspaceConnection.getName(), workspaceConnection.getUnreadableComponents().size()));
+	        }
+	
+	        if (!buildConfiguration.isPersonalBuild() && buildConfiguration.acceptBeforeFetch()) {
+	            listener.log(Messages.getDefault().RepositoryConnection_checkout_accept(
+	            		workspaceConnection.getName()));
+	
+	            getBuildConnection().startBuildActivity(buildResultHandle,
+	                    Messages.getDefault().RepositoryConnection_activity_accepting_changes(), parentActivityId, true,
+	                    monitor.newChild(1));
+	
+	            if (monitor.isCanceled()) {
+	            	throw new InterruptedException();
+	            }
+	            
+	            acceptReport = SourceControlUtility.acceptAllIncoming(
+	                    fRepositoryManager, workspace, buildConfiguration.getSnapshotName(),
+	                    monitor.newChild(40));
+	            buildProperties.put(Constants.TEAM_SCM_ACCEPT_PHASE_OVER, "true"); //$NON-NLS-1$
+	            getBuildConnection().addSnapshotContribution(acceptReport.getSnapshot(), buildResultHandle, monitor.newChild(1));
+	            
+	            int acceptCount = acceptReport.getChangesAcceptedCount();
+	            if (acceptCount > 0) {
+	                buildProperties.put(IJazzScmConfigurationElement.PROPERTY_CHANGES_ACCEPTED, String.valueOf(acceptCount));
+	            }
+	
+	            IBaselineSet snapshot = acceptReport.getSnapshot();
+	            if (snapshot != null) {
+	            	buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, snapshot.getItemId().getUuidValue());
+	            }
+	            
+	            if (buildResultHandle != null) {
+	            	WorkItemPublisher workItemPublisher = new WorkItemPublisher();
+	            	workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), getTeamRepository());
+	            }
+	            
+	            if (monitor.isCanceled()) {
+	            	throw new InterruptedException();
+	            }
+	            if (changeReport != null) {
+		            	IBuildDefinition definition = null;
+		        		if (buildResultHandle != null) {
+		        			IBuildResult result = (IBuildResult) fRepository.itemManager().fetchPartialItem(buildResultHandle, ItemManager.REFRESH, Arrays.asList(new String[] {IBuildResult.PROPERTY_BUILD_DEFINITION}), monitor.newChild(1) );
+		        			definition = (IBuildDefinition) fRepository.itemManager().fetchPartialItem(result.getBuildDefinition(), ItemManager.REFRESH, Arrays.asList(new String[] {IBuildDefinition.PROPERTY_ID}), monitor.newChild(1));
+		        		}
+			            // build change report
+			            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
+			            changeReportBuilder.populateChangeReport(changeReport,
+			            		workspaceConnection.getResolvedWorkspace(), workspaceConnection.getName(),
+			            		acceptReport,
+			            		(definition != null) ? definition : null, (definition != null) ? definition.getId() : null,
+			            		listener, monitor.newChild(2));
+	            }
+	            
+	        } else {
+	        	if (changeReport != null) {
 		            // build change report
 		            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-		            changeReportBuilder.populateChangeReport(changeReport,
-		            		workspaceConnection.getResolvedWorkspace(), workspaceConnection.getName(),
-		            		acceptReport,
-		            		(definition != null) ? definition : null, (definition != null) ? definition.getId() : null,
-		            		listener, monitor.newChild(2));
-            }
-            
-        } else {
-        	if (changeReport != null) {
-	            // build change report
-	            ChangeReportBuilder changeReportBuilder = new ChangeReportBuilder(fRepository);
-	            changeReportBuilder.populateChangeReport(changeReport, 
-	            		buildConfiguration.isPersonalBuild(),
-	            		listener);
-        	}
-        }
+		            changeReportBuilder.populateChangeReport(changeReport, 
+		            		buildConfiguration.isPersonalBuild(),
+		            		listener);
+	        	}
+	        }
+	
+	        if ( changeReport != null ) {
+	        	changeReport.prepareChangeSetLog();
+	        	
+	        	// Create a link in all the work items to the current jenkins build url if it is a build from repository worksapce
+	        	if (buildConfiguration.isRepositoryWorkspaceConfiguration() && 
+	        			currentBuildFullUrl != null) {
+	        		if (addLinksToWorkItems) {
+		        		LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
+		        		// Get the work items
+		        		List<Integer> workItems = changeReport.getAcceptedWorkItems();
+		        		try {
+			        		// Create a link to the current Jenkins build in the work items
+			        		WorkItemUtils.addRelatedLinkToWorkItems(this.fRepository, workItems, currentBuildFullUrl, currentBuildLabel);
+		        		} catch (Exception exp) {
+		        			// Log the exception but do not fail the build
+		        			LOGGER.log(Level.WARNING, 
+		        					String.format("Error adding Jenkins build URL as \"Related Artifacts\" to work items %s", workItems.toString()), //$NON-NLS-1$ 
+		        					exp);
+		        		}
+	        		}
+	        	}
+	        }
+	
+	        buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
+	        Map<String, Object> result = new HashMap<String, Object>();
+	        result.put(Constants.BUILD_PROPERTIES, buildProperties);
+		        
+	        // lets cache the workspace connection object for subsequent "load" call...
+	        CallConnector<CallConnectorData> callConnector = null;
+	        String connectorId = ""; //$NON-NLS-1$
+	        try {
+	        	CallConnectorData cData = new CallConnectorData(workspaceConnection, reporter);
+	            if ((callConnectorTimeout != null) && (!"".equals(callConnectorTimeout)) && callConnectorTimeout.matches("\\d+")) { //$NON-NLS-1$ //$NON-NLS-2$
+	            	long timeout = Long.parseLong(callConnectorTimeout) * 1000;
+	            	callConnector = new CallConnector<CallConnectorData>(cData, timeout);
+	            } else {
+	            	callConnector = new CallConnector<CallConnectorData>(cData);
+	            }
+	    		callConnector.start();
+	    		connectorId = (new Long(callConnector.getId())).toString();
+	        } catch(Exception e) {
+	    		String errorMessage = Messages.getDefault().RepositoryConnection_accept_unable_to_start_call_connector();
+	    		// can't proceed if load has to be synchronized, 
+	    		// since we are unable to obtain workspace connection object
+	    		TeamBuildException exception = new TeamBuildException(errorMessage);
+	    		listener.log(errorMessage, exception);
+	    		throw exception;
+	        }
+	        result.put(Constants.CONNECTOR_ID, connectorId); //$NON-NLS-1$
+	        result.put(Constants.PARENT_ACTIVITY_ID, parentActivityId); //$NON-NLS-1$
+	        return result;
+		}
+    }
 
-        if ( changeReport != null ) {
-        	changeReport.prepareChangeSetLog();
-        	
-        	// Create a link in all the work items to the current jenkins build url if it is a build from repository worksapce
-        	if (buildConfiguration.isRepositoryWorkspaceConfiguration() && 
-        			currentBuildFullUrl != null) {
-        		LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
-        		// Get the work items
-        		List<Integer> workItems = changeReport.getAcceptedWorkItems();
-        		try {
-	        		// Create a link to the current Jenkins build in the work items
-	        		WorkItemUtils.addRelatedLinkToWorkItems(this.fRepository, workItems, currentBuildFullUrl, currentBuildLabel);
-        		} catch (Exception exp) {
-        			// Log the exception but do not fail the build
-        			LOGGER.log(Level.WARNING, 
-        					String.format("Error adding Jenkins build URL as \"Related Artifacts\" to work items %s", workItems.toString()), //$NON-NLS-1$ 
-        					exp);
-        		}
-        	}
-        }
-
-        buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
-        Map<String, Object> result = new HashMap<String, Object>();
-        result.put(Constants.BUILD_PROPERTIES, buildProperties); //$NON-NLS-1$
-        
-        // lets cache the workspace connection object for subsequent "load" call...
-        CallConnector<IWorkspaceConnection> callConnector = null;
-        String connectorId = ""; //$NON-NLS-1$
-        try {
-            if ((callConnectorTimeout != null) && (!"".equals(callConnectorTimeout)) && callConnectorTimeout.matches("\\d+")) { //$NON-NLS-1$ //$NON-NLS-2$
-            	long timeout = Long.parseLong(callConnectorTimeout) * 1000;
-            	callConnector = new CallConnector<IWorkspaceConnection>(workspaceConnection, timeout);
-            } else {
-            	callConnector = new CallConnector<IWorkspaceConnection>(workspaceConnection);
-            }
-    		callConnector.start();
-    		connectorId = (new Long(callConnector.getId())).toString();
-        } catch(Exception e) {
-    		String errorMessage = Messages.getDefault().RepositoryConnection_accept_unable_to_start_call_connector();
-    		// can't proceed if load has to be synchronized, 
-    		// since we are unable to obtain workspace connection object
-    		TeamBuildException exception = new TeamBuildException(errorMessage);
-    		listener.log(errorMessage, exception);
-    		throw exception;
-        }
-        result.put(Constants.CONNECTOR_ID, connectorId); //$NON-NLS-1$
-        result.put(Constants.PARENT_ACTIVITY_ID, parentActivityId); //$NON-NLS-1$
-        
-        return result;
+	private Map<String, Object> getMetronomeOptions(Map<String, Object> options) {
+		Map<String, Object> metronomeOptions = new HashMap<String, Object>();
+		if (options != null && options.containsKey(Constants.METRONOME_OPTIONS_PROPERTY_NAME)) {
+			return (Map<String, Object>) options.get(Constants.METRONOME_OPTIONS_PROPERTY_NAME);
+		}
+		return metronomeOptions;
 	}
 
 	/**
@@ -597,8 +637,8 @@ public class RepositoryConnection {
 	 * @param pathToLoadRuleFile Path to the load rule file.
 	 * @param isDeleteNeeded true if Jenkins job is configured to delete load directory before fetching
 	 * @param createFoldersForComponents create folders for components if true
-	 * @param acceptBeforeLoad Accept latest changes before loading, if true
-	 * @param temporaryWorkspaceComment
+     * @param acceptBeforeLoad If <code>true</code> then, the changes from the flow target is synced to the repository workspace
+	 * @param temporaryWorkspaceComment - Description to be used when creating the repository workspace
 	 * @param shouldDeleteTemporaryWorkspace whether the temporary workspace created for snapshot/stream case should be
 	 *            deleted before returning(irrespective of failure or not)
 	 * @throws Exception Thrown if anything goes wrong
@@ -609,24 +649,49 @@ public class RepositoryConnection {
 			String hjFetchDestination, boolean isCustomSnapshotName, String snapshotName, final IConsoleOutput listener, IProgressMonitor progress,
 			Locale clientLocale, String parentActivityId, String connectorId, Object extProvider, final PrintStream logger, String loadPolicy,
 			String componentLoadConfig, String componentsToExclude, String pathToLoadRuleFile, boolean isDeleteNeeded,
-			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkspaceComment, boolean shouldDeleteTemporaryWorkspace)
+			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkspaceComment, boolean shouldDeleteTemporaryWorkspace,
+			Map<String, Object>options)
 			throws Exception {
-		LOGGER.finest("RepositoryConnection.load : Enter");
+		LOGGER.finest("RepositoryConnection.load : Enter"); //$NON-NLS-1$
 
 		// Lets get same workspaceConnection as created by accept call so that if
         // we are synchronizing, we use the same cached sync times.
-        IWorkspaceConnection workspaceConnection = null;
+        CallConnectorData callConnectorData = null;
+        IWorkspaceConnection workspaceConnection  = null;
+        MetronomeReporter reporter = null;
+        // Earlier callConnector was set only for build definition or workspace
+        // configuration and not for stream and snapshot.
+        // So for stream and snapshot, conenctorId is null.
+        // Also for stream and snapshot, workspaceConnection was null.
+        // From now on, for stream and snapshot, call connector id will be non null 
+        // only if metronome needs to be collected.
+        // TODO Add these to test cases.
         if (connectorId != null &&  !("".equals(connectorId))) { //$NON-NLS-1$
-        	workspaceConnection = (IWorkspaceConnection)CallConnector.getValue(Long.parseLong(connectorId));
+        	callConnectorData = (CallConnectorData) CallConnector.getValue(Long.parseLong(connectorId));
+        	if (callConnectorData != null) {
+        		workspaceConnection = callConnectorData.workspaceConnection;
+        		reporter = callConnectorData.metronome;
+        	}
         }
 
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
 		ensureLoggedIn(monitor.newChild(1));
 		
+		// If metronome reporter is null, then reinitailize it
+		// Since we are sharing the reporter, the details get added up
+		Map<String, String> metronomeData = new HashMap<String, String>();
+		
+		Map<String, Object> metronomeOptions = (Map<String,Object>)getMetronomeOptions(options);
+		boolean shouldCreateMetronomeReport = shouldCreateMetronomeReport(metronomeOptions);
+		if (shouldCreateMetronomeReport) {
+			reporter = initializeMetronomeReporter(getTeamRepository(), reporter, listener);
+		}
+		
         BuildConfiguration buildConfiguration = new BuildConfiguration(getTeamRepository(), hjFetchDestination);
 		
-		// If we have a build result, the build definition that describes what is to be accepted into & how to load
+		// If we have a build result, the build definition that describes 
+        // what is to be accepted into & how to load
 		// Otherwise, the build workspace on the Jenkins definition is used.
 		IBuildResultHandle buildResultHandle = null;
 		if (buildResultUUID != null && buildResultUUID.length() > 0) {
@@ -634,6 +699,9 @@ public class RepositoryConnection {
 			buildResultHandle = (IBuildResultHandle)IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
 			buildConfiguration.initialize(buildResultHandle, isCustomSnapshotName, snapshotName, loadPolicy != null
 					&& Constants.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES.equals(loadPolicy), listener, monitor.newChild(1), clientLocale);
+			// Check if the property is set in the build definition. If the value in the Jenkins job is true, then it will override 
+			// the build definition property's value.
+			shouldCreateMetronomeReport = (shouldCreateMetronomeReport == false) ? shouldCreateMetronomeReport(buildConfiguration) : shouldCreateMetronomeReport;
 		} else if (buildWorkspaceName != null && buildWorkspaceName.length() > 0) {
 			listener.log(Messages.get(clientLocale).RepositoryConnection_using_build_workspace_configuration());
 			IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(buildWorkspaceName, getTeamRepository(),
@@ -903,6 +971,12 @@ public class RepositoryConnection {
 	            } catch (TeamRepositoryException e) {
 	            	listener.log(Messages.getDefault().RepositoryConnection_complete_checkout_activity_failed(e.getMessage()), e);
 	            }
+	            
+	            // Try to push the log but don't fail the build if you can't
+	            // We try to minimize the number of variable that can be null.
+	            // What we know at this point is metronomeOptions, metronomeData, listener, clientLocale and monitor are non null
+	            publishMetronomeLog(reporter, shouldCreateMetronomeReport, buildResultHandle, metronomeData, metronomeOptions, 
+	            		listener, clientLocale, monitor);	            	 
 	        } finally {
 	            /*
 	             * Force a deregistration of the sandbox so that its Metadata is guaranteed to be flushed
@@ -941,8 +1015,69 @@ public class RepositoryConnection {
 		// Add temporary workspace details as the return value
 		Map<String, Object> loadResult = new HashMap<String, Object> ();
 		loadResult.put(Constants.TEMPORARY_REPO_WORKSPACE_DATA, buildConfiguration.getTemporaryRepositoryWorkspaceProperties());
+		// Again, to reduce null handling, we might end up sending empty data. Hence this has not been wrapped into 
+		// a shouldCreateMetronome check.
+		loadResult.put(Constants.METRONOME_DATA_PROPERTY_NAME, metronomeData);
  		return loadResult;
 	}
+
+	private MetronomeReporter initializeMetronomeReporter(ITeamRepository teamRepository, MetronomeReporter param, 
+												IConsoleOutput listener) throws Exception {
+		MetronomeReporter reporter = param;
+		if (reporter == null) {
+        	if (listener != null) {
+        		listener.log("Reinitializing metronome data"); //$NON-NLS-1$
+        	}
+        	reporter = new MetronomeReporter(getTeamRepository());
+		} else {
+			reporter.addTeamRepository(getTeamRepository());
+		}
+		return reporter;
+	}
+
+	/**
+	 * Push the log to the build result if required and store the content in a hashmap.
+	 * @param reporter The metronome reporter, may be <code>null</code>
+	 * @param buildResultHandle The build result to publish metronome logs to.
+	 * 				May be <code>null</code>
+	 * @param metronomeData The map into which metronome data should be put into
+	 * @param metronomeOptions Additional metronome options sent from hjplugin layer.
+	 * @param listener Listener to output messages. Never <code>null</code>
+	 * @param monitor To monitor progress. May be <code>null</code>
+	 * @param createMetronomeReport. Whether to create metrnome report. Use this to determine to 
+	 * 								publish metronome logs
+	 */
+	private void publishMetronomeLog(MetronomeReporter reporter, boolean createMetronomeReport, IBuildResultHandle buildResultHandle,
+			Map<String, String> metronomeData, Map<String, Object> metronomeOptions, final IConsoleOutput listener,
+			 Locale clientLocale, SubMonitor monitor) {
+		try {
+			if (createMetronomeReport && reporter != null) {
+				// For Build result, push the data to RTC
+				// For all configurations, add the metronome data to
+				// properties
+
+	    		String reportCSV = reporter.reportCSVFormat();
+	    		String report = reporter.report("statistics");
+
+				if (buildResultHandle != null) {
+		    		BuildConnection.publishLog(getTeamRepository(), buildResultHandle, report, 
+		    											getStatsReportFilePrefix(metronomeOptions),
+		    											getStatisticsReportFileSuffix(metronomeOptions), 
+		    											getStatisticsReportLabel(metronomeOptions),
+		    											monitor.newChild(1));
+					BuildConnection.publishLog(getTeamRepository(), buildResultHandle, reportCSV, 
+									getStatsDataFilePrefix(metronomeOptions), 
+									getStatisticsDataFileSuffix(metronomeOptions), 
+									getStatisticsDataLabel(metronomeOptions),
+									monitor.newChild(1));
+				} 
+				metronomeData.put(Constants.STATISTICS_REPORT_PROPERTY_NAME, report);
+				metronomeData.put(Constants.STATISTICS_DATA_PROPERTY_NAME, reportCSV);
+			}
+		} catch (Exception e) {
+			listener.log(Messages.get(clientLocale).RepositoryConnection_unable_to_publish_metronome_log(), e); //$NON-NLS-1$
+		}
+	}	
 
 	/**
 	 * Update the build workspace and load it. Create a snapshot of the build workspace and
@@ -1454,8 +1589,9 @@ public class RepositoryConnection {
 	 */
 	private Map<String, Object> acceptForBuildStream(final String processAreaName, final String buildStream, final ChangeReport changeReport,
 			final String snapshotName, final String previousSnapshotUUID, final String previousBuildURL, 
-			String currentBuildURL, String currentBuildLabel, String temporaryWorkspaceComment,
-			final IConsoleOutput listener, final IProgressMonitor progress, final Locale clientLocale) throws Exception {
+			String currentBuildURL, String currentBuildLabel, String temporaryWorkspaceComment, boolean addLinksToWorkItems,
+			MetronomeReporter reporter, String callConnectorTimeout, final IConsoleOutput listener, 
+			final IProgressMonitor progress, final Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
         Map<String, Object> result = new HashMap<String, Object>();
@@ -1530,18 +1666,20 @@ public class RepositoryConnection {
 		        		buildProperties.put(IJazzScmConfigurationElement.PROPERTY_CHANGES_ACCEPTED, String.valueOf(acceptCount));
 		        	}
 		        	
-		        	LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
-		        	// From the compareReport, get the list of work items included in this build.
-		        	// We will create link to the current Jenkins build in those work items
-		        	List<Integer> workItemIds = changeReport.getAcceptedWorkItems();
-		        	try {
-		        		WorkItemUtils.addRelatedLinkToWorkItems(fRepository, workItemIds, currentBuildURL,
-		        				currentBuildLabel);
-		        	} catch (Exception exp) {
-	        			// Log the exception but do not fail the build
-	        			LOGGER.log(Level.WARNING, 
-	        					String.format("Error adding Jenkins build URL as \"Related Artifacts\" to work items %s", workItemIds.toString()), //$NON-NLS-1$ 
-	        					exp);
+		        	if (addLinksToWorkItems) {
+			        	LOGGER.info("Adding Jenkins build URL as \"Related Artifacts\" to work items"); //$NON-NLS-1$
+			        	// From the compareReport, get the list of work items included in this build.
+			        	// We will create link to the current Jenkins build in those work items
+			        	List<Integer> workItemIds = changeReport.getAcceptedWorkItems();
+			        	try {
+			        		WorkItemUtils.addRelatedLinkToWorkItems(fRepository, workItemIds, currentBuildURL,
+			        				currentBuildLabel);
+			        	} catch (Exception exp) {
+		        			// Log the exception but do not fail the build
+		        			LOGGER.log(Level.WARNING, 
+		        					String.format("Error adding Jenkins build URL as \"Related Artifacts\" to work items %s", workItemIds.toString()), //$NON-NLS-1$ 
+		        					exp);
+			        	}
 		        	}
 				}
 			} else { // Fill in just the snapshot UUID in the change log
@@ -1581,6 +1719,16 @@ public class RepositoryConnection {
 	        streamData.put(Constants.STREAM_DATA_SNAPSHOTUUID, baselineSet.getItemId().getUuidValue());
 	        result.put(Constants.STREAM_DATA, streamData);
 	        
+	        // Create a call connector only if metronome reporting is required.
+	        // If metronome reporter is not null, then add it to callconnector and 
+	        // return. If we are unable to start call connector, it is OK. 
+	        // The downside is that the the compare call's stats are not recored 
+	        // in the final metronome reporter data from the load phase.
+	        if (reporter != null) {
+	        	CallConnectorData cData = new CallConnectorData(null, reporter);
+        		createCallConnectorForMetronomeData(cData, callConnectorTimeout, result, listener);
+	        }
+	        
 	        return result;
 
 		} catch (Exception exp) {
@@ -1609,8 +1757,8 @@ public class RepositoryConnection {
 	 * @throws {@link IOException} - if there any error when writing the changelog.
 	 */
 	private Map<String, Object> acceptForBuildSnapshot(BuildSnapshotContext buildSnapshotContext, final String buildSnapshot, final ChangeReport changeReport, 
-									final IConsoleOutput listener, final IProgressMonitor progress, 
-									final Locale clientLocale) throws Exception {
+									MetronomeReporter reporter, String callConnectorTimeout, final IConsoleOutput listener,
+									 final IProgressMonitor progress, final Locale clientLocale) throws Exception {
 
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
         Map<String, Object> result = new HashMap<String, Object>();
@@ -1634,6 +1782,16 @@ public class RepositoryConnection {
 		buildProperties.put(IJazzScmConfigurationElement.PROPERTY_SNAPSHOT_UUID, baselineSet.getItemId().getUuidValue());
 		buildProperties = BuildConfiguration.formatAsEnvironmentVariables(buildProperties);
         result.put(Constants.BUILD_PROPERTIES, buildProperties);
+        
+        // Create a call connector only if metronome reporting is required.
+        // If metronome reporter is not null, then add it to callconnector and return.
+        // If we are unable to start call connector, it is OK. The downside is that the 
+        // the compare call's stats are not recored in the final metronome reporter data 
+        // from the load phase.
+        if (reporter != null) {
+        	CallConnectorData cData = new CallConnectorData(null, reporter);
+        	createCallConnectorForMetronomeData(cData, callConnectorTimeout, result, listener);
+        }
         
         return result;
 	}
@@ -1753,4 +1911,87 @@ public class RepositoryConnection {
 		return changesCount;
 	}
 
+	private boolean shouldCreateMetronomeReport(Map<String, Object> options) {
+		boolean shouldCreateMetronomeReport = false;
+		if (options.containsKey(Constants.TEAM_BUILD_REPORT_STATISTICS_PROPERTY_NAME)) { //$NON-NLS-1$
+			Boolean value = (Boolean) options.get(Constants.TEAM_BUILD_REPORT_STATISTICS_PROPERTY_NAME); //$NON-NLS-1$
+			shouldCreateMetronomeReport = value.booleanValue();
+		}
+		return shouldCreateMetronomeReport;
+	}
+	
+	private boolean shouldCreateMetronomeReport(BuildConfiguration buildConfiguration) {
+		return Boolean.parseBoolean(buildConfiguration.getBuildProperty(Constants.TEAM_BUILD_REPORT_STATISTICS_PROPERTY_NAME, "false"));
+	}
+	
+	/**
+	 * Create a callConnector with the given data and add the id to the result map
+	 * Swallows exception that occurs while creating call connector
+	 * 
+	 * @param cData
+	 * @param callConnectorTimeoutParam
+	 * @param properties
+	 * @param listener
+	 * 
+	 */
+	private void createCallConnectorForMetronomeData(final CallConnectorData cData, final String callConnectorTimeoutParam, 
+					final Map<String, Object> result, IConsoleOutput listener) {
+        CallConnector<CallConnectorData> callConnector = null;
+        String connectorId = ""; //$NON-NLS-1$
+        try {
+        	String callConnectorTimeout = Utils.fixEmptyAndTrim(callConnectorTimeoutParam);
+            if ((callConnectorTimeout != null) && (!"".equals(callConnectorTimeout)) && callConnectorTimeout.matches("\\d+")) { //$NON-NLS-1$ //$NON-NLS-2$
+            	long timeout = Long.parseLong(callConnectorTimeout) * 1000;
+            	callConnector = new CallConnector<CallConnectorData>(cData, timeout);
+            } else {
+            	callConnector = new CallConnector<CallConnectorData>(cData);
+            }
+    		callConnector.start();
+    		connectorId = (new Long(callConnector.getId())).toString();
+    		result.put(Constants.CONNECTOR_ID, connectorId);
+        } catch(Exception e) {
+    		String errorMessage = Messages.getDefault().RepositoryConnection_accept_unable_to_start_call_connector() + 
+    				Messages.getDefault().RepositoryConnection_metronome_data_might_be_unavailable();
+    		listener.log(errorMessage);
+    		LOGGER.log(Level.WARNING, errorMessage, e);
+        }
+	}
+	
+	private static String getStatsDataFilePrefix(Map<String, Object> metronomeOptions) {
+		return getStringValue(Constants.STATISTICS_DATA_FILE_PREFIX_PROPERTY_NAME, 
+					Constants.STATISTICS_DATA_FILE_DEFAULT_PREFIX_VALUE, metronomeOptions);
+	}
+
+	private static String getStatsReportFilePrefix(Map<String, Object> metronomeOptions) {
+		return getStringValue(Constants.STATISTICS_REPORT_FILE_PREFIX_PROPERTY_NAME, 
+					Constants.STATISTICS_REPORT_FILE_DEFAULT_PREFIX_VALUE, metronomeOptions);
+	}
+	
+	private static String getStatisticsReportFileSuffix(Map<String, Object> metronomeOptions) {
+		return getStringValue(Constants.STATISTICS_REPORT_FILE_SUFFIX_PROPERTY_NAME, 
+					Constants.STATISTICS_REPORT_FILE_DEFAULT_SUFFIX_VALUE, metronomeOptions);
+	}
+
+	private static String getStatisticsDataFileSuffix(Map<String, Object> metronomeOptions) {
+		return getStringValue(Constants.STATISTICS_DATA_FILE_SUFFIX_PROPERTY_NAME, 
+					Constants.STATISTICS_DATA_FILE_DEFAULT_SUFFIX_VALUE, metronomeOptions);
+	}
+
+	private static String getStatisticsReportLabel(Map<String, Object> metronomeOptions) {
+		return getStringValue(Constants.STATISTICS_REPORT_LABEL_PROPERTY_NAME, 
+					Constants.STATISTICS_REPORT_DEFAULT_LABEL_VALUE, metronomeOptions);
+	}
+	
+	private static String getStatisticsDataLabel(Map<String, Object> metronomeOptions) {
+		return getStringValue(Constants.STATISTICS_DATA_LABEL_PROPERTY_NAME, 
+					Constants.STATISTICS_DATA_DEFAULT_LABEL_VALUE, metronomeOptions);
+	}
+
+	private static String getStringValue(String key, String defaultValue, Map<String, Object> metronomeOptions) {
+		String value = defaultValue;
+		if (metronomeOptions != null && metronomeOptions.containsKey(key)) {
+			value = (String) metronomeOptions.get(key);
+		}
+		return value;
+	}
 }

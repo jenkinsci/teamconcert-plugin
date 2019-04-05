@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2016 IBM Corporation and others.
+ * Copyright © 2014, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,16 +15,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.JenkinsRule.WebClient;
-import org.junit.Assert;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
@@ -39,8 +33,10 @@ import com.ibm.team.build.internal.hjplugin.util.RTCBuildResultHelper;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildStatus;
 
 import hudson.model.FreeStyleProject;
+import hudson.tools.ToolProperty;
 import hudson.util.Secret;
 
+@SuppressWarnings({"nls", "static-method"})
 public class RTCBuildResultHelperIT extends AbstractTestCase {
 
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
@@ -55,7 +51,7 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 
 		if (Config.DEFAULT.isConfigured()) {
 			
-			testingFacade = Utils.getTestingFacade();
+			setTestingFacade(Utils.getTestingFacade());
 		}
 	}
 
@@ -67,12 +63,13 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 	 * Detailed testing of the actual delete of the build result in RTC is in BuildConnectionIT
 	 * @throws Exception If the test fails
 	 */
+	@SuppressWarnings("unchecked")
 	@Test public void testdeleteRTCBuildResults() throws Exception {
 		
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade().invoke(
 					"testBuildTerminationSetup",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
@@ -82,13 +79,13 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(), getBuildDefinitionUniqueName());
+				Integer.valueOf(loginInfo.getTimeout()), getBuildDefinitionUniqueName());
 			
 			try {
 				// start & delete in progress build (status ok) avoiding toolkit
 				setupBuildTerminationTest(loginInfo, true, false, RTCBuildStatus.OK.name(), setupArtifacts);
 				String buildResultUUID = setupArtifacts.get(ARTIFACT_BUILD_RESULT_ITEM_ID);
-				FreeStyleProject project = j.createFreeStyleProject();
+				FreeStyleProject project = getJenkinsRule().createFreeStyleProject();
 				RTCScm scm = getRTCScm();
 				project.setScm(scm);
 				Set<RTCScm> rtcScmConfigs = Collections.singleton(scm);
@@ -102,7 +99,7 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -112,13 +109,14 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
-						loginInfo.getTimeout(), setupArtifacts);
+						Integer.valueOf(loginInfo.getTimeout()), setupArtifacts);
 			}
 		}
 	}
 
 	private RTCScm getRTCScm() throws InvalidCredentialsException {
-		RTCBuildToolInstallation tool = new RTCBuildToolInstallation("config_toolkit", Config.DEFAULT.getToolkit(), Collections.EMPTY_LIST);
+		RTCBuildToolInstallation tool = new RTCBuildToolInstallation("config_toolkit", Config.DEFAULT.getToolkit(), 
+				Collections.<ToolProperty<?>>emptyList());
 		tool.getDescriptor().setInstallations(tool);
 		RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 		BuildType buildType = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, "SomeBuildDefinition", null, null, "");
@@ -132,7 +130,7 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 			RTCLoginInfo loginInfo, boolean startBuild, boolean abandon,
 			String buildStatus, Map<String, String> setupArtifacts)
 			throws Exception {
-		testingFacade.invoke(
+		getTestingFacade().invoke(
 				"testBuildTerminationTestSetup",
 			new Class[] { String.class, // serverURL,
 				String.class, // userId,
@@ -145,16 +143,16 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 			loginInfo.getServerUri(),
 			loginInfo.getUserId(),
 			loginInfo.getPassword(),
-			loginInfo.getTimeout(),
-			startBuild,
-			abandon, 
+			Integer.valueOf(loginInfo.getTimeout()),
+			Boolean.valueOf(startBuild),
+			Boolean.valueOf(abandon), 
 			buildStatus,
 			setupArtifacts);
 	}
 	
 	private void verifyBuildResultDeleted(RTCLoginInfo loginInfo,
 			Map<String, String> setupArtifacts) throws Exception {
-		testingFacade.invoke(
+		getTestingFacade().invoke(
 				"verifyBuildResultDeleted",
 			new Class[] { String.class, // serverURL,
 				String.class, // userId,
@@ -164,7 +162,23 @@ public class RTCBuildResultHelperIT extends AbstractTestCase {
 			loginInfo.getServerUri(),
 			loginInfo.getUserId(),
 			loginInfo.getPassword(),
-			loginInfo.getTimeout(),
+			Integer.valueOf(loginInfo.getTimeout()),
 			setupArtifacts);
+	}
+
+	public JenkinsRule getJenkinsRule() {
+		return this.j;
+	}
+
+	public void setJenkinsRUle(JenkinsRule j) {
+		this.j = j;
+	}
+
+	public RTCFacadeWrapper getTestingFacade() {
+		return this.testingFacade;
+	}
+
+	public void setTestingFacade(RTCFacadeWrapper testingFacade) {
+		this.testingFacade = testingFacade;
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 IBM Corporation and others.
+ * Copyright © 2017, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -52,6 +52,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@SuppressWarnings({"nls", "static-method", "boxing"})
 public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 
 	private static final String PROPERTY_TEAM_SCM_DELIVER_TRIGGER_POLICY = "team.scm.deliver.triggerPolicy"; //$NON-NLS-1$
@@ -59,10 +60,12 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
     
 	private RTCFacadeWrapper testingFacade;
 
+	@Rule public JenkinsRule r = new JenkinsRule();
+
 	@Before
 	public void setUp() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			testingFacade = Utils.getTestingFacade();
+			setTestingFacade(Utils.getTestingFacade());
 			createSandboxDirectory();
 		}
 	}
@@ -74,8 +77,6 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// Add additional code here
 		}
 	}
-	
-	@Rule public JenkinsRule r = new JenkinsRule();
 
 	@Test
 	public void testPBDeliverStepDoingNothing() throws Exception {
@@ -112,11 +113,11 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		String pbDeliverSkippedMsg = "Post build deliver skipped";
 		// PB Deliver with stream configuration
 		String streamName = getStreamUniqueName();
-		Map<String, String> setupArtifacts =  Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		Map<String, String> setupArtifacts =  Utils.setUpBuildStream(getTestingFacade(), defaultC, streamName);
 		
 		try {
 			// Create a freestyle job with stream configuration
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			// Add the post build deliver publisher
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			// Run a build
@@ -128,18 +129,18 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(logFile, rtcNotConfiguredForBDMsg));
 			assertNotNull(Utils.getMatch(logFile, pbDeliverSkippedMsg));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 		
 		// PB Deliver with repository workspace configuration
 	    streamName = getStreamUniqueName();
-		setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC,
+		setupArtifacts = Utils.setUpBuildStream(getTestingFacade(), defaultC,
 							streamName);
 		String workspaceName = setupArtifacts.get(Utils.ARTIFACT_WORKSPACE_NAME);
 		
 		try {
 			// Create a freestyle job with repository workspace configuration
-			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(getJenkinsRule(), workspaceName);
 			// Add the post build deliver publisher
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			// Run a build
@@ -151,19 +152,19 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(logFile, rtcNotConfiguredForBDMsg));
 			assertNotNull(Utils.getMatch(logFile, pbDeliverSkippedMsg));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 		
 		// PB Deliver with snapshot configuration
 		workspaceName = getRepositoryWorkspaceUniqueName();
 		String snapshotName = getSnapshotUniqueName();
 		String componentName = getComponentUniqueName();
-		setupArtifacts = Utils.setupBuildSnapshot(loginInfo, workspaceName, snapshotName, componentName, testingFacade);
+		setupArtifacts = Utils.setupBuildSnapshot(loginInfo, workspaceName, snapshotName, componentName, getTestingFacade());
 		String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 		
 		try {
 			// Create a freestyle job with snapshot configuration
-			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, snapshotUUID);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(getJenkinsRule(), snapshotUUID);
 			// Add the post build deliver publisher
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			// Run a build
@@ -175,7 +176,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(logFile, rtcNotConfiguredForBDMsg));
 			assertNotNull(Utils.getMatch(logFile, pbDeliverSkippedMsg));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -204,7 +205,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		
 		try {
 			// Create a freestyle project with RTCPostbuilddeliver added twice
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			// Add another RTCPostBuildDeliverPublisher to the project
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			
@@ -225,7 +226,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			RTCBuildResultAction action = b.getAction(RTCBuildResultAction.class);
 			assertEquals("true", action.getBuildProperties().get(RTCJobProperties.POST_BUILD_DELIVER_HANDLED));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -254,7 +255,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 							configOrGenericProperties);
 		try {
 			// Create a freestyle project with RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);			
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);			
 
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -277,7 +278,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 			
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 		
 	}
@@ -305,7 +306,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		configOrGenericProperties.put(PROPERTY_TEAM_SCM_DELIVER_TRIGGER_POLICY, "NO_ERRORS");
 		
 		// Create a load directory that exists but is unwritable (aka a temporary file)
-		File tmpFile = Utils.getTemporaryFile();
+		File tmpFile = Utils.getTemporaryFile(true);
 		
 		Map<String, String> setupArtifacts = Utils.setupBuildDefinitionWithPBDeliver(loginInfo,
 							componentName, workspaceName, buildDefinitionId, 
@@ -314,7 +315,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 
 		try {
 			// Create a freestyle project with RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);			
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);			
 
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -336,7 +337,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 									"\". Current build status is \"FAILURE\" and trigger policy is \"NO_ERRORS\""));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -362,7 +363,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		configOrGenericProperties.put(PROPERTY_TEAM_SCM_DELIVER_TRIGGER_POLICY, "ALWAYS");
 		
 		// Create a load directory that exists but is unwritable (aka a temporary file)
-		File tmpFile = Utils.getTemporaryFile();
+		File tmpFile = Utils.getTemporaryFile(true);
 		
 		Map<String, String> setupArtifacts = Utils.setupBuildDefinitionWithPBDeliver(loginInfo,
 							componentName, workspaceName, buildDefinitionId, 
@@ -371,7 +372,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 
 		try {
 			// Create a freestyle project with RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);			
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);			
 
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -390,7 +391,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Aborting post-build deliver due to 1 incomplete activities."));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -417,7 +418,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		configOrGenericProperties.put(PROPERTY_ABORT_ON_INCOMPLETE_ACTIVITY, "false");
 
 		// Create a load directory that exists but is unwritable (aka a temporary file)
-		File tmpFile = Utils.getTemporaryFile();
+		File tmpFile = Utils.getTemporaryFile(true);
 		
 		Map<String, String> setupArtifacts = Utils.setupBuildDefinitionWithPBDeliver(loginInfo,
 							componentName, workspaceName, buildDefinitionId, 
@@ -425,7 +426,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 							configOrGenericProperties);
 		try {
 			// Create a freestyle project with RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);			
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);			
 
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -451,7 +452,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			RTCBuildResultAction action = b.getAction(RTCBuildResultAction.class);
 			assertEquals("true", action.getBuildProperties().get(RTCJobProperties.POST_BUILD_DELIVER_HANDLED));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 		
 	}
@@ -483,7 +484,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		Utils.deleteRepositoryWorkspace(workspaceName);
 		try {
 			// Create a freestyle job with build definition id and post build deliver
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			// Although accept would have failed, a build result would have been created
@@ -499,7 +500,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 									"\". Current build status is \"FAILURE\" and trigger policy is \"NO_ERRORS\""));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -533,7 +534,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 
 		try {
 			// Create a freestyle job with build definition id and post build deliver
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -549,7 +550,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Aborting post-build deliver. A snapshot was not created by the Jazz SCM pre-build participant."));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -580,7 +581,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		
 		try {
 			// Create a freestyle job with build definition id and post build deliver
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			
 			// Run a build and verify that it succeeded
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithBuildResultUUID(buildResultUUID));
@@ -600,7 +601,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver succeeded for build result"));
 						
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -628,7 +629,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		
 		try {
 			// Create a freestyle job with build definition id and post build deliver
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			
 			// Run a build and verify that it succeeded
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithBuildResultUUID(buildResultUUID));
@@ -644,7 +645,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Aborting post-build deliver. A snapshot was not created by the Jazz SCM pre-build participant."));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -674,7 +675,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			MockPublisher publisher = new MockPublisher(Result.SUCCESS, new RTCBuildResultAction[] {action});
 			
 			// Create a FreeStyleJob with the above publisher and RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.getPublishersList().add(publisher);
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			
@@ -691,7 +692,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
 			if (setupArtifacts != null) {
-				Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+				Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 			}
 		}
 	}
@@ -724,7 +725,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			MockPublisher publisher = new MockPublisher(Result.SUCCESS, new RTCBuildResultAction[] {action});
 			
 			// Create a FreeStyleJob with the above publisher and RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.getPublishersList().add(publisher);
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			
@@ -741,7 +742,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
 			if (setupArtifacts != null) {
-				Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+				Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 			}
 		}
 	}
@@ -777,7 +778,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			MockPublisher publisher = new MockPublisher(Result.SUCCESS, new RTCBuildResultAction[] {action});
 			
 			// Create a FreeStyleJob with the above publisher and RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.getPublishersList().add(publisher);
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			
@@ -796,7 +797,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(f, "Post build deliver succeeded for build result"));	
 		} finally {
 			if (setupArtifacts != null) {
-				Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+				Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 			}
 		}
 	}
@@ -822,7 +823,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		Map<String, String> setupArtifacts = Utils.setupBuildDefinitionWithPBDeliver(loginInfo, 
 				componentName, workspaceName, buildDefinitionId, null);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			// Once the build has run, put the build result uuid into artifactIds so that they can be
 			// cleaned up
@@ -839,7 +840,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(f, "Summary of Post-build Deliver"));
 			assertNotNull(Utils.getMatch(f, "Post build deliver succeeded for build result"));		
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -862,7 +863,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		String buildDefinitionId = getBuildDefinitionUniqueName();
 		
 		@SuppressWarnings("unchecked")
-		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+		Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 				.invoke("setupAcceptChanges",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -876,10 +877,12 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
-						loginInfo.getTimeout(), workspaceName,
-						componentName, buildDefinitionId, true, false);
+						loginInfo.getTimeout(), 
+						workspaceName,
+						componentName, buildDefinitionId, true,
+						false);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			// Once the build has run, put the build result uuid into artifactIds so that they can be
 			// cleaned up
@@ -893,7 +896,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNull(Utils.getMatch(f, "Starting post build deliver for build result"));
 			assertNotNull(Utils.getMatch(f, "Post build deliver is not configured for build definition"));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -919,7 +922,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 				componentName, workspaceName, buildDefinitionId,
 				configOrGenericProperties);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId);
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			// Once the build has run, put the build result uuid into artifactIds so that they can be
 			// cleaned up
@@ -934,7 +937,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(f, "Post build deliver skipped for build result"));
 			assertNotNull(Utils.getMatch(f, "Post build deliver is disabled for build definition"));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 
@@ -1033,7 +1036,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			MockPublisher publisher = new MockPublisher(Result.SUCCESS, new RTCBuildResultAction[] {action1, action2});
 			
 			// Create a FreeStyleJob with the above publisher and RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.getPublishersList().add(publisher);
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			
@@ -1058,10 +1061,10 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver succeeded for build result .*" + action2.getBuildResultUUID()));
 		} finally {
 			if (setupArtifacts != null) {
-				Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+				Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 			}
 			if (setupArtifacts2 != null) {
-				Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts2);
+				Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts2);
 			}
 		}
 	}
@@ -1085,7 +1088,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		
 		try {
 			// Create a fake build result action 
-			RTCScm scm = Utils.constructRTCScmForBuildDefinition(r, "unknown build definition");
+			RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), "unknown build definition");
 			RTCBuildResultAction action1 = new RTCBuildResultAction(loginInfo.getServerUri(), java.util.UUID.randomUUID().toString(), false, scm);
 
 			RTCBuildResultAction action2 = null;
@@ -1098,7 +1101,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			MockPublisher publisher = new MockPublisher(Result.SUCCESS, new RTCBuildResultAction[] { action1, action2});
 			
 			// Create a FreeStyleJob with the above publisher and RTCPostBuildDeliverPublisher
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.getPublishersList().add(publisher);
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 			
@@ -1118,7 +1121,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(f, "Trigger policy prevented post build deliver for build result \""+action2.getBuildResultUUID() + "\""));
 			assertNotNull(Utils.getMatch(f, "Post build deliver skipped for build result .*" + action2.getBuildResultUUID()));
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -1139,7 +1142,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		
 		try {
 			// Create a fake build result action 
-			RTCScm scm = Utils.constructRTCScmForBuildDefinition(r, "unknown build definition");
+			RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), "unknown build definition");
 			RTCBuildResultAction action1 = new RTCBuildResultAction(loginInfo.getServerUri(), java.util.UUID.randomUUID().toString(), false, scm);
 
 			RTCBuildResultAction action2 = null;
@@ -1152,7 +1155,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			MockPublisher publisher = new MockPublisher(Result.SUCCESS, new RTCBuildResultAction[] {action1, action2});
 			
 			// Create a FreeStyleJob with the above publisher and RTCPostBuildDeliverPublisher with failOnError set to false.
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.getPublishersList().add(publisher);
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(false));
 
@@ -1175,7 +1178,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(f, "Post build deliver succeeded for build result"));	
 			
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}
 	}
 	
@@ -1204,7 +1207,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 				configOrGenericProperties);
 		try {
 			// Add a Publisher who can fail the build
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, buildDefinitionId, Collections.singletonList(new MockPublisher(expectedResult)));
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId, Collections.singletonList(new MockPublisher(expectedResult)));
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			
 			// Once the build has run, put the build result uuid into artifactIds so that they can be
@@ -1225,7 +1228,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(f, triggerPolicyString));
 			
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}	
 	}
 	
@@ -1252,7 +1255,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
     	
 		try {
 			// Add a Publisher who can fail the build
-			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(r, 
+			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), 
 								buildDefinitionId, Collections.singletonList(new MockPublisher(expectedResult)));
 			// Run a build
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
@@ -1271,7 +1274,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			assertNotNull(Utils.getMatch(f, "Summary of Post-build Deliver"));
 			assertNotNull(Utils.getMatch(f, "Post build deliver succeeded for build result"));	
 		} finally {
-			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
+			Utils.tearDown(getTestingFacade(), Config.DEFAULT, setupArtifacts);
 		}	
     }
 	
@@ -1284,7 +1287,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
      */
 	private void helperTestPBDeliverMultileStepsDoingNothing(int count) throws Exception {
 		// Create a freestyle project and then add RTCPostBuilddeliverPublisher
-		FreeStyleProject prj = r.createFreeStyleProject();
+		FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 		for (int i = 0 ; i < count; i++) {
 			prj.getPublishersList().add(new RTCPostBuildDeliverPublisher(true));
 		}
@@ -1327,18 +1330,18 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 					true, false, null);
 		String buildResultUUID = setupArtifacts.get(Utils.ARTIFACT_BUILDRESULT_ITEM_ID);
 		
-		File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+		File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 		FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 		
 		// Perform accept on the build result 1.
-		Map<String, String> buildProperties1 = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(), 
+		Map<String, String> buildProperties1 = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), 
 				loginInfo.getPassword(), loginInfo.getTimeout(),
 				buildResultUUID, null, null, null, 
-				sandboxDir.getCanonicalPath(), changeLog, "Snapshot", null,
+				getSandboxDir().getCanonicalPath(), changeLog, "Snapshot", null,
 				LoadOptions.getDefault(), getTaskListener(), Locale.getDefault());
 		
 		// Construct RTCScm instance for the above build definition
-		RTCScm scm = Utils.constructRTCScmForBuildDefinition(r, buildDefinitionId);
+		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId);
 		// Construct RTCBuildResultAction with the buildProperties, build result UUID and scm instance.
 		RTCBuildResultAction action = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, true, scm);
 		action.addBuildProperties(buildProperties1);
@@ -1371,15 +1374,15 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		// Accept should fail, so we will remove the repository workspace
 		Utils.deleteRepositoryWorkspace(workspaceName);
 
-		File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+		File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 		FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 		
 		try {
 			// Perform accept on the build result
-			Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(), 
+			Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), 
 					loginInfo.getPassword(), loginInfo.getTimeout(),
 					buildResultUUID, null, null, null, 
-					sandboxDir.getCanonicalPath(), changeLog, "Snapshot", null,
+					getSandboxDir().getCanonicalPath(), changeLog, "Snapshot", null,
 					LoadOptions.getDefault(), getTaskListener(), Locale.getDefault());
 		} catch (Exception exp) {
 			// Expected
@@ -1387,7 +1390,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		}
 			
 		// Construct RTCScm instance for the above build definition
-		RTCScm scm = Utils.constructRTCScmForBuildDefinition(r, buildDefinitionId);
+		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId);
 		// Construct RTCBuildResultAction with the buildProperties, build result UUID and scm instance.
 		RTCBuildResultAction action = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, true, scm);
 		return new Tuple<Map<String, String>, RTCBuildResultAction>(setupArtifacts, action);
@@ -1406,6 +1409,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
+	@SuppressWarnings("unchecked")
 	private Tuple<Map<String, String>, RTCBuildResultAction> getRTCBuildResultActionWithLoadFailure(RTCLoginInfo loginInfo ,
 			Map<String, String> configOrGenericProperties) throws Exception, FileNotFoundException, IOException {
 		Map<String, String> setupArtifacts;
@@ -1418,20 +1422,20 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 					true, false, configOrGenericProperties);
 		String buildResultUUID = setupArtifacts.get(Utils.ARTIFACT_BUILDRESULT_ITEM_ID);
 
-		File changeLogFile = new File(sandboxDir, "getRTCBuildResultActionWithLoadFailure-RTCChangeLogFile");
+		File changeLogFile = new File(getSandboxDir(), "getRTCBuildResultActionWithLoadFailure-RTCChangeLogFile");
 		FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 		Map<String, String> buildProperties = null;
 		try {
 			// Perform accept on the build result
-			Map<String, Object> acceptProperties = Utils.accept(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(), 
+			Map<String, Object> acceptProperties = Utils.accept(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), 
 					loginInfo.getPassword(), loginInfo.getTimeout(),
 					buildResultUUID, null, null, null, 
-					sandboxDir.getCanonicalPath(), changeLog, "Snapshot", null,
+					getSandboxDir().getCanonicalPath(), changeLog, "Snapshot", null,
 					LoadOptions.getDefault(), getTaskListener(), Locale.getDefault());
 			buildProperties = (Map<String, String>) acceptProperties.get(Utils.ACCEPT_BUILD_PROPERTIES);
 			
-			File tmpFilePath = Utils.getTemporaryFile();
-			Utils.load(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(), 
+			File tmpFilePath = Utils.getTemporaryFile(true);
+			Utils.load(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), 
 					loginInfo.getPassword(), loginInfo.getTimeout(),
 					buildResultUUID, null, null, null, 
 					tmpFilePath.getAbsolutePath(), "Snapshot",
@@ -1442,7 +1446,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		}
 		assertNotNull(buildProperties);
 		// Construct RTCScm instance for the above build definition
-		RTCScm scm = Utils.constructRTCScmForBuildDefinition(r, buildDefinitionId);
+		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId);
 		// Construct RTCBuildResultAction with the buildProperties, build result UUID and scm instance.
 		RTCBuildResultAction action = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, true, scm);
 		action.addBuildProperties(buildProperties);
@@ -1451,17 +1455,33 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 	
 	private void dumpExceptionIntoFile(String fileNamePrefix, Exception exp) throws IOException{
 		if (Config.DEFAULT.isDumpLogFiles()) {
-			File f = File.createTempFile("fileNamePrefix", "exception.log");
-			PrintWriter p = new PrintWriter(f);
-			p.println(exp.getMessage());
-			for (StackTraceElement elem : exp.getStackTrace()) {
-				p.println(elem.toString());
+			File f = File.createTempFile(fileNamePrefix, "exception.log");
+			try (PrintWriter p = new PrintWriter(f)) {
+				p.println(exp.getMessage());
+				for (StackTraceElement elem : exp.getStackTrace()) {
+					p.println(elem.toString());
+				}
+				if (exp.getCause() != null) {
+					Throwable cause = exp.getCause();
+					p.println(cause.getMessage());
+				}
 			}
-			if (exp.getCause() != null) {
-				Throwable cause = exp.getCause();
-				p.println(cause.getMessage());
-			}
-			p.close();
 		}
+	}
+
+	public RTCFacadeWrapper getTestingFacade() {
+		return this.testingFacade;
+	}
+
+	public void setTestingFacade(RTCFacadeWrapper testingFacade) {
+		this.testingFacade = testingFacade;
+	}
+
+	public JenkinsRule getJenkinsRule() {
+		return this.r;
+	}
+
+	public void setJenkinsRule(JenkinsRule r) {
+		this.r = r;
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -1207,5 +1207,29 @@ public class BuildConfiguration {
 	 */
 	protected RTCWorkspaceUtils getRTCWorkspaceUtils() {
 		return RTCWorkspaceUtils.getInstance();
+	}
+
+	/**
+	 * Return the build property's value. If the build property is not found,
+	 * then the defaultValue is returned
+	 *  
+	 * @param propertyName The name of the build property 
+	 * @param defaultValue The default value to return if property is not found
+	 * @return a {@link String} The value of the property or 
+	 * 			the default value, if the property is not found
+	 *         
+	 */
+	public String getBuildProperty(String propertyName, String defaultValue) {
+		if (this.buildProperties == null) {
+			return defaultValue;
+		}
+		if (!this.buildProperties.containsKey(propertyName)) {
+			return defaultValue;
+		}
+		String propertyValue =  (this.buildProperties.get(propertyName));
+		if (propertyValue == null) {
+			return defaultValue;
+		}
+		return propertyValue;
 	}
 }

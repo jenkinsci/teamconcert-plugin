@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright © 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -50,117 +50,117 @@ public class Config {
 	private Config() {
 		String configuredString = System.getProperty(CONFIGURED);
 		if (configuredString == null) {
-			configured = false;
+			setConfigured(false);
 		}
-		configured = Boolean.parseBoolean(configuredString);
+		setConfigured(Boolean.parseBoolean(configuredString));
 
-		if (configured) {
+		if (isConfigured()) {
 
-			toolkit = System.getProperty(TOOLKIT);
-			if (toolkit == null) {
+			setToolkit(System.getProperty(TOOLKIT));
+			if (getToolkit() == null) {
 				throw new IllegalStateException(MessageFormat.format(
 						MISSING_PROPERTY, TOOLKIT));
 			}
 
-			serverURI = System.getProperty(SERVER_URI);
-			if (serverURI == null) {
-				serverURI="https://localhost:9443/jazz/";
+			setServerURI(System.getProperty(SERVER_URI));
+			if (getServerURI() == null) {
+				setServerURI("https://localhost:9443/jazz/");
 			} else {
-				if (!serverURI.endsWith("/")) {
-					serverURI = serverURI + "/";
+				if (!getServerURI().endsWith("/")) {
+					setServerURI(getServerURI() + "/");
 				}
 			}
 
-			userId = System.getProperty(USER_ID);
-			if (userId == null) {
-				userId = "ADMIN";
+			setUserId(System.getProperty(USER_ID));
+			if (getUserId() == null) {
+				setUserId("ADMIN");
 			}
 			
-			if (userIDForAuthenticationFailures == null) {
-				userIDForAuthenticationFailures = Long.toHexString(System.currentTimeMillis());
+			if (getUserIDForAuthenticationFailures() == null) {
+				setUserIDForAuthenticationFailures(Long.toHexString(System.currentTimeMillis()));
 			}
 
-			password = System.getProperty(PASSWORD);
-			if (password == null) {
+			setPassword(System.getProperty(PASSWORD));
+			if (getPassword() == null) {
 				throw new IllegalStateException(MessageFormat.format(
 						MISSING_PROPERTY, PASSWORD));
 			}
 
-			passwordFile = System.getProperty(PASSWORD_FILE);
+			setPasswordFile(System.getProperty(PASSWORD_FILE));
 
 			String timeoutString = System.getProperty(TIMEOUT);
 			if (timeoutString == null) {
 				timeoutString = "480";
 			}
-			timeout = Integer.parseInt(timeoutString);
+			setTimeout(Integer.parseInt(timeoutString));
 			
 			String dumpLogFilesString = System.getProperty(DUMP_LOG_FILES);
 			if (dumpLogFilesString == null) {
 				dumpLogFilesString = "false";
 			}
-			dumpLogFiles = Boolean.parseBoolean(dumpLogFilesString);
+			setDumpLogFiles(Boolean.parseBoolean(dumpLogFilesString));
 			
 			String setUpOnlyString = System.getProperty(SET_UP_ONLY);
 			if (setUpOnlyString == null) {
-				setUpOnly = false;
+				setSetUpOnly(false);
 			}
-			setUpOnly = Boolean.parseBoolean(setUpOnlyString);
+			setSetUpOnly(Boolean.parseBoolean(setUpOnlyString));
 		}
 	}
 
 	public boolean isConfigured() {
-		return configured;
+		return this.configured;
 	}
 
 	private void validateConfigured() {
-		if (!configured) {
+		if (!isConfigured()) {
 			throw new IllegalStateException(NOT_CONFIGURED);
 		}
 	}
 
 	public String getToolkit() {
 		validateConfigured();
-		return toolkit;
+		return this.toolkit;
 	}
 
 	public String getServerURI() {
 		validateConfigured();
-		return serverURI;
+		return this.serverURI;
 	}
 
 	public String getUserID() {
 		validateConfigured();
-		return userId;
+		return getUserId();
 	}
 
 	public String getUserIDForAuthenticationFailures() {
 		validateConfigured();
-		return userIDForAuthenticationFailures;
+		return this.userIDForAuthenticationFailures;
 	}
 
 	public String getPassword() {
 		validateConfigured();
-		return password;
+		return this.password;
 	}
 
 	public String getPasswordFile() {
 		validateConfigured();
-		return passwordFile;
+		return this.passwordFile;
 	}
 
 	public int getTimeout() {
 		validateConfigured();
-		return timeout;
+		return this.timeout;
 	}
 
 	public boolean isSetUpOnly() {
 		validateConfigured();
-		return setUpOnly;
+		return this.setUpOnly;
 	}
 
 	public boolean isDumpLogFiles() {
 		validateConfigured();
-		return dumpLogFiles;
+		return this.dumpLogFiles;
 	}
 
 	public RTCLoginInfo getLoginInfo() throws InvalidCredentialsException {
@@ -181,5 +181,49 @@ public class Config {
 			b.append(getPasswordFile());
 		}
 		return b.hashCode();
+	}
+
+	private void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getUserId() {
+		return this.userId;
+	}
+
+	private void setUserId(String userId) {
+		this.userId = userId;
+	}
+
+	private void setServerURI(String serverURI) {
+		this.serverURI = serverURI;
+	}
+
+	private void setConfigured(boolean configured) {
+		this.configured = configured;
+	}
+
+	private void setToolkit(String toolkit) {
+		this.toolkit = toolkit;
+	}
+
+	private void setTimeout(int timeout) {
+		this.timeout = timeout;
+	}
+
+	private void setPasswordFile(String passwordFile) {
+		this.passwordFile = passwordFile;
+	}
+
+	private void setDumpLogFiles(boolean dumpLogFiles) {
+		this.dumpLogFiles = dumpLogFiles;
+	}
+
+	private void setSetUpOnly(boolean setUpOnly) {
+		this.setUpOnly = setUpOnly;
+	}
+
+	private void setUserIDForAuthenticationFailures(String userIDForAuthenticationFailures) {
+		this.userIDForAuthenticationFailures = userIDForAuthenticationFailures;
 	}
 }

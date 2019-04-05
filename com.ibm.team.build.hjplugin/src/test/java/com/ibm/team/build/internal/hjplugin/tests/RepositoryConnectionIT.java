@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright © 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -44,7 +44,7 @@ import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import hudson.model.TaskListener;
 import hudson.scm.EditType;
 
-@SuppressWarnings("nls")
+@SuppressWarnings({"nls", "static-method", "boxing"})
 public class RepositoryConnectionIT extends AbstractTestCase {
 
 	private RTCFacadeWrapper testingFacade;
@@ -53,7 +53,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	public void setUp() throws Exception {
 
 		if (Config.DEFAULT.isConfigured()) {
-			testingFacade = Utils.getTestingFacade();
+			setTestingFacade(Utils.getTestingFacade());
 	        createSandboxDirectory();
 		}
 	}
@@ -79,7 +79,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentDroppedName = getUniqueName("Component_dropped");
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupComponentChanges",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -112,17 +112,17 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						workspaceName, null, null, getTaskListener(), false);
 				
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						(String) null, getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -154,7 +154,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -182,7 +182,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupAcceptDiscardChanges",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -217,18 +217,18 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
 				Map<String, String> properties = Utils.acceptAndLoad(
-						testingFacade,
+						getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -275,7 +275,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -306,7 +306,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupAcceptChanges",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -340,17 +340,17 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -393,7 +393,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -428,7 +428,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupAcceptChanges",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -473,17 +473,17 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
 				String buildResultUUID = setupArtifacts.get("buildResultItemId");
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						buildResultUUID, null,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -538,7 +538,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -566,7 +566,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupAcceptChanges",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -638,7 +638,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -665,7 +665,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupEmptyChangeSets",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -699,17 +699,17 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -731,7 +731,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -762,7 +762,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupNoopChanges",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -795,17 +795,17 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -826,7 +826,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -855,7 +855,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupComponentRootChange",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -888,17 +888,17 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -918,7 +918,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -946,7 +946,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupMultipleComponentChanges",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -979,17 +979,17 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot #42", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -1054,7 +1054,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -1091,7 +1091,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupXMLEncodingTestChangeSets",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -1124,18 +1124,18 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				String snapshotName = XML_ENCODED_CHARACTERS;
 				
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						null, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						snapshotName, getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -1154,7 +1154,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -1184,7 +1184,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 			String buildDefinitionId = getBuildDefinitionUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupBuildResultContributions",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -1218,11 +1218,11 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 
 				Assert.assertTrue("Expected non zero hashcode", !hashCode.equals(new BigInteger("0")));
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// create the build result
-				String buildResultItemId = (String) testingFacade.invoke(
+				String buildResultItemId = (String) getTestingFacade().invoke(
 						"createBuildResult", new Class[] { //$NON-NLS-1$
 								String.class, // serverURI,
 								String.class, // userId,
@@ -1241,13 +1241,13 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 				setupArtifacts.put("buildResultItemId", buildResultItemId);
 				
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade,
+				Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						buildResultItemId, workspaceName,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -1260,7 +1260,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 	    		setupArtifacts.put("baselineSetItemId", result.getBaselineSetItemId());
 
 	    		// Verify the build result
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"verifyBuildResultContributions",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -1274,7 +1274,7 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 						setupArtifacts);
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -1526,5 +1526,13 @@ public class RepositoryConnectionIT extends AbstractTestCase {
 		Assert.assertTrue(csEntry.getAdditionalWorkItems().isEmpty());
 		Assert.assertEquals(csEntry.getAffectedVersionables().size(), csEntry.getAffectedPaths().size());
 		Assert.assertFalse(csEntry.isTooManyChanges());
+	}
+
+	public RTCFacadeWrapper getTestingFacade() {
+		return this.testingFacade;
+	}
+
+	public void setTestingFacade(RTCFacadeWrapper testingFacade) {
+		this.testingFacade = testingFacade;
 	}
 }

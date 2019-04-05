@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright (c) 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,14 @@
 
 package com.ibm.team.build.internal.hjplugin.rtc;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,8 +56,10 @@ import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.common.model.query.IBaseBuildEngineQueryModel.IBuildEngineQueryModel;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.common.schedule.IBuildScheduleTaskProperties;
+import com.ibm.team.build.internal.publishing.LogPublisher;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
+import com.ibm.team.repository.common.IContent;
 import com.ibm.team.repository.common.IContributor;
 import com.ibm.team.repository.common.IContributorHandle;
 import com.ibm.team.repository.common.ItemNotFoundException;
@@ -742,6 +752,49 @@ public class BuildConnection {
 			getTeamBuildClient().delete(resultHandle, progress);
 		} catch (ItemNotFoundException e) {
 			// its ok if it has already been deleted.
+		}
+	}
+
+	/**
+	 * Publish the metronome log to the Build Result 
+	 * 
+	 * @param teamRepository The repository
+	 * @param buildResultHandle The item id of the build result
+	 * @param logContent The content of the log file
+	 * @param prefix The prefix for the log file
+	 * @param suffix The suffix for the log file
+	 * @param label The label for the log file
+	 * @param monitor Monitor for progress
+	 * @throws TeamRepositoryException If anything goes wrong when communicating with RTC
+	 * @throws IOException If there is something goes wrong when reading/writing file 
+	 */
+	@SuppressWarnings("restriction")
+	public static void publishLog(ITeamRepository repository, IBuildResultHandle buildResultHandle, String logContent,
+										String prefix, String suffix, String label, 
+										IProgressMonitor monitor) throws TeamRepositoryException, IOException {
+		SubMonitor progress = SubMonitor.convert(monitor, 100);
+		Path tmpDirPath = Files.createTempDirectory("teamconcert", new FileAttribute<?>[0]); //$NON-NLS-1$
+		Path tmpFilePath = tmpDirPath.resolve(prefix+suffix);
+		File tmpDir = tmpDirPath.toFile();
+		File tmpFile = Files.createFile(tmpFilePath, new FileAttribute<?>[0]).toFile();
+		tmpDir.deleteOnExit();
+		tmpFile.deleteOnExit();
+		try {
+			try (PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(tmpFile),
+					IContent.ENCODING_UTF_8))) {
+				printWriter.print(logContent);
+				printWriter.flush();
+			}
+			// Upload the file to the build result
+			progress.worked(30);
+			LogPublisher publisher = new LogPublisher(tmpFile.getAbsolutePath(), label, 
+								 			IContent.CONTENT_TYPE_TEXT, IContent.ENCODING_UTF_8);
+			publisher.publish(buildResultHandle, BuildStatus.OK, repository);
+		} finally {
+			monitor.done();
+			// Deleting it here just to be on the safe side
+			tmpFile.delete();
+			tmpDir.delete();
 		}
 	}
 

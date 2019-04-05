@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,39 +11,14 @@
 
 package com.ibm.team.build.internal.hjplugin;
 
-import hudson.AbortException;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.Util;
-import hudson.model.TaskListener;
-import hudson.model.AbstractProject;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
-import hudson.model.Hudson;
-import hudson.model.Job;
-import hudson.model.Node;
-import hudson.model.Queue.Task;
-import hudson.model.Run;
-import hudson.remoting.Channel;
-import hudson.remoting.RemoteOutputStream;
-import hudson.remoting.VirtualChannel;
-import hudson.scm.ChangeLogParser;
-import hudson.scm.PollingResult;
-import hudson.scm.PollingResult.Change;
-import hudson.scm.SCMDescriptor;
-import hudson.scm.SCMRevisionState;
-import hudson.scm.SCM;
-import hudson.security.ACL;
-import hudson.util.FormValidation;
-import hudson.util.Secret;
-import hudson.util.ListBoxModel;
-
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.net.MalformedURLException;
@@ -57,9 +32,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
 
 import org.jvnet.localizer.LocaleProvider;
 import org.kohsuke.stapler.AncestorInPath;
@@ -82,20 +54,85 @@ import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.Tuple;
 import com.ibm.team.build.internal.hjplugin.util.ValidationResult;
 
+import hudson.AbortException;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.Util;
+import hudson.model.AbstractProject;
+import hudson.model.Cause;
+import hudson.model.CauseAction;
+import hudson.model.Hudson;
+import hudson.model.Job;
+import hudson.model.Node;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.model.Queue.Task;
+import hudson.remoting.Channel;
+import hudson.remoting.RemoteOutputStream;
+import hudson.remoting.VirtualChannel;
+import hudson.scm.ChangeLogParser;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
+import hudson.scm.SCM;
+import hudson.scm.SCMDescriptor;
+import hudson.scm.SCMRevisionState;
+import hudson.security.ACL;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
+
 @ExportedBean(defaultVisibility=999)
 public class RTCScm extends SCM {
-
-    private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
+	
+	private static final BigInteger BIGINT_ZERO = new BigInteger("0"); //$NON-NLS-1$
+	
+	private static final BigInteger BIGINT_ONE = new BigInteger("1");  //$NON-NLS-1$
+	
+	private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
+	
+	private static final String METRONOME_OPTIONS_PROPERTY_NAME = "metronomeOptions"; //$NON-NLS-1$
+    
+	private static final String METRONOME_DATA_PROPERTY_NAME = "metronomeData"; //$NON-NLS-1$
 
 	private static final String CALL_CONNECTOR_TIMEOUT_PROPERTY = "com.ibm.team.build.callConnector.timeout"; //$NON-NLS-1$
 	
 	private static final String IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING = "com.ibm.team.build.ignoreOutgoingFromBuildWorkspaceWhilePolling"; //$NON-NLS-1$
 	
+	private static final String JOB_PROPERTY_OVERRIDES_SYSTEM_PROPERTY = "com.ibm.team.build.jobPropertyOverride"; //$NON-NLS-1$
+	
 	private static final String DEPRECATED_CREDENTIAL_EDIT_ALLOWED = "com.ibm.team.build.credential.edit"; //$NON-NLS-1$
 	
-	private static final BigInteger BIGINT_ZERO = new BigInteger("0");
+	private static final String TEAMCONCERT_FOLDER_NAME = "teamconcert"; //$NON-NLS-1$
 	
-	private static final BigInteger BIGINT_ONE = new BigInteger("1"); 
+	private static final String TEAMCONCERT_METRONOME_NAME = "diagnostics"; //$NON-NLS-1$
+	
+	private static final String STATISTICS_DATA_FILE_SUFFIX_VALUE = ".csv";
+	
+	private static final String STATISTICS_REPORT_FILE_SUFFIX_VALUE = ".log";
+
+	private static final String STATISTICS_DATA_VALUE = "Statistics Data";
+
+	private static final String STATISTICS_REPORT_VALUE = "Statistics Report";
+
+	private static final String STATISTICS_DATA_FILE_PREFIX_VALUE = "statisticsData-";
+
+	private static final String STATISTICS_REPORT_FILE_PREFIX_VALUE = "statistics-";
+
+	private static final String STATISTICS_DATA_LABEL_PROPERTY_NAME = "statisticsDataLabel";
+
+	private static final String STATISTICS_REPORT_LABEL_PROPERTY_NAME = "statisticsReportLabel";
+
+	public static final String STATISTICS_DATA_FILE_PREFIX_PROPERTY_NAME = "statisticsDataFilePrefix";
+	
+	private static final String STATISTICS_REPORT_FILE_PREFIX_PROPERTY_NAME = "statisticsReportFilePrefix";
+	
+	private static final String STATISTICS_DATA_FILE_SUFFIX_PROPERTY_NAME = "statisticsDataFileSuffix";
+	
+	private static final String STATISTICS_REPORT_FILE_SUFFIX_PROPERTY_NAME = "statisticsReportFileSuffix";
+
 	
 	// persisted fields for SCM
     private boolean overrideGlobal;
@@ -190,9 +227,11 @@ public class RTCScm extends SCM {
 	// When set to true, the loadPolicy value is set to useDynamicLoadRules, irrespective of the value already set in
 	// build definition
 	private boolean useDynamicLoadRules;
+	
+	private boolean addLinksToWorkItems;
 
 	private RTCBuildResultAction buildResultAction = null;
-	
+
 	/**
 	 * Class defining the snapshot context configuration data.
 	 */
@@ -239,7 +278,7 @@ public class RTCScm extends SCM {
 	}
 	
 	/**
-	 * Structure that represents the radio button selection for build workspace/definition
+	 * Structure that represents the radio button selection for build workspace, stream, snapshot definition
 	 * choice in config.jelly (job configuration) 
 	 */
 	public static class BuildType {
@@ -251,7 +290,8 @@ public class RTCScm extends SCM {
 		public String loadDirectory;
 		public boolean clearLoadDirectory;
 		public boolean createFoldersForComponents;
-		private String acceptBeforeLoad = "true";
+		private String acceptBeforeLoad = "true"; //$NON-NLS-1$
+		private boolean addLinksToWorkItems;
 		private boolean generateChangelogWithGoodBuild;
 		private String processArea;
 		private String currentSnapshotOwnerType;
@@ -406,6 +446,15 @@ public class RTCScm extends SCM {
 
 		public boolean getUseDynamicLoadRules() {
 			return useDynamicLoadRules;
+		}
+		
+		@DataBoundSetter
+		public void setAddLinksToWorkItems(boolean addLinksToWorkItems) {
+			this.addLinksToWorkItems = addLinksToWorkItems;
+		}
+
+		public boolean getAddLinksToWorkItems() {
+			return this.addLinksToWorkItems;
 		}
 	}
 	
@@ -1766,6 +1815,7 @@ public class RTCScm extends SCM {
 			this.createFoldersForComponents = buildType.createFoldersForComponents;
 			this.acceptBeforeLoad = buildType.acceptBeforeLoad;
 			this.generateChangelogWithGoodBuild = buildType.generateChangelogWithGoodBuild;
+			this.addLinksToWorkItems = buildType.addLinksToWorkItems;
 			this.processArea = buildType.processArea;
 			this.currentSnapshotOwnerType = buildType.currentSnapshotOwnerType;
 			this.buildSnapshotContext = buildType.buildSnapshotContext;
@@ -1797,7 +1847,8 @@ public class RTCScm extends SCM {
 					"\" clearLoadDirectory=\"" + this.clearLoadDirectory + //$NON-NLS-1$  
 					"\" createFoldersForComponents=\"" + this.createFoldersForComponents + //$NON-NLS-1$  
 					"\" acceptBeforeLoad=\"" + this.acceptBeforeLoad + 
-					"\" generateChangelogWithGoodBuild=\"" + this.generateChangelogWithGoodBuild); //$NON-NLS-1$ //$NON-NLS-2$
+					"\" generateChangelogWithGoodBuild=\"" + this.generateChangelogWithGoodBuild +  //$NON-NLS-1$ //$NON-NLS-2$
+					"\" addLinksToWorkitems=\"" + this.addLinksToWorkItems); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 	
@@ -1885,7 +1936,7 @@ public class RTCScm extends SCM {
 		
         LOGGER.finest("RTCScm.checkout : Begin");
 		listener.getLogger().println(Messages.RTCScm_checkout_started());
-	
+
 		String label = getLabel(build);
 		String localBuildToolkit;
 		String nodeBuildToolkit;
@@ -1918,9 +1969,6 @@ public class RTCScm extends SCM {
 		nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
 
 		boolean debug = Helper.isDebugEnabled(build, listener);
-		
-		// Before proceeding, log the details of master and node buildtoolkit
-		logBuildToolkitVersions(workspacePath, listener, localBuildToolkit, nodeBuildToolkit, debug);
 
 		RTCLoginInfo loginInfo;
 		try {
@@ -1928,6 +1976,21 @@ public class RTCScm extends SCM {
 		} catch (InvalidCredentialsException e1) {
 			throw new AbortException(e1.getMessage());
 		}
+		
+		if (workspacePath.isRemote()) {
+			// Slaves do a lazy remote class loader. The slave's class loader will request things as needed
+			// from the remote master. The class loader on the master is the one that knows about the hjplugin-rtc.jar
+			// but not any of the toolkit jars. So trying to send the class (& its references) is problematic.
+			// The hjplugin-rtc.jar won't be able to be found on the slave either from the regular class loader either
+			// (since its on the master). So what we do is send our hjplugin-rtc.jar over to the slave to "prepopulate"
+			// it in the class loader. This way we can create our special class loader referencing it and all the toolkit
+			// jars.
+			sendJarsToSlave(workspacePath);
+		}
+		
+		// Before proceeding, log the details of master and node buildtoolkit
+		logBuildToolkitVersions(workspacePath, listener, localBuildToolkit, nodeBuildToolkit, debug);
+
 		// if buildResultUUID is not null then we need to match...
 		if (buildResultUUID != null) {
 			if (!match(loginInfo, localBuildToolkit, buildResultUUID, buildDefinition, buildWorkspace, debug, listener, LocaleProvider.getLocale())) {
@@ -1961,17 +2024,6 @@ public class RTCScm extends SCM {
 						" Build snapshot=\"" + buildSnapshot + "\"" +  //$NON-NLS-1$ //$NON-NLS-2$
 						" useBuildDefinitionInBuild=\"" + useBuildDefinitionInBuild + "\"" + //$NON-NLS-1$ //$NON-NLS-2$
 						" Baseline Set name=\"" + label + "\""); //$NON-NLS-1$ //$NON-NLS-2$
-			}
-
-			if (workspacePath.isRemote()) {
-				// Slaves do a lazy remote class loader. The slave's class loader will request things as needed
-				// from the remote master. The class loader on the master is the one that knows about the hjplugin-rtc.jar
-				// but not any of the toolkit jars. So trying to send the class (& its references) is problematic.
-				// The hjplugin-rtc.jar won't be able to be found on the slave either from the regular class loader either
-				// (since its on the master). So what we do is send our hjplugin-rtc.jar over to the slave to "prepopulate"
-				// it in the class loader. This way we can create our special class loader referencing it and all the toolkit
-				// jars.
-				sendJarsToSlave(workspacePath);
 			}
 
 			RTCBuildResultSetupTask buildResultSetupTask = new RTCBuildResultSetupTask(build.getParent().getName() + " " + build.getDisplayName() + " " + node.getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
@@ -2036,10 +2088,9 @@ public class RTCScm extends SCM {
 			}
 			
 			String strCallConnectorTimeout = build.getEnvironment(listener).get(CALL_CONNECTOR_TIMEOUT_PROPERTY);
-			if ((strCallConnectorTimeout == null) || !strCallConnectorTimeout.matches("\\d+")) {
-				strCallConnectorTimeout = "";
+			if ((strCallConnectorTimeout == null) || !strCallConnectorTimeout.matches("\\d+")) { //$NON-NLS-1$
+				strCallConnectorTimeout = ""; //$NON-NLS-1$
 			}
-			
 
 			String previousSnapshotUUIDForChangeLog = null;
 			Run<?,?> previousBuild = null;
@@ -2072,8 +2123,14 @@ public class RTCScm extends SCM {
 					listener.getLogger().println(Messages.RTCScm_empty_resolved_snapshot_name(customizedSnapshotName));
 				}
 			}
-	
-			String parentActivityId = "";
+			
+			// This map will hold future options to be added
+			Map<String, Object> options = new HashMap<String, Object>();
+			// Check whether metronome report should be collected
+			Map<String, Object> metronomeOptions = createMetronomeOptions(build, listener);
+			options.put(METRONOME_OPTIONS_PROPERTY_NAME, metronomeOptions);
+
+			String parentActivityId = ""; //$NON-NLS-1$
 			String connectorId = "";
 			Map<String, String> streamData = new HashMap<String, String>();
 			Map<String, String> buildSnapshotContextMap = buildSnapshotContext != null ? buildSnapshotContext.getContextMap() : null;
@@ -2089,11 +2146,14 @@ public class RTCScm extends SCM {
 					buildStream, isCustomSnapshotName,
 					snapshotName, previousSnapshotUUIDForChangeLog,
 					listener, changeLog,
-					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, getAcceptBeforeLoad(),
+					workspacePath.isRemote(), debug, LocaleProvider.getLocale(), strCallConnectorTimeout, 
+					getAcceptBeforeLoad(),
+					getAddLinksToWorkItems(),
 					// If you are not comparing with any snapshot, no need to put the previous build URL
 					buildUrls,
-					//(previousSnapshotUUIDForChangeLog != null && previousBuild != null) ? Util.fixEmptyAndTrim(previousBuild.getUrl()): null,
-					Helper.getTemporaryWorkspaceComment(build));
+					Helper.getTemporaryWorkspaceComment(build),
+					// Add future options to this object instead of adding new parameters to this method
+					options);
 
 			// publish in the build result links to the project and the build
 			if (buildResultUUID != null) {
@@ -2161,7 +2221,8 @@ public class RTCScm extends SCM {
 					connectorId, extProvider, Util.fixEmptyAndTrim(loadPolicyTemp), Util.fixEmptyAndTrim(componentLoadConfig), Helper.parseConfigurationValue(build, null,
 							Util.fixEmptyAndTrim(getComponentsToExclude()), listener), Helper.parseConfigurationValue(build, null,
 							Util.fixEmptyAndTrim(getPathToLoadRuleFile()), listener), clearLoadDirectory, createFoldersForComponents,
-					getAcceptBeforeLoad(), Helper.getTemporaryWorkspaceComment(build), shouldDeleteTemporaryWorkspace);
+					        getAcceptBeforeLoad(), Helper.getTemporaryWorkspaceComment(build), shouldDeleteTemporaryWorkspace, options);
+
 			if (buildResultUUID != null) {
 				String rootUrl = Hudson.getInstance().getRootUrl();
 				if (rootUrl != null) {
@@ -2187,6 +2248,9 @@ public class RTCScm extends SCM {
 				loadResult = workspacePath.act(loadTask);
 			}
 			addTemporaryWorkspaceDetailsToAction(loadResult, buildResultAction);
+			
+			// Before leaving, add metronome data to build
+			addMetronomeDataToBuild(build, loadResult, metronomeOptions, listener);
     	} catch (Exception e) {
     		Throwable eToReport = e;
     		if (eToReport instanceof InvocationTargetException) {
@@ -2363,12 +2427,16 @@ public class RTCScm extends SCM {
 	    			listener.getLogger().println(Messages.RTCScm_no_changes_found());
 	    			return new PollingResult(revisionState, new RTCRevisionState(BIGINT_ZERO), Change.NONE);
 	    		}
-    		} else {
+    		} else { // buildWorkspace
     			// If acceptBeforeLoad is false, we should always build.
-    			if (!getAcceptBeforeLoad()) { 
+    			if (!getAcceptBeforeLoad()) {
+	    			listener.getLogger().println("Checking incoming changes for \"" + buildWorkspace + "\"");
+	    			listener.getLogger().println("RTCScm is not configured to accept latest changes.");
+	    			listener.getLogger().println("In this configuration, polling will result in unnecessary builds.");
+	    			listener.getLogger().println(Messages.RTCScm_changes_found());
     				return new PollingResult(revisionState, new RTCRevisionState(BIGINT_ZERO), Change.SIGNIFICANT);
     			}
-    			String strIgnoreOutgoingFromBuildWorkspace = System.getProperty(IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING);
+    			String strIgnoreOutgoingFromBuildWorkspace = getIgnoreOutoingFromBuildWorkspaceParamValue(project, listener);
     			boolean ignoreOutgoingFromBuildWorkspace = "true".equals(strIgnoreOutgoingFromBuildWorkspace); 
     			// Get the previous snapshot for stream case
     			String streamChangesData = Helper.getStreamChangesDataFromLastBuild(project, masterToolkit, loginInfo, getProcessArea(), buildStream, LocaleProvider.getLocale()).getSecond();
@@ -2463,6 +2531,18 @@ public class RTCScm extends SCM {
     	}
 	}
 
+	private String getIgnoreOutoingFromBuildWorkspaceParamValue(Job<?,?> job, TaskListener listener) {
+		String value = "false";
+		if (Boolean.parseBoolean(System.getProperty(JOB_PROPERTY_OVERRIDES_SYSTEM_PROPERTY, "false"))) {
+			value = Helper.getStringBuildParameter(job, IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING, listener);
+		} else {
+			if(System.getProperty(IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING) != null) {
+				value = Util.fixEmptyAndTrim(System.getProperty(IGNORE_OUTGOING_FROM_BUILD_WS_WHILE_POLLING));
+			}
+		}
+		return value;
+	}
+
 	private boolean isInQueue(Job<?, ?> project) {
 		LOGGER.finest("RTCScm.isInQueue : Begin");
 		if(project instanceof AbstractProject) {
@@ -2515,6 +2595,8 @@ public class RTCScm extends SCM {
 		for (Entry<String, String> entry : getBuildResultAction().getBuildProperties().entrySet()) {
 			environment.put(entry.getKey(), entry.getValue());
 		}
+		// NOTE We could put metronome data as is to the build environment
+		// which pipeline builds can read off as a string.
 		LOGGER.log(Level.FINEST, "Exiting RTCScm:buildEnvironment");
 	}
 
@@ -2747,6 +2829,10 @@ public class RTCScm extends SCM {
 		return generateChangelogWithGoodBuild;
 	}
 	
+	public boolean getAddLinksToWorkItems() {
+		return addLinksToWorkItems;
+	}
+
 	@Override
     public String getKey() {
 		LOGGER.finest("RTCScm.getKey : Begin");
@@ -2823,7 +2909,134 @@ public class RTCScm extends SCM {
 			action.addBuildProperties(temporaryWorkspaceProperties);
 		}		
 	}
+	
+	/**
+	 * Add the metronome data to the Build Result action's properties.
+	 * This will be exported to the Jenkins build as environment variables.
+	 * 
+	 * @param loadResult The result from the load phase
+	 * @param action The RTC Build Result action
+	 */
+	private void addMetronomeDataToBuild(Run<?,?> build, Map<String, Object> loadResult, 
+								Map<String, Object> metronomeOptions, TaskListener listener) {
+		
+		// This ensures that metronome data is added only if the user has a property in the Jenkins 
+		// job to upload the logs
+		// For a build definition based build, we will upload the logs only to the build result. 
+		// hence we will return immediately if the shouldCreateMetronome is set to false in the Jenkins 
+		// job.
+		Boolean shouldCreateMetronomeReport = (Boolean) metronomeOptions.get(
+								RTCJobProperties.TEAM_BUILD_REPORT_STATISTICS_PROPERTY_NAME);
+		if (shouldCreateMetronomeReport == null || 
+				Boolean.FALSE.equals(shouldCreateMetronomeReport) || 
+				getBuildTypeStr().equals(BUILD_DEFINITION_TYPE)) {
+			return;
+		}
+		// Check if metronome data should be pushed
+		@SuppressWarnings("unchecked")
+		Map<String, String> metronomeData = (Map<String, String>)loadResult.get(METRONOME_DATA_PROPERTY_NAME);
+		if (metronomeData == null) {
+			return;
+		}
+		
+		String	statisticsData= Util.fixEmpty(metronomeData.get(RTCJobProperties.STATISTICS_DATA_PROPERTY_NAME));
+		String	statisticsReport = Util.fixEmpty(metronomeData.get(RTCJobProperties.STATISTICS_REPORT_PROPERTY_NAME));
+		if (statisticsData == null && statisticsReport == null) {
+			return;
+		}
+		try {
+			// Put the statistics files under a new folder called "teamconcert"
+			File teamConcertDir = new File(build.getRootDir(), TEAMCONCERT_FOLDER_NAME); //$NON-NLS-1$
+			if (!teamConcertDir.exists()) {
+				teamConcertDir.mkdir();
+			}
+			// Create a folder called metronome under rtcscm folder
+			File metronomeDir = new File(teamConcertDir, TEAMCONCERT_METRONOME_NAME); //$NON-NLS-1$
+			if (!metronomeDir.exists()) {
+				metronomeDir.mkdir();
+			}
+			// We need the suffix because there could be multiple invocations of RTCScm in a 
+			// pipeline job 
+			File statisticsDataFile = new File(metronomeDir, getStatisticsDataFileName(metronomeOptions));
+			File statisticsReportFile =  new File(metronomeDir, getStatisticsReportFileName(metronomeOptions));
+			writeMetronomeContentToFile(statisticsData, statisticsDataFile);
+			writeMetronomeContentToFile(statisticsReport, statisticsReportFile);
+			
+			// We could export the file names to the build properties
+			// This will help users identify which file belongs to this run of RTCScm 
+			// (especially in Pipeline jobs)
+		}
+		catch (Throwable e) {
+			// Don't have to fail the build.
+			LOGGER.log(Level.WARNING, "Unable to create directory to write metronome data", e); //$NON-NLS-1$
+			listener.getLogger().println(Messages.Metronome_Unable_To_Write_MetronomeFile());
+		}
+	}
 
+	private void writeMetronomeContentToFile(String statisticsData, File statisticsDataFile) {
+		if (statisticsData == null) {
+			return;
+		}
+		try (PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(
+				new FileOutputStream(statisticsDataFile), "UTF-8"))) { //$NON-NLS-1$
+			printWriter.print(statisticsData);
+			printWriter.flush();
+		} catch (FileNotFoundException | UnsupportedEncodingException e) {
+			// Don't have to fail the build here
+			LOGGER.log(Level.WARNING, 
+					String.format("Error occurred when writing metronome data to file %s",  //$NON-NLS-1$
+							statisticsDataFile.getAbsolutePath()), e);
+		}
+	}
+	
+	/**
+	 * Create the metronome options for Accept and Load phase
+	 * 
+	 * @param shouldCreateMetronomeReport If the user requested to create metronome report
+	 * @return A map of options, keyed by the option name and value is a generic {@link Object}
+	 * @throws InterruptedException 
+	 * @throws IOException 
+	 */
+	public static Map<String, Object> createMetronomeOptions(Run<?,?> build, TaskListener listener)
+									throws IOException, InterruptedException {
+		boolean shouldCreateMetronomeReport = Boolean.parseBoolean(Helper.getStringBuildParameter(build, 
+				RTCJobProperties.TEAM_BUILD_REPORT_STATISTICS_PROPERTY_NAME, listener));
+		Map<String, Object> metronomeOptions = new HashMap<String, Object>(); 
+		metronomeOptions.put(RTCJobProperties.TEAM_BUILD_REPORT_STATISTICS_PROPERTY_NAME,
+								new Boolean(shouldCreateMetronomeReport));
+		
+		String timestamp = Long.toString(System.currentTimeMillis());
+		String statisticsDataFilePrefix = STATISTICS_DATA_FILE_PREFIX_VALUE + 
+								timestamp;
+		String statisticsReportFilePrefix = STATISTICS_REPORT_FILE_PREFIX_VALUE +
+								timestamp;
+		
+		metronomeOptions.put(STATISTICS_DATA_FILE_PREFIX_PROPERTY_NAME, 
+						statisticsDataFilePrefix); 
+		metronomeOptions.put(STATISTICS_REPORT_FILE_PREFIX_PROPERTY_NAME, 
+						statisticsReportFilePrefix);
+		
+		metronomeOptions.put(STATISTICS_DATA_FILE_SUFFIX_PROPERTY_NAME, STATISTICS_DATA_FILE_SUFFIX_VALUE);
+		metronomeOptions.put(STATISTICS_REPORT_FILE_SUFFIX_PROPERTY_NAME, STATISTICS_REPORT_FILE_SUFFIX_VALUE);
+		
+		metronomeOptions.put(STATISTICS_DATA_LABEL_PROPERTY_NAME, STATISTICS_DATA_VALUE);
+		metronomeOptions.put(STATISTICS_REPORT_LABEL_PROPERTY_NAME, STATISTICS_REPORT_VALUE);
+		
+		return metronomeOptions;
+	}
+	
+	private static String getStatisticsDataFileName(Map<String, Object> metronomeOptions) {
+		String statisticsDataFilePrefix = (String) metronomeOptions.get(STATISTICS_DATA_FILE_PREFIX_PROPERTY_NAME);
+		String fileSuffix = (String) metronomeOptions.get(STATISTICS_DATA_FILE_SUFFIX_PROPERTY_NAME);
+		return statisticsDataFilePrefix + fileSuffix;
+	}
+	
+	private static String getStatisticsReportFileName(Map<String, Object> metronomeOptions) {
+		String statisticsDataFilePrefix = (String) metronomeOptions.get(STATISTICS_REPORT_FILE_PREFIX_PROPERTY_NAME);
+		String fileSuffix = (String) metronomeOptions.get(STATISTICS_REPORT_FILE_SUFFIX_PROPERTY_NAME);
+		return statisticsDataFilePrefix + fileSuffix;
+	}
+	
 	private boolean validateBuildToolkitPath(String buildToolkitPath) {
 		// Check whether build toolkit on master is valid
 		FormValidation buildToolkitCheck = RTCBuildToolInstallation.validateBuildToolkit(false, buildToolkitPath);
@@ -2841,5 +3054,4 @@ public class RTCScm extends SCM {
 	private RTCBuildResultAction getBuildResultAction() {
 		return buildResultAction;
 	}
-	
 }

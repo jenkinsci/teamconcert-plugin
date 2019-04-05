@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright © 2016, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -52,7 +52,7 @@ public class RTCFacadeTests {
 
 
 	public RTCFacadeTests(RepositoryConnection repositoryConnection) {
-		this.connection = repositoryConnection;
+		this.setConnection(repositoryConnection);
 	}
 	
 	/**
@@ -64,8 +64,8 @@ public class RTCFacadeTests {
 	 */
 	public Map<String, String> setupTestProcessArea_basic(String projectAreaName) throws Exception {
 		Map<String, String> setupArtifacts = new HashMap<String, String>();
-		connection.ensureLoggedIn(null);
-		ITeamRepository repo = connection.getTeamRepository();
+		getConnection().ensureLoggedIn(null);
+		ITeamRepository repo = getConnection().getTeamRepository();
 		String name = projectAreaName;
 		// create and return the itemIds so that the teamconcert plugin test, that eventually invokes this method, knows
 		// the artifacts to be deleted during tear down.
@@ -87,9 +87,9 @@ public class RTCFacadeTests {
 		Map<String, String> setupArtifacts = setupTestProcessArea_basic(projectAreaName);
 		IProjectAreaHandle projectAreaHandle = (IProjectAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(
 				UUID.valueOf(setupArtifacts.get(TestSetupTearDownUtil.ARTIFACT_PROJECT_AREA_ITEM_ID)), null);
-		IProjectArea projectArea = (IProjectArea)connection.getTeamRepository().itemManager()
+		IProjectArea projectArea = (IProjectArea)getConnection().getTeamRepository().itemManager()
 				.fetchCompleteItem(projectAreaHandle, IItemManager.DEFAULT, null);
-		IProcessItemService processItemService = (IProcessItemService)connection.getTeamRepository().getClientLibrary(IProcessItemService.class);
+		IProcessItemService processItemService = (IProcessItemService)getConnection().getTeamRepository().getClientLibrary(IProcessItemService.class);
 		processItemService.archiveProcessItem(projectArea, null);
 		return setupArtifacts;
 	}
@@ -105,11 +105,11 @@ public class RTCFacadeTests {
 		Map<String, String> setupArtifacts = setupTestProcessArea_basic(projectAreaName);
 		IProjectAreaHandle projectAreaHandle = (IProjectAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(
 				UUID.valueOf(setupArtifacts.get(TestSetupTearDownUtil.ARTIFACT_PROJECT_AREA_ITEM_ID)), null);
-		IProjectArea projectArea = (IProjectArea)connection.getTeamRepository().itemManager()
+		IProjectArea projectArea = (IProjectArea)getConnection().getTeamRepository().itemManager()
 				.fetchCompleteItem(projectAreaHandle, IItemManager.DEFAULT, null);
 		ITeamAreaHandle teamAreaHandle = (ITeamAreaHandle)projectArea.getTeamAreas().get(0);
-		ITeamArea teamArea = (ITeamArea)connection.getTeamRepository().itemManager().fetchCompleteItem(teamAreaHandle, IItemManager.DEFAULT, null);
-		IProcessItemService processItemService = (IProcessItemService)connection.getTeamRepository().getClientLibrary(IProcessItemService.class);
+		ITeamArea teamArea = (ITeamArea)getConnection().getTeamRepository().itemManager().fetchCompleteItem(teamAreaHandle, IItemManager.DEFAULT, null);
+		IProcessItemService processItemService = (IProcessItemService)getConnection().getTeamRepository().getClientLibrary(IProcessItemService.class);
 		processItemService.archiveProcessItem(teamArea, null);
 		return setupArtifacts;
 	}
@@ -130,7 +130,7 @@ public class RTCFacadeTests {
 	 * @throws Exception
 	 */
 	public Map<String, String> setupTestBuildStream_complete(String projectAreaName, String streamName) throws Exception {
-		ITeamRepository repo = connection.getTeamRepository();
+		ITeamRepository repo = getConnection().getTeamRepository();
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 
 		Map<String, String> artifactIds = setupTestProcessArea_basic(projectAreaName);
@@ -149,7 +149,7 @@ public class RTCFacadeTests {
 		buildStream = SCMUtil.createStream(workspaceManager, projectAreaHandle, "duplicate" + streamName); //$NON-NLS-1$
 		artifactIds.put(ARTIFACT_PROJECT_AREA_DUPLICATE_STREAM_ITEM_ID_2, buildStream.getContextHandle().getItemId().getUuidValue());
 		
-		IProjectArea projectArea = (IProjectArea)connection.getTeamRepository().itemManager()
+		IProjectArea projectArea = (IProjectArea)getConnection().getTeamRepository().itemManager()
 				.fetchCompleteItem(projectAreaHandle, IItemManager.DEFAULT, null);
 		ITeamAreaHandle teamAreaHandle = (ITeamAreaHandle)projectArea.getTeamAreas().get(0);
 		
@@ -213,16 +213,17 @@ public class RTCFacadeTests {
 	 * @return
 	 * @throws Exception
 	 */
-	public Map<String, String> setupTestBuildSnapshot_complete(String workspaceName, String projectAreaName, String streamName, String snapshotName)
+	public Map<String, String> setupTestBuildSnapshot_complete(final String workspaceName, final String projectAreaName, 
+			final String streamName, final String snapshotName)
 			throws Exception {
-		ITeamRepository repo = connection.getTeamRepository();
+		ITeamRepository repo = getConnection().getTeamRepository();
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		String componentName = TestUtils.getComponentUniqueName();
 
 		Map<String, String> artifactIds = setupTestProcessArea_basic(projectAreaName);
 		IProcessAreaHandle projectAreaHandle = (IProcessAreaHandle)IProjectArea.ITEM_TYPE.createItemHandle(
 				UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_PROJECT_AREA_ITEM_ID)), null);
-		IProjectArea projectArea = (IProjectArea)connection.getTeamRepository().itemManager()
+		IProjectArea projectArea = (IProjectArea)getConnection().getTeamRepository().itemManager()
 				.fetchCompleteItem(projectAreaHandle, IItemManager.DEFAULT, null);
 		ITeamAreaHandle teamAreaHandle = (ITeamAreaHandle)projectArea.getTeamAreas().get(0);
 
@@ -336,5 +337,13 @@ public class RTCFacadeTests {
 		SCMUtil.deleteWorkspaceAndAssociatedSnapshots(repo, artifactIds.get(ARTIFACT_TEAM_AREA_STREAM_ITEM_ID1));
 		SCMUtil.deleteWorkspaceAndAssociatedSnapshots(repo, artifactIds.get(ARTIFACT_TEAM_AREA_STREAM_ITEM_ID2));
 		SCMUtil.deleteWorkspaceAndAssociatedSnapshots(repo, artifactIds.get(ARTIFACT_REPOSITORY_WORKSPACE_ITEM_ID));
+	}
+
+	public RepositoryConnection getConnection() {
+		return this.connection;
+	}
+
+	public void setConnection(RepositoryConnection connection) {
+		this.connection = connection;
 	}
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright © 2016, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,8 +22,9 @@ import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
 
 @Ignore("Abstract class containing utility methods")
+@SuppressWarnings({"boxing", "nls", "static-method"})
 public class AbstractTestCase {
-	protected File sandboxDir;
+	private File sandboxDir;
 
 	/**
      * generate the name of the project based on the test case
@@ -44,7 +45,7 @@ public class AbstractTestCase {
     }
     
     protected String getFileUniqueName() {
-    	return getUniqueName("File");
+    	return getUniqueName("File"); //$NON-NLS-1$
     }
     
     /**
@@ -90,20 +91,28 @@ public class AbstractTestCase {
 	protected void createSandboxDirectory() {
 		File tempDir = new File(System.getProperty("java.io.tmpdir"));
 		File buildTestDir = new File(tempDir, "HJPluginTests");
-		sandboxDir = new File(buildTestDir, getFileUniqueName());
-		sandboxDir.mkdirs();
-		//sandboxDir.deleteOnExit();
-		Assert.assertTrue(sandboxDir.exists());
+		setSandboxDir(new File(buildTestDir, getFileUniqueName()));
+		getSandboxDir().mkdirs();
+		getSandboxDir().deleteOnExit();
+		Assert.assertTrue(getSandboxDir().exists());
 	}
 
 	protected void tearDownSandboxDirectory() throws Exception {
-		if (sandboxDir != null) {
-			FileUtils.delete(sandboxDir);
+		if (getSandboxDir() != null) {
+			FileUtils.delete(getSandboxDir());
 		}
 	}
 
 	protected TaskListener getTaskListener() {
 		TaskListener listener = new StreamTaskListener(System.out, null);
 		return listener;
+	}
+
+	protected File getSandboxDir() {
+		return this.sandboxDir;
+	}
+
+	protected void setSandboxDir(File sandboxDir) {
+		this.sandboxDir = sandboxDir;
 	}
 }

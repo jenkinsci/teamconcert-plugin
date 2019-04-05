@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright © 2016, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -28,14 +28,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.WithTimeout;
-import org.mockito.Mockito;
 
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
-import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
@@ -46,12 +45,10 @@ import hudson.FilePath;
 import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.model.Job;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
-import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
@@ -65,11 +62,15 @@ import hudson.util.StreamTaskListener;
  * Integration Tests for {@link Helper} class
  *
  */
+@SuppressWarnings({"nls", "static-method", "boxing"})
 public class HelperIT extends AbstractTestCase {
 	
+	private static final String BUILD_RESULT_ITEM_ID1 = Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID;
+
 	private static final String BUILDTOOLKITNAME = "rtc-build-toolkit";
 
-	@Rule public JenkinsRule r = new JenkinsRule();
+	@Rule
+	public JenkinsRule r = new JenkinsRule();
 	
 	@Before
 	public void setup() throws Exception {
@@ -122,16 +123,16 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, Config.DEFAULT.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm1 = new RTCScm(true, BUILDTOOLKITNAME, Config.DEFAULT.getServerURI(), Config.DEFAULT.getTimeout(), Config.DEFAULT.getUserID(), 
 					Secret.fromString(Config.DEFAULT.getPassword()), Config.DEFAULT.getPasswordFile(), null, 
 					new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
-			String[] result = verifyBuildDefinitionWithParameter(r, rtcScm1, buildDefinitionId,
+			String[] result = verifyBuildDefinitionWithParameter(getJenkinsRule(), rtcScm1, buildDefinitionId,
 								null, componentName,
 								new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
 								new ParametersAction(new StringParameterValue("buildResultUUID", "")));
-			setupArtifacts.put("buildResultItemId1", result[0]);
+			setupArtifacts.put(BUILD_RESULT_ITEM_ID1, result[0]);
 		} finally {
 			testingFacade.invoke(
 					"tearDown",
@@ -185,18 +186,20 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
 			// Setup
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.setScm(rtcScm);
 			
 			// Test
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, 
 									Arrays.asList(new ParametersAction[] {new ParametersAction(new StringParameterValue("buildResultUUID", ""))}));
-			while(!future.isDone());
+			while(!future.isDone()) {
+				// Intentionally blank
+			}
 			FreeStyleBuild build = future.get();
 			
 			// Verify the build status
@@ -254,15 +257,15 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm1 = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
-			String[] result = verifyBuildDefinitionWithParameter(r, rtcScm1, buildDefinitionId,
+			String[] result = verifyBuildDefinitionWithParameter(getJenkinsRule(), rtcScm1, buildDefinitionId,
 												new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", buildDefinitionId), 
 														new StringParameterDefinition("buildResultUUID", "")},
-												componentName,null);
-			setupArtifacts.put("buildResultItemId1", result[0]);
+												componentName, (ParametersAction) null);
+			setupArtifacts.put(BUILD_RESULT_ITEM_ID1, result[0]);
 		} finally {
 			testingFacade.invoke(
 					"tearDown",
@@ -314,16 +317,16 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm1 = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
-			String[] result = verifyBuildDefinitionWithParameter(r, rtcScm1, buildDefinitionId,
+			String[] result = verifyBuildDefinitionWithParameter(getJenkinsRule(), rtcScm1, buildDefinitionId,
 												new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", invalidBuildDefinitionId)},
 												componentName, new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
 												new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 
-			setupArtifacts.put("buildResultItemId1", result[0]);
+			setupArtifacts.put(BUILD_RESULT_ITEM_ID1, result[0]);
 		} finally {
 			testingFacade.invoke(
 					"tearDown",
@@ -376,12 +379,12 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
 			// Setup
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {
 					new StringParameterDefinition("myBuildDefinition", invalidBuildDefinitionId),
 					new StringParameterDefinition("buildResultUUID", "")})));
@@ -390,7 +393,9 @@ public class HelperIT extends AbstractTestCase {
 			// Test
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, Arrays.asList(new ParametersAction[] {}));
 			
-			while(!future.isDone());
+			while(!future.isDone()) {
+				// Intentionally blank
+			}
 			FreeStyleBuild build = future.get();
 			
 			// Verify the build status
@@ -449,12 +454,12 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
 			// Setup with rtcBuildDefinition parameter with a value
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(
 						new ParameterDefinition[] {new StringParameterDefinition("myBuildDefinition", buildDefinitionId),
 										new StringParameterDefinition("buildResultUUID", "")})));
@@ -462,7 +467,9 @@ public class HelperIT extends AbstractTestCase {
 
 			// Test
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause)null);
-			while(!future.isDone());
+			while(!future.isDone()) {
+				// Intentionally blank
+			}
 			FreeStyleBuild build = future.get();
 
 			// Verify the build status
@@ -482,7 +489,7 @@ public class HelperIT extends AbstractTestCase {
 			assertNotNull(action.getBuildResultUUID());
 			setupArtifacts.put("buildResultItemId", action.getBuildResultUUID());
 
-			File pollingFile = Utils.getTemporaryFile();
+			File pollingFile = Utils.getTemporaryFile(true);
 			PollingResult pollResult = prj.poll(new StreamTaskListener(pollingFile, Charset.forName("ASCII")));
 
 			// If there is any error during polling, it can be seen in the log file
@@ -541,19 +548,21 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
 			// Setup
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.setScm(rtcScm);
 
 			// Test
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, 
 						new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
 						new ParametersAction(new StringParameterValue("buildResultUUID", "")));
-			while(!future.isDone());
+			while(!future.isDone()) {
+				// Intentionally blank
+			}
 			FreeStyleBuild build = future.get();
 
 			// Verify the build status
@@ -569,7 +578,7 @@ public class HelperIT extends AbstractTestCase {
 			assertNotNull(action.getBuildResultUUID());
 			setupArtifacts.put("buildResultItemId", action.getBuildResultUUID());
 			
-			File pollingFile = Utils.getTemporaryFile();
+			File pollingFile = Utils.getTemporaryFile(true);
 			PollingResult pollResult = prj.poll(new StreamTaskListener(pollingFile, Charset.forName("UTF-8")));
 			
 			// If there is any error during polling, it can be seen in the log file
@@ -624,12 +633,12 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildSnapshot", "", null, null, null), false);
 		
 			// Setup
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition(RTCJobProperties.RTC_BUILD_SNAPSHOT, "")})));
 			prj.setScm(rtcScm);
 
@@ -637,7 +646,9 @@ public class HelperIT extends AbstractTestCase {
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,  
 						new ParametersAction(new StringParameterValue(RTCJobProperties.RTC_BUILD_SNAPSHOT, snapshotName)),
 						new ParametersAction(new StringParameterValue("buildResultUUID", "")));
-			while(!future.isDone());
+			while(!future.isDone()) {
+				// Intentionally blank
+			}
 			FreeStyleBuild build = future.get();
 
 			// Verify the build status
@@ -698,12 +709,12 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildSnapshot", null, null, "${myBuildSnapshot}", null), false);
 		
 			// Setup
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition(RTCJobProperties.RTC_BUILD_SNAPSHOT, snapshotName),
 																new StringParameterDefinition("myBuildSnapshot", "Dummy Snapshot")
 																})));
@@ -715,7 +726,9 @@ public class HelperIT extends AbstractTestCase {
 								new ParametersAction(new StringParameterValue("myBuildSnapshot", "Dummy Snapshot")),
 								new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 
-			while(!future.isDone());
+			while(!future.isDone()) {
+				// Intentionally blank
+			}
 			FreeStyleBuild build = future.get();
 
 			// Verify the build status
@@ -774,12 +787,12 @@ public class HelperIT extends AbstractTestCase {
 		try {
 			// Set the toolkit
 			RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-			r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+			getJenkinsRule().jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 			RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 					defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildSnapshot", null, null, "${myBuildSnapshot}", null), false);
 		
 			// Setup
-			FreeStyleProject prj = r.createFreeStyleProject();
+			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
 			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] {new StringParameterDefinition("myBuildSnapshot", "Dummy Snapshot")})));
 			prj.setScm(rtcScm);
 
@@ -787,7 +800,9 @@ public class HelperIT extends AbstractTestCase {
 			QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, 
 						new ParametersAction(new StringParameterValue("myBuildSnapshot", snapshotName)),
 						new ParametersAction(new StringParameterValue("buildResultUUID", "")));
-			while(!future.isDone());
+			while(!future.isDone()) {
+				// Intentionally blank
+			}
 			FreeStyleBuild build = future.get();
 
 			// Verify the build status
@@ -821,12 +836,14 @@ public class HelperIT extends AbstractTestCase {
 		}
 		
 		// Setup
-		FreeStyleProject prj = r.createFreeStyleProject("myfakeJob");
+		FreeStyleProject prj = getJenkinsRule().createFreeStyleProject("myfakeJob");
 		
 		// Test
 		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0);
 
-		while(!future.isDone());
+		while(!future.isDone()) {
+			// Intentionally blank
+		}
 		FreeStyleBuild build = future.get();
 	
 		// Test
@@ -836,13 +853,14 @@ public class HelperIT extends AbstractTestCase {
 		assertEquals(Messages.RTCScm_temporary_workspace_comment(
 				1, 
 				"myfakeJob", 
-				r.getURL()), workspaceComment);
+				getJenkinsRule().getURL()), workspaceComment);
 			
 	}
 
 	private String[] verifyBuildDefinitionWithParameter(JenkinsRule r, RTCScm rtcScm, String buildDefinitionId,
-				ParameterDefinition[] parameterDefinitions, String componentName, ParametersAction... pActions) throws Exception {
+				ParameterDefinition[] parameterDefinitions, String componentName, ParametersAction... pActionsParam) throws Exception {
 		String [] result = new String[2];
+
 		// Setup
 		FreeStyleProject prj = r.createFreeStyleProject();
 		if (parameterDefinitions != null) {
@@ -850,13 +868,13 @@ public class HelperIT extends AbstractTestCase {
 		}
 		prj.setScm(rtcScm);
 		
-		if (pActions ==null) {
+		ParametersAction [] pActions = pActionsParam;
+		if (pActions == null) {
 			pActions = new ParametersAction[0];
 		}
+
 		// Test
-		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null,pActions);
-		while(!future.isDone());
-		FreeStyleBuild build = future.get();
+		FreeStyleBuild build = Utils.runBuild(prj, Arrays.asList(pActions));
 		
 		// Verify whether RTCScm ran successfully
 		Utils.verifyRTCScmInBuild(build, true);
@@ -884,10 +902,8 @@ public class HelperIT extends AbstractTestCase {
 	}
 	
 	private String getMatch(File file, String pattern) throws FileNotFoundException {
-        Scanner scanner = null;
         String match = null;
-        try {
-        	scanner = new Scanner(file, "UTF-8");
+        try (Scanner scanner = new Scanner(file, "UTF-8")){
         	scanner.useDelimiter(System.getProperty("line.separator"));
             while(scanner.hasNext()) {
                     String token = scanner.next();
@@ -896,11 +912,15 @@ public class HelperIT extends AbstractTestCase {
                             break;
                     }
             }
-        } finally {
-        	if (scanner != null) {
-        		scanner.close();
-        	}
         }
         return match;
+	}
+
+	public JenkinsRule getJenkinsRule() {
+		return this.r;
+	}
+
+	public void setJenkinsRule(JenkinsRule r) {
+		this.r = r;
 	}
 }

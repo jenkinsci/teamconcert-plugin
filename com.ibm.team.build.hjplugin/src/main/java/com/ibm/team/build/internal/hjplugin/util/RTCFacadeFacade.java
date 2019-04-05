@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2017 IBM Corporation and others.
+ * Copyright (c) 2014, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -905,7 +905,8 @@ public class RTCFacadeFacade {
 	private static String validateWorkspaceExists(String serverURI, String userId, String password, int timeout, HttpClientContext httpContext,
 			String buildWorkspace) throws Exception {
 		String workspaceItemId = null;
-		String uri = RTCBuildConstants.URI_SEARCH_WORKSPACES + Util.encode(buildWorkspace);
+		String uri = RTCBuildConstants.URI_SEARCH_WORKSPACES + Util.rawEncode(buildWorkspace).replace("&", "%26"). //$NON-NLS-1$ //$NON-NLS-2$
+					replace("=", "%3D");  //$NON-NLS-1$ //$NON-NLS-2$
 		JSON wsJson = HttpUtils.performGet(serverURI, uri, userId, password, timeout, httpContext, null).getJson();
 
 		if (!(wsJson instanceof JSONObject)) {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.eclipse.core.runtime.AssertionFailedException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.common.builddefinition.IAutoDeliverConfigurationElement;
@@ -33,18 +34,19 @@ import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils;
+import com.ibm.team.build.internal.hjplugin.rtc.RTCVersionCheckException;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCWorkspaceUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.build.internal.hjplugin.rtc.VersionCheckerUtil;
 import com.ibm.team.filesystem.common.IFileItem;
 import com.ibm.team.filesystem.common.IFileItemHandle;
-import com.ibm.team.process.common.IProcessArea;
+import com.ibm.team.links.common.IReference;
+import com.ibm.team.links.common.registry.IEndPointDescriptor;
+import com.ibm.team.links.common.registry.ILinkTypeRegistry;
 import com.ibm.team.process.common.IProcessAreaHandle;
 import com.ibm.team.process.common.IProjectArea;
-import com.ibm.team.process.common.IProjectAreaHandle;
 import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
-import com.ibm.team.repository.client.internal.ItemManager;
 import com.ibm.team.repository.common.IItemHandle;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.repository.common.UUID;
@@ -56,6 +58,7 @@ import com.ibm.team.scm.client.IWorkspaceConnection.IRevertOp;
 import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
 import com.ibm.team.scm.common.AcceptFlags;
+import com.ibm.team.scm.common.BaselineSetFlags;
 import com.ibm.team.scm.common.IBaselineSetHandle;
 import com.ibm.team.scm.common.IChange;
 import com.ibm.team.scm.common.IChangeSet;
@@ -65,19 +68,26 @@ import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IVersionableHandle;
 import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
+import com.ibm.team.scm.common.WorkspaceComparisonFlags;
+import com.ibm.team.scm.common.dto.IChangeHistorySyncReport;
 import com.ibm.team.scm.common.dto.IItemConflictReport;
 import com.ibm.team.scm.common.dto.IUpdateReport;
 import com.ibm.team.workitem.common.model.IWorkItem;
 import com.ibm.team.workitem.common.model.IWorkItemHandle;
+import com.ibm.team.workitem.common.model.IWorkItemReferences;
+import com.ibm.team.workitem.common.model.WorkItemLinkTypes;
 
-@SuppressWarnings("nls")
+@SuppressWarnings({"nls", "restriction"})
 public class TestSetupTearDownUtil extends BuildClient {
 	
+	private static final String CS3WI1 = "cs3wi1";
 	public static final String ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_2 = "multipleWorkspaceItemId2";
 	public static final String ARTIFACT_MULTIPLE_WORKSPACE_ITEM_ID_1 = "multipleWorkspaceItemId1";
 	public static final String ARTIFACT_SINGLE_WORKSPACE_ITEM_ID = "singleWorkspaceItemId";
 	public static final String ARTIFACT_WORKSPACE_NAME = "workspaceName";
 	public static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
+	// This could be a repository workspace in setupAcceptChanges or 
+	// a stream in setupTestBuildStream_basic
 	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
 	public static final String ARTIFACT_STREAM_NAME = "streamName";
 	public static final String ARTIFACT_PB_STREAM_ITEM_ID = "pbStreamItemId";
@@ -102,7 +112,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_LOAD_RULE_STREAM_SS_ITEM_ID = "lrStreamSSItemId";
 	public static final String ARTIFACT_LOAD_RULE_SS_ITEM_ID = "lrSnapshotItemId";
 	public static final String ARTIFACT_LOAD_RULE_SS_WS_ITEM_ID = "lrSSWSId";
+	public static final String ARTIFACT_WORKITEM_ID = "workItemId";
 	
+	@SuppressWarnings("deprecation")
+	private static final IEndPointDescriptor RELATED_ARTIFACT = 
+						ILinkTypeRegistry.INSTANCE.getLinkType(WorkItemLinkTypes.RELATED_ARTIFACT).
+									getTargetEndPointDescriptor();
+
 	public TestSetupTearDownUtil() {
 		
 	}
@@ -124,6 +140,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 		
 		Map<String, String> artifactIds = new HashMap<String, String>();
+		@SuppressWarnings("unused")
 		IProcessAreaHandle projectAreaHandle = ProcessUtil.getDefaultProjectArea(repo);
 
 		IWorkspaceHandle streamHandle = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(streamUUID), null);
@@ -178,7 +195,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			String componentName, String loadDirectory, boolean createWorkItem, String workItemSummary, 
 			IProgressMonitor progress) throws Exception {
 		return setupAcceptChanges(connectionDetails, workspaceName, componentName, null, loadDirectory,
-				false, false, false, true, workItemSummary, progress);
+				false, false, false, createWorkItem, workItemSummary, progress);
 	}
 	
 	public Map<String, String> setupAcceptChanges(ConnectionDetails connectionDetails, String name,
@@ -222,17 +239,19 @@ public class TestSetupTearDownUtil extends BuildClient {
 				String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
 				
 				if (isPersonalBuild) {
-					IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchCompleteItem(IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null), 
-							ItemManager.REFRESH, null).getWorkingCopy();
+					IBuildResult buildResult = (IBuildResult) repo.itemManager().
+							fetchCompleteItem(IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null), 
+							IItemManager.REFRESH, null).getWorkingCopy();
 					buildResult.setPersonalBuild(true);
 					BuildUtil.save(repo, buildResult);
 				}
 			}
 		}
-		IWorkItemHandle workItemHandle = null;
+		IWorkItem workItem = null;
 		if (createWorkItem) {
 			IProjectArea projectArea = ProcessUtil.getDefaultProjectArea(repo);
-			workItemHandle = WorkItemUtil.createWorkItem(repo, projectArea, workItemSummary);
+			workItem = WorkItemUtil.createWorkItem(repo, projectArea, workItemSummary);
+			artifactIds.put(ARTIFACT_WORKITEM_ID, Integer.toString(workItem.getId()));
 		}
 		
 		IComponent component = (IComponent) pathToHandle.get(componentName);
@@ -249,12 +268,29 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		createChangeSet1(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
 		createChangeSet2(repo, buildStream, component, c1, pathToHandle, artifactIds);
-		createChangeSet3(repo, buildStream, component, c1, pathToHandle,artifactIds, workItemHandle, false);
+		createChangeSet3(repo, buildStream, component, c1, pathToHandle,artifactIds, workItem, false);
 		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
 		createEmptyChangeSets(repo, buildStream, component, artifactIds, 5, 1);
 		createNoopChangeSets(repo, buildStream, component, c1, pathToHandle, artifactIds, 6);
 		createComponentRootChangeSet(repo, buildStream, component, pathToHandle, artifactIds, 8);
 		
+		return artifactIds;
+	}
+
+	public Map<String, String> createEmptyChangeSets(ConnectionDetails connectionDetails, String workspaceUUID, 
+			String componentUUID, int count, IProgressMonitor progress) throws Exception {
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(monitor.newChild(5));
+		ITeamRepository repo = connection.getTeamRepository(); 
+		Map<String, String> artifactIds = new HashMap<>();
+		IWorkspaceHandle workspaceH = (IWorkspaceHandle) IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(workspaceUUID), null);
+		IComponentHandle componentH = (IComponentHandle) IComponent.ITEM_TYPE.createItemHandle(UUID.valueOf(componentUUID), null);
+		IComponent component = (IComponent) repo.itemManager().fetchCompleteItem(componentH, 
+							IItemManager.REFRESH, monitor.newChild(35));
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		IWorkspaceConnection workspaceC = workspaceManager.getWorkspaceConnection(workspaceH, monitor.newChild(55));
+		createEmptyChangeSets(repo, workspaceC, component, artifactIds, 1, 1);
 		return artifactIds;
 	}
 
@@ -301,6 +337,18 @@ public class TestSetupTearDownUtil extends BuildClient {
 		}
 	}
 
+	/**
+	 * Deletes versionables in the filesystem tree /f/tree/e.txt
+	 * 
+	 * @param repo
+	 * @param workspace
+	 * @param component
+	 * @param root
+	 * @param pathToHandle
+	 * @param artifacts
+	 * @throws TeamRepositoryException
+	 */
+	@SuppressWarnings("unchecked")
 	private void createChangeSet2(ITeamRepository repo,
 			IWorkspaceConnection workspace, IComponent component, String root,
 			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts)
@@ -334,6 +382,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		createChangeSet3(repo, workspace, component, root, pathToHandle, artifacts, 
 				workItems, forDiscard);		
 	}
+	
 	/**
 	 * Creates a change set, creates a work item with the specified summary and 
 	 * links the work item to the change set.
@@ -364,6 +413,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 	
 	
+	@SuppressWarnings("unchecked")
 	private void createChangeSet3(ITeamRepository repo,
 			IWorkspaceConnection workspace, IComponent component, String root,
 			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts,
@@ -381,7 +431,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			SCMUtil.createWorkItemChangeSetLink(repo, new IWorkItemHandle[] { workItems.get(0) }, cs3);
 			IWorkItem fullWorkItem = (IWorkItem) repo.itemManager().fetchCompleteItem(workItems.get(0), IItemManager.DEFAULT, null);
 			artifacts.put(Integer.toString(fullWorkItem.getId()), fullWorkItem.getHTMLSummary().toString());
-			artifacts.put("cs3wi1", Integer.toString(fullWorkItem.getId()));
+			artifacts.put(CS3WI1, Integer.toString(fullWorkItem.getId()));
 			artifacts.put("cs3wi1itemId", fullWorkItem.getItemId().getUuidValue());
 		}
 		workspace.closeChangeSets(Collections.singletonList(cs3), null);
@@ -423,6 +473,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		workItems = WorkItemUtil.findSomeWorkItems(repo, 5);
 		if (!workItems.isEmpty()) {
 			SCMUtil.createWorkItemChangeSetLink(repo, workItems.toArray(new IWorkItemHandle[workItems.size()]), cs4);
+			@SuppressWarnings("unchecked")
 			List<IWorkItem> fullWorkItems = repo.itemManager().fetchCompleteItems(workItems, IItemManager.DEFAULT, null);
 			int i = 1;
 			for (IWorkItem wi : fullWorkItems) {
@@ -451,6 +502,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		
 		// Delete project area and process definition, if any
 		ProcessUtil.deleteProcessArtifacts(repo, setupArtifacts);
+		
+		// Delete work item artifacts
+		WorkItemUtil.deleteWorkItems(repo, setupArtifacts);
 	}
 	
 	public void tearDownTestBuildStream_complete(ConnectionDetails connectionDetails,
@@ -643,6 +697,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 	
+	@SuppressWarnings("unchecked")
 	private void createNoopChangeSets(ITeamRepository repo,
 			IWorkspaceConnection workspace, IComponent component, String c1,
 			Map<String, IItemHandle> pathToHandle,
@@ -742,6 +797,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void createComponentRootChangeSet(ITeamRepository repo,
 			IWorkspaceConnection workspace, IComponent component,
 			Map<String, IItemHandle> pathToHandle,
@@ -858,7 +914,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
-	@SuppressWarnings("restriction")
 	public Map<String, String> setupBuildResultContributions(ConnectionDetails connectionDetails,
 									String workspaceName,
 									String componentName,
@@ -911,7 +966,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 	
-	@SuppressWarnings("restriction")
 	public Map<String, String> setupBuildResultContributions_toTestLoadPolicy(ConnectionDetails connectionDetails, String workspaceName,
 			String componentName, String buildDefinitionId, IProgressMonitor progress) throws Exception {
 
@@ -968,6 +1022,20 @@ public class TestSetupTearDownUtil extends BuildClient {
 		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
 		buildConnectionTests.testCreateBuildResult(testName);
 	}
+	
+	public void testMetronomeLogsInBuildResult(ConnectionDetails connectionDetails, 
+						String buildResultUUID)  throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.testMetronomeLogsInBuildResult(buildResultUUID);
+	}
+	
+	public void testNoMetronomeLogsInBuildResult(ConnectionDetails connectionDetails, 
+			String buildResultUUID)  throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConnectionTests buildConnectionTests = new BuildConnectionTests(connection);
+		buildConnectionTests.testNoMetronomeLogsInBuildResult(buildResultUUID);
+	}
 
 	public void testCreateBuildResultFail(ConnectionDetails connectionDetails,
 			String testName) throws Exception {
@@ -996,7 +1064,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		Map<String, String> artifactIds = new HashMap<String, String>();
 		
 		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
-		String c1 = "/" + componentName;
 		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName, new String[] {
 				"/f/",
 				"/f/a.txt"
@@ -1050,6 +1117,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 
+	@SuppressWarnings("unchecked")
 	private void createXMLEncodingTestChangeSet(ITeamRepository repo,
 			IWorkspaceConnection workspace, IComponent component,
 			Map<String, IItemHandle> pathToHandle, Map<String, String> artifacts)
@@ -1500,8 +1568,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 	
-	
-	@SuppressWarnings("restriction")
 	public Map<String, String> setupTestBuildDefinition(
 			ConnectionDetails connectionDetails, String uniqueName,
 			IProgressMonitor progress) throws Exception {
@@ -1573,14 +1639,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IComponentAdditionOp componentOp = buildStream.componentOpFactory().addComponent(component, buildWorkspaceConnection, false);
 		buildStream.applyComponentOperations(Collections.singletonList(componentOp), null);
 		
-		// Get the change set out of the artifacts
-		IChangeSetHandle csH = (IChangeSetHandle)pathToHandle.get("changeSet1");
-
-		// Deliver the changes
-//		IChangeHistorySyncReport report = buildWorkspaceConnection.compareTo(buildStream, WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,
-//				Collections.EMPTY_LIST, null);		
-//		buildWorkspaceConnection.deliver(buildStream, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
-
 		// capture interesting uuids to verify against
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
@@ -1630,7 +1688,19 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
-	public Map<String, String> setupTestBuildStream_basic(ConnectionDetails connectionDetails, String streamName,
+	/** 
+	 * Setups a stream and a repository workspace flowing to that stream.
+	 * In the repository workspace, a folder with some files are shared.
+	 * 4 change sets are created. One change set has a work item associated with it.
+	 * 
+	 * @param connectionDetails
+	 * @param streamName
+	 * @param progress
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> setupTestBuildStream_acceptChanges(ConnectionDetails connectionDetails, 
+			String streamName, String workItemSummary,
 			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
@@ -1669,15 +1739,29 @@ public class TestSetupTearDownUtil extends BuildClient {
 		IComponentAdditionOp componentOp = buildStreamConnection.componentOpFactory().addComponent(component, false);
 		buildStreamConnection.applyComponentOperations(Collections.singletonList(componentOp), null);
 		
-		// Get the change set out of the artifacts
-		IChangeSetHandle csH = (IChangeSetHandle) pathToHandle.get("changeSet1");
+		IWorkItem workItem = null;
+		String buildToolkitVersion = null;
+		try {
+			buildToolkitVersion = VersionCheckerUtil.getBuildToolkitVersion(Locale.getDefault()); 
+		} catch (RTCVersionCheckException exp) {
+			if (exp.getMessage().contains("Could not find class \"com.ibm.team.rtc.common.configuration.IComponentConfiguration\" in com.ibm.team.rtc.commons jar")) {
+				buildToolkitVersion = "4.0.7";
+			}
+		}
+		if (canWorkItemBeCreated(buildToolkitVersion)) {
+			IProjectArea projectArea = ProcessUtil.getDefaultProjectArea(repo);
+			workItem = WorkItemUtil.createWorkItem(repo, projectArea, workItemSummary);
+			artifactIds.put(ARTIFACT_WORKITEM_ID, Integer.toString(workItem.getId()));
+		}
 
-		//Deliver the changes
-//		IChangeHistorySyncReport report = buildWorkspaceConnection.compareTo(buildStreamConnection, 
-//					WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,  
-//					Collections.EMPTY_LIST, null);
-//		buildWorkspaceConnection.deliver(buildStreamConnection, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
+		// Create change sets in the workspace
+		createChangeSet3(repo, buildWorkspaceConnection, component, c1, pathToHandle,artifactIds, workItem, false);
 		
+		// Create a snapshot on the workspace
+		buildWorkspaceConnection.createBaselineSet(null, "test snapshot",
+				 "test snapshot for workspace",
+				 BaselineSetFlags.CREATE_NEW_BASELINES, new NullProgressMonitor());
+
 		// capture interesting uuids to verify against
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStreamConnection.getContextHandle().getItemId().getUuidValue());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_NAME, streamName);
@@ -1728,15 +1812,6 @@ public class TestSetupTearDownUtil extends BuildClient {
 		// Add the component to the stream
 		IComponentAdditionOp componentOp = buildStreamConnection.componentOpFactory().addComponent(component, buildWorkspaceConnection, false);
 		buildStreamConnection.applyComponentOperations(Collections.singletonList(componentOp), null);
-		
-		// Get the change set out of the artifacts
-		IChangeSetHandle csH = (IChangeSetHandle) pathToHandle.get("changeSet1");
-
-		//Deliver the changes
-//		IChangeHistorySyncReport report = buildStreamConnection.compareTo(buildWorkspaceConnection, 
-//					WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,  
-//					Collections.EMPTY_LIST, null);
-//		buildWorkspaceConnection.deliver(buildStreamConnection, report, Collections.EMPTY_LIST, Arrays.asList(new IChangeSetHandle[]{csH}), null);
 		
 		// capture interesting uuids to verify against
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID, buildStreamConnection.getContextHandle().getItemId().getUuidValue());
@@ -1932,7 +2007,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 			String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, connection, "my label", artifactIds);
 			if (isPersonalBuild) {
 				IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchCompleteItem(IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null), 
-						ItemManager.REFRESH, null).getWorkingCopy();
+						IItemManager.REFRESH, null).getWorkingCopy();
 				buildResult.setPersonalBuild(true);
 				BuildUtil.save(repo, buildResult);
 			}
@@ -1986,14 +2061,92 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return pathToHandle;
 	}
 	
+	@SuppressWarnings("unused")
 	private Map<String, IItemHandle> setupBuildWorkspaceWithComponent(ITeamRepository repo, IWorkspaceConnection target, 
 			String workspaceName, String componentName, 
 			String [] filePaths) throws TeamRepositoryException {
 		return setupWorkspaceWithComponent(repo, target, workspaceName, componentName, filePaths);
 	}
 	
+	@SuppressWarnings("unused")
 	private Map<String, IItemHandle> setupWorkspaceWithComponent(ITeamRepository repo, String workspaceName, String componentName, 
 			String [] filePaths) throws TeamRepositoryException {
 		return setupWorkspaceWithComponent(repo, null, workspaceName, componentName, filePaths);
+	}
+
+	public void testWorkItemHasRelatedArtifactLink(ConnectionDetails connectionDetails,
+					String workItemid, String url) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(new NullProgressMonitor());
+		ITeamRepository repo = connection.getTeamRepository(); 
+		IWorkItem workItem = WorkItemUtil.getWorkItem(repo, workItemid);
+		IWorkItemReferences references = WorkItemUtil.getWorkItemReferences(repo, workItem);
+		List<IReference> rArtifacts = references.getReferences(RELATED_ARTIFACT);
+		boolean matchFound = false;
+		if (rArtifacts == null || (rArtifacts != null && rArtifacts.size() == 0)) {
+			throw new TeamRepositoryException("Related artifact links not found");
+		}
+		if (rArtifacts.size() > 1 ) {
+			throw new TeamRepositoryException("More than one related artifact link found");
+		}
+		IReference iReference = rArtifacts.get(0);
+		if(iReference.createURI().toURL().toString().equals(url)) {
+			matchFound = true;
+		}
+		if (!matchFound) {
+			throw new TeamRepositoryException("URL not found." + 
+							String.format("given URL is %s, other URL is %s", url, iReference.createURI().toURL().toString()));
+		}
+	}
+
+	public void testWorkItemHasNoRelatedArtifactLink(ConnectionDetails connectionDetails, String workItemId) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(new NullProgressMonitor());
+		ITeamRepository repo = connection.getTeamRepository(); 
+		IWorkItem workItem = WorkItemUtil.getWorkItem(repo, workItemId);
+		IWorkItemReferences references = WorkItemUtil.getWorkItemReferences(repo, workItem);
+		List<IReference> rArtifacts = references.getReferences(RELATED_ARTIFACT);
+		if (rArtifacts == null || (rArtifacts != null && rArtifacts.size() == 0)) {
+			return;
+		}
+		if (rArtifacts.size() > 1 ) {
+			throw new TeamRepositoryException("More than one related artifact link found when none is expected");
+		}
+	}
+
+	public int deliverChangesFromWorkspaceToStream(ConnectionDetails connectionDetails,
+						String streamUUID, String workspaceUUID) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(new NullProgressMonitor());
+		ITeamRepository repo = connection.getTeamRepository(); 
+		IWorkspace workspace = (IWorkspace) repo.itemManager().fetchCompleteItem(
+					IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(workspaceUUID), null),
+					IItemManager.REFRESH, new NullProgressMonitor());
+		repo.itemManager();
+		IWorkspace stream = (IWorkspace) repo.itemManager().fetchCompleteItem(
+				IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(streamUUID), null),
+				IItemManager.REFRESH, new NullProgressMonitor());
+
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		IWorkspaceConnection workspaceConn = workspaceManager.getWorkspaceConnection(workspace, new NullProgressMonitor());
+		IWorkspaceConnection streamConn =  workspaceManager.getWorkspaceConnection(stream, new NullProgressMonitor());
+		//Deliver the changes
+		IChangeHistorySyncReport report = workspaceConn.compareTo(streamConn, 
+					WorkspaceComparisonFlags.CHANGE_SET_COMPARISON_ONLY,  
+					Collections.EMPTY_LIST, null);
+		workspaceConn.deliver(streamConn, 
+				report, report.outgoingBaselines(), 
+				report.outgoingChangeSets(), null);
+		return report.outgoingChangeSets().size();
+	}
+	
+	private boolean canWorkItemBeCreated(String buildToolkitVersion) {
+		String [] unsupportedBuildToolkitVersions = {"6.0", "5.0.2", "5.0", "4.0.7", "5.0.1"};
+		for (String unsupportedBuildToolkitVersion : unsupportedBuildToolkitVersions) {
+			if (buildToolkitVersion.equals(unsupportedBuildToolkitVersion)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

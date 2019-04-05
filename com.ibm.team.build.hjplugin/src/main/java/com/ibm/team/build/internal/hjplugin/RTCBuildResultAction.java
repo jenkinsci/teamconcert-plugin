@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -69,7 +69,7 @@ public class RTCBuildResultAction implements Serializable, Action, EnvironmentCo
 	 * @param buildResultUUID The UUID of the corresponding build result. <code>null</code>
 	 * if there is no build result
 	 * @param createdBuildResult Whether the build owns the RTC build's lifecycle or not.
-	 * @param scm The RTCSCM responsible for the SCM part of the build. This may be
+	 * @param scm The RTCScm responsible for the SCM part of the build. This may be
 	 * different from the one supplied on the AbstractBuild if another SCM plugin
 	 * incorporates our SCM provider (i.e. MultiSCM). 
 	 */

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright © 2016, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -26,11 +26,13 @@ import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
+import com.ibm.team.build.internal.hjplugin.util.TaskListenerWrapper;
 
 
 /**
- * Class responsible for Loading
- *
+ * Class responsible for Loading the repository workspace for build definition and 
+ * repository workspace configuration. For build stream and build snapshot configurations, 
+ * it loads the temporary repository workspace created in {@link RTCAcceptTask} 
  */
 public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 	private static final Logger LOGGER = Logger.getLogger(RTCLoadTask.class.getName());
@@ -66,6 +68,7 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 	private Map<String,String> buildStreamData;
 	private String temporaryWorkspaceComment;
 	private boolean shouldDeleteTemporaryWorkspace;
+	private Map<String, Object> options;
 
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -110,9 +113,11 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 	 * @param pathToLoadRuleFile path to the load rule file. Right now only remote path of the format <component
 	 *            name>/<remote path to load rule file> is supported
 	 * @param createFoldersForComponents create folders for components if true
-	 * @param temporaryWorkspaceComment
+	 * @param temporaryWorkspaceComment Description for the temporary repository workspace
 	 * @param deleteTemporaryWorkspace - whether the temporary workspace create for snapshot build or already created
 	 *            for stream build should be deleted at the end of load
+	 * @param options List of options for various functionality. TFor future enhancements, use this map to store  
+	 *                options instead of arguments to this method
 	 * @throws Exception
 	 */
 	public RTCLoadTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
@@ -120,7 +125,8 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 			Map<String, String> buildStreamData, boolean isCustomSnapshotName, String snaspshotName, TaskListener listener, boolean isRemote,
 			boolean debug, Locale clientLocale, String parentActivityId, String connectorId, RtcExtensionProvider extProvider, String loadPolicy,
 			String componentLoadConfig, String componentsToExclude, String pathToLoadRuleFile, boolean isDeleteNeeded,
-			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkspaceComment, boolean deleteTemporaryWorkspace) {
+			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkspaceComment, 
+			boolean deleteTemporaryWorkspace, Map<String, Object> options) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -154,6 +160,7 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
     	this.acceptBeforeLoad = acceptBeforeLoad;
     	this.temporaryWorkspaceComment = temporaryWorkspaceComment;
     	this.shouldDeleteTemporaryWorkspace = deleteTemporaryWorkspace;
+    	this.options = options;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -228,17 +235,18 @@ public class RTCLoadTask extends RTCTask<Map<String, Object>> {
 					boolean.class, // createFoldersForComponents
 					boolean.class, // acceptBeforeLoad
 					String.class, // temporaryWorkspaceComment
-					boolean.class // shouldDeleteTemporaryWorkspace
+					boolean.class, // shouldDeleteTemporaryWorkspace
+					Map.class
 			}, serverURI, userId, Secret.toString(password),
 					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap,
 					buildSnapshot, buildStream, buildStreamData,
 					workspace.getAbsolutePath(), isCustomSnapshotName,
 					snapshotName,
-					listener, clientLocale, parentActivityId, connectorId,
+					new TaskListenerWrapper(listener), clientLocale, parentActivityId, connectorId,
 					extProvider, listener.getLogger(), loadPolicy, componentLoadConfig, 
 					componentsToExclude, pathToLoadRuleFile, isDeleteNeeded, 
 					createFoldersForComponents, acceptBeforeLoad, temporaryWorkspaceComment, 
-					shouldDeleteTemporaryWorkspace);
+					shouldDeleteTemporaryWorkspace, options);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

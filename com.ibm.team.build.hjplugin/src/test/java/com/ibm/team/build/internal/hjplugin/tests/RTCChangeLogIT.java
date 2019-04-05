@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 IBM Corporation and others.
+ * Copyright © 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -23,16 +23,6 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import com.google.common.io.Files;
-/*******************************************************************************
- * Copyright (c) 2018 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
- *******************************************************************************/
 
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogChangeSetEntry.WorkItemDesc;
@@ -50,6 +40,7 @@ import hudson.model.FreeStyleProject;
  * Integration tests around change log 
  *
  */
+@SuppressWarnings({"nls", "boxing"})
 public class RTCChangeLogIT extends AbstractTestCase {
 	
 	/**
@@ -77,7 +68,7 @@ public class RTCChangeLogIT extends AbstractTestCase {
 		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		@SuppressWarnings("unchecked")
 		Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
-				.invoke("setupAcceptChanges",
+				.invoke("setupAcceptChanges", //$NON-NLS-1$
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -91,22 +82,23 @@ public class RTCChangeLogIT extends AbstractTestCase {
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
-						loginInfo.getTimeout(), workspaceName,
-						componentName, sandboxDir.getAbsolutePath(),
+						loginInfo.getTimeout(),
+						workspaceName,
+						componentName, getSandboxDir().getAbsolutePath(),
 						true, "This is a work item with control \u0010 character");
 
 		try  {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(r, workspaceName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForWorkspace(getJenkinsRule(), workspaceName);
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
-			// Get the changelog file and check whether our parser can 
+			// Get the change log file and check whether our parser can 
 			// handle it
-			File changelogFile = new File(build.getRootDir(), "changelog.xml");
-			File temp = File.createTempFile("changelog", "mybuild");
+			File changelogFile = new File(build.getRootDir(), "changelog.xml"); //$NON-NLS-1$
+			File temp = File.createTempFile("changelog", "mybuild");  //$NON-NLS-1$//$NON-NLS-2$
 			Files.copy(changelogFile, temp);
 			RTCChangeLogParser parser = new RTCChangeLogParser();
 			RTCChangeLogSet result = (RTCChangeLogSet) parser.parse(null, null, changelogFile);
-			// Verify that one of the changelogentry has a work item with the summary and a whitespace 
+			// Verify that one of the changelogEntry has a work item with the summary and a whitespace 
 			// instead of the control character 
 			boolean found = false;
 			for (Object ce : result.getItems()) {
@@ -117,8 +109,8 @@ public class RTCChangeLogIT extends AbstractTestCase {
 					allWorkItems.addAll(rtcEntry.getAdditionalWorkItems());
 				}
 				for (WorkItemDesc wi : allWorkItems) {
-					if (wi.getSummary().startsWith("This is a work item with")) {
-						assertEquals("This is a work item with control   character", 
+					if (wi.getSummary().startsWith("This is a work item with")) { //$NON-NLS-1$
+						assertEquals("This is a work item with control   character",  //$NON-NLS-1$
 								wi.getSummary());
 						found = true;
 						break;
@@ -130,5 +122,12 @@ public class RTCChangeLogIT extends AbstractTestCase {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
 		}
 	}
-	
+
+	public JenkinsRule getJenkinsRule() {
+		return this.r;
+	}
+
+	public void setJenkinsRule(JenkinsRule r) {
+		this.r = r;
+	}
 }

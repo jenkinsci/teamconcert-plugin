@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 
@@ -372,6 +373,27 @@ public class BuildConnectionTests {
 			BuildUtil.deleteBuildArtifacts(repo, artifactIds);
 		}
 	}
+	
+	public void testMetronomeLogsInBuildResult(String buildResultUUID) throws Exception {
+		helperTestLogContributionsInBuildResult(buildResultUUID, 2);
+	}
+	
+	public void testNoMetronomeLogsInBuildResult(String buildResultUUID) throws Exception {
+		helperTestLogContributionsInBuildResult(buildResultUUID, 0);
+	}
+	
+	private void helperTestLogContributionsInBuildResult(String buildResultUUID, int count) throws Exception {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		
+		ITeamBuildClient buildClient = (ITeamBuildClient) repo.getClientLibrary(ITeamBuildClient.class);
+		IBuildResultHandle resultHandle = (IBuildResultHandle) IBuildResult.ITEM_TYPE.createItemHandle(
+							UUID.valueOf(buildResultUUID), null);
+		IBuildResultContribution[] contributions = buildClient.getBuildResultContributions(
+				resultHandle, IBuildResultContribution.LOG_EXTENDED_CONTRIBUTION_ID, 
+				new NullProgressMonitor());
+		Assert.isTrue(contributions.length == count);
+	}
 
 	public void testExternalLinks(String testName) throws Exception {
 		connection.ensureLoggedIn(null);
@@ -385,22 +407,26 @@ public class BuildConnectionTests {
 			// create build workspace
 			IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
 			IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, testName);
-			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, 
+					buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
-					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, 
+					buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
 			
 			// create a build result
-			String buildResultItemId = connection.createBuildResult(testName, null, "external links test 1", listener, null, Locale.getDefault());
+			String buildResultItemId = connection.createBuildResult(testName, null, 
+						"external links test 1", listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (listener.hasFailure()) {
 				throw listener.getFailure();
 			}
 
 			// Add external links
-			connection.getBuildConnection().createBuildLinks(buildResultItemId, "http://localHost:8080", "myJob", "myJob/2",
+			connection.getBuildConnection().createBuildLinks(buildResultItemId, 
+					"http://localHost:8080", "myJob", "myJob/2",
 					listener, null);
 			if (listener.hasFailure()) {
 				throw listener.getFailure();
@@ -412,11 +438,14 @@ public class BuildConnectionTests {
 			IBuildResultContribution[] contributions = buildClient.getBuildResultContributions(buildResultHandle, IBuildResultContribution.LINK_EXTENDED_CONTRIBUTION_ID, null);
 			AssertUtil.assertEquals(2, contributions.length);
 			for (IBuildResultContribution contribution : contributions) {
-				AssertUtil.assertEquals(IBuildResultContribution.LINK_EXTENDED_CONTRIBUTION_ID, contribution.getExtendedContributionTypeId());
+				AssertUtil.assertEquals(IBuildResultContribution.LINK_EXTENDED_CONTRIBUTION_ID, 
+						contribution.getExtendedContributionTypeId());
 				if (contribution.getLabel().equals("Hudson/Jenkins Job")) {
-					AssertUtil.assertEquals("http://localHost:8080/myJob", contribution.getExtendedContributionProperty(IBuildResultContribution.PROPERTY_NAME_URL));
+					AssertUtil.assertEquals("http://localHost:8080/myJob", 
+							contribution.getExtendedContributionProperty(IBuildResultContribution.PROPERTY_NAME_URL));
 				} else if (contribution.getLabel().equals("Hudson/Jenkins Build")) {
-					AssertUtil.assertEquals("http://localHost:8080/myJob/2", contribution.getExtendedContributionProperty(IBuildResultContribution.PROPERTY_NAME_URL));
+					AssertUtil.assertEquals("http://localHost:8080/myJob/2", 
+							contribution.getExtendedContributionProperty(IBuildResultContribution.PROPERTY_NAME_URL));
 				} else {
 					AssertUtil.fail("Unexpected contribution " + contribution.getLabel());
 				}
@@ -424,7 +453,8 @@ public class BuildConnectionTests {
 			
 			// create another build result
 			BuildUtil.deleteBuildResult(repo, buildResultItemId);
-			buildResultItemId = connection.createBuildResult(testName, null, "external links test 2", listener, null, Locale.getDefault());
+			buildResultItemId = connection.createBuildResult(testName, null, "external links test 2", 
+								listener, null, Locale.getDefault());
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultItemId);
 			if (listener.hasFailure()) {
 				throw listener.getFailure();

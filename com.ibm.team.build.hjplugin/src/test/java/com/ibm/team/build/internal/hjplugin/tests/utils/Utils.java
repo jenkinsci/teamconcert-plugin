@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright © 2016, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -33,20 +34,26 @@ import java.util.regex.Pattern;
 
 import org.jvnet.hudson.test.JenkinsRule;
 
+import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
+import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCPostBuildDeliverPublisher;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
+import com.ibm.team.build.internal.hjplugin.rtc.tests.RTCTestingFacade;
 import com.ibm.team.build.internal.hjplugin.tests.Config;
 
+import hudson.Util;
 import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
 import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.StringParameterValue;
@@ -58,6 +65,7 @@ import hudson.tasks.Publisher;
 import hudson.util.Secret;
 import hudson.util.StreamTaskListener;
 
+@SuppressWarnings({"nls", "boxing"})
 public class Utils {
 	public static final String ACCEPT_BUILD_PROPERTIES = "buildProperties";
 
@@ -69,7 +77,10 @@ public class Utils {
 	public static final String ARTIFACT_WORKSPACE_NAME = "workspaceName";
 	public static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
 	public static final String ARTIFACT_STREAM_NAME = "streamName";
+	// This could be a repository workspace in setupAcceptChanges or 
+	// a stream in setupTestBuildStream_basic
 	public static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
+	public static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
 	public static final String ARTIFACT_COMPONENT_ADDED_ITEM_ID = "componentAddedItemId";
 	public static final String ARTIFACT_COMPONENT_NAME = "componentName";
 
@@ -87,8 +98,14 @@ public class Utils {
 	public static final String TEAM_SCM_STREAM_CHANGES_DATA = "team_scm_streamChangesData";
 	public static final String TEAM_SCM_SNAPSHOT_OWNER = "team_scm_snapshotOwner";
 	public static final String TEAM_SCM_WORKSPACE_UUID = "team_scm_workspaceUUID";
+	
+	public static final String ARTIFACT_WORKITEM_ID = "workItemId";
 
-	public static final Object REPOSITORY_ADDRESS = "repositoryAddress";
+	public static final String REPOSITORY_ADDRESS = "repositoryAddress";
+
+	private static final String BuildToolkit_Version_407 = "4.0.7";
+	
+	private static final String BuildToolkit_Version_50 = "5.0";
 	
 	private static RTCFacadeWrapper testingFacade = null;
 
@@ -151,8 +168,10 @@ public class Utils {
 							Locale.class, // locale
 							String.class, // callConnectorTimeout
 							boolean.class,// acceptBeforeLoad
+							boolean.class, // addLinksToWorkitems
 							Map.class, // jenkinsBuildUrls
-							String.class} , // workspaceComment
+							String.class,   // workspaceComment
+							Map.class} , // options
 							serverURI,
 							userId,
 							password,
@@ -162,7 +181,9 @@ public class Utils {
 							buildSnapshotNameOrUUID, buildStreamName,
 							hjWorkspacePath, changelog, false,
 							baselineSetName, previousSnapshotUUID, listener, clientLocale, CALLCONNECTOR_TIMEOUT, 
-							options.acceptBeforeLoad, null, null);
+							options.acceptBeforeLoad, 
+							options.addLinksToWorkItems, 
+							null, null, new HashMap<String, Object>());
 		return acceptMap;	
 	}
 	
@@ -235,7 +256,8 @@ public class Utils {
 					boolean.class, //createFoldersForComponents
 					boolean.class, // acceptBeforeLoad
 					String.class, // workspaceComment
-					boolean.class},
+					boolean.class, 
+					Map.class}, // options
 					serverURI, 
 					userId, 
 					password,
@@ -264,7 +286,8 @@ public class Utils {
 					options.createFoldersForComponents, 
 					options.acceptBeforeLoad,
 					null,
-					true);
+					true, 
+					new HashMap<String, Object>());
 	}
 
 	/**
@@ -424,7 +447,92 @@ public class Utils {
 				c.getServerURI(), c.getUserID(), c.getPassword(), c.getTimeout(), streamName);
 
 		return setupArtifacts;
-		}
+	}
+	
+	/**
+	 * Set up a stream and a repository workspace flowing to that stream.
+	 * Add some change sets to the repository workspace but do not deliver them to the stream
+	 * 
+	 * @param testingFacade - The {@link RTCTestingFacade} for the build toolkit
+	 * @param c - configuration options for this test run
+	 * @param streamName - The name of the stream
+	 * @return - a map of artifact ids and their UUIDs.
+	 * 			Artifact ids are declared in TestSetupTearDownUtil in -rtc plugin.
+	 * @throws Exception
+	 */
+	 public static Map<String,String> setUpBuildStream_AcceptChanges(RTCFacadeWrapper testingFacade, 
+									Config c,
+									String streamName,
+									String workItemSummary) throws Exception {
+		// Setup a build stream with a component
+		@SuppressWarnings("unchecked")
+		Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke("setupTestBuildStream_acceptChanges", new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class, //streamName
+				String.class}, // workitemSummary
+				c.getServerURI(), c.getUserID(), c.getPassword(), c.getTimeout(), 
+				streamName, workItemSummary);
+		
+		return setupArtifacts;
+	}
+	 
+	/**
+	 * Deliver changes from workspace to stream
+	 * 
+	 * @param testingFacade - The {@link RTCTestingFacade} for the build toolkit
+	 * @param c - configuration options for this test run
+	 * @param streamName - The name of the stream
+	 * @return - the number of change sets delivered.
+	 * @throws Exception
+	 */
+	 public static int deliverChangesToStream(RTCFacadeWrapper testingFacade, 
+									Config c,
+									String streamUUID, String workspaceUUID) throws Exception {
+		// Setup a build stream with a component
+		return (Integer) testingFacade.invoke("deliverChangesFromWorkspaceToStream", new Class[] { String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class,  //streamUUID
+				String.class}, //workspaceUUID
+				c.getServerURI(), c.getUserID(), c.getPassword(), c.getTimeout(), streamUUID, workspaceUUID);
+	}
+	 
+	 
+	 @SuppressWarnings("unchecked")
+	public static Map<String, String> createEmptyChangeSets(RTCFacadeWrapper testingFacade, 
+			 						Config c, String workspaceUUID,
+			 						String componentUUID, int count) throws Exception {
+		// Create empty change sets in the component of the workspace and close them
+		// See RTCTestingFacade#createEmptyChangeSets
+		return (Map<String, String>) testingFacade.invoke("createEmptyChangeSets", new Class[] {
+				String.class, // serverURL,
+				String.class, // userId,
+				String.class, // password,
+				int.class, // timeout,
+				String.class, // workspaceUUID
+				String.class, // componentUUID
+				int.class}, // count
+				c.getServerURI(), c.getUserID(),
+				c.getPassword(), c.getTimeout(), workspaceUUID,
+				componentUUID, count);
+	 }
+	
+	@SuppressWarnings("unchecked")
+	public static Map<String, String> setupRepositoryWorkspace(RTCFacadeWrapper testingFacade, Config c, 
+						String repositoryWorkspaceName, String componentName) throws Exception {
+		return (Map<String, String>) testingFacade.invoke("setupAcceptChanges", new Class[] { String.class, // serverURL
+				String.class, // userId
+				String.class, // password
+				int.class, // timeout
+				String.class, // repository workspace name
+				String.class,   // COMPONENT NAME
+				boolean.class} , // createBuildDefinition
+				c.getServerURI(), c.getUserID(), c.getPassword(), c.getTimeout(), repositoryWorkspaceName, 
+				componentName, false);
+	}
 	
 	/**
 	 * Sets up a build definition with the given buildDefinitionId. Also create a build repository workspace with a
@@ -641,8 +749,8 @@ public class Utils {
 	 * @throws Exception 
 	 */
 	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, 
-		String streamName, String loadDirectory) throws Exception {
-		RTCScm rtcScm = constructRTCScmForStream(r, c, streamName, loadDirectory);
+		String streamName, String loadDirectory, boolean addLinksToWorkitems) throws Exception {
+		RTCScm rtcScm = constructRTCScmForStream(r, c, streamName, loadDirectory, addLinksToWorkitems);
 		FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);
 		return prj;
 	}
@@ -656,40 +764,78 @@ public class Utils {
 	 * @throws Exception 
 	 */
 	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, String streamName) throws Exception {
-		return setupFreeStyleJobForStream(r, c, streamName, null);
+		return setupFreeStyleJobForStream(r, c, streamName, null, true);
 	}
 	
 	/**
-	 * Runs a build for the given freestyle project with the given ParametersActions
+	 * Runs a build for the given freestyle project with the given ParametersActions.
 	 * 
+	 * Note: If you are running a build with build definition configuration, then pass 
+	 * {@link #getPactionsWithEmptyBuildResultUUID()} to ensure that the outer Jenkins build's 
+	 *  buildResultUUID is not passed to the test.
+	 *  
 	 * @param prj - The freestyle project
 	 * @param actions - The list of ParametersActions 
-	 * @return - A FreeStyleProject created with the given RTCScm.
+	 * @return - A FreeStyleBuild
 	 * @throws InterruptedException
 	 * @throws ExecutionException
 	 */
 	public static FreeStyleBuild runBuild(FreeStyleProject prj, List<ParametersAction> actions) throws InterruptedException, ExecutionException  {
 		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, actions == null ? new ArrayList<ParametersAction>() : actions);
-		while(!future.isDone());
+		while(!future.isDone()) {
+			// Intentionally empty
+		}
 		return future.get();
+	}
+
+	/**
+	 * Runs a build for the given freestyle project with the given ParametersActions
+	 * If the project is configured with build definition and if the build creates a build result,
+	 * then add the build result item id to additional artifacts
+	 *
+	 * Note: If you are running a build with build definition configuration, then pass 
+	 * {@link #getPactionsWithEmptyBuildResultUUID()} to ensure that the outer Jenkins build's 
+	 *  buildResultUUID is not passed to the test.
+	 *  
+	 * @param prj - The freestyle project
+	 * @param actions - The list of ParametersActions
+	 * @param buildCreatesBuildResult Does the freestyle build create a build result
+	 * @param additionalArtifacts A map where additional artifact uuids can be added, for 
+	 * 			now, just add the build result item id.
+	 * @return - A FreeStyleBuild
+	 * @throws InterruptedException
+	 * @throws ExecutionException
+	 */
+	public static FreeStyleBuild runBuild(FreeStyleProject prj, List<ParametersAction> actions, 
+									boolean buildCreatesBuildResult, Map<String, String> additionalArtifacts) 
+											throws InterruptedException, ExecutionException  {
+		QueueTaskFuture<FreeStyleBuild> future = prj.scheduleBuild2(0, (Cause) null, actions == null ? new ArrayList<ParametersAction>() : actions);
+		while(!future.isDone()) {
+			// Intentionally empty
+		}
+		FreeStyleBuild build = future.get();
+		RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
+		if (action != null && additionalArtifacts != null && buildCreatesBuildResult) {
+			additionalArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_1_ID, action.getBuildResultUUID());
+		}
+		return build;
 	}
 
 	/** 
 	 * Returns the number of times a pattern was found in the file.
 	 * 
 	 * @param file - The file to search
-	 * @param pattern - The pattern to search for 
+	 * @param patternParam - The pattern to search for 
 	 * @return - The number of times the match was found.
 	 * @throws FileNotFoundException
 	 */
-	public static int getMatchCount(File file, String pattern) throws FileNotFoundException {
-        Scanner scanner = null;
+	public static int getMatchCount(File file, final String patternParam) throws FileNotFoundException {
+        String pattern = patternParam;
         if (!pattern.endsWith(".*")) {
         	pattern = pattern + ".*";
         }
     	int matchCount = 0;
-        try {
-        	scanner = new Scanner(file, "UTF-8");
+        try (Scanner scanner = new Scanner(file, "UTF-8")) {
         	scanner.useDelimiter(LOG_Delimiter);
             while(scanner.hasNext()) {
                 String token = scanner.next();
@@ -697,10 +843,6 @@ public class Utils {
                 	matchCount++;
                 }
             }
-        } finally {
-        	if (scanner != null) {
-        		scanner.close();
-        	}
         }
         return matchCount;
 	}
@@ -709,34 +851,34 @@ public class Utils {
 	 * Returns the string that matched the given pattern in the file.
 	 * 
 	 * @param file - The file to search
-	 * @param pattern - The pattern to search for 
+	 * @param patternParam - The pattern to search for 
 	 * @return - The string that was matched.
 	 * @throws FileNotFoundException
 	 */
-	public static String getMatch(File file, String pattern) throws FileNotFoundException {
-        Scanner scanner = null;
+	public static String getMatch(File file, final String patternParam) throws FileNotFoundException {
         String match = null;
+        String pattern = patternParam;
         if (!pattern.endsWith(".*")) {
         	pattern = pattern + ".*";
         }
-        try {
-        	scanner = new Scanner(file, "UTF-8");
+        try (Scanner scanner = new Scanner(file, "UTF-8")) {
         	scanner.useDelimiter(LOG_Delimiter);
             while(scanner.hasNext()) {
 				String token = scanner.next();
 				if (token.matches(pattern)) {
 					match = token;
-				        break;
+				    break;
 				}
             }
-        } finally {
-        	if (scanner != null) {
-        		scanner.close();
-        	}
         }
         return match;
 	}
 	
+	public static void verifyRTCScmInBuild(Run<?,?> build, 
+			boolean isBuildDefinitionBuild) throws Exception {
+		verifyRTCScmInBuild(build, isBuildDefinitionBuild, true);
+	}
+
 	/**
 	 * Verify that RTCScm ran successfully in the given build.
 	 * 
@@ -744,7 +886,8 @@ public class Utils {
 	 * @param isBuildDefinitionBuild - Whether it is a build definition configuration
 	 * @throws Exception
 	 */
-	public  static void verifyRTCScmInBuild(Run<?,?> build, boolean isBuildDefinitionBuild) throws Exception {
+	public  static void verifyRTCScmInBuild(Run<?,?> build, boolean isBuildDefinitionBuild,
+			  boolean verifySnapshot) throws Exception {
 		// Verify the build status
 		assertNotNull(build);
 		assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
@@ -760,8 +903,10 @@ public class Utils {
 		}
 
 		// Verify snapshot getting created
-		String baselineSetItemId = action.getBuildProperties().get("team_scm_snapshotUUID");
-		assertNotNull(baselineSetItemId);
+		if (verifySnapshot) {
+			String baselineSetItemId = action.getBuildProperties().get("team_scm_snapshotUUID");
+			assertNotNull(baselineSetItemId);
+		}
 	}
 	
 	/**
@@ -808,6 +953,23 @@ public class Utils {
 		assertChangesMessage(pollingFile);		
 	}
 
+	
+	/**
+	 * Assert that polling file has the item name.
+	 * Check that the polling result is SIGNIFICANT but acceptBeforeLoad is false
+	 *  
+	 * @param pollingResult The result of polling  
+	 * @param pollingFile The file that contains polling messages
+	 * @param itemName - The name of the item that we expect to be present in the polling file. 
+	 * @throws Exception
+	 */
+	public static void assertPollingMessagesWhenSpuriousChangesDetected(PollingResult pollingResult, 
+			File pollingFile, String item) throws Exception {
+		assertEquals(Change.SIGNIFICANT, pollingResult.change);
+		assertCheckForIncomingChangesMessage(pollingFile, item);
+		assertCheckForInvalidChangesMessage(pollingFile, item);
+		assertChangesMessage(pollingFile);		
+	}
 	/**
 	 * Update the given RTCScm instance with the provided build type and return the updated instance.
 	 */
@@ -891,14 +1053,23 @@ public class Utils {
 	 * @return A freestyle project that has a RTCScm instance configured with the repository workspace.
 	 */
 	public static FreeStyleProject setupFreeStyleJobForWorkspace(JenkinsRule r, String workspaceName) throws Exception {
+		return setupFreeStyleJobForWorkspace(r, workspaceName, new RTCScm.BuildType("buildWorkspace", null, workspaceName, null, null));
+	}
+	
+	/***
+	 * Construct RTCScm for the given repository workspace. The repository workspace should exist.
+	 * 
+	 * @param r The Jenkins instance.
+	 * @param workspaceName The name of the repository workspace.
+	 * @return A free style project that has a RTCScm instance configured with the repository workspace.
+	 */
+	public static FreeStyleProject setupFreeStyleJobForWorkspace(JenkinsRule r, String workspaceName, BuildType buildType) throws Exception {
 		Config defaultC = Config.DEFAULT;
 		setSystemBuildToolkit(r, defaultC);
 		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
-				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildWorkspace", null, workspaceName, null, null), false);
-		
+				defaultC.getPasswordFile(), null, buildType, false);
 		// Setup
 		FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);
-		
 		return prj;
 	}
 	
@@ -1013,7 +1184,7 @@ public class Utils {
 	 * @throws IOException
 	 */
 	public static String getInvalidLoadPath() throws IOException {
-		File f = getTemporaryFile();
+		File f = getTemporaryFile(true);
 		return f.getAbsolutePath();
 	}
 	
@@ -1126,6 +1297,11 @@ public class Utils {
 	public static void dumpPBLogFile(FreeStyleBuild b, String filename) throws IOException {
 		dumpLogFile(b, "pbdeliver-", filename, ".tmp");
 	}
+	
+	public static void dumpFile(File file, String prefix) throws IOException {
+		File tempFile = Utils.getTemporaryFile(prefix, false);
+		Files.copy(file, tempFile);
+	}
 
 	/**
 	 * Dump the log file from the build into a temporary file
@@ -1134,29 +1310,34 @@ public class Utils {
 	 * @param filename the name of the temporary file
 	 * @throws IOException if there is an exception reading or writing files.
 	 */
-	public static void dumpLogFile(FreeStyleBuild b, String prefix, String filename, String suffix) throws IOException {
+	public static String dumpLogFile(FreeStyleBuild b, String prefix, String filename, String suffix) throws IOException {
 		if (Config.DEFAULT.isDumpLogFiles()) {
-			File tmpFile = File.createTempFile(prefix + filename, suffix);
-			PrintWriter outputPrintWriter = null;
-			Scanner inputLogFileScanner = null;
-			try {
-				outputPrintWriter = new PrintWriter(tmpFile);
-				File logFile = b.getLogFile();
-				inputLogFileScanner = new Scanner(new FileInputStream(logFile));
+			File tmpFile = getTemporaryFile(prefix, filename, suffix, false);
+			File logFile = b.getLogFile();
+			try (PrintWriter outputPrintWriter = new PrintWriter(tmpFile);
+				FileInputStream fLogFileIns = new FileInputStream(logFile);
+				Scanner inputLogFileScanner = new Scanner(fLogFileIns)) {
 				inputLogFileScanner.useDelimiter(LOG_Delimiter);
 				while(inputLogFileScanner.hasNext()) {
 					outputPrintWriter.println(inputLogFileScanner.next());
 				}
 			}
-			finally {
-				if (outputPrintWriter != null) {
-					outputPrintWriter.close();
-				}
-				if (inputLogFileScanner != null) {
-					inputLogFileScanner.close();
-				}
-			}
+			return tmpFile.getAbsolutePath();
 		}
+		return null;
+	}
+	
+	/**
+	 * Returns a temporary file that will delete itself with JVM exists.
+	 * @param deleteOnExit should the temporary file be deleted on exit?
+	 *  
+	 * @return A File object that represents the temporary file.
+	 * @throws IOException
+	 */
+	public static File getTemporaryFile(boolean deleteOnExit) throws IOException  {
+		File f = File.createTempFile("tmp", "log");
+		f.deleteOnExit();
+		return f;
 	}
 	
 	/**
@@ -1165,12 +1346,107 @@ public class Utils {
 	 * @return A File object that represents the temporary file.
 	 * @throws IOException
 	 */
-	public static File getTemporaryFile() throws IOException  {
-		File f = File.createTempFile("tmp", "log");
-		f.deleteOnExit();
+	public static File getTemporaryFile(String prefix, boolean deleteOnExit) throws IOException  {
+		File f = File.createTempFile("tmp" + prefix, "log");
+		if (deleteOnExit) {
+			f.deleteOnExit();
+		}
 		return f;
 	}
 	
+	/**
+	 * Returns a temporary file that will delete itself with JVM exists.
+	 *  
+	 * @return A File object that represents the temporary file.
+	 * @throws IOException
+	 */
+	public static File getTemporaryFile(String prefix, String filename, String suffix, 
+								boolean deleteOnExit) throws IOException  {
+		File f = File.createTempFile(prefix + filename, suffix);
+		if (deleteOnExit) {
+			f.deleteOnExit();
+		}
+		return f;
+	}
+	
+	
+	/**
+	 * Verify that given work item id has a related artifact link 
+	 */
+	public static void testWorkItemHasRelatedArtifactLink(String workItemId, 
+						String url) throws Exception {
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		testingFacade.invoke("testWorkItemHasRelatedArtifactLink", new Class [] { //$NON-NLS-1$
+			String.class, // Server URI
+			String.class, // userId
+			String.class, // password
+			int.class, // timeout
+			String.class, // workItemId
+			String.class}, // url
+			loginInfo.getServerUri(), 
+			loginInfo.getUserId(),
+			loginInfo.getPassword(),
+			loginInfo.getTimeout(),
+			workItemId,
+			url);
+	}
+	
+	/**
+	 * Verify that given work item id has no related artifact link 
+	 */
+	public static void testWorkItemHasNoRelatedArtifactLink(String workItemId) throws Exception {
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		testingFacade.invoke("testWorkItemHasNoRelatedArtifactLink", new Class [] {
+			String.class, // Server URI
+			String.class, // userId
+			String.class, // password
+			int.class, // timeout
+			String.class}, // workItemId
+			loginInfo.getServerUri(), 
+			loginInfo.getUserId(),
+			loginInfo.getPassword(),
+			loginInfo.getTimeout(),
+			workItemId);
+	}
+	
+
+	public static void validateMetronomeLogsInBuildresult(String buildResultUUID) throws Exception {
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		testingFacade.invoke("testMetronomeLogsInBuildResult", new Class[] {
+				String.class,
+				String.class,
+				String.class,
+				int.class,
+				String.class},
+				loginInfo.getServerUri(), 
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(),
+				buildResultUUID);
+	}
+	
+	public static void validateNoMetronomeLogsInBuildResult(String buildResultUUID) throws Exception {
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		RTCLoginInfo loginInfo = defaultC.getLoginInfo();
+		testingFacade.invoke("testNoMetronomeLogsInBuildResult", new Class[] {
+				String.class,
+				String.class,
+				String.class,
+				int.class,
+				String.class},
+				loginInfo.getServerUri(), 
+				loginInfo.getUserId(),
+				loginInfo.getPassword(),
+				loginInfo.getTimeout(),
+				buildResultUUID);
+	}
 
 	/**
 	 * Constructs RTCScm for the given stream name. The stream should exist.
@@ -1181,7 +1457,7 @@ public class Utils {
 	 * @param loadDirectory The directory in which the stream has to be loaded.
 	 * @return A RTCScm instance
 	 */
-	private static RTCScm constructRTCScmForStream(JenkinsRule r, Config c, String streamName, String loadDirectory) {
+	private static RTCScm constructRTCScmForStream(JenkinsRule r, Config c, String streamName, String loadDirectory, boolean createWorkItemLinks) {
 		Config defaultC = c;
 		// Set the toolkit
 		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
@@ -1190,24 +1466,44 @@ public class Utils {
 		if (loadDirectory != null) {
 			buildType.setLoadDirectory(loadDirectory);
 		}
+		buildType.setAddLinksToWorkItems(createWorkItemLinks);
 		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 				defaultC.getPasswordFile(), null, buildType, false);
 		return rtcScm;
 	}
 	
 	private static void assertCheckForIncomingChangesMessage(File pollingFile, String item) throws Exception {
-		assertNotNull("Expected message about checking incoming changes", getMatch(pollingFile, "Checking incoming changes for \"" + item + "\""));
+		assertNotNull("Expected message about checking incoming changes"
+	+ Files.toString(pollingFile, Charset.defaultCharset()),
+					getMatch(pollingFile, "Checking incoming changes for \"" + item + "\""));
+	}
+	
+	private static void assertCheckForInvalidChangesMessage(File pollingFile, String item) throws Exception {
+		assertNotNull("Expected message about unncessary builds."
+	+ Files.toString(pollingFile, Charset.defaultCharset()),
+					getMatch(pollingFile, "In this configuration, polling will result in unnecessary builds"));
 	}
 	
 	private static void assertNoChangesMessage(File pollingFile) throws Exception {
-		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : No changes detected"));
+		assertNotNull("Expecting No changes " + Files.toString(pollingFile, Charset.defaultCharset()),
+				getMatch(pollingFile, "RTC : No changes detected"));
 	}
 	
 	private static void assertChangesMessage(File pollingFile) throws Exception {
-		assertNotNull("Expecting No changes", getMatch(pollingFile, "RTC : Changes detected"));
+		assertNotNull("Expecting No changes " + Files.toString(pollingFile, Charset.defaultCharset()) ,
+				getMatch(pollingFile, "RTC : Changes detected"));
 	}
 	
-	private static FreeStyleProject createFreeStyleJobWithRTCScm(JenkinsRule r, RTCScm rtcScm) throws IOException {
+	public static FreeStyleProject createFreeStyleJobWithRTCScm(JenkinsRule r, RTCScm rtcScm,
+									ParameterDefinition [] definitions) throws IOException {
+		FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);
+		if (definitions != null && definitions.length > 0) {
+			prj.addProperty(new ParametersDefinitionProperty(definitions));
+		}
+		return prj;
+	}
+	
+	public static FreeStyleProject createFreeStyleJobWithRTCScm(JenkinsRule r, RTCScm rtcScm) throws IOException {
 		FreeStyleProject prj = r.createFreeStyleProject();
 		prj.setScm(rtcScm);
 		return prj;
@@ -1216,5 +1512,53 @@ public class Utils {
 	private static void setSystemBuildToolkit(JenkinsRule r, Config defaultC) {
 		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
 		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
+	}
+	
+	public static RTCBuildToolInstallation getSystemBuildToolkit(JenkinsRule r) {
+		RTCBuildToolInstallation [] installs = r.jenkins.
+					getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).getInstallations();
+		if (installs != null && installs.length >0) {
+			return installs[0];
+		} else {
+			return null;
+		}
+	}
+
+	public static void verifyStreamBuild(FreeStyleBuild build, String streamUUID, String url) throws IOException {
+		assertNotNull(build);
+		assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
+	
+		// Verify whether RTCScm ran successfully
+		List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
+		assertEquals(1, rtcActions.size());
+		RTCBuildResultAction action = rtcActions.get(0);
+		assertNotNull(action);
+		
+		// Verify that we have the stream UUID as the snapshot owner field
+		assertEquals(streamUUID, action.getBuildProperties().get(TEAM_SCM_SNAPSHOT_OWNER));
+		
+		// Verify that we have stored stream's state inside the build result action
+		assertTrue(action.getBuildProperties().get(TEAM_SCM_STREAM_CHANGES_DATA).length() > 0);
+		
+		// Verify previous build Url
+		RTCChangeLogSet changeLogSet = (RTCChangeLogSet) build.getChangeSet();
+		assertEquals("Expected a proper previousBuildUrl", url, changeLogSet.getPreviousBuildUrl());
+		
+	}
+	
+	public static boolean is407BuildToolkit() {
+		String buildToolkitVersion = Util.fixEmptyAndTrim(System.getProperty("buildToolkitVersion"));
+		if (BuildToolkit_Version_407.equals(buildToolkitVersion)) {
+			return true;
+		}
+		return false;
+	}
+
+	public static boolean is50BuildToolkit() {
+		String buildToolkitVersion = Util.fixEmptyAndTrim(System.getProperty("buildToolkitVersion"));
+		if (BuildToolkit_Version_50.equals(buildToolkitVersion)) {
+			return true;
+		}
+		return false;
 	}
 }

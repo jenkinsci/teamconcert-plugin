@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2014 IBM Corporation and others.
+ * Copyright © 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -34,6 +34,7 @@ import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
 
+@SuppressWarnings({"nls", "boxing"})
 public class BuildConnectionIT extends AbstractTestCase {
 
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
@@ -45,8 +46,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 
 		if (Config.DEFAULT.isConfigured()) {
 			// DO NOT initialize Hudson/Jenkins because its slow and we don't need it for the tests
-			
-			testingFacade = Utils.getTestingFacade();
+			setTestingFacade(Utils.getTestingFacade());
 		}
 	}
 
@@ -69,7 +69,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			testingFacade.invoke("testCreateBuildResult",
+			getTestingFacade().invoke("testCreateBuildResult",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
 					String.class, // password,
@@ -87,7 +87,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			testingFacade.invoke("testCreateBuildResultFail",
+			getTestingFacade().invoke("testCreateBuildResultFail",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
 					String.class, // password,
@@ -105,7 +105,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			testingFacade.invoke("testExternalLinks",
+			getTestingFacade().invoke("testExternalLinks",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
 					String.class, // password,
@@ -142,7 +142,8 @@ public class BuildConnectionIT extends AbstractTestCase {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			TaskListener listener = new StreamTaskListener(System.out, null);
 			
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
+			@SuppressWarnings("unchecked")
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade().invoke(
 					"testBuildTerminationSetup",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
@@ -429,7 +430,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -457,7 +458,8 @@ public class BuildConnectionIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
+			@SuppressWarnings("unchecked")
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade().invoke(
 					"testBuildTerminationSetup",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
@@ -524,7 +526,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -543,7 +545,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 			RTCLoginInfo loginInfo, boolean startBuild, boolean abandon,
 			String buildStatus, Map<String, String> setupArtifacts)
 			throws Exception {
-		testingFacade.invoke(
+		getTestingFacade().invoke(
 				"testBuildTerminationTestSetup",
 			new Class[] { String.class, // serverURL,
 				String.class, // userId,
@@ -567,7 +569,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 			RTCLoginInfo loginInfo, String expectedState,
 			String expectedStatus, Map<String, String> setupArtifacts)
 			throws Exception {
-		testingFacade.invoke(
+		getTestingFacade().invoke(
 				"verifyBuildTermination",
 			new Class[] { String.class, // serverURL,
 				String.class, // userId,
@@ -587,7 +589,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 	
 	private void verifyBuildResultDeleted(RTCLoginInfo loginInfo,
 			Map<String, String> setupArtifacts) throws Exception {
-		testingFacade.invoke(
+		getTestingFacade().invoke(
 				"verifyBuildResultDeleted",
 			new Class[] { String.class, // serverURL,
 				String.class, // userId,
@@ -606,7 +608,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 		if (Config.DEFAULT.isConfigured()) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
-			testingFacade.invoke("testBuildStart",
+			getTestingFacade().invoke("testBuildStart",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
 					String.class, // password,
@@ -627,7 +629,7 @@ public class BuildConnectionIT extends AbstractTestCase {
 			// Let the test fill in the build result UUID.
 			String buildResultUUID = ""; 
 			BuildResultInfo buildResultInfo = new BuildResultInfo(buildResultUUID, false);
-			String loggedInContributorName = (String) testingFacade.invoke("testBuildResultInfo",
+			String loggedInContributorName = (String) getTestingFacade().invoke("testBuildResultInfo",
 				new Class[] { String.class, // serverURL,
 					String.class, // userId,
 					String.class, // password,
@@ -649,5 +651,13 @@ public class BuildConnectionIT extends AbstractTestCase {
 			assertTrue(buildCause.getShortDescription(), buildCause.getShortDescription().contains("ersonal"));
 			assertTrue(buildCause.getShortDescription(), buildCause.getShortDescription().contains(loggedInContributorName));
 		}
+	}
+
+	private RTCFacadeWrapper getTestingFacade() {
+		return this.testingFacade;
+	}
+
+	private void setTestingFacade(RTCFacadeWrapper testingFacade) {
+		this.testingFacade = testingFacade;
 	}
 }

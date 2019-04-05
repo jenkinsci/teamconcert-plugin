@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright © 2016, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -17,7 +17,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -56,13 +55,13 @@ import hudson.scm.PollingResult.Change;
 
 /**
  * Tests for Build from Stream 
- * 
- * @author lvaikunt
  *
  */
+@SuppressWarnings({"static-method", "nls"})
 public class RTCScmStreamIT extends AbstractTestCase {
 
-	@Rule public JenkinsRule r = new JenkinsRule();
+	@Rule
+	public JenkinsRule r = new JenkinsRule();
 	
 	@Before
 	public void setup() throws Exception {
@@ -99,12 +98,12 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
 			// Test that previousBuildUrl is none because there is nothing to compare with
-			verifyStreamBuild(build, streamUUID, "");
+			Utils.verifyStreamBuild(build, streamUUID, "");
 			
 			// Get the snapshot UUID from it so that we can delete it before the next build runs
 			String snapshotUUID = getSnapshotUUIDFromBuild(build);
@@ -116,12 +115,12 @@ public class RTCScmStreamIT extends AbstractTestCase {
 			FreeStyleBuild build1 =  Utils.runBuild(prj, null);
 			// Test that previousBuildUrl is none because our previous snapshot is delete so
 			// we didn't compare with anything
-			 verifyStreamBuild(build1, streamUUID, "");
+			 Utils.verifyStreamBuild(build1, streamUUID, "");
 			
 			// Perform another build
 			FreeStyleBuild build2 =  Utils.runBuild(prj, null);
 			// Ensure that previousBuildUrl is there since we did compare with a previous snapshot
-			 verifyStreamBuild(build2, streamUUID, build1.getUrl());
+			 Utils.verifyStreamBuild(build2, streamUUID, build1.getUrl());
 			
 		} finally {
 			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
@@ -129,8 +128,8 @@ public class RTCScmStreamIT extends AbstractTestCase {
 	}
 	
 	/**
-	 * Verify that stream name and UUID and previous build url after found in
-	 * changelog
+	 * Verify that stream name and UUID and previous build URL after found in
+	 * change log
 	 * 
 	 * @throws Exception
 	 */
@@ -147,7 +146,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -190,7 +189,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamItemId = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -236,21 +235,21 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		
 		try {
 			{ // positive case - when stream name is not null
-				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
-				verifyStreamBuild(build, streamUUID, "");
+				Utils.verifyStreamBuild(build, streamUUID, "");
 				
 				// Run polling and check whether message appears
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
 				
 				// Verify polling messages
 				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, streamName);
 			}
 			{ // negative case - when stream name is null
-				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, null);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, null);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
@@ -260,7 +259,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 
 				
 				// Run polling and check whether message appears
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
 				
 				// Verify polling messages
@@ -292,14 +291,14 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		
 		try {
-				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);
-				verifyStreamBuild(build, streamUUID, "");
+				Utils.verifyStreamBuild(build, streamUUID, "");
 				
 				// Run polling and check whether message appears
-				File pollingFile = Utils.getTemporaryFile();
+				File pollingFile = Utils.getTemporaryFile(true);
 				PollingResult pollingResult = Utils.pollProject(prj, pollingFile);
 				// Verify polling messages for "No Changes"
 				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, streamName);
@@ -309,14 +308,14 @@ public class RTCScmStreamIT extends AbstractTestCase {
 				Utils.addComponentToBuildStream(testingFacade, defaultC, streamUUID, componentToAddName);
 				
 				// Run polling to check whether "Changes Found" message appears
-				pollingFile = Utils.getTemporaryFile();
+				pollingFile = Utils.getTemporaryFile(true);
 				pollingResult = Utils.pollProject(prj, pollingFile);
 				// Verify polling messages for "No Changes"
 				Utils.assertPollingMessagesWhenChangesDetected(pollingResult, pollingFile, streamName);
 				
 				// Run a build and check whether the change log set contains the new component's name
 				build = Utils.runBuild(prj, null);
-				verifyStreamBuild(build, streamUUID, build.getPreviousBuild().getUrl());
+				Utils.verifyStreamBuild(build, streamUUID, build.getPreviousBuild().getUrl());
 
 				RTCChangeLogSet changeLogSet = (RTCChangeLogSet) build.getChangeSets().get(0);
 				assertEquals(1, changeLogSet.getComponentChangeCount());
@@ -347,7 +346,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		try {
 			// Create a basic project configuration
 			// Individual validation steps can then customize the RTCScm instance and update it in the project instance
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			// validate support for custom snapshot name
 			validateCustomSnapshotName_stream(prj);
 
@@ -374,10 +373,10 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
-			verifyStreamBuild(build, streamUUID, "");
+			Utils.verifyStreamBuild(build, streamUUID, "");
 			
 			// Check whether the temporary workspace is uuid and name is not null
 			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
@@ -415,11 +414,12 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
+		@SuppressWarnings("unused")
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		try {
 
 			String loadDirectory = Utils.getInvalidLoadPath();
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName, loadDirectory);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName, loadDirectory, true);
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
 			assertTrue(build.getLog(100).toString(), build.getResult().isWorseOrEqualTo(Result.FAILURE));
@@ -467,8 +467,9 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		String streamName = getStreamUniqueName();
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
+		assertNotNull(streamUUID);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			// Run a build
 			FreeStyleBuild build = Utils.runBuild(prj, null);
 			Utils.verifyRTCScmInBuild(build, false);
@@ -509,7 +510,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 		Map<String, String> setupArtifacts = Utils.setUpBuildStream(testingFacade, defaultC, streamName);
 		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
 		try {
-			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(r, defaultC, streamName);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, streamName);
 			FreeStyleBuild build = Utils.runBuild(prj, null);		
 			Utils.verifyRTCScmInBuild(build, false);
 			
@@ -609,28 +610,6 @@ public class RTCScmStreamIT extends AbstractTestCase {
 				.getMatch(build.getLogFile(), java.util.regex.Pattern.quote(Messages.RTCScm_empty_resolved_snapshot_name("${emptyParam}"))));
 	}
 	
-	private static void verifyStreamBuild(FreeStyleBuild build, String streamUUID, String url) throws IOException {
-		assertNotNull(build);
-		assertTrue(build.getLog(100).toString(), build.getResult().isBetterOrEqualTo(Result.SUCCESS));
-
-		// Verify whether RTCScm ran successfully
-		List<RTCBuildResultAction> rtcActions = build.getActions(RTCBuildResultAction.class);
-		assertEquals(1, rtcActions.size());
-		RTCBuildResultAction action = rtcActions.get(0);
-		assertNotNull(action);
-		
-		// Verify that we have the stream UUID as the snapshot owner field
-		assertEquals(streamUUID, action.getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOT_OWNER));
-		
-		// Verify that we have stored stream's state inside the build result action
-		assertTrue(action.getBuildProperties().get(Utils.TEAM_SCM_STREAM_CHANGES_DATA).length() > 0);
-		
-		// Verify previous build Url
-		RTCChangeLogSet changeLogSet = (RTCChangeLogSet) build.getChangeSet();
-		assertEquals("Expected a proper previousBuildUrl", url, changeLogSet.getPreviousBuildUrl());
-		
-	}
-	
 	/**
 	 * Delete the snapshot identified by a UUID
 	 *  
@@ -652,7 +631,7 @@ public class RTCScmStreamIT extends AbstractTestCase {
 				loginInfo.getServerUri(),
 				loginInfo.getUserId(),
 				loginInfo.getPassword(),
-				loginInfo.getTimeout(),
+				Integer.valueOf(loginInfo.getTimeout()),
 				streamName,
 				snapshotUUID);
 		
@@ -666,5 +645,13 @@ public class RTCScmStreamIT extends AbstractTestCase {
 	 */
 	private String getSnapshotUUIDFromBuild(Run<?,?> build) {
 		return build.getActions(RTCBuildResultAction.class).get(0).getBuildProperties().get(Utils.TEAM_SCM_SNAPSHOTUUID);
+	}
+
+	public JenkinsRule getJenkinsRule() {
+		return this.r;
+	}
+
+	public void setJenkinsRule(JenkinsRule r) {
+		this.r = r;
 	}
 }

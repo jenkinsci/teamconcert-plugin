@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 IBM Corporation and others.
+ * Copyright © 2017, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -58,7 +58,7 @@ import net.sf.json.JSONObject;
  *      <li>Post Build Deliver could not be performed due to configuration error</li>
  *      <li>Post Build Deliver failed due to StaleDataExceptions</li>
  *    </ul>
- *  then the build will marked as failed.   
+ *  then the Jenkins build will marked as failed.   
  *    
  *
  */
@@ -248,9 +248,9 @@ public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuil
 						// Everything is fine, start post build deliver
 						PostBuildDeliverResult result = RTCFacadeFacade.postBuildDeliver(loginInfo.getServerUri(),
 								loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), buildResultItemId, buildResultLabel, listener);
-						// If the build result is not OK, thrown an exception that post build deliver failed
-						// If build result is not OK, only print the participant summary and log the same as well
-						// If build result is OK, check whether PB deliver was done
+						// If build result is not OK, only print the participant summary and log the same as well, throw an exception with the participant
+						// summary.
+						// If build result is OK, check whether PB deliver really happened.
 						// If yes, then print the participant log.
 						// else, print the participant summary and return that PB deliver was skipped.
 						if (RTCBuildStatus.OK.equals(result.getBuildStatus())) {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -31,6 +31,7 @@ import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
+import com.ibm.team.build.internal.common.model.BuildProperty;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.process.common.IProcessArea;
@@ -159,6 +160,7 @@ public class BuildUtil {
 	 * @return - a configuration element for post build deliver.
 	 * @throws Exception - if there is any error in retrieving/saving the build definition
 	 */
+	@SuppressWarnings("unchecked")
 	public static IBuildConfigurationElement setupPBDeliverConfigurationElement(ITeamRepository repo,
 				String buildDefinitionId, Map<String,String> artifactIds,
 				Map<String, String> configOrGenericProperties, IProgressMonitor progress) throws Exception {
@@ -176,7 +178,14 @@ public class BuildUtil {
 			buildDefinition.getProperty(IAutoDeliverConfigurationElement.PROPERTY_DELIVER_TRIGGER_POLICY).setValue(triggerPolicy);
 			if (configOrGenericProperties  != null) {
 				for (String configProperty : configOrGenericProperties.keySet()) {
-					buildDefinition.getProperty(configProperty).setValue(configOrGenericProperties.get(configProperty));
+					IBuildProperty property = buildDefinition.getProperty(configProperty);
+					if (property != null) {
+						property.setValue(configOrGenericProperties.get(configProperty));
+					} else {
+						buildDefinition.getProperties().add(
+								BuildItemFactory.createBuildProperty(configProperty, 
+										configOrGenericProperties.get(configProperty)));
+					}
 				}
 			}
 			getTeamBuildClient(repo).save(buildDefinition, monitor.newChild(50));

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright © 2016, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -26,10 +26,14 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.util.TaskListenerWrapper;
 
 /**
- * Class responsible for Accepting incoming changes
- *
+ * Class responsible for Accepting incoming changes for build definition and 
+ * build repository workspace configurations. For build stream, it creates a 
+ * snapshot with the latest changes and makes it owned by the stream. For snapshot 
+ * configuration, it doesn't compute any changelog but records the snapshot UUID  
+ * in the changelog
  */
 public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	private static final Logger LOGGER = Logger.getLogger(RTCAcceptTask.class.getName());
@@ -56,9 +60,11 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	private Locale clientLocale;
 	private String callConnectorTimeout;
 	private boolean acceptBeforeLoad;
+	private boolean addLinksToWorkitems;
 	// The relative url of the previous build from which the previous snapshot uuid was obtained
 	private Map<String, String> buildURLInfo; 
 	private String temporaryWorkspaceComment;
+	private Map<String, Object> options;
 	
 	/**
 	 * Back links to Hudson/Jenkins that are to be set on the build result
@@ -98,13 +104,16 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 	 * @param clientLocale The locale of the requesting client
 	 * @param acceptBeforeLoad Accept latest changes before loading, if true
 	 * @param buildURLInfo 
-	 * @param temporaryWorkspaceComment
+	 * @param temporaryWorkspaceComment Description for the temporary repository workspace
+	 * @param options List of options for various functionality. For future enhancements, use this map to store  
+	 *                options instead of arguments to this method
+	 * 
 	 */
 	public RTCAcceptTask(String contextStr, String buildToolkit, String serverURI, String userId, String password, int timeout, String processArea,
 			String buildResultUUID, String buildWorkspace, Map<String, String> buildSnapshotContextMap, String buildSnapshot, String buildStream,
 			boolean isCustomSnapshotName, String snapshotName, String previousSnapshotUUID, TaskListener listener, RemoteOutputStream changeLog, boolean isRemote,
-			boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad, Map<String,String> buildURLInfo,
-			String temporaryWorkspaceComment) {
+			boolean debug, Locale clientLocale, String strCallConnectorTimeout, boolean acceptBeforeLoad, boolean addLinksToWorkItems, Map<String,String> buildURLInfo,
+			String temporaryWorkspaceComment, Map<String, Object> options) {
     	
 		super(debug, listener);
 		this.contextStr = contextStr;
@@ -129,8 +138,10 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
     	this.clientLocale = clientLocale;
     	this.callConnectorTimeout = strCallConnectorTimeout;
     	this.acceptBeforeLoad = acceptBeforeLoad;
+    	this.addLinksToWorkitems = addLinksToWorkItems;
     	this.buildURLInfo = buildURLInfo;
     	this.temporaryWorkspaceComment = temporaryWorkspaceComment;
+    	this.options = options;
 	}
 	/**
 	 * Provides the Urls to be set as links on the build result
@@ -224,14 +235,16 @@ public class RTCAcceptTask extends RTCTask<Map<String, Object>> {
 					Locale.class, // clientLocale
 					String.class, // callConnectorTimeout
 					boolean.class, // acceptBeforeLoad
-					Map.class, // previousBuildUrl
-					String.class // temporaryWorkspaceComment
+					boolean.class, // addLinksToWorkItems
+					Map.class, // buildUrls
+					String.class, // temporaryWorkspaceComment
+					Map.class // options
 			}, serverURI, userId, Secret.toString(password),
 					timeout, processArea, buildResultUUID, buildWorkspace, buildSnapshotContextMap, buildSnapshot,
 					buildStream, workspace.getAbsolutePath(),
 					changeLog, isCustomSnapshotName, snapshotName, previousSnapshotUUID,
-					listener, clientLocale, callConnectorTimeout, acceptBeforeLoad, 
-					buildURLInfo, temporaryWorkspaceComment);
+					new TaskListenerWrapper(listener), clientLocale, callConnectorTimeout, acceptBeforeLoad,
+					addLinksToWorkitems, buildURLInfo, temporaryWorkspaceComment, options);
 
     	} catch (Exception e) {
     		Throwable eToReport = e;

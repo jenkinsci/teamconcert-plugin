@@ -15,6 +15,7 @@ import java.io.IOException;
 
 import com.ibm.team.build.internal.hjplugin.tests.Config;
 
+@SuppressWarnings({"nls"})
 public class FileUtils {
 	
 	/**

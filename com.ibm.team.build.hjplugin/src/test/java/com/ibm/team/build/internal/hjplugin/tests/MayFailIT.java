@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright © 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,9 +13,6 @@ package com.ibm.team.build.internal.hjplugin.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Map;
-
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -26,19 +23,16 @@ import org.mockito.Mockito;
 import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
-import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
 import com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
-import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
-import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 
 import hudson.model.FreeStyleProject;
 import hudson.util.Secret;
 import net.sf.json.JSONObject;
 
+@SuppressWarnings({"nls", "boxing"})
 public class MayFailIT extends AbstractTestCase {
 	private static final String CONFIGURE = "configure";
 	private static final String CONFIG = "config";
@@ -53,6 +47,7 @@ public class MayFailIT extends AbstractTestCase {
 	private static final String TEST_GLOBAL_USER_ID = "ADMIN";
 	private static final String TEST_GLOBAL_PASSWORD = "ADMIN";
 	private static final String TEST_GLOBAL_PASSWORD_FILE = "C:/Users/ADMIN/ADMIN-password";
+	@SuppressWarnings("unused")
 	private static final String TEST_GLOBAL_CRED_ID = "1234";
 	private static final String TEST_GLOBAL_TIMEOUT = "480";
 	
@@ -80,22 +75,22 @@ public class MayFailIT extends AbstractTestCase {
 	
 	@Test public void testJobConfigRoundtripOverrideGlobal() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = j.createFreeStyleProject();
+			FreeStyleProject project = getJenkinsRule().createFreeStyleProject();
 			RTCScm rtcScm = createTestOverrideGlobalRTCScm(false);
 			project.setScm(rtcScm);
 	
-			j.submit(j.createWebClient().getPage(project, CONFIGURE).getFormByName(CONFIG));
+			getJenkinsRule().submit(getJenkinsRule().createWebClient().getPage(project, CONFIGURE).getFormByName(CONFIG));
 	
 			RTCScm newRtcScm = (RTCScm) project.getScm();
 	
-			j.assertEqualBeans(rtcScm, newRtcScm, OVERRIDE_GLOBAL + "," + SERVER_URI + "," + USER_ID + "," + PASSWORD + "," + PASSWORD_FILE + ","
+			getJenkinsRule().assertEqualBeans(rtcScm, newRtcScm, OVERRIDE_GLOBAL + "," + SERVER_URI + "," + USER_ID + "," + PASSWORD + "," + PASSWORD_FILE + ","
 					+ BUILD_TYPE + "," + BUILD_DEFINITION);
 		}
 	}
 
 	@Test public void testJobConfigRoundtripWithoutCredentials() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
-			FreeStyleProject project = j.createFreeStyleProject();
+			FreeStyleProject project = getJenkinsRule().createFreeStyleProject();
 			RTCScm rtcScm = createEmptyRTCScm();
 			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
 			project.setScm(rtcScm);
@@ -114,7 +109,7 @@ public class MayFailIT extends AbstractTestCase {
 			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
 			descriptor.configure(mockedReq, mockJSON);
 	
-			WebClient webClient = j.createWebClient();
+			WebClient webClient = getJenkinsRule().createWebClient();
 	
 			// Get the page to configure the project
 			HtmlPage page = webClient.getPage(project, CONFIGURE);
@@ -129,7 +124,7 @@ public class MayFailIT extends AbstractTestCase {
 			overrideGlobalInput.setChecked(false);
 	
 			// Submit the config form
-			j.submit(form);
+			getJenkinsRule().submit(form);
 	
 			// check submitted SCM result
 			RTCScm newRtcScm = (RTCScm) project.getScm();
@@ -144,95 +139,6 @@ public class MayFailIT extends AbstractTestCase {
 		}
 	}
 	
-	/**
-	 * Test "Test Build Workspace" validates correctly a singly occurring workspace (valid)
-	 * and multiple workspaces with the same name (invalid)
-	 */
-	@Test public void testTestBuildWorkspace() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
-			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
-			
-			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade.invoke(
-					"setupTestBuildWorkspace", new Class[] {
-							String.class, // serverURL,
-							String.class, // userId,
-							String.class, // password,
-							int.class, // timeout,
-							String.class, // singleWorkspaceName,
-							String.class}, // multipleWorkspaceName
-					loginInfo.getServerUri(),
-					loginInfo.getUserId(),
-					loginInfo.getPassword(),
-					loginInfo.getTimeout(),
-					"Singly Occuring=WS&encoded", 
-					"Multiple Occurrence=WS");
-
-			try {
-				
-				String errorMessage = RTCFacadeFacade.testBuildWorkspace(
-					Config.DEFAULT.getToolkit(),
-					loginInfo.getServerUri(),
-					loginInfo.getUserId(),
-					loginInfo.getPassword(),
-					loginInfo.getTimeout(),
-					false, // using toolkit
-					"Singly Occuring=WS&encoded");
-				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
-
-				// Disabling this test pending investigation
-				errorMessage = RTCFacadeFacade.testBuildWorkspace(
-						Config.DEFAULT.getToolkit(),
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(),
-						true, // avoiding toolkit
-						"Singly Occuring=WS&encoded");
-				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
-
-				try {
-					errorMessage = RTCFacadeFacade.testBuildWorkspace(
-							Config.DEFAULT.getToolkit(),
-							loginInfo.getServerUri(),
-							loginInfo.getUserId(),
-							loginInfo.getPassword(),
-							loginInfo.getTimeout(),
-							false, // using toolkit
-							"Multiple Occurrence=WS");
-					assertTrue("There should be more than 1 workspace with the name", errorMessage != null && errorMessage.contains("More than 1"));
-
-					errorMessage = RTCFacadeFacade.testBuildWorkspace(
-							Config.DEFAULT.getToolkit(),
-							loginInfo.getServerUri(),
-							loginInfo.getUserId(),
-							loginInfo.getPassword(),
-							loginInfo.getTimeout(),
-							true, // avoiding toolkit
-							"Multiple Occurrence=WS");
-					assertTrue("There should be more than 1 workspace with the name", errorMessage != null && errorMessage.contains("More than 1"));
-				} catch (Exception e) {
-					e.printStackTrace(System.out);
-					Assert.fail(e.getMessage());
-				}
-			} finally {
-				testingFacade.invoke(
-						"tearDown",
-						new Class[] { String.class, // serverURI
-								String.class, // userId
-								String.class, // password
-								int.class, // timeout
-								Map.class}, // setupArtifacts
-						loginInfo.getServerUri(),
-						loginInfo.getUserId(),
-						loginInfo.getPassword(),
-						loginInfo.getTimeout(),
-						setupArtifacts);
-			}
-		}
-	}
-	
 	private RTCScm createTestOverrideGlobalRTCScm(boolean useCreds) {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE, TEST_BUILD_SNAPSHOT, TEST_BUILD_STREAM);
 		return new RTCScm(true, "", TEST_SERVER_URI, Integer.parseInt(TEST_TIMEOUT), TEST_USER_ID, Secret.fromString(TEST_PASSWORD), TEST_PASSWORD_FILE,
@@ -242,6 +148,14 @@ public class MayFailIT extends AbstractTestCase {
 	private RTCScm createEmptyRTCScm() {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_WORKSPACE_TYPE, "", "", "", "");
 		return new RTCScm(false, "", "", 0, "", Secret.fromString(""), "", "", buildSource, false);
+	}
+
+	public JenkinsRule getJenkinsRule() {
+		return this.j;
+	}
+
+	public void setJenkinsRule(JenkinsRule j) {
+		this.j = j;
 	}
 
 }

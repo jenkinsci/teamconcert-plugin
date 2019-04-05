@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 IBM Corporation and others.
+ * Copyright © 2017, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,10 +13,6 @@ package com.ibm.team.build.internal.hjplugin.tests;
 
 
 import static org.junit.Assert.assertTrue;
-import hudson.model.FreeStyleBuild;
-import hudson.model.Result;
-import hudson.model.FreeStyleProject;
-import hudson.model.TaskListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,9 +28,9 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.WithTimeout;
 
-import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogParser;
 import com.ibm.team.build.internal.hjplugin.RTCChangeLogSet;
+import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
@@ -42,10 +38,15 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.LoadOptions;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.Result;
+import hudson.model.TaskListener;
+
 /**
  * Add those tests that may/will fail in 407 toolkit to this class.
- * 
  */
+@SuppressWarnings({"nls", "static-method", "boxing"})
 public class MayFail407IT extends AbstractTestCase {
 
 	private RTCFacadeWrapper testingFacade;
@@ -59,7 +60,7 @@ public class MayFail407IT extends AbstractTestCase {
 			return;
 		}
 
-		testingFacade = Utils.getTestingFacade();
+		setTestingFacade(Utils.getTestingFacade());
 		createSandboxDirectory();
 
 		Utils.deleteTemporaryWorkspaces();
@@ -98,7 +99,7 @@ public class MayFail407IT extends AbstractTestCase {
 			String snapshotUUID = setupArtifacts.get(Utils.ARTIFACT_BASELINESET_ITEM_ID);
 			// setup a free style project and start a build
 			// verify that the temporary workspace created during the build is deleted
-			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, snapshotUUID);
+			FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(getJenkinsRule(), snapshotUUID);
 			// set loadPolicy to useDynamicLoadRules and validate that the workspace is loaded according to the dynamic
 			// load rules
 			RTCScm rtcScm = (RTCScm)prj.getScm();
@@ -199,7 +200,7 @@ public class MayFail407IT extends AbstractTestCase {
 				String componentName = getComponentUniqueName();
 				String fetchLocation = ".";
 
-				setupArtifacts = (Map<String, String>)testingFacade.invoke("testStreamConfig_loadPolicy",
+				setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testStreamConfig_loadPolicy",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -209,7 +210,7 @@ public class MayFail407IT extends AbstractTestCase {
 								String.class, // hjPath,
 								String.class }, // buildPath
 						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName,
-						componentName, sandboxDir.getPath(), fetchLocation);
+						componentName, getSandboxDir().getPath(), fetchLocation);
 				// Scenario#1
 				// do not set loadPolicy and componentLoadConfig
 				// set createFoldersForComponents to false
@@ -218,12 +219,12 @@ public class MayFail407IT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -232,7 +233,7 @@ public class MayFail407IT extends AbstractTestCase {
 					LoadOptions loadOptions = new LoadOptions();
 					loadOptions.acceptBeforeLoad = true;
 					loadOptions.isDeleteNeeded = true;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, null, streamName,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 
@@ -290,12 +291,12 @@ public class MayFail407IT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -307,7 +308,7 @@ public class MayFail407IT extends AbstractTestCase {
 					loadOptions.createFoldersForComponents = true;
 					loadOptions.componentsToExclude = componentName + 2;
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, null, streamName,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -371,12 +372,12 @@ public class MayFail407IT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -389,7 +390,7 @@ public class MayFail407IT extends AbstractTestCase {
 					loadOptions.componentsToExclude = componentName + 2;
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, null, streamName,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -453,12 +454,12 @@ public class MayFail407IT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -472,7 +473,7 @@ public class MayFail407IT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, null, streamName,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -536,12 +537,12 @@ public class MayFail407IT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -555,7 +556,7 @@ public class MayFail407IT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, null, streamName,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -600,12 +601,12 @@ public class MayFail407IT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir1");
+					File loadDir = new File(getSandboxDir(), "loadDir1");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -619,7 +620,7 @@ public class MayFail407IT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, null, streamName,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 				} catch (Exception e) {
@@ -639,12 +640,12 @@ public class MayFail407IT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -658,7 +659,7 @@ public class MayFail407IT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_LOAD_RULES;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, null, streamName,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -688,7 +689,7 @@ public class MayFail407IT extends AbstractTestCase {
 				e.printStackTrace();
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -696,6 +697,22 @@ public class MayFail407IT extends AbstractTestCase {
 						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
+	}
+
+	public RTCFacadeWrapper getTestingFacade() {
+		return this.testingFacade;
+	}
+
+	public void setTestingFacade(RTCFacadeWrapper testingFacade) {
+		this.testingFacade = testingFacade;
+	}
+
+	public JenkinsRule getJenkinsRule() {
+		return this.r;
+	}
+
+	public void setJenkinsRule(JenkinsRule r) {
+		this.r = r;
 	}
 
 }

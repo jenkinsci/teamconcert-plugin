@@ -1,7 +1,7 @@
 <?jelly escape-by-default='true'?>
 <!--
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright © 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -156,6 +156,7 @@
 					<!-- Accept changes before load -->
                     <f:section name="AcceptOptions" title="${%acceptOptions.title}"/>
 			        <f:optionalBlock name="acceptBeforeLoad" title="${%acceptOptions.acceptBeforeLoad}" field="acceptBeforeLoad" checked="${instance == null || (instance != null &amp;&amp; instance.acceptBeforeLoad)}" inline="true" />
+			        <f:optionalBlock name="addLinksToWorkItems" title="${%acceptOptions.addLinksToWorkItems}" field="addLinksToWorkItems" checked="${instance != null &amp;&amp; instance.addLinksToWorkItems}" inline="true" />
 
 				    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
 				        method="validateBuildWorkspaceConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace,loadPolicy,pathToLoadRuleFile" />
@@ -254,6 +255,9 @@
                     <st:include page="config-snapshotoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
                     
 					<st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+					
+					<f:section name="AcceptOptions" title="${%acceptOptions.title}"/>
+					<f:optionalBlock name="addLinksToWorkItems" title="${%acceptOptions.addLinksToWorkItems}" field="addLinksToWorkItems" checked="${instance != null &amp;&amp; instance.addLinksToWorkItems}" inline="true" />
 					
 				    <f:section name="changelogOptions" title="${%changelogOptions.title}"/>
 					<f:optionalBlock name="generateChangelogWithGoodBuild" title="${%changelog.compareWithGoodBuild}" field="generateChangelogWithGoodBuild" checked="${instance.generateChangelogWithGoodBuild}" inline="true" />

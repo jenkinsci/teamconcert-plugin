@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright © 2013, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -35,7 +35,7 @@ import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.tests.utils.LoadOptions;
 import com.ibm.team.build.internal.hjplugin.tests.utils.Utils;
 
-@SuppressWarnings("nls")
+@SuppressWarnings({"nls", "static-method", "boxing"})
 public class BuildConfigurationIT extends AbstractTestCase {
 	private static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
 	private static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
@@ -48,7 +48,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 		if (Config.DEFAULT.isConfigured()) {
 			// DO NOT initialize Hudson/Jenkins because its slow and we don't need it for the tests
-			testingFacade = Utils.getTestingFacade();
+			setTestingFacade(Utils.getTestingFacade());
 	        createSandboxDirectory();
 		}
 	}
@@ -77,7 +77,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String workspaceName = getRepositoryWorkspaceUniqueName();
 			String componentName = getComponentUniqueName();
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testComponentLoading",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -92,27 +92,27 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), workspaceName,
 							componentName,
-							sandboxDir.getPath(),
+							getSandboxDir().getPath(),
 							fetchLocation);
 			
 			try {
 				TaskListener listener = getTaskListener();
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
 	    		
-				String[] children = sandboxDir.list();
+				String[] children = getSandboxDir().list();
 				Assert.assertEquals(2, children.length); // changelog plus what we loaded
-				File actualRoot = new File(sandboxDir, "path\\relative");
+				File actualRoot = new File(getSandboxDir(), "path\\relative");
 				Assert.assertTrue(actualRoot.exists());
 				children = actualRoot.list();
 				assertEquals(2, children.length); // metadata plus component root folder
@@ -139,7 +139,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -209,7 +209,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testGoodFetchLocation",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -224,11 +224,11 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), workspaceName,
 							componentName,
-							sandboxDir.getPath(),
+							getSandboxDir().getPath(),
 							fetchLocation);
 			
 			// clean up
-			testingFacade.invoke(
+			getTestingFacade().invoke(
 					"tearDown",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -250,7 +250,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String fetchLocation = "C:\\absolute\\is\\ok\\too";
 			
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testGoodFetchLocation",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -265,11 +265,11 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), getRepositoryWorkspaceUniqueName(),
 							getComponentUniqueName(),
-							sandboxDir.getPath(),
+							getSandboxDir().getPath(),
 							fetchLocation);
 			
 			// clean up
-			testingFacade.invoke(
+			getTestingFacade().invoke(
 					"tearDown",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -292,7 +292,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testBadFetchLocation",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -307,11 +307,11 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), repositoryWorkspaceName,
 							componentName,
-							sandboxDir.getPath(),
+							getSandboxDir().getPath(),
 							fetchLocation);
 			
 			// clean up
-			testingFacade.invoke(
+			getTestingFacade().invoke(
 					"tearDown",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -353,7 +353,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testPersonalBuild",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -368,31 +368,31 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), workspaceName,
 							componentName,
-							sandboxDir.getPath(),
+							getSandboxDir().getPath(),
 							"${propertyA}/here");
 			
 			try {
 				TaskListener listener = getTaskListener();
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir/here");
+				File loadDir = new File(getSandboxDir(), "loadDir/here");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, 
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), 
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
 	    		
 				String[] children = loadDir.list();
@@ -428,7 +428,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				Assert.assertEquals("overwritten", buildProperties.get("propertyC"));
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -467,7 +467,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testOldLoadRules",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -481,34 +481,34 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), workspaceName,
 							componentName,
-							sandboxDir.getPath());
+							getSandboxDir().getPath());
 			
 			try {
 				TaskListener listener = getTaskListener();
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
-				assertTrue(new File(sandboxDir, "abc").mkdirs());
-				assertTrue(new File(sandboxDir, "def").mkdirs());
-				assertTrue(new File(sandboxDir, "hij").mkdirs());
+				assertTrue(new File(getSandboxDir(), "abc").mkdirs());
+				assertTrue(new File(getSandboxDir(), "def").mkdirs());
+				assertTrue(new File(getSandboxDir(), "hij").mkdirs());
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade,
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						setupArtifacts.get("buildResultItemId"), null,
-						sandboxDir.getCanonicalPath(), changeLog,
+						getSandboxDir().getCanonicalPath(), changeLog,
 						"Snapshot", listener, Locale.getDefault());
 	    		
-				String[] children = sandboxDir.list();
+				String[] children = getSandboxDir().list();
 				Assert.assertEquals(6, children.length); // change log + 3 dirs made + metadata + file loaded
-				Assert.assertTrue(new File(sandboxDir, "a.txt").exists());
-				Assert.assertFalse(new File(sandboxDir, "h.txt").exists());
-				Assert.assertTrue(new File(sandboxDir, "abc").exists());
-				Assert.assertTrue(new File(sandboxDir, "def").exists());
-				Assert.assertTrue(new File(sandboxDir, "hij").exists());
+				Assert.assertTrue(new File(getSandboxDir(), "a.txt").exists());
+				Assert.assertFalse(new File(getSandboxDir(), "h.txt").exists());
+				Assert.assertTrue(new File(getSandboxDir(), "abc").exists());
+				Assert.assertTrue(new File(getSandboxDir(), "def").exists());
+				Assert.assertTrue(new File(getSandboxDir(), "hij").exists());
 				
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
 	    		FileReader changeLogReader = new FileReader(changeLogFile);
@@ -530,7 +530,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -569,7 +569,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testOldLoadRules_setAllLoadOptions",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -583,24 +583,24 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), workspaceName,
 							componentName,
-							sandboxDir.getPath());
+							getSandboxDir().getPath());
 			
 			try {
 				TaskListener listener = getTaskListener();
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade,
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -641,7 +641,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -680,7 +680,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String fetchLocation = ".";
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("testNewLoadRules",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -695,25 +695,25 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getPassword(),
 							loginInfo.getTimeout(), workspaceName,
 							componentName,
-							sandboxDir.getPath(),
+							getSandboxDir().getPath(),
 							fetchLocation);
 			
 			try {
 				TaskListener listener = getTaskListener();
 				
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade,
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(),
 						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
@@ -745,7 +745,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -794,7 +794,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_loadRulesWithNoLoadPolicy",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -807,24 +807,24 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							boolean.class, // configureLoadRules
 							boolean.class}, // setLoadPolicy
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, false);
+					getSandboxDir().getPath(), fetchLocation, true, false);
 
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -864,7 +864,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -879,7 +879,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			workspaceName = getRepositoryWorkspaceUniqueName();
 			componentName = getComponentUniqueName();
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_loadRulesWithNoLoadPolicy",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_loadRulesWithNoLoadPolicy",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -891,23 +891,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							boolean.class, // configureLoadRules
 							boolean.class}, // setLoadPolicy
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, true);
+					getSandboxDir().getPath(), fetchLocation, true, true);
 
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -961,7 +961,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -975,7 +975,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			workspaceName = getRepositoryWorkspaceUniqueName();
 			componentName = getComponentUniqueName();
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_loadRulesWithNoLoadPolicy",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_loadRulesWithNoLoadPolicy",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -987,23 +987,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							boolean.class, // configureLoadRules
 							boolean.class}, // setLoadPolicy
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false, false);
+					getSandboxDir().getPath(), fetchLocation, false, false);
 
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1056,7 +1056,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1098,7 +1098,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1110,23 +1110,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // buildPath
 							boolean.class }, // configureLoadRules
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true);
+					getSandboxDir().getPath(), fetchLocation, true);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1159,7 +1159,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			}
 			finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1172,7 +1172,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			workspaceName = getRepositoryWorkspaceUniqueName();
 			componentName = getComponentUniqueName();
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -1183,23 +1183,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // buildPath
 							boolean.class }, // configureLoadRules
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false);
+					getSandboxDir().getPath(), fetchLocation, false);
 
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1253,7 +1253,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1300,7 +1300,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1314,23 +1314,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false, null, null);
+					getSandboxDir().getPath(), fetchLocation, false, null, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1384,7 +1384,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1399,7 +1399,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1413,22 +1413,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, null, null);
+					getSandboxDir().getPath(), fetchLocation, true, null, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1487,7 +1487,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1502,7 +1502,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1516,22 +1516,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_LOAD_RULES, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_LOAD_RULES, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1585,7 +1585,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1600,7 +1600,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1614,22 +1614,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1688,7 +1688,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1703,7 +1703,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1717,22 +1717,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1791,7 +1791,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1806,7 +1806,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1820,22 +1820,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1894,7 +1894,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -1909,7 +1909,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -1923,22 +1923,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, false, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -1991,7 +1991,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2031,7 +2031,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_createFoldersForComponents_usingLoadRules",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2042,22 +2042,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // hjPath,
 							String.class }, // buildPath
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation);
+					getSandboxDir().getPath(), fetchLocation);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2098,7 +2098,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				}
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2145,7 +2145,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_componentsToExclude",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2159,23 +2159,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false, null, null);
+					getSandboxDir().getPath(), fetchLocation, false, null, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2228,7 +2228,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2243,7 +2243,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_componentsToExclude",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2257,22 +2257,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, null, null);
+					getSandboxDir().getPath(), fetchLocation, true, null, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2309,7 +2309,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						changeCount, false, null, null, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2324,7 +2324,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_componentsToExclude",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2338,22 +2338,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_LOAD_RULES, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_LOAD_RULES, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2407,7 +2407,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2422,7 +2422,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_componentsToExclude",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2436,22 +2436,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2505,7 +2505,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2520,7 +2520,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_componentsToExclude",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2534,22 +2534,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2603,7 +2603,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2618,7 +2618,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_componentsToExclude",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2632,22 +2632,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, true, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2684,7 +2684,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						changeCount, false, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2699,7 +2699,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_componentsToExclude",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2713,22 +2713,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, false, RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2782,7 +2782,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2832,7 +2832,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_includeComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -2847,22 +2847,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, "false", null, null);
+					getSandboxDir().getPath(), fetchLocation, true, "false", null, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2899,7 +2899,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						changeCount, false, null, null, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2915,7 +2915,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_includeComponents",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_includeComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -2929,22 +2929,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, "true", null, null);
+					getSandboxDir().getPath(), fetchLocation, true, "true", null, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -2980,7 +2980,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -2995,7 +2995,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_includeComponents",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_includeComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -3009,19 +3009,19 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, "false", RTCScm.LOAD_POLICY_USE_LOAD_RULES, null);
+					getSandboxDir().getPath(), fetchLocation, true, "false", RTCScm.LOAD_POLICY_USE_LOAD_RULES, null);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -3074,7 +3074,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						RTCScm.LOAD_POLICY_USE_LOAD_RULES, null, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -3091,7 +3091,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_includeComponents",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_includeComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -3105,20 +3105,20 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, "true", RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG,
+					getSandboxDir().getPath(), fetchLocation, true, "true", RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG,
 					RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -3171,7 +3171,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, buildProperties);
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -3187,7 +3187,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			componentName = getComponentUniqueName();
 			fetchLocation = ".";
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_includeComponents",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_includeComponents",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -3201,22 +3201,22 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // loadPolicy
 							String.class }, // componentLoadConfig
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true, "true", RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
+					getSandboxDir().getPath(), fetchLocation, true, "true", RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -3253,7 +3253,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -3295,7 +3295,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_multipleLoadRuleFiles",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -3307,23 +3307,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // buildPath
 							boolean.class }, // setLoadPolicyToUseLoadRules
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false);
+					getSandboxDir().getPath(), fetchLocation, false);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -3346,7 +3346,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -3360,7 +3360,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			workspaceName = getRepositoryWorkspaceUniqueName();
 			componentName = getComponentUniqueName();
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_multipleLoadRuleFiles",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_multipleLoadRuleFiles",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -3371,23 +3371,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // buildPath
 							boolean.class }, // setLoadPolicyToUseLoadRules
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true);
+					getSandboxDir().getPath(), fetchLocation, true);
 
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -3402,7 +3402,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				}
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -3444,7 +3444,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 
-			Map<String, String> setupArtifacts = (Map<String, String>)testingFacade.invoke(
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
 					"testBuildDefinitionConfig_oldLoadRulesFormat",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
@@ -3456,23 +3456,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // buildPath
 							boolean.class }, // setLoadPolicyToUseLoadRules
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, false);
+					getSandboxDir().getPath(), fetchLocation, false);
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(loadDir.mkdirs());
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -3510,7 +3510,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -3523,7 +3523,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			workspaceName = getRepositoryWorkspaceUniqueName();
 			componentName = getComponentUniqueName();
 
-			setupArtifacts = (Map<String, String>)testingFacade.invoke("testBuildDefinitionConfig_oldLoadRulesFormat",
+			setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testBuildDefinitionConfig_oldLoadRulesFormat",
 					new Class[] { String.class, // serverURL,
 							String.class, // userId,
 							String.class, // password,
@@ -3534,23 +3534,23 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							String.class, // buildPath
 							boolean.class }, // setLoadPolicyToUseLoadRules
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
-					sandboxDir.getPath(), fetchLocation, true);
+					getSandboxDir().getPath(), fetchLocation, true);
 
 			try {
 				TaskListener listener = getTaskListener();
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 				// put extraneous stuff in the load directory (which is different from sandbox cause
 				// we want to get a the change log.
-				File loadDir = new File(sandboxDir, "loadDir");
+				File loadDir = new File(getSandboxDir(), "loadDir");
 				assertTrue(new File(loadDir, "abc").mkdirs());
 				assertTrue(new File(loadDir, "def").mkdirs());
 				assertTrue(new File(loadDir, "hij").mkdirs());
 
 				// checkout the changes
-				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+				Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 
@@ -3565,7 +3565,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				}
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -3599,7 +3599,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String fetchLocation = ".";
 			try {
-				setupArtifacts = (Map<String, String>)testingFacade.invoke("testRepositoryWorkspaceConfig_loadPolicy",
+				setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testRepositoryWorkspaceConfig_loadPolicy",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -3609,7 +3609,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 								String.class, // hjPath,
 								String.class }, // buildPath
 						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName,
-						componentName, sandboxDir.getPath(), fetchLocation);
+						componentName, getSandboxDir().getPath(), fetchLocation);
 				// Scenario#1
 				// do not set loadPolicy and componentLoadConfig
 				// set createFoldersForComponents to false
@@ -3618,12 +3618,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -3632,7 +3632,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					LoadOptions loadOptions = new LoadOptions();
 					loadOptions.acceptBeforeLoad = true;
 					loadOptions.isDeleteNeeded = true;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, workspaceName, null, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 
@@ -3692,12 +3692,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -3709,7 +3709,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.createFoldersForComponents = true;
 					loadOptions.componentsToExclude = componentName + 2;
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, workspaceName, null, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -3775,12 +3775,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -3793,7 +3793,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.componentsToExclude = componentName + 2;
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, workspaceName, null, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -3859,12 +3859,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -3878,7 +3878,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, workspaceName, null, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -3944,12 +3944,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -3963,7 +3963,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, workspaceName, null, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -4010,12 +4010,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir1");
+					File loadDir = new File(getSandboxDir(), "loadDir1");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4029,7 +4029,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, workspaceName, null, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 				} catch (Exception e) {
@@ -4049,12 +4049,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4068,7 +4068,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_LOAD_RULES;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, workspaceName, null, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -4100,7 +4100,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				Assert.fail("Exception not expected: " + e.getMessage());
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -4138,7 +4138,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				String fetchLocation = ".";
 				String snapshotName = workspaceName + "_lrSS";
 
-				setupArtifacts = (Map<String, String>)testingFacade.invoke("testSnapshotConfig_loadPolicy",
+				setupArtifacts = (Map<String, String>)getTestingFacade().invoke("testSnapshotConfig_loadPolicy",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
 								String.class, // password,
@@ -4148,7 +4148,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 								String.class, // hjPath,
 								String.class }, // buildPath
 						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName,
-						componentName, sandboxDir.getPath(), fetchLocation);
+						componentName, getSandboxDir().getPath(), fetchLocation);
 				// Scenario#1
 				// do not set loadPolicy and componentLoadConfig
 				// set createFoldersForComponents to false
@@ -4157,12 +4157,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4171,7 +4171,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					LoadOptions loadOptions = new LoadOptions();
 					loadOptions.acceptBeforeLoad = true;
 					loadOptions.isDeleteNeeded = true;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, snapshotName, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 
@@ -4229,12 +4229,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4246,7 +4246,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.createFoldersForComponents = true;
 					loadOptions.componentsToExclude = componentName + 2;
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, snapshotName, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -4310,12 +4310,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4328,7 +4328,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.componentsToExclude = componentName + 2;
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, snapshotName, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -4392,12 +4392,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4411,7 +4411,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, snapshotName, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -4475,12 +4475,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4494,7 +4494,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, snapshotName, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -4539,12 +4539,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir1");
+					File loadDir = new File(getSandboxDir(), "loadDir1");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4558,7 +4558,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, snapshotName, null,
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 				} catch (Exception e) {
@@ -4578,12 +4578,12 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				try {
 					TaskListener listener = getTaskListener();
 
-					File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+					File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 					FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 
 					// put extraneous stuff in the load directory (which is different from sandbox cause
 					// we want to get a the change log.
-					File loadDir = new File(sandboxDir, "loadDir");
+					File loadDir = new File(getSandboxDir(), "loadDir");
 					assertTrue(new File(loadDir, "abc").mkdirs());
 					assertTrue(new File(loadDir, "def").mkdirs());
 					assertTrue(new File(loadDir, "hij").mkdirs());
@@ -4597,7 +4597,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loadOptions.pathToLoadRuleFile = componentName + "1/h-comp1/new.loadRule";
 					loadOptions.loadPolicy = RTCScm.LOAD_POLICY_USE_LOAD_RULES;
 					loadOptions.componentLoadConfig = RTCScm.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS;
-					Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(),
+					Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
 							loginInfo.getPassword(), loginInfo.getTimeout(), null, null, snapshotName, null, 
 							loadDir.getCanonicalPath(), changeLog, "Snapshot", null, loadOptions, listener, Locale.getDefault());
 					
@@ -4627,7 +4627,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				e.printStackTrace();
 			} finally {
 				// clean up
-				testingFacade.invoke("tearDown", new Class[] { String.class, // serverURL,
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
 						String.class, // userId,
 						String.class, // password,
 						int.class, // timeout,
@@ -4649,7 +4649,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			String componentName = getComponentUniqueName();
 			String snapshotName = getSnapshotUniqueName();
 			
-			setupArtifacts = (Map<String, String>) testingFacade
+			setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupBuildSnapshot",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -4670,7 +4670,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							"HJP"
 							);
 			
-			testingFacade.invoke("testBuildSnapshotConfiguration",
+			getTestingFacade().invoke("testBuildSnapshotConfiguration",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
 									String.class, // password,
@@ -4685,11 +4685,11 @@ public class BuildConfigurationIT extends AbstractTestCase {
 							loginInfo.getTimeout(), 
 							snapshotName,
 							"HJP",
-							sandboxDir.getPath());
+							getSandboxDir().getPath());
 			}
 			finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -4702,5 +4702,13 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
+	}
+
+	private RTCFacadeWrapper getTestingFacade() {
+		return this.testingFacade;
+	}
+	
+	private void setTestingFacade(RTCFacadeWrapper testingFacade) {
+		this.testingFacade = testingFacade;
 	}
 }

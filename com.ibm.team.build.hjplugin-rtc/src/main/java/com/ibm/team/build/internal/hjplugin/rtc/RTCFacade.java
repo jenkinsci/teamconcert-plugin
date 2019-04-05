@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -466,9 +466,10 @@ public class RTCFacade {
 	 * {@link TaskListener}.
 	 * @param clientLocale The locale of the requesting client
 	 * @param callConnectorTimeout user defined value for call connector timeout
-	 * @param acceptBeforeLoad Accept latest changes before loading, if true
-	 * @param buildURLMap - URL to the previous and current Jenkins build. The previous build URL is added to the 
-	 *                change log.
+     * @param acceptBeforeLoad If <code>true</code> then, the changes from the flow target is synced to the repository workspace
+     * @param addLinksToWorkItems If <code>true</code> then, Jenkins build link will be added to all the work items in the accepted change sets
+     * @param buildURLMap - URL to the previous and current Jenkins build. The previous build URL is added to the 
+	 *		                change log.
 	 * @param temporaryWorkspaceComment 
 	 * @return Map<String, Object> returns a map of objects see RepositoryConnection#accept for more details.
 	 * @throws Exception
@@ -476,8 +477,9 @@ public class RTCFacade {
 	public Map<String, Object> accept(String serverURI, String userId, String password, int timeout, String processArea, String buildResultUUID,
 			String buildWorkspace, Map<String, String> buildSnapshotContextMap, final String buildSnapshot, final String buildStream,
 			String hjWorkspacePath, OutputStream changeLog, boolean isCustomSnapshotName, String snapshotName, final String previousSnapshotUUID,
-			final Object listener, Locale clientLocale, String callConnectorTimeout, boolean acceptBeforeLoad, Map<String, String> buildURLMap,
-			String temporaryWorkspaceComment) throws Exception {
+			final Object listener, Locale clientLocale, String callConnectorTimeout, 
+			boolean acceptBeforeLoad, boolean addLinksToWorkItems, Map<String, String> buildURLMap,
+			String temporaryWorkspaceComment, Map<String, Object> options) throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient(); 
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
@@ -494,7 +496,7 @@ public class RTCFacade {
 			// create the BuildSnaphotContextMap instance from the context map and pass it to accept
 			return repoConnection.accept(processArea, buildResultUUID, buildWorkspace, new BuildSnapshotContext(buildSnapshotContextMap),
 					buildSnapshot, buildStream, hjWorkspacePath, report, isCustomSnapshotName, snapshotName, previousSnapshotUUID, clientConsole, monitor, clientLocale,
-					callConnectorTimeout, acceptBeforeLoad, buildURLMap, temporaryWorkspaceComment);
+					callConnectorTimeout, acceptBeforeLoad, addLinksToWorkItems, buildURLMap, temporaryWorkspaceComment, options);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -540,7 +542,7 @@ public class RTCFacade {
 	 * @param pathToLoadRuleFile Path to the load rule file.
 	 * @param isDeleteNeeded true if Jenkins job is configured to delete load directory before fetching
 	 * @param createFoldersForComponents Create folders for components if true
-	 * @param acceptBeforeLoad Accept latest changes before loading, if true
+     * @param acceptBeforeLoad If <code>true</code> then, the changes from the flow target is synced to the repository workspace
 	 * @param temporaryWorkpsaceComment
 	 * @param shouldDeleteTemporaryWorkspace whether load should delete the temporary workspace before returning
 	 * @throws Exception If any non-recoverable error occurs.
@@ -550,7 +552,8 @@ public class RTCFacade {
 			Map<String, String> buildStreamData, String hjWorkspacePath, boolean isCustomSnapshotName, String snapshotName, final Object listener,
 			Locale clientLocale, String parentActivityId, String connectorId, Object extProvider, PrintStream logger, String loadPolicy,
 			String componentLoadConfig, String componentsToExclude, String pathToLoadRuleFile, boolean isDeleteNeeded,
-			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkpsaceComment, boolean shouldDeleteTemporaryWorkspace)
+			boolean createFoldersForComponents, boolean acceptBeforeLoad, String temporaryWorkpsaceComment, boolean shouldDeleteTemporaryWorkspace,
+			Map<String, Object> options)
 			throws Exception {
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
@@ -563,7 +566,7 @@ public class RTCFacade {
 					buildSnapshot, buildStream, buildStreamData, hjWorkspacePath, isCustomSnapshotName, snapshotName, clientConsole, monitor,
 					clientLocale, parentActivityId, connectorId, extProvider, logger, loadPolicy, componentLoadConfig, componentsToExclude,
 					pathToLoadRuleFile, isDeleteNeeded, createFoldersForComponents, acceptBeforeLoad, temporaryWorkpsaceComment,
-					shouldDeleteTemporaryWorkspace);
+					shouldDeleteTemporaryWorkspace, options);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -1035,7 +1038,6 @@ public class RTCFacade {
 	 * @return A human readable string that represents the build toolkit version. 
 	 * @throws Exception If anything goes wrong while computing the build toolkit version.
 	 */
-	@SuppressWarnings("static-method")
 	public String getBuildToolkitVersion(String buildtoolkitPath, Object listener, Locale clientLocale) throws Exception {
 		try {
 			return VersionCheckerUtil.getBuildToolkitVersion(clientLocale);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2017 IBM Corporation and others.
+ * Copyright © 2014, 2018 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -43,6 +43,7 @@ import hudson.remoting.RemoteOutputStream;
 import hudson.util.Secret;
 import hudson.util.StreamTaskListener;
 
+@SuppressWarnings({"nls", "boxing"})
 public class RTCBuildTaskIT extends AbstractTestCase {
 	
 	@Rule public JenkinsRule r = new JenkinsRule();
@@ -54,7 +55,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 
 		if (Config.DEFAULT.isConfigured()) {
 
-			testingFacade = Utils.getTestingFacade();
+			setTestingFacade(Utils.getTestingFacade());
 			createSandboxDirectory();
 		}
 	}
@@ -140,7 +141,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 			String buildDefinitionId = getUniqueName();
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupBuildResultContributionsInQueuedBuild",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -177,18 +178,18 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 						Locale.getDefault());
 				assertNull(task.localInvocation());
 				
-				BuildResultInfo buildResultInfo = task.invoke(sandboxDir, null);
+				BuildResultInfo buildResultInfo = task.invoke(getSandboxDir(), null);
 				assertTrue(buildResultInfo.ownLifeCycle());
 				assertEquals(buildResultUUID, buildResultInfo.getBuildResultUUID());
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				RemoteOutputStream remoteChangeLog = new RemoteOutputStream(changeLog);
 				
-				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), 
+				Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), 
 						loginInfo.getUserId(), loginInfo.getPassword(),
 						loginInfo.getTimeout(), buildResultInfo.getBuildResultUUID(),
-						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, getTaskListener(), Locale.getDefault());
+						null, getSandboxDir().getAbsolutePath(), remoteChangeLog, baselineSetName, getTaskListener(), Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
 	    		RTCChangeLogParser parser = new RTCChangeLogParser();
@@ -200,7 +201,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 	    		setupArtifacts.put("baselineSetItemId", result.getBaselineSetItemId());
 
 	    		// Verify the build result
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"verifyBuildResultContributions",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -214,7 +215,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 						setupArtifacts);
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -250,7 +251,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 			String buildDefinitionId = getUniqueName("BuildDefinition");
 
 			@SuppressWarnings("unchecked")
-			Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			Map<String, String> setupArtifacts = (Map<String, String>) getTestingFacade()
 					.invoke("setupBuildResultContributions",
 							new Class[] { String.class, // serverURL,
 									String.class, // userId,
@@ -284,20 +285,20 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 						Locale.getDefault());
 				assertNull(task.localInvocation());
 				
-				BuildResultInfo buildResultInfo = task.invoke(sandboxDir, null);
+				BuildResultInfo buildResultInfo = task.invoke(getSandboxDir(), null);
 				assertTrue(buildResultInfo.ownLifeCycle());
 				assertNotNull(buildResultInfo.getBuildResultUUID());
 
 				// record build result so it gets cleaned up on test end
 				setupArtifacts.put("buildResultItemId", buildResultInfo.getBuildResultUUID());
 
-				File changeLogFile = new File(sandboxDir, "RTCChangeLogFile");
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				RemoteOutputStream remoteChangeLog = new RemoteOutputStream(changeLog);
 				
-				Utils.acceptAndLoad(testingFacade, loginInfo.getServerUri(), loginInfo.getUserId(), 
+				Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), 
 						loginInfo.getPassword(), loginInfo.getTimeout(), buildResultInfo.getBuildResultUUID(),
-						null, sandboxDir.getAbsolutePath(), remoteChangeLog, baselineSetName, getTaskListener(),
+						null, getSandboxDir().getAbsolutePath(), remoteChangeLog, baselineSetName, getTaskListener(),
 						Locale.getDefault());
 
 	    		// parse the change report and ensure the expected components are reported.
@@ -310,7 +311,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 	    		setupArtifacts.put("baselineSetItemId", result.getBaselineSetItemId());
 
 	    		// Verify the build result
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"verifyBuildResultContributions",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -324,7 +325,7 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 						setupArtifacts);
 			} finally {
 				// clean up
-				testingFacade.invoke(
+				getTestingFacade().invoke(
 						"tearDown",
 						new Class[] { String.class, // serverURL,
 								String.class, // userId,
@@ -337,6 +338,14 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 						loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
+	}
+
+	public RTCFacadeWrapper getTestingFacade() {
+		return this.testingFacade;
+	}
+
+	public void setTestingFacade(RTCFacadeWrapper testingFacade) {
+		this.testingFacade = testingFacade;
 	}
 
 }
