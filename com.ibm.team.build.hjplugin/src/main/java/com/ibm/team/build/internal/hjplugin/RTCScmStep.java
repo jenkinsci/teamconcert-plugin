@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2015 IBM Corporation and others.
+ * Copyright (c) 2015, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -24,7 +24,9 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-
+import org.kohsuke.stapler.interceptor.RequirePOST;
+import hudson.model.Item;
+import jenkins.model.Jenkins;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
@@ -113,7 +115,16 @@ public class RTCScmStep extends SCMStep {
 			return listBox;
 		}
 
-		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?, ?> project, @QueryParameter String serverUri) {
+		@RequirePOST
+		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?, ?> project, 
+									@QueryParameter String serverUri) {
+			if (project == null) {
+				// Pipeline syntax should have a job context. Hence returning empty. 
+				return new StandardListBoxModel().withEmptySelection();
+			} else {
+				project.checkPermission(Item.CONFIGURE);
+			}
+			
 			return new StandardListBoxModel()
 			.withEmptySelection()
 			.withMatching(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
