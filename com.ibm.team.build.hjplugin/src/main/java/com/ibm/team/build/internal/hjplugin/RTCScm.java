@@ -41,6 +41,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -59,6 +60,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.model.Item;
 import hudson.model.AbstractProject;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
@@ -692,7 +694,15 @@ public class RTCScm extends SCM {
 			return listBox;
 		}
 
-		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?, ?> project, @QueryParameter String serverURI) {
+		@RequirePOST
+		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?, ?> project,
+								@QueryParameter String serverURI) {
+			if (project == null) {
+				// This is called in the context of global settings page also
+				Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+			} else {
+				project.checkPermission(Item.CONFIGURE);
+			}
 			return new StandardListBoxModel()
 			.withEmptySelection()
 			.withMatching(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
@@ -796,6 +806,7 @@ public class RTCScm extends SCM {
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection.
 	     * @return The result of the validation (will be ok if valid)
 		 */
+		@RequirePOST
 		public FormValidation doCheckGlobalConnection(
 				@QueryParameter("buildTool") final String buildTool,
 				@QueryParameter("serverURI") final String serverURI,
@@ -806,6 +817,7 @@ public class RTCScm extends SCM {
 				@QueryParameter("timeout") final String timeout,
 				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit) {
 			LOGGER.finest("DescriptorImpl.doCheckGlobalConnection: Begin");
+			Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
 			boolean avoidUsingToolkit = Boolean.parseBoolean(Util.fixNull(avoidUsingBuildToolkit));
 			ValidationResult result = validateConnectInfo(null, true, buildTool, serverURI, userId, password, passwordFile, credId, timeout, avoidUsingToolkit);
 
@@ -836,6 +848,7 @@ public class RTCScm extends SCM {
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection.
 	     * @return The result of the validation (will be ok if valid)
 		 */
+		@RequirePOST
 		public FormValidation doCheckJobConnection(
 				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
@@ -848,6 +861,11 @@ public class RTCScm extends SCM {
 				@QueryParameter("timeout") String timeout,
 				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit) {
 			LOGGER.finest("DescriptorImpl.doCheckJobConnection: Begin");
+			if (project == null) {
+				return FormValidation.ok();
+			} else {
+				project.checkPermission(Item.CONFIGURE);
+			}
 			boolean overrideGlobal = Boolean.parseBoolean(Util.fixNull(override));
 			boolean avoidUsingToolkit;
 			if (!overrideGlobal) {
@@ -1048,6 +1066,7 @@ public class RTCScm extends SCM {
 		 * 
 		 * @return Whether the build workspace configuration is valid or not. Never <code>null</code>
 		 */
+		@RequirePOST
 		public FormValidation doValidateBuildWorkspaceConfiguration(
 				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
@@ -1063,6 +1082,11 @@ public class RTCScm extends SCM {
 				@QueryParameter("loadPolicy") String loadPolicy,
 				@QueryParameter("pathToLoadRuleFile") String pathToLoadRuleFile) {
 			LOGGER.finest("DescriptorImpl.doValidateBuildWorkspaceConfiguration: Begin"); //$NON-NLS-1$
+			if (project == null) {
+				return FormValidation.ok();
+			} else {
+				project.checkPermission(Item.CONFIGURE);
+			}
 			// validate if required fields are provided
 			if (Util.fixEmptyAndTrim(buildWorkspace) == null) {
 				return FormValidation.error(Messages.RTCScm_build_workspace_empty());
@@ -1144,6 +1168,7 @@ public class RTCScm extends SCM {
 		 * @param buildDefinition The build definition to validate
 		 * @return Whether the build definition configuration is valid or not. Never <code>null</code>
 		 */
+		@RequirePOST
 		public FormValidation doValidateBuildDefinitionConfiguration(
 				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
@@ -1157,6 +1182,12 @@ public class RTCScm extends SCM {
 				@QueryParameter("avoidUsingToolkit") final String avoidUsingBuildToolkit,
 				@QueryParameter("buildDefinition") final String buildDefinition) {
 			LOGGER.finest("DescriptorImpl.doValidateBuildDefinitionConfiguration: Begin"); //$NON-NLS-1$
+			if (project == null) {
+				return FormValidation.ok();
+			} else {
+				project.checkPermission(Item.CONFIGURE);
+			}
+			
 			// validate if required fields are provided
 			if (Util.fixEmptyAndTrim(buildDefinition) == null) {
 				return FormValidation.error(Messages.RTCScm_build_definition_empty());
@@ -1224,6 +1255,7 @@ public class RTCScm extends SCM {
 		 *            rule file>
 		 * @return Whether the build stream configuration is valid or not. Never <code>null</code>
 		 */
+		@RequirePOST
 		public FormValidation doValidateBuildStreamConfiguration(
 				@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override,
@@ -1240,6 +1272,12 @@ public class RTCScm extends SCM {
 				@QueryParameter("loadPolicy") String loadPolicy,
 				@QueryParameter("pathToLoadRuleFile") final String pathToLoadRuleFile) {
 			LOGGER.finest("DescriptorImpl.doValidateBuildStreamConfiguration : Enter"); //$NON-NLS-1$
+			
+			if (project == null) {
+				return FormValidation.ok();
+			} else {
+				project.checkPermission(Item.CONFIGURE);
+			}
 			// validate if required fields are provided
 			if (Util.fixEmptyAndTrim(buildStream) == null) {
 				return FormValidation.error(Messages.RTCScm_build_stream_empty());
@@ -1344,6 +1382,7 @@ public class RTCScm extends SCM {
 		 *            
 		 * @return Whether the build snapshot configuration is valid or not. Never <code>null</code>
 		 */
+		@RequirePOST
 		public FormValidation doValidateBuildSnapshotConfiguration(@AncestorInPath Job<?, ?> project,
 				@QueryParameter("overrideGlobal") final String override, @QueryParameter("buildTool") String buildTool,
 				@QueryParameter("serverURI") String serverURI, @QueryParameter("timeout") String timeout, @QueryParameter("userId") String userId,
@@ -1355,6 +1394,12 @@ public class RTCScm extends SCM {
 				@QueryParameter("pathToLoadRuleFile") String pathToLoadRuleFile) {
 
 			LOGGER.finest("DescriptorImpl.doValidateBuildSnapshotConfiguration: Begin"); //$NON-NLS-1$
+			if (project == null) {
+				return FormValidation.ok();
+			} else {
+				project.checkPermission(Item.CONFIGURE);
+			}
+			
 			// validate if a value is specified for build snapshot
 			if (Util.fixEmptyAndTrim(buildSnapshot) == null) {
 				return FormValidation.error(Messages.RTCScm_build_snapshot_empty());
