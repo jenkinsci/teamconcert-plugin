@@ -1084,6 +1084,11 @@ Refer to the best practices document
 
 # Releases
 
+## 1.3.1 January 7, 2019
+- Fixed security issue #1605
+
+[GitHub commit - c5a48d1541](https://github.com/jenkinsci/teamconcert-plugin/commit/c5a48d154166a81fe65fbd9b71c9a51548d13e50)
+
 ## 1.3.0 May 1, 2019
 
 > NOTE: The default behavior of creating "Related artifact" link to a
