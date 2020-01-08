@@ -10,6 +10,16 @@ the snapshot.  It leverages the current RTC features and workflows that
 users are already familiar with such as, emails, toaster popups,
 reporting, dashboards, etc.
 
+# Note
+Older versions of this plugin may not be safe to use. Please review
+the following warnings before use:
+
+-   [Users with Overall/Read access can enumerate credential
+    IDs](https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(2)){.external-link}
+-   [CSRF vulnerability and missing permission checks allows capturing
+    credentials](https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(1)){.external-link}
+
+
 # Documentation
 
 ## Rational Team Concert Help Topics
