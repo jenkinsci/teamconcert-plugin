@@ -26,6 +26,10 @@ the snapshot.  It leverages the current RTC features and workflows that
 users are already familiar with such as, emails, toaster popups,
 reporting, dashboards, etc.
 
+:toc:
+:toc-placement: preamble
+:toclevels: 3
+
 [[TeamConcertPlugin-Documentation]]
 == Documentation
 
