@@ -160,23 +160,26 @@ In 1.2.0.0 some of the load and accept options that were previously configurable
 NOTE: For more details on load rules support and how to configure dynamic load rules, see the xref:TeamConcertPlugin-LoadRulesSupport[Load Rules Support] section. 
 
 ==== Accept Options
+
 NOTE: Applicable only to Repository workspace configuration
 
 . When loading the jenkins build workspace from a RTC repository workspace, there is an option to configure whether to accept latest changes before loading. By default, this option is selected.
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_11.png?version=1&modificationDate=1461332037000&api=v2[image,width=794,height=315]#:: 
 [%hardbreaks]
 
-==== Traceability Options for Repository Workspace and Stream configurations
+==== Traceability Options
 
-. To add a "Related Artifact" link to a Jenkins build in all the included work items, select the option "Add Jenkins build link to accepted work items" option. This applies to Repository Workspace and Stream configurations.
+NOTE: Applicable only to Repository workspace and Stream configuration
+
+. To add a *Related Artifact* link to a Jenkins build in all the included work items, select the option "Add Jenkins build link to accepted work items" option. This applies to Repository Workspace and Stream configurations.
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/JenkinsBuildStreamAddLinkOption.png?version=1&modificationDate=1556704560000&api=v2[image,height=145]#::
 [%hardbreaks]
 
 === Build Triggers
 ==== Triggering builds by polling for changes
-When *Poll SCM* is selected, builds will be triggered only if Team Concert Plugin detects new changes. How new changes are computed varies for Build Definition, Repository Workspace and Stream configurations. For Build Definition and Repository Workspace, Team Concert Plugin compares the repository workspace against the flow targets. In case of Stream, the snapshot from the *previous* build is compared against the stream. If the previous build does not have a snapshot, then the build previous to that one is considered.
+When *Poll SCM* is selected, builds will be triggered only if Team Concert Plugin detects *new* changes. The logic for computing of new changes varies for Build Definition, Repository Workspace and Stream configurations. For Build Definition and Repository Workspace, Team Concert Plugin compares the repository workspace against the flow targets. In case of Stream, the snapshot from the *previous* build is compared against the stream. If the previous build does not have a snapshot, then the build previous to that one is considered.
 
-New changes include +
+New changes can be any or all of the following +
 
 * Changes in the flow target not present in the repository workspace.
 * Changes discarded in the flow target or changes created in the repository workspace, not delivered to the stream.
@@ -185,13 +188,22 @@ New changes include +
 
 To configure polling, +
 
-. Find the "Build Triggers" section.
-. Check the "Poll SCM" check box to poll for incoming changes to the build workspace.
+. Find the *Build Triggers* section.
+. Check the *Poll SCM* check box to poll for new changes.
 . Enter a schedule.  Click the help button beside the "Schedule" field to get help with the syntax.
-. Click the "Save" button to save the settings and return to the job page.
-NOTE: For pipeline jobs, set `poll` boolean attribute to true in the `checkout` step, in addition to configuring a polling interval.
+. Click the *Save* button to save the settings and return to the job page.
+
+NOTE: For pipeline jobs, set `poll` boolean attribute to true in the `checkout` step, in addition to configuring a polling interval. 
+[%hardbreaks]
 
 ==== Triggering builds on a schedule
+
+You can configure the job to build at a specific time, irrespective of whether there are new changes in the source code. +
+
+. Find the *Build Triggers* section.
+. Check the *Build Periodically* check box.
+. Enter a schedule.  Click the help button beside the "Schedule" field to get help with the syntax.
+. Click the *Save* button to save the settings and return to the job page.
 
 [[TeamConcertPlugin-ConfiguringJenkinsjobforPostBuildDeliver(BuildDefinitionconfigurationonly)]]
 === Configuring Jenkins job for Post Build Deliver (Build Definition configuration only)
