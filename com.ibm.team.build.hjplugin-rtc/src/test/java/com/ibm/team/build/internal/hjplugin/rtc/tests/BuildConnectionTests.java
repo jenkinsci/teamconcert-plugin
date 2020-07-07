@@ -149,7 +149,7 @@ public class BuildConnectionTests {
 		IBuildResult buildResult = (IBuildResult) repo.itemManager().fetchCompleteItem(buildResultHandle, IItemManager.REFRESH, null);
 		
 		AssertUtil.assertEquals(BuildState.IN_PROGRESS, buildResult.getState());
-		AssertUtil.assertTrue(buildResult.getLabel() != null && !buildResult.getLabel().isEmpty(), "Label should be set");
+		AssertUtil.assertTrue("Label should be set", buildResult.getLabel() != null && !buildResult.getLabel().isEmpty());
 		AssertUtil.assertEquals(artifacts.get(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ITEM_ID), buildResult.getBuildDefinition().getItemId().getUuidValue());
 
         verifyBuildWorkspaceContribution(repo, buildClient, buildResult,
@@ -202,10 +202,10 @@ public class BuildConnectionTests {
         for (Iterator<ILink> i = linkCollection.iterator(); i.hasNext(); ) {
         	ILink link = i.next();
             IReference reference = link.getSourceRef();
-            AssertUtil.assertTrue(reference.isItemReference(), "reference " + reference.getComment() + " is not an item reference");
+            AssertUtil.assertTrue("reference " + reference.getComment() + " is not an item reference", reference.isItemReference());
 
             IItemHandle referencedItem = ((IItemReference) reference).getReferencedItem();
-            AssertUtil.assertTrue(referencedItem instanceof IBuildResultHandle, "referencedItem is a " + referencedItem.getClass().getName() + " not an IBuildResultHandle");
+            AssertUtil.assertTrue("referencedItem is a " + referencedItem.getClass().getName() + " not an IBuildResultHandle", referencedItem instanceof IBuildResultHandle);
 
             if (buildResult.getItemId().getUuidValue().equals(referencedItem.getItemId().getUuidValue())) {
             	found = true;
@@ -224,7 +224,7 @@ public class BuildConnectionTests {
 		AssertUtil.assertEquals(1, activities.length);
 		IBuildActivity activity = activities[0];
 		AssertUtil.assertEquals("Jazz Source Control setup", activity.getLabel());
-		AssertUtil.assertTrue(activity.isComplete(), "activity is not complete");
+		AssertUtil.assertTrue("activity is not complete", activity.isComplete());
 		AssertUtil.assertEquals(2, activity.getChildActivities().length);
 		AssertUtil.assertEquals("Accepting changes", activity.getChildActivities()[0].getLabel());
 		AssertUtil.assertEquals("Fetching files", activity.getChildActivities()[1].getLabel());
@@ -243,7 +243,7 @@ public class BuildConnectionTests {
 
         AssertUtil.assertEquals(NLS.bind("snapshot {0}", baselineSet.getName()), //$NON-NLS-1$
                 contributions[0].getLabel());
-        AssertUtil.assertFalse((contributions[0].isImpactsPrimaryResult()), "Snapshot contribution impacts primary result");
+        AssertUtil.assertFalse("Snapshot contribution impacts primary result", (contributions[0].isImpactsPrimaryResult()));
 	}
 
 	private void verifyBuildWorkspaceContribution(ITeamRepository repo,
@@ -257,7 +257,7 @@ public class BuildConnectionTests {
         AssertUtil.assertEquals(1, contributions.length);
 
         AssertUtil.assertEquals(workspace.getName(), contributions[0].getLabel());
-        AssertUtil.assertFalse((contributions[0].isImpactsPrimaryResult()), "Workspace contribution impacts primary result");
+        AssertUtil.assertFalse("Workspace contribution impacts primary result", (contributions[0].isImpactsPrimaryResult()));
 
         AssertUtil.assertEquals(workspace.getItemId(),
                 contributions[0].getExtendedContribution().getItemId());
@@ -280,6 +280,7 @@ public class BuildConnectionTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, personalWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
@@ -298,7 +299,7 @@ public class BuildConnectionTests {
 				throw listener.getFailure();
 			}
 
-			AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+			AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 			BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 			AssertUtil.assertEquals(buildWorkspace.getContextHandle().getItemId(), workspaceDescriptor.getWorkspaceHandle().getItemId());
 			AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
@@ -320,7 +321,7 @@ public class BuildConnectionTests {
 				throw listener.getFailure();
 			}
 			
-			AssertUtil.assertTrue(buildConfiguration.isPersonalBuild(), "Should be a personal build");
+			AssertUtil.assertTrue("Should be a personal build", buildConfiguration.isPersonalBuild());
 			workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 			AssertUtil.assertEquals(personalWorkspace.getContextHandle().getItemId(), workspaceDescriptor.getWorkspaceHandle().getItemId());
 			AssertUtil.assertEquals("my personal buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
@@ -350,6 +351,7 @@ public class BuildConnectionTests {
 			
 			// no build engine for the build definition
 			BuildUtil.createBuildDefinition(repo, testName, false, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
@@ -364,7 +366,7 @@ public class BuildConnectionTests {
 				AssertUtil.fail("Without a build engine, the result should not be able to be created");
 			} catch (Exception e) {
 				// expected
-				AssertUtil.assertTrue(e instanceof RTCConfigurationException, "Unexpected exception encountered " + e.getMessage());
+				AssertUtil.assertTrue("Unexpected exception encountered " + e.getMessage(), e instanceof RTCConfigurationException);
 			}
 		} finally {
 			
@@ -411,6 +413,7 @@ public class BuildConnectionTests {
 					buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, 
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
@@ -506,6 +509,7 @@ public class BuildConnectionTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
@@ -562,6 +566,7 @@ public class BuildConnectionTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
@@ -780,6 +785,7 @@ public class BuildConnectionTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, personalWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");

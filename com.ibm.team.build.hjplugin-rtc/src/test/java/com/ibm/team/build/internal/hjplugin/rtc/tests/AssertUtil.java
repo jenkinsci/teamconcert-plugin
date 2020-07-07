@@ -26,13 +26,13 @@ public class AssertUtil {
 		}
 	}
 	
-	public static void assertTrue(boolean condition, String message) {
+	public static void assertTrue(String message, boolean condition) {
 		if (!condition) {
 			throw new AssertionFailedException(message);
 		}
 	}
 	
-	public static void assertFalse(boolean condition, String message) {
+	public static void assertFalse(String message, boolean condition) {
 		if (condition) {
 			throw new AssertionFailedException(message);
 		}

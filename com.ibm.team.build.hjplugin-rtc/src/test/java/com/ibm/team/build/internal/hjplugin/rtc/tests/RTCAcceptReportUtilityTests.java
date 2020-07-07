@@ -118,7 +118,7 @@ public class RTCAcceptReportUtilityTests {
 		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
 		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
-		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
+		AssertUtil.assertFalse("Hash codes are equal where they are expected to be unequal", hash1 == hash2);
 	}
 
 	public void testAcceptReportsWithDifferentDiscardedChangesets() throws Exception {
@@ -143,7 +143,7 @@ public class RTCAcceptReportUtilityTests {
 		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
 		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
-		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
+		AssertUtil.assertFalse("Hash codes are equal where they are expected to be unequal", hash1 == hash2);
 	}
 
 	public void testAcceptReportsWithDifferentAcceptedComponents() throws Exception {
@@ -168,7 +168,7 @@ public class RTCAcceptReportUtilityTests {
 		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
 		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
-		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
+		AssertUtil.assertFalse("Hash codes are equal where they are expected to be unequal", hash1 == hash2);
 	}
 
 	public void testAcceptReportsWithDifferentRemovedComponents() throws Exception {
@@ -193,7 +193,7 @@ public class RTCAcceptReportUtilityTests {
 		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
 		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
-		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
+		AssertUtil.assertFalse("Hash codes are equal where they are expected to be unequal", hash1 == hash2);
 	}
 
 	public void testAcceptReportsWithOppositeChangesets() throws Exception {
@@ -217,7 +217,7 @@ public class RTCAcceptReportUtilityTests {
 		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
 		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
-		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
+		AssertUtil.assertFalse("Hash codes are equal where they are expected to be unequal", hash1 == hash2);
 	}
 
 	public void testNonMatchingAcceptReports() throws Exception {
@@ -245,6 +245,6 @@ public class RTCAcceptReportUtilityTests {
 		int hash1 = RTCAcceptReportUtility.hashCode(acceptReport1, false);
 		int hash2 = RTCAcceptReportUtility.hashCode(acceptReport2, false);
 
-		AssertUtil.assertFalse(hash1 == hash2, "Hash codes are equal where they are expected to be unequal");
+		AssertUtil.assertFalse("Hash codes are equal where they are expected to be unequal", hash1 == hash2);
 	}
 }

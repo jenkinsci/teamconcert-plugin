@@ -13,6 +13,7 @@ package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.Locale;
 import java.util.logging.Level;
@@ -29,8 +30,11 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.ibm.team.build.common.model.IBuildResultHandle;
+import com.ibm.team.build.internal.publishing.WorkItemPublisher;
 import com.ibm.team.build.internal.scm.SourceControlUtility;
 import com.ibm.team.filesystem.client.operations.ILoadRule2;
+import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 
 /**
@@ -71,6 +75,17 @@ public class VersionCheckerUtil {
 			}
 		}
 		return isPre603BuildToolkit;
+	}
+	
+	public static boolean isPre70BuildToolkit() {
+		boolean isPre70BuildToolkit = true; // Assume that we are dealing with a toolkit v 6.0.6.1 or below.
+		try {
+			WorkItemPublisher.class.getMethod("publish", IBuildResultHandle.class, Array.class, boolean.class, ITeamRepository.class);
+			isPre70BuildToolkit = false;
+		} catch (NoSuchMethodException | SecurityException exp) {
+			
+		} 
+		return isPre70BuildToolkit;
 	}
 	
 	public static String getBuildToolkitVersion(Locale clientLocale) throws RTCVersionCheckException {

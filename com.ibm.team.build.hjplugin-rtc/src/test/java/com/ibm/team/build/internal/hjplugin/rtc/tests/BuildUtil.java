@@ -12,8 +12,10 @@ package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.client.ClientFactory;
@@ -31,7 +33,6 @@ import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
-import com.ibm.team.build.internal.common.model.BuildProperty;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.build.internal.hjplugin.rtc.RepositoryConnection;
 import com.ibm.team.process.common.IProcessArea;
@@ -139,14 +140,29 @@ public class BuildUtil {
 	}
 
 	public static void createBuildDefinition(ITeamRepository repo, String buildDefinitionId, boolean createBuildEngine,
-			Map<String, String> artifactIds, String... scmProperties) throws Exception {
+			Map<String, String> artifactIds, 
+			Map<String, String> buildProperties,
+			String... scmProperties) throws Exception {
 		IProcessArea processArea = ProcessUtil.getDefaultProjectArea(repo);
 		IBuildDefinition buildDefinition = BuildUtil.createBuildDefinition(repo, buildDefinitionId, processArea, scmProperties);
+		if (buildProperties != null && buildProperties.size() > 0) {
+			// Apply all the properties and save the build definition again
+			buildDefinition = (IBuildDefinition) buildDefinition.getWorkingCopy();
+			for (Entry<String,String> property : buildProperties.entrySet()) {
+				buildDefinition.getProperties().add(BuildItemFactory.createBuildProperty
+						(property.getKey(), property.getValue())); 
+			}
+			buildDefinition = getTeamBuildClient(repo).save(buildDefinition, getNullProgressMonitor());
+		}
 		if (createBuildEngine) {
 			IBuildEngine buildEnine = BuildUtil.createBuildEngine(repo, buildDefinitionId, processArea, buildDefinition, true);
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_ENGINE_ITEM_ID, buildEnine.getItemId().getUuidValue());
 		}
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_DEFINITION_ITEM_ID, buildDefinition.getItemId().getUuidValue());
+	}
+
+	private static NullProgressMonitor getNullProgressMonitor() {
+		return new NullProgressMonitor();
 	}
 
 	/**

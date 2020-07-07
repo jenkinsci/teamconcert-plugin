@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2019 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -119,6 +119,7 @@ public class BuildConfigurationTests {
 			
 			// create the build definition
 			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -157,13 +158,13 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle().getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertTrue(buildConfiguration.includeComponents(), "Should be a list of components to include");
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "Should be creating a folder for the component");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertTrue("Should be a list of components to include", buildConfiguration.includeComponents());
+		AssertUtil.assertTrue("Should be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault()).size());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponents().size());
@@ -172,7 +173,7 @@ public class BuildConfigurationTests {
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion should not be needed");
+		AssertUtil.assertFalse("Deletion should not be needed", buildConfiguration.isDeleteNeeded());
 	}
 
 	public Map<String, String> setupNewLoadRules(String workspaceName,
@@ -235,6 +236,7 @@ public class BuildConfigurationTests {
 			
 			// create the build definition
 			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -291,13 +293,13 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle().getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault()).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
@@ -305,7 +307,7 @@ public class BuildConfigurationTests {
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
 	}
 
 	public Map<String, String> setupOldLoadRules(String workspaceName,
@@ -367,6 +369,7 @@ public class BuildConfigurationTests {
 			
 			// create the build definition
 			BuildUtil.createBuildDefinition(repo, componentName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "false",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "false",
@@ -417,7 +420,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds,
 					configureLoadRules);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
@@ -460,14 +465,14 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		// when loadPolicy is set to useComponentLoadConfig loadRules are not set
 		AssertUtil.assertEquals(
 				configureLoadRules && !setLoadPolicy? 1 : 0,
@@ -478,15 +483,15 @@ public class BuildConfigurationTests {
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(setLoadPolicy ? buildConfiguration.isLoadPolicySetToUseComponentLoadConfig()== true : buildConfiguration.isLoadPolicySet() == false,
-				" isLoadPolicySetToUseComponentLoadConfig is not as expected");
-		AssertUtil.assertTrue(setLoadPolicy ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false,
-				" isLoadPolicySet is not as expected");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents is not as expected");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue(" isLoadPolicySetToUseComponentLoadConfig is not as expected",
+				setLoadPolicy ? buildConfiguration.isLoadPolicySetToUseComponentLoadConfig()== true : buildConfiguration.isLoadPolicySet() == false);
+		AssertUtil.assertTrue(" isLoadPolicySet is not as expected",
+				setLoadPolicy ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false);
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents is not as expected",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 	}
 
 	public Map<String, String> setupBuildDefinition_loadRulesWithLoadPolicySetToLoadRules(String workspaceName, String componentName,
@@ -509,7 +514,9 @@ public class BuildConfigurationTests {
 		try {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, configureLoadRules);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
@@ -549,30 +556,30 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		@SuppressWarnings("rawtypes")
 		Collection loadRules = buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(configureLoadRules ? loadRules.size() == 1 : loadRules.size() == 0, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", configureLoadRules ? loadRules.size() == 1 : loadRules.size() == 0);
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(), "isLoadPolicySet should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySet should be true", buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 	}
 
 	public Map<String, String> setupBuildDefinition_toTestCreateFolderForComponents(String workspaceName, String componentName,
@@ -597,7 +604,9 @@ public class BuildConfigurationTests {
 		try {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
@@ -636,19 +645,19 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
 		AssertUtil
 				.assertTrue(
-					shouldCreateFoldersForComponents
-								&& (loadPolicy == null || loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)) ? buildConfiguration
-								.createFoldersForComponents() == true : buildConfiguration.createFoldersForComponents() == false,
-						"Create folders for components is not as expected");
+					"Create folders for components is not as expected",
+						shouldCreateFoldersForComponents
+									&& (loadPolicy == null || loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)) ? buildConfiguration
+									.createFoldersForComponents() == true : buildConfiguration.createFoldersForComponents() == false);
 		AssertUtil.assertEquals(
 				0,
 				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
@@ -658,25 +667,25 @@ public class BuildConfigurationTests {
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
 		AssertUtil
 				.assertTrue(
+						"isLoadPolicySetToUseLoadRules is not as expected ",
 						loadPolicy != null && Constants.LOAD_POLICY_USE_LOAD_RULES.equals(loadPolicy) ? buildConfiguration
-								.isLoadPolicySetToUseLoadRules() == true : buildConfiguration.isLoadPolicySetToUseLoadRules() == false,
-						"isLoadPolicySetToUseLoadRules is not as expected ");
+								.isLoadPolicySetToUseLoadRules() == true : buildConfiguration.isLoadPolicySetToUseLoadRules() == false);
 		AssertUtil.assertTrue(
+				"isLoadPolicySetToUseComponentLoadConfig is not as expected ",
 				loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy) ? buildConfiguration
-						.isLoadPolicySetToUseComponentLoadConfig() == true : buildConfiguration.isLoadPolicySetToUseComponentLoadConfig() == false,
-				"isLoadPolicySetToUseComponentLoadConfig is not as expected ");
-		AssertUtil.assertTrue(loadPolicy != null ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false,
-				"isLoadPolicySet is not as expected");
+						.isLoadPolicySetToUseComponentLoadConfig() == true : buildConfiguration.isLoadPolicySetToUseComponentLoadConfig() == false);
+		AssertUtil.assertTrue("isLoadPolicySet is not as expected",
+				loadPolicy != null ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false);
 		AssertUtil
 				.assertTrue(
+						"isComponentLoadConfigSetToExcludeSomeComponents is not as expected",
 						componentLoadConfig != null && componentLoadConfig.equals(Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS) ? buildConfiguration
 								.isComponentLoadConfigSetToExcludeSomeComponents() == true : buildConfiguration
-								.isComponentLoadConfigSetToExcludeSomeComponents() == false,
-						"isComponentLoadConfigSetToExcludeSomeComponents is not as expected");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+								.isComponentLoadConfigSetToExcludeSomeComponents() == false);
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 	}
 
 	public Map<String, String> setupBuildDefinition_toTestCreateFoldersForComponents_usingLoadRules(String workspaceName, String componentName,
@@ -701,7 +710,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, true,
 					false, false, true, false, false, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
@@ -740,14 +751,14 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Create folders for components should be false");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Create folders for components should be false", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(
 				1,
 				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
@@ -757,13 +768,13 @@ public class BuildConfigurationTests {
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules is not as expected ");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig is not as expected ");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(), "isLoadPolicySet is not as expected");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents is not as expected");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules is not as expected ", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig is not as expected ", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isLoadPolicySet is not as expected", buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents is not as expected",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 	}
 
 	public Map<String, String> setupBuildDefinition_toTestComponentsToExclude(String workspaceName, String componentName, String buildDefinitionId,
@@ -793,6 +804,7 @@ public class BuildConfigurationTests {
 					buildDefinitionId,
 					true,
 					artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION,
@@ -839,14 +851,14 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Create folders for components should be false");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Create folders for components should be false", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(
 				0,
 				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
@@ -854,41 +866,41 @@ public class BuildConfigurationTests {
 		Collection<IComponentHandle> componentsToExclude = buildConfiguration.getComponents();
 		AssertUtil
 				.assertTrue(
+						"List of components to exclude is not as expected",
 						shouldExcludeComponents
 								&& (loadPolicy == null || (Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy) && Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS
-										.equals(componentLoadConfig))) ? componentsToExclude.size() == 1 : componentsToExclude.size() == 0,
-						"List of components to exclude is not as expected");
+										.equals(componentLoadConfig))) ? componentsToExclude.size() == 1 : componentsToExclude.size() == 0);
 		// only component 2 is excluded
 		if (shouldExcludeComponents
 				&& (loadPolicy == null || Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)
 						&& Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS.equals(componentLoadConfig))) {
 			AssertUtil.assertTrue(
-					UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID)).equals(
-							componentsToExclude.iterator().next().getItemId()), "components to exclude list is not a expected");
+					"components to exclude list is not a expected", UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID)).equals(
+									componentsToExclude.iterator().next().getItemId()));
 		}
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
 		AssertUtil
 				.assertTrue(
+						"isLoadPolicySetToUseLoadRules is not as expected ",
 						loadPolicy != null && Constants.LOAD_POLICY_USE_LOAD_RULES.equals(loadPolicy) ? buildConfiguration
-								.isLoadPolicySetToUseLoadRules() == true : buildConfiguration.isLoadPolicySetToUseLoadRules() == false,
-						"isLoadPolicySetToUseLoadRules is not as expected ");
+								.isLoadPolicySetToUseLoadRules() == true : buildConfiguration.isLoadPolicySetToUseLoadRules() == false);
 		AssertUtil.assertTrue(
+				"isLoadPolicySetToUseComponentLoadConfig is not as expected ",
 				loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy) ? buildConfiguration
-						.isLoadPolicySetToUseComponentLoadConfig() == true : buildConfiguration.isLoadPolicySetToUseComponentLoadConfig() == false,
-				"isLoadPolicySetToUseComponentLoadConfig is not as expected ");
-		AssertUtil.assertTrue(loadPolicy != null ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false,
-				"isLoadPolicySet is not as expected");
+						.isLoadPolicySetToUseComponentLoadConfig() == true : buildConfiguration.isLoadPolicySetToUseComponentLoadConfig() == false);
+		AssertUtil.assertTrue("isLoadPolicySet is not as expected",
+				loadPolicy != null ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false);
 		AssertUtil
 				.assertTrue(
+						"isComponentLoadConfigSetToExcludeSomeComponents is not as expected",
 						componentLoadConfig != null && componentLoadConfig.equals(Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS) ? buildConfiguration
 								.isComponentLoadConfigSetToExcludeSomeComponents() == true : buildConfiguration
-								.isComponentLoadConfigSetToExcludeSomeComponents() == false,
-						"isComponentLoadConfigSetToExcludeSomeComponents is not as expected");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+								.isComponentLoadConfigSetToExcludeSomeComponents() == false);
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 	}
 
 	public Map<String, String> setupBuildDefinition_toTestIncludeComponents(String workspaceName, String componentName, String buildDefinitionId,
@@ -919,6 +931,7 @@ public class BuildConfigurationTests {
 					buildDefinitionId,
 					true,
 					artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION,
@@ -969,58 +982,58 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
 		AssertUtil.assertTrue(
-				Boolean.valueOf(valueOfIncludeComponents)
-						&& (loadPolicy == null || Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)
-								&& Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS.equals(componentLoadConfig)) ? buildConfiguration
-						.includeComponents() == true : buildConfiguration.includeComponents() == false, "includeComponents is not as expected");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Create folders for components should be false");
+				"includeComponents is not as expected", Boolean.valueOf(valueOfIncludeComponents)
+								&& (loadPolicy == null || Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)
+										&& Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS.equals(componentLoadConfig)) ? buildConfiguration
+								.includeComponents() == true : buildConfiguration.includeComponents() == false);
+		AssertUtil.assertFalse("Create folders for components should be false", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(
 				0,
 				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
 						System.out, null, Locale.getDefault()).size());
 		Collection<IComponentHandle> loadComponents = buildConfiguration.getComponents();
-		AssertUtil.assertTrue(addLoadComponents
-				&& (loadPolicy == null || Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)
-						&& Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS.equals(componentLoadConfig)) ? loadComponents.size() == 1
-				: loadComponents.size() == 0, "Load components list is not as expected");
+		AssertUtil.assertTrue("Load components list is not as expected", addLoadComponents
+						&& (loadPolicy == null || Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)
+								&& Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS.equals(componentLoadConfig)) ? loadComponents.size() == 1
+						: loadComponents.size() == 0);
 		if (addLoadComponents
 				&& (loadPolicy == null || Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)
 				&& Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS.equals(componentLoadConfig))) {
 			AssertUtil.assertTrue(
-					UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID)).equals(
-							loadComponents.iterator().next().getItemId()), "Load components list is not a expected");
+					"Load components list is not a expected", UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID)).equals(
+									loadComponents.iterator().next().getItemId()));
 		}
 
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
 		AssertUtil
 				.assertTrue(
+						"isLoadPolicySetToUseLoadRules is not as expected ",
 						loadPolicy != null && Constants.LOAD_POLICY_USE_LOAD_RULES.equals(loadPolicy) ? buildConfiguration
-								.isLoadPolicySetToUseLoadRules() == true : buildConfiguration.isLoadPolicySetToUseLoadRules() == false,
-						"isLoadPolicySetToUseLoadRules is not as expected ");
+								.isLoadPolicySetToUseLoadRules() == true : buildConfiguration.isLoadPolicySetToUseLoadRules() == false);
 		AssertUtil.assertTrue(
+				"isLoadPolicySetToUseComponentLoadConfig is not as expected ",
 				loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy) ? buildConfiguration
-						.isLoadPolicySetToUseComponentLoadConfig() == true : buildConfiguration.isLoadPolicySetToUseComponentLoadConfig() == false,
-				"isLoadPolicySetToUseComponentLoadConfig is not as expected ");
-		AssertUtil.assertTrue(loadPolicy != null ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false,
-				"isLoadPolicySet is not as expected");
+						.isLoadPolicySetToUseComponentLoadConfig() == true : buildConfiguration.isLoadPolicySetToUseComponentLoadConfig() == false);
+		AssertUtil.assertTrue("isLoadPolicySet is not as expected",
+				loadPolicy != null ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false);
 		AssertUtil
 				.assertTrue(
+						"isComponentLoadConfigSetToExcludeSomeComponents is not as expected",
 						componentLoadConfig != null && componentLoadConfig.equals(Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS) ? buildConfiguration
 								.isComponentLoadConfigSetToExcludeSomeComponents() == true : buildConfiguration
-								.isComponentLoadConfigSetToExcludeSomeComponents() == false,
-						"isComponentLoadConfigSetToExcludeSomeComponents is not as expected");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+								.isComponentLoadConfigSetToExcludeSomeComponents() == false);
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 	}
 	
 	public Map<String, String> setupBuildDefinition_toTestMultipleLoadRuleFiles(String workspaceName, String componentName, String buildDefinitionId,
@@ -1045,7 +1058,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds,
 					true, true, false, false, false, false, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
@@ -1083,29 +1098,29 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Create folders for components should be false");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Create folders for components should be false", buildConfiguration.createFoldersForComponents());
 
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
 		AssertUtil.assertTrue(
-				setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySetToUseLoadRules() == true : buildConfiguration
-						.isLoadPolicySetToUseLoadRules() == false, "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySet() == true
-				: buildConfiguration.isLoadPolicySet() == false, "isLoadPolicySet is not as expected");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+				"isLoadPolicySetToUseLoadRules should be true", setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySetToUseLoadRules() == true : buildConfiguration
+								.isLoadPolicySetToUseLoadRules() == false);
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isLoadPolicySet is not as expected", setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySet() == true
+						: buildConfiguration.isLoadPolicySet() == false);
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		PrintStream ps = new PrintStream(baos);
 		try {
@@ -1114,7 +1129,7 @@ public class BuildConfigurationTests {
 			if (setLoadPolicyToUseLoadRules) {
 				AssertUtil.fail("Exception expected");
 			} else {
-				AssertUtil.assertTrue(loadRules.size() == 2, "There should be 2 load rule files.");
+				AssertUtil.assertTrue("There should be 2 load rule files.", loadRules.size() == 2);
 				AssertUtil.assertEquals(Messages.get(Locale.getDefault()).BuildConfiguration_multiple_load_rule_files_deprecated(), baos.toString()
 						.trim());
 			}
@@ -1156,7 +1171,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds,
 					true, false, true, false, false, false, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "true",
@@ -1195,29 +1212,29 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Create folders for components should be false");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Create folders for components should be false", buildConfiguration.createFoldersForComponents());
 
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
 		AssertUtil.assertTrue(
-				setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySetToUseLoadRules() == true : buildConfiguration
-						.isLoadPolicySetToUseLoadRules() == false, "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySet() == true
-				: buildConfiguration.isLoadPolicySet() == false, "isLoadPolicySet should be true");
-		AssertUtil.assertTrue(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be true");
+				"isLoadPolicySetToUseLoadRules should be true", setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySetToUseLoadRules() == true : buildConfiguration
+								.isLoadPolicySetToUseLoadRules() == false);
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isLoadPolicySet should be true", setLoadPolicyToUseLoadRules ? buildConfiguration.isLoadPolicySet() == true
+						: buildConfiguration.isLoadPolicySet() == false);
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		PrintStream ps = new PrintStream(baos);
 		try {
@@ -1226,7 +1243,7 @@ public class BuildConfigurationTests {
 			if (setLoadPolicyToUseLoadRules) {
 				AssertUtil.fail("Exception expected");
 			} else {
-				AssertUtil.assertTrue(loadRules.size() == 1, "There should be 1 load rule file.");
+				AssertUtil.assertTrue("There should be 1 load rule file.", loadRules.size() == 1);
 				AssertUtil.assertEquals(Messages.get(Locale.getDefault()).NonValidatingLoadRuleFactory_old_load_rules_format_deprecated(), baos
 						.toString().trim());
 			}
@@ -1449,20 +1466,20 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle().getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertFalse(buildConfiguration.acceptBeforeFetch(), "Should not be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertFalse("Should not be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault()).size());
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion is not needed");
+		AssertUtil.assertFalse("Deletion is not needed", buildConfiguration.isDeleteNeeded());
 	}
 	
 	
@@ -1494,6 +1511,7 @@ public class BuildConfigurationTests {
 					componentName,
 					true,
 					artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH,
@@ -1546,23 +1564,23 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle().getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should not be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "Should be creating a folder for the component");
+		AssertUtil.assertTrue("Should not be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertTrue("Should be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault()).size());
 		AssertUtil.assertEquals(1, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertTrue(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySet(), "isLoadPolicySet should be false");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(), "isComponentLoadConfigSetToExcludeSomeComponents should be false");
+		AssertUtil.assertTrue("Deletion is needed", buildConfiguration.isDeleteNeeded());
+		AssertUtil.assertFalse("isLoadPolicySet should be false", buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false", buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
 	}
 
 	public Map<String, String> setupPersonalBuild(String workspaceName,
@@ -1633,6 +1651,7 @@ public class BuildConfigurationTests {
 			
 			// create the build definition
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -1774,13 +1793,13 @@ public class BuildConfigurationTests {
 			AssertUtil.fail("Property substitutions not logged");
 		}
 
-		AssertUtil.assertTrue(buildConfiguration.isPersonalBuild(), "Should be a personal build");
+		AssertUtil.assertTrue("Should be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID), workspaceDescriptor.getWorkspaceHandle().getItemId().getUuidValue());
 		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		AssertUtil.assertEquals(
 				1,
 				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
@@ -1790,7 +1809,7 @@ public class BuildConfigurationTests {
 		expectedLoadDir = new File(expectedLoadDir, "loadDir/here");
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
 		AssertUtil.assertEquals(testName + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
-		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "Deletion is needed");
+		AssertUtil.assertFalse("Deletion is needed", buildConfiguration.isDeleteNeeded());
 		// myPropsFile = ${team.scm.fetchDestination}/com.ibm.team.build.releng/continuous-buildsystem.properties
 		// propertyA = loadDir
 		// propertyB = a place (${propertyA}) to load some stuff 
@@ -1826,6 +1845,7 @@ public class BuildConfigurationTests {
 			
 			// create the build definition
 			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -1914,22 +1934,22 @@ public class BuildConfigurationTests {
 		}
 		// Things that have be right in BuildConfiguration
 		AssertUtil.assertEquals(buildConfiguration.getBuildSnapshotDescriptor().getSnapshotUUID(), bs.getItemId().getUuidValue());
-		AssertUtil.assertTrue(buildConfiguration.getBuildWorkspaceDescriptor() != null, "WorkspaceDescriptor cannot be null for snapshot load");
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "isPersonalBuild cannot be true for a snapshot load");
-		AssertUtil.assertFalse(buildConfiguration.acceptBeforeFetch(), "acceptBeforeFetch cannot be true for a snapshot load");
+		AssertUtil.assertTrue("WorkspaceDescriptor cannot be null for snapshot load", buildConfiguration.getBuildWorkspaceDescriptor() != null);
+		AssertUtil.assertFalse("isPersonalBuild cannot be true for a snapshot load", buildConfiguration.isPersonalBuild());
+		AssertUtil.assertFalse("acceptBeforeFetch cannot be true for a snapshot load", buildConfiguration.acceptBeforeFetch());
 
 		IWorkspaceHandle workspaceHandle =  buildConfiguration.getBuildWorkspaceDescriptor().getWorkspaceHandle();
 		String workspaceName = buildConfiguration.getBuildWorkspaceDescriptor().getConnection(manager, false, null).getName();		
 		// verify the following
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFolders for components cannot be true for testLoadSnapshotConfiguration");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "includeComponents cannot be true for testLoadSnapshotConfiguration");
-		AssertUtil.assertFalse(buildConfiguration.isDeleteNeeded(), "isDeleteNeeded cannot be true for  testLoadSnapshotConfiguration");
+		AssertUtil.assertFalse("createFolders for components cannot be true for testLoadSnapshotConfiguration", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertFalse("includeComponents cannot be true for testLoadSnapshotConfiguration", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("isDeleteNeeded cannot be true for  testLoadSnapshotConfiguration", buildConfiguration.isDeleteNeeded());
 		AssertUtil.assertEquals(buildConfiguration.getComponents(), Collections.emptyList());
 		AssertUtil.assertEquals(buildConfiguration.getFetchDestinationFile().getCanonicalPath(), hjPath);
 		AssertUtil.assertEquals(buildConfiguration.getSnapshotName(), null);
 		
 		// There should not be any build properties (for now)
-		AssertUtil.assertTrue(buildConfiguration.getBuildProperties().keySet().size() == 0, "buildProperties has to be zero size");
+		AssertUtil.assertTrue("buildProperties has to be zero size", buildConfiguration.getBuildProperties().keySet().size() == 0);
 
 		// Call tearDown and ensure that the workspace is deleted
 		buildConfiguration.tearDown(manager, false, null, listener, Locale.getDefault());
@@ -1982,25 +2002,25 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_LOAD_RULES, null, false, null, pathToLoadRuleFile, listener,
 				Locale.getDefault(), new NullProgressMonitor());
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
-		AssertUtil.assertTrue(buildConfiguration.acceptBeforeFetch(), "Should be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		@SuppressWarnings("rawtypes")
 		Collection loadRules = buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 1, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 1);
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(), "isLoadPolicySet should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySet should be true", buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
 
 		// validate RTCWorkspaceUtils.getComponentLoadRuleString() indirectly through buildConfiguration.initialize
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
@@ -2009,7 +2029,7 @@ public class BuildConfigurationTests {
 				listener, Locale.getDefault(), new NullProgressMonitor());
 		loadRules = buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
 				System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 0, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 0);
 
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		// #2 - missing separator
@@ -2110,7 +2130,7 @@ public class BuildConfigurationTests {
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
 		loadRules = buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
 				System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 1, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 1);
 
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		// #11 - non-existent-componentId in repo
@@ -2173,20 +2193,20 @@ public class BuildConfigurationTests {
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, null, null, false, null, null, listener, Locale.getDefault(),
 				new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #16 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules, 
 		// set loadPolicy to useComponentLoadConfig and do not set componentLoadConfig 
@@ -2196,20 +2216,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null, true,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #17 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules, 
 		// set loadPolicy to useComponentLoadConfig and do not set componentLoadConfig 
@@ -2219,20 +2239,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #18 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules, 
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to loadAllComponents
@@ -2242,20 +2262,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG,
 				Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #19 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to loadAllComponents
@@ -2265,20 +2285,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG,
 				Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #20 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to excludeSomeComponents
@@ -2288,20 +2308,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG,
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #21 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to excludeSomeComponents
@@ -2311,20 +2331,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG,
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #22 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and do not set componentLoadConfig
@@ -2334,20 +2354,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_LOAD_RULES,
 				null, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #23 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and do not set componentLoadConfig
@@ -2357,20 +2377,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_LOAD_RULES,
 				null, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #24 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and set componentLoadConfig to excludeSomeComponents
@@ -2380,20 +2400,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_LOAD_RULES,
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #25 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and set componentLoadConfig to excludeSomeComponents
@@ -2403,20 +2423,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_LOAD_RULES,
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #26 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// do not set loadPolicy and set componentLoadConfig to excludeSomeComponents
@@ -2426,20 +2446,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, null,
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #27 set createFoldersForComponents to false, set componentsToExclude to multiple component names and set
 		// componentLoadRules,
@@ -2451,20 +2471,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(workspaceHandle, workspaceName, null, true, Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG,
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false, componentName + "1, " + componentName + "1",
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #28 set createFoldersForComponents to false, set componentsToExclude to multiple component ids and set
 		// componentLoadRules,
@@ -2476,20 +2496,20 @@ public class BuildConfigurationTests {
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID)
 						+ "," + artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 2, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 2);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #29 set createFoldersForComponents to false, set componentsToExclude to multiple component ids and set
 		// componentLoadRules,
@@ -2502,20 +2522,20 @@ public class BuildConfigurationTests {
 				Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID)
 						+ "," + artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #30 add duplicate component name, which will fail
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
@@ -2597,25 +2617,25 @@ public class BuildConfigurationTests {
 						Constants.LOAD_POLICY_USE_LOAD_RULES, null, false, null, pathToLoadRuleFile, listener, Locale.getDefault(),
 						new NullProgressMonitor());
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_LOAD_RULE_STREAM_WS_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
 				.getItemId().getUuidValue());
-		AssertUtil.assertFalse(buildConfiguration.acceptBeforeFetch(), "Should not be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertFalse("Should not be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		@SuppressWarnings("rawtypes")
 		Collection loadRules = buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 1, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 1);
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(), "isLoadPolicySet should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySet should be true", buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
 		
 		BuildStreamDescriptor buildStreamDescriptor = buildConfiguration.getBuildStreamDescriptor();
 		AssertUtil.assertEquals(workspaceName + "_lrStream", buildStreamDescriptor.getName());
@@ -2628,7 +2648,7 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_LOAD_RULES, null, false, null, null, listener, Locale.getDefault(), new NullProgressMonitor());
 		loadRules = buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
 				System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 0, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 0);
 
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		// #2 - missing separator
@@ -2739,7 +2759,7 @@ public class BuildConfigurationTests {
 				new NullProgressMonitor());
 		loadRules = buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
 				System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 1, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 1);
 
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		// #11 - non-existent-componentId in repo
@@ -2807,20 +2827,20 @@ public class BuildConfigurationTests {
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		buildConfiguration.initialize(streamHandle, workspaceName + "_lrStream", workspace, baselineSet, true, contributor, null, null, false, null,
 				null, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #16 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and do not set componentLoadConfig
@@ -2830,20 +2850,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(streamHandle, workspaceName + "_lrStream", workspace, baselineSet, true, contributor,
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #17 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and do not set componentLoadConfig
@@ -2853,20 +2873,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(streamHandle, workspaceName + "_lrStream", workspace, baselineSet, true, contributor,
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #18 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to loadAllComponents
@@ -2877,20 +2897,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, true,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #19 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to loadAllComponents
@@ -2901,20 +2921,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #20 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to excludeSomeComponents
@@ -2925,20 +2945,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, true,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #21 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to excludeSomeComponents
@@ -2949,20 +2969,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #22 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and do not set componentLoadConfig
@@ -2972,21 +2992,21 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(streamHandle, workspaceName + "_lrStream", workspace, baselineSet, true, contributor,
 				Constants.LOAD_POLICY_USE_LOAD_RULES, null, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId
 						+ "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #23 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and do not set componentLoadConfig
@@ -2996,21 +3016,21 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(streamHandle, workspaceName + "_lrStream", workspace, baselineSet, true, contributor,
 				Constants.LOAD_POLICY_USE_LOAD_RULES, null, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId
 						+ "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #24 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and set componentLoadConfig to excludeSomeComponents
@@ -3021,21 +3041,21 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_LOAD_RULES, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, true,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 
 		// #25 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and set componentLoadConfig to excludeSomeComponents
@@ -3046,21 +3066,21 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_LOAD_RULES, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 		
 		// #26 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// do not set loadPolicy and set componentLoadConfig to excludeSomeComponents
@@ -3071,21 +3091,21 @@ public class BuildConfigurationTests {
 				null, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");		
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());		
 
 		// #27 set createFoldersForComponents to false, set componentsToExclude to multiple component names and set
 		// componentLoadRules,
@@ -3098,20 +3118,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false, componentName
 						+ "1, " + componentName + "2," + componentName, componentId + "/" + loadRuleItemId, listener, Locale.getDefault(),
 				new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 2, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 2);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");		
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());		
 
 		// #28 set createFoldersForComponents to false, set componentsToExclude to multiple component Ids and set
 		// componentLoadRules,
@@ -3133,20 +3153,20 @@ public class BuildConfigurationTests {
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID) + ","
 						+ artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID) + "," + UUID.generate().getUuidValue(), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 2, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 2);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertFalse(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be false");
-		AssertUtil.assertTrue(buildConfiguration.isStreamLoad(), "isStreamLoad should be true");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertFalse("isSnapshotLoad should be false", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertTrue("isStreamLoad should be true", buildConfiguration.isStreamLoad());
 	}
 
 	public Map<String, String> setupSnapshotConfig_toTestLoadPolicy(String workspaceName, String componentName) throws Exception {
@@ -3192,25 +3212,25 @@ public class BuildConfigurationTests {
 			throw failure[0];
 		}
 
-		AssertUtil.assertFalse(buildConfiguration.isPersonalBuild(), "Should NOT be a personal build");
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
 		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_LOAD_RULE_SS_WS_ITEM_ID,
 				workspaceDescriptor.getWorkspace(connection.getRepositoryManager(), null).getItemId().getUuidValue());
-		AssertUtil.assertTrue(workspaceDescriptor.getWorkspace(connection.getRepositoryManager(), null).getName().startsWith("HJP"), "Not the expected workspace descriptor");
-		AssertUtil.assertFalse(buildConfiguration.acceptBeforeFetch(), "Should not be accepting before fetching");
-		AssertUtil.assertFalse(buildConfiguration.includeComponents(), "Should be a list of components to exclude");
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "Should not be creating a folder for the component");
+		AssertUtil.assertTrue("Not the expected workspace descriptor", workspaceDescriptor.getWorkspace(connection.getRepositoryManager(), null).getName().startsWith("HJP"));
+		AssertUtil.assertFalse("Should not be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
 		@SuppressWarnings("rawtypes")
 		Collection loadRules = buildConfiguration.getComponentLoadRules(
 				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 1, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 1);
 		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
 		File expectedLoadDir = new File(hjPath);
 		expectedLoadDir = new File(expectedLoadDir, buildPath);
 		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(), "isLoadPolicySet should be true");
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isLoadPolicySet should be true", buildConfiguration.isLoadPolicySet());
 		BuildSnapshotDescriptor buildSnapshotDescriptor = buildConfiguration.getBuildSnapshotDescriptor();
 		AssertUtil.assertEquals(workspaceName + "_lrSS", buildSnapshotDescriptor.getSnapshotName());
 		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_LOAD_RULE_SS_ITEM_ID), buildSnapshotDescriptor.getSnapshotUUID());
@@ -3222,7 +3242,7 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_LOAD_RULES, null, false, null, null, listener, Locale.getDefault(), new NullProgressMonitor());
 		loadRules = buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
 				System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 0, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 0);
 
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		// #2 - missing separator
@@ -3332,7 +3352,7 @@ public class BuildConfigurationTests {
 				new NullProgressMonitor());
 		loadRules = buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
 				System.out, null, Locale.getDefault());
-		AssertUtil.assertTrue(loadRules.size() == 1, "Load rules not as expected");
+		AssertUtil.assertTrue("Load rules not as expected", loadRules.size() == 1);
 
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		// #11 - non-existent-componentId in repo
@@ -3399,20 +3419,20 @@ public class BuildConfigurationTests {
 		buildConfiguration = new BuildConfiguration(repo, hjPath);
 		buildConfiguration.initialize(baselineSet, contributor, "HJP", "Test load rules for snapshot configuration", null, null, false, null, null,
 				listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #16 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and do not set componentLoadConfig
@@ -3422,20 +3442,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(baselineSet, contributor, "HJP", "Test load rules for snapshot configuration",
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #17 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and do not set componentLoadConfig
@@ -3445,20 +3465,20 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(baselineSet, contributor, "HJP", "Test load rules for snapshot configuration",
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, null, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID),
 				componentId + "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #18 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to loadAllComponents
@@ -3469,20 +3489,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, true,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #19 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to loadAllComponents
@@ -3493,20 +3513,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_LOAD_ALL_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be false");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be false", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #20 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to excludeSomeComponents
@@ -3517,20 +3537,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, true,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertTrue(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be true");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertTrue("createFoldersForComponents should be true", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #21 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useComponentLoadConfig and set componentLoadConfig to excludeSomeComponents
@@ -3541,20 +3561,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #22 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and do not set componentLoadConfig
@@ -3564,21 +3584,21 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(baselineSet, contributor, "HJP", "Test load rules for snapshot configuration",
 				Constants.LOAD_POLICY_USE_LOAD_RULES, null, true, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId
 						+ "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #23 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and do not set componentLoadConfig
@@ -3588,21 +3608,21 @@ public class BuildConfigurationTests {
 		buildConfiguration.initialize(baselineSet, contributor, "HJP", "Test load rules for snapshot configuration",
 				Constants.LOAD_POLICY_USE_LOAD_RULES, null, false, artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId
 						+ "/" + loadRuleItemId, listener, Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertFalse(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be false");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #24 set createFoldersForComponents to true, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and set componentLoadConfig to excludeSomeComponents
@@ -3613,21 +3633,21 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_LOAD_RULES, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, true,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #25 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// set loadPolicy to useLoadRules and set componentLoadConfig to excludeSomeComponents
@@ -3638,21 +3658,21 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_LOAD_RULES, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 0, "componentsToExclude should be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should be empty", buildConfiguration.getComponents().size() == 0);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 1, "loadRules should not be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be true");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be false");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should not be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 1);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 		
 		// #26 set createFoldersForComponents to false, set componentsToExclude and componentLoadRules,
 		// do not set loadPolicy and set componentLoadConfig to excludeSomeComponents
@@ -3663,21 +3683,21 @@ public class BuildConfigurationTests {
 				null, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false,
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 1, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 1);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(),
-				"isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true",
+				buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #27 set createFoldersForComponents to false, set multiple component names for componentsToExclude and
 		// set componentLoadRules,
@@ -3690,20 +3710,20 @@ public class BuildConfigurationTests {
 				Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG, Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS, false,
 				componentName + "1, " + componentName + "2", componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 2, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 2);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 
 		// #28 set createFoldersForComponents to false, set multiple component ids for componentsToExclude and
 		// set componentLoadRules,
@@ -3723,19 +3743,19 @@ public class BuildConfigurationTests {
 				artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID) + ","
 						+ artifactIds.get(TestSetupTearDownUtil.ARTIFACT_COMPONENT2_ITEM_ID), componentId + "/" + loadRuleItemId, listener,
 				Locale.getDefault(), new NullProgressMonitor());
-		AssertUtil.assertFalse(buildConfiguration.createFoldersForComponents(), "createFoldersForComponents should be fale");
-		AssertUtil.assertTrue(buildConfiguration.getComponents().size() == 2, "componentsToExclude should not be empty");
+		AssertUtil.assertFalse("createFoldersForComponents should be fale", buildConfiguration.createFoldersForComponents());
+		AssertUtil.assertTrue("componentsToExclude should not be empty", buildConfiguration.getComponents().size() == 2);
 		AssertUtil.assertTrue(
-				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
-						System.out, null, Locale.getDefault()).size() == 0, "loadRules should be empty");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySet(),
-				"for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified");
-		AssertUtil.assertFalse(buildConfiguration.isLoadPolicySetToUseLoadRules(), "isLoadPolicySetToUseLoadRules should be false");
-		AssertUtil.assertTrue(buildConfiguration.isLoadPolicySetToUseComponentLoadConfig(), "isLoadPolicySetToUseComponentLoadConfig should be true");
-		AssertUtil.assertTrue(buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents(),
-				"isComponentLoadConfigSetToExcludeSomeComponents should be true");
-		AssertUtil.assertFalse(buildConfiguration.isBuildDefinitionConfiguration(), "isBuildDefinitionConfiguration should be false");
-		AssertUtil.assertTrue(buildConfiguration.isSnapshotLoad(), "isSnapshotLoad should be true");
-		AssertUtil.assertFalse(buildConfiguration.isStreamLoad(), "isStreamLoad should be false");
+				"loadRules should be empty", buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+								System.out, null, Locale.getDefault()).size() == 0);
+		AssertUtil.assertTrue("for non-buildDefinition configuration isLoadPolicySet should be always be true irrespective of whether loadPolicy is specified",
+				buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseLoadRules should be false", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySetToUseComponentLoadConfig should be true", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertTrue("isComponentLoadConfigSetToExcludeSomeComponents should be true",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertFalse("isBuildDefinitionConfiguration should be false", buildConfiguration.isBuildDefinitionConfiguration());
+		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
+		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 	}
 }

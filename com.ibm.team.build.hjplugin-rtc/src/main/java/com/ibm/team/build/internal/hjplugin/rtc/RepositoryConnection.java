@@ -394,7 +394,8 @@ public class RepositoryConnection {
 			ChangeReport changeReport, boolean isCustomSnapshotName, String snapshotName, final String previousSnapshotUUID,
 			final IConsoleOutput listener, IProgressMonitor progress, Locale clientLocale, String callConnectorTimeout,
 			boolean acceptBeforeLoad, boolean addLinksToWorkItems,
-			Map<String, String> jenkinsBuildUrls, String temporaryWorkspaceComment, Map<String, Object> options)
+			Map<String, String> jenkinsBuildUrls, String temporaryWorkspaceComment, 
+			Map<String, Object> options)
 			throws Exception {
 		LOGGER.finest("RepositoryConnection.accept : Enter"); //$NON-NLS-1$
 
@@ -511,7 +512,19 @@ public class RepositoryConnection {
 	            
 	            if (buildResultHandle != null) {
 	            	WorkItemPublisher workItemPublisher = new WorkItemPublisher();
-	            	workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), getTeamRepository());
+	            	// If we are dealing with a pre-70 toolkit, then we cannot control creation of build result links 
+	            	// to work items
+	            	if (VersionCheckerUtil.isPre70BuildToolkit()) {
+	            		workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), getTeamRepository());	
+	            	} else {
+		            	// If the property IJazzScmConfigurationElement.PROPERTY_INCLUDE_LINKS_IN_WORKITEMS is true,
+		            	// then continue to publish the build links in work item
+	            		// Default value if the property doesn't exist is true.
+	            		String includeBuildResultLinksInWorkItems = 
+	            						buildConfiguration.getBuildProperty(Constants.PROPERTY_INCLUDE_LINKS_IN_WORKITEMS, "true");
+	            		workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), 
+	            						Boolean.parseBoolean(includeBuildResultLinksInWorkItems), getTeamRepository());
+	            	}
 	            }
 	            
 	            if (monitor.isCanceled()) {

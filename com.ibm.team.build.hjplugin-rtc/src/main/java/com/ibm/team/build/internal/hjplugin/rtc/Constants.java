@@ -106,6 +106,13 @@ public class Constants {
     public static final String PROPERTY_COMPONENT_LOAD_CONFIG = "team.scm.componentLoadConfig"; //$NON-NLS-1$
     
     /**
+     * Build property for "Add build result links in accepted work items".
+     *
+     * @since 0.12.0 (RTC 7.0)
+     */
+    public static final String PROPERTY_INCLUDE_LINKS_IN_WORKITEMS = "team.scm.createWorkItemIncludeLinks"; //$NON-NLS-1$
+    
+    /**
      * Constants related to build URL map sent by RTCScm
      */
 	public static final String GENERIC_JENKINS_BUILD = "Jenkins Build"; //$NON-NLS-1$
