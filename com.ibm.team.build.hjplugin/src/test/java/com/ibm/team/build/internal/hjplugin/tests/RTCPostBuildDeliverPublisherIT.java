@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
@@ -49,7 +50,10 @@ import com.ibm.team.build.internal.hjplugin.util.Tuple;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @SuppressWarnings({"nls", "static-method", "boxing"})
@@ -582,7 +586,9 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		try {
 			// Create a freestyle job with build definition id and post build deliver
 			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
-			
+			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(
+					new StringParameterDefinition("buildResultUUID", ""))));
+					
 			// Run a build and verify that it succeeded
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithBuildResultUUID(buildResultUUID));
 			assertEquals(Result.SUCCESS, b.getResult());
@@ -630,6 +636,8 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		try {
 			// Create a freestyle job with build definition id and post build deliver
 			FreeStyleProject prj = Utils.setupFreeStyleJobWithPBDeliver(getJenkinsRule(), buildDefinitionId);
+			prj.addProperty(new ParametersDefinitionProperty(Arrays.asList(
+					new StringParameterDefinition("buildResultUUID", ""))));
 			
 			// Run a build and verify that it succeeded
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithBuildResultUUID(buildResultUUID));

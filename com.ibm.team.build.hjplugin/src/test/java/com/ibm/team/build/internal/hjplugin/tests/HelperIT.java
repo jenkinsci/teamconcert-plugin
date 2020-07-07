@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.WithTimeout;
 
+import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCBuildToolInstallation;
@@ -45,6 +46,7 @@ import hudson.FilePath;
 import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.JobProperty;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
@@ -129,7 +131,11 @@ public class HelperIT extends AbstractTestCase {
 					new RTCScm.BuildType("buildDefinition", "${myBuildDefinition}", null, null, null), false);
 
 			String[] result = verifyBuildDefinitionWithParameter(getJenkinsRule(), rtcScm1, buildDefinitionId,
-								null, componentName,
+								new ParameterDefinition[] {
+										new StringParameterDefinition("myBuildDefinition", ""),
+										new StringParameterDefinition("buildResultUUID", "")
+								},
+								componentName,
 								new ParametersAction(new StringParameterValue("myBuildDefinition", buildDefinitionId)),
 								new ParametersAction(new StringParameterValue("buildResultUUID", "")));
 			setupArtifacts.put(BUILD_RESULT_ITEM_ID1, result[0]);
@@ -554,6 +560,9 @@ public class HelperIT extends AbstractTestCase {
 
 			// Setup
 			FreeStyleProject prj = getJenkinsRule().createFreeStyleProject();
+			JobProperty prop = new ParametersDefinitionProperty(Arrays.asList(
+					new StringParameterDefinition("myBuildDefinition", "")));
+			prj.addProperty(prop);
 			prj.setScm(rtcScm);
 
 			// Test
@@ -577,13 +586,16 @@ public class HelperIT extends AbstractTestCase {
 			// Verify build result getting created
 			assertNotNull(action.getBuildResultUUID());
 			setupArtifacts.put("buildResultItemId", action.getBuildResultUUID());
-			
+
+			// A build is needed before polling. and hence the first build.
+			prj.removeProperty(prop);
 			File pollingFile = Utils.getTemporaryFile(true);
 			PollingResult pollResult = prj.poll(new StreamTaskListener(pollingFile, Charset.forName("UTF-8")));
 			
 			// If there is any error during polling, it can be seen in the log file
-			assertNotNull(getMatch(pollingFile, "FATAL: RTC : checking for changes failure: Unable to find a build definition with ID:.*myBuildDefinition.*"));
-			assertEquals(Change.NONE, pollResult.change);
+			assertNotNull(Files.toString(pollingFile, Charset.forName("UTF-8")), 
+						getMatch(pollingFile, "FATAL: RTC : checking for changes failure: Unable to find a build definition with ID:.*myBuildDefinition.*"));
+			assertEquals(pollResult.toString(), Change.NONE, pollResult.change);
 		} finally {
 			testingFacade.invoke(
 					"tearDown",

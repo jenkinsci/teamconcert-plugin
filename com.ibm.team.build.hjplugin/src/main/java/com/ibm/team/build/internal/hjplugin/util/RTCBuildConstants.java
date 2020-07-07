@@ -104,10 +104,10 @@ public interface RTCBuildConstants {
     public static final String URI_SEGMENT_RESULT_PARTICIPANT = "participant"; //$NON-NLS-1$
 
     /**
-     * URI for checking compatibility of the RTC server. We need 5.0 or higher in order to
-     * use the Rest services.
+     * URI for checking compatibility of the RTC server. We need 6.0 or higher in order to
+     * use the Rest services. Dropping support for 5.0 servers.
      */
-    public static final String URI_COMPATIBILITY_CHECK = "versionCompatibility?clientVersion=5.0"; //$NON-NLS-1$
+    public static final String URI_COMPATIBILITY_CHECK = "versionCompatibility?clientVersion=6.0"; //$NON-NLS-1$
     
     /**
      * URI for checking compatibility of the RTC server version 6.0.4
