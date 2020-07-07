@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2019 IBM Corporation and others.
+ * Copyright © 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -924,14 +924,41 @@ public class RepositoryConnection {
 						}
 						// we will always have a single entry in the loadRules collection, as specifying multiple load
 						// rules file will result in an error
-						SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), synchronizeLoad,
-								loadRulesInstance.iterator().next(), false, monitor.newChild(39));
+						BackwardCompatibilityUtilFor701.invokeUpdateCopyFileArea(workspaceConnection, // workspaceConnection
+								synchronizeLoad, // synchronizeLoad
+								fetchDestinationFile.getCanonicalPath(), // fetchDestination
+								buildConfiguration.isDeleteNeeded(), // deleteDestinationBeforeFetch
+								buildConfiguration.getLoadMethod(), // loadMethod
+								buildConfiguration.getLoadPolicy(), // loadPolicy
+								buildConfiguration.getComponentLoadConfig(), // componentLoadConfig
+								buildConfiguration.getComponentLoadRuleUuids(), // componentLoadRuleUuids
+								loadRulesInstance.iterator().next(), // loadRule
+								false, // preserveFileTimestamps
+								false, // expandKeywords
+								listener, // consoleOutput
+								getTeamRepository(), // repository
+								monitor.newChild(39)); // monitor
 					} else {
 						if (LOGGER.isLoggable(Level.FINER)) {
 							LOGGER.finer("RepositoryConnection.load : Load rules are not specified. Using pre-603 interface of SourceControlUtility.updateFileCopyArea");
 						}
-						SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), false,
-								Collections.EMPTY_LIST, synchronizeLoad, Collections.EMPTY_LIST, false, monitor.newChild(39));
+						BackwardCompatibilityUtilFor701.invokeUpdateCopyFileArea(workspaceConnection, // workspaceConnection
+								synchronizeLoad, // synchronizeLoad
+								fetchDestinationFile.getCanonicalPath(), // fetchDestination
+								buildConfiguration.isDeleteNeeded(), // deleteDestinationBeforeFetch
+								buildConfiguration.getLoadMethod(), // loadMethod
+								buildConfiguration.getLoadPolicy(), // loadPolicy
+								false, // createFoldersForComponents
+								buildConfiguration.getComponentLoadConfig(), // componentLoadConfig
+								false, // includeComponents
+								Collections.EMPTY_LIST, // components
+								buildConfiguration.getComponentLoadRuleUuids(), // componentLoadRuleUuids
+								Collections.EMPTY_LIST, // componentLoadRules
+								false, // preserveFileTimestamps
+								false, // expandKeywords
+								listener, // consoleOutput
+								getTeamRepository(), // repository
+								monitor.newChild(39)); // monitor
 					}
 				} else {
 					// either load policy is not set or it is set to use component load config or load policy is set to
@@ -965,8 +992,23 @@ public class RepositoryConnection {
 					Collection<ILoadRule2> lRules = buildConfiguration.isLoadPolicySetToUseDynamicLoadRules() ? buildConfiguration
 							.getCustomLoadRules(workspaceConnection, compLoadRules, logger, clientLocale) : buildConfiguration.getComponentLoadRules(
 							workspaceConnection, null, logger, monitor.newChild(1), clientLocale);
-					SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), includedComponents,
-							components, synchronizeLoad, lRules, buildConfiguration.createFoldersForComponents(), monitor.newChild(39));
+					BackwardCompatibilityUtilFor701.invokeUpdateCopyFileArea(workspaceConnection, // workspaceConnection
+							synchronizeLoad, // synchronizeLoad
+							fetchDestinationFile.getCanonicalPath(), // fetchDestination
+							buildConfiguration.isDeleteNeeded(), // deleteDestinationBeforeFetch
+							buildConfiguration.getLoadMethod(), // loadMethod
+							buildConfiguration.getLoadPolicy(), // loadPolicy
+							buildConfiguration.createFoldersForComponents(), // createFoldersForComponents
+							buildConfiguration.getComponentLoadConfig(), // componentLoadConfig
+							includedComponents, // includeComponents
+							components, // components
+							buildConfiguration.getComponentLoadRuleUuids(), // componentLoadRuleUuids
+							lRules, // componentLoadRules
+							false, // preserveFileTimestamps
+							false, // expandKeywords
+							listener, // consoleOutput
+							getTeamRepository(), // repository
+							monitor.newChild(39)); // monitor
 				}
 	         
 	         

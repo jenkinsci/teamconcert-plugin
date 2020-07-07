@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,10 +13,13 @@ package com.ibm.team.build.internal.hjplugin.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import hudson.model.TaskListener;
+import hudson.util.StreamTaskListener;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.PrintStream;
 import java.util.Locale;
 import java.util.Map;
 
@@ -40,6 +43,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	private static final String ARTIFACT_WORKSPACE_ITEM_ID = "workspaceItemId";
 	private static final String ARTIFACT_STREAM_ITEM_ID = "streamItemId";
 	private static final String ARTIFACT_COMPONENT1_ITEM_ID = "component1ItemId";
+	public static final String ARTIFACT_BUILD_DEFINITION_ID = "buildDefinitionId";
+	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 
 	private RTCFacadeWrapper testingFacade;
 
@@ -153,6 +158,20 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			}
 		}
 	}
+	
+	private void validateBuildProperties(String workspaceItemId,
+			String fetchDestination, boolean deleteBeforeFetch,
+			boolean acceptBeforeFetch, String componentLoadRules,
+			boolean includeComponents, String loadComponents,
+			String snapshotItemId, int changesAccepted,
+			boolean createFoldersForComponents, String loadPolicy,
+			String componentLoadConfig, Map<String, String> properties) {
+		validateBuildProperties(workspaceItemId, fetchDestination,
+				deleteBeforeFetch, acceptBeforeFetch, componentLoadRules,
+				includeComponents, loadComponents, snapshotItemId,
+				changesAccepted, createFoldersForComponents, loadPolicy,
+				componentLoadConfig, null, properties);
+	}
 
 	private void validateBuildProperties(String workspaceItemId,
 			String fetchDestination,
@@ -166,6 +185,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 			boolean createFoldersForComponents,
 			String loadPolicy,
 			String componentLoadConfig,
+			String loadMethod,
 			Map<String, String> properties) {
 
 	    final String PROPERTY_WORKSPACE_UUID = "team_scm_workspaceUUID"; //$NON-NLS-1$
@@ -180,6 +200,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	    final String PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS = "team_scm_createFoldersForComponents"; //$NON-NLS-1$
 	    final String PROPERTY_LOAD_POLICY = "team_scm_loadPolicy"; //$NON-NLS-1$
 	    final String PROPERTY_COMPONENT_LOAD_CONFIG = "team_scm_componentLoadConfig"; //$NON-NLS-1$
+	    final String PROPERTY_LOAD_METHOD = "team_scm_loadMethod"; //$NON-NLS-1$
 	    
 	    Assert.assertEquals(workspaceItemId, properties.get(PROPERTY_WORKSPACE_UUID));
 	    Assert.assertEquals(fetchDestination, properties.get(PROPERTY_FETCH_DESTINATION));
@@ -198,6 +219,11 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	    Assert.assertEquals(Boolean.toString(createFoldersForComponents), properties.get(PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS));
 		Assert.assertEquals(loadPolicy, properties.get(PROPERTY_LOAD_POLICY));
 		Assert.assertEquals(componentLoadConfig, properties.get(PROPERTY_COMPONENT_LOAD_CONFIG));
+		if (loadMethod == null) {
+			Assert.assertNull(properties.get(PROPERTY_LOAD_METHOD));
+		} else {
+			Assert.assertEquals(loadMethod, properties.get(PROPERTY_LOAD_METHOD));
+		}
 	}
 
 	@Test public void testGoodRelativeFetchLocation() throws Exception {
@@ -4700,6 +4726,685 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(), setupArtifacts);
+			}
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testBuildDefinitionConfig_doIncrementalUpdate_personalBuild() throws Exception {
+		// create a build definition
+		// create the required SCM artifacts
+
+		// create a build engine
+		// create a personal build request
+
+		// verify that the buildConfiguration is setup as expected
+
+		// checkout based on the request
+		// verify changes accepted
+
+		// Tests following scenarios
+		// 1. Load all components, do not create folders for components, do not exclude components, do not specify load
+		// rules, do incremental update, do a personal build
+		// incremental update though selected, is not supported in a personal build
+		if (Config.DEFAULT.isConfigured()) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+
+			// Scenario#1
+			// Load all components, do not create folders for components, do not
+			// exclude components, do not specify load rules, do incremental
+			// update
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
+			String fetchLocation = ".";
+
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
+					"testBuildDefinitionConfig_doIncrementalUpdate",
+					new Class[] { String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							int.class, // timeout,
+							String.class, // workspaceName,
+							String.class, // componentName,
+							String.class, // hjPath,
+							String.class, // buildPath
+							boolean.class, // shouldCreateFoldersForComponents
+							String.class, // loadPolicy
+							String.class, // componentLoadConfig
+							boolean.class, // isPersonalBuild
+							boolean.class }, // shouldDoIncrementalUpdate
+					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
+					getSandboxDir().getPath(), fetchLocation, false, null, null, false, true);
+			try {
+				TaskListener listener = getTaskListener();
+
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
+
+				File loadDir = new File(getSandboxDir(), "loadDir");
+
+				// checkout the changes
+				// initial load
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
+						changeLog, "Snapshot", listener, Locale.getDefault());
+
+				String[] children = loadDir.list();
+				Assert.assertEquals(7, children.length); // all contents of component1 and component2 + metadata
+				// Validate contents of component1
+				File fComp1 = new File(loadDir, "f-comp1");
+				Assert.assertTrue(fComp1.exists());
+				Assert.assertTrue(fComp1.isDirectory());
+				Assert.assertTrue(new File(fComp1, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(fComp1, "h-comp1.txt").exists());
+
+				File gComp1 = new File(loadDir, "g-comp1");
+				Assert.assertTrue(gComp1.exists());
+				Assert.assertTrue(gComp1.isDirectory());
+				Assert.assertTrue(new File(gComp1, "b-comp1.txt").exists());
+				Assert.assertTrue(new File(gComp1, "i-comp1.txt").exists());
+
+				File hComp1 = new File(loadDir, "h-comp1");
+				Assert.assertTrue(hComp1.exists());
+				Assert.assertTrue(hComp1.isDirectory());
+				Assert.assertTrue(new File(hComp1, "c-comp1.txt").exists());
+
+				// Validate contents of component2
+				File fComp2 = new File(loadDir, "f-comp2");
+				Assert.assertTrue(fComp2.exists());
+				Assert.assertTrue(fComp2.isDirectory());
+				Assert.assertTrue(new File(fComp2, "a.txt").exists());
+
+				File gComp2 = new File(loadDir, "g-comp2");
+				Assert.assertTrue(gComp2.exists());
+				Assert.assertTrue(gComp2.isDirectory());
+				Assert.assertTrue(new File(gComp2, "b.txt").exists());
+
+				File hComp2 = new File(loadDir, "h-comp2");
+				Assert.assertTrue(hComp2.exists());
+				Assert.assertTrue(hComp2.isDirectory());
+				Assert.assertTrue(new File(hComp2, "c.txt").exists());
+
+				RTCChangeLogParser parser = new RTCChangeLogParser();
+				FileReader changeLogReader = new FileReader(changeLogFile);
+				RTCChangeLogSet result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				int changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(1, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, false, null, null,
+						"optimizedIncrementalLoad", buildProperties);
+
+				// put extraneous stuff in the load directory, these changes should not be retained as we will not go
+				// through incremental update in a personal build
+				assertTrue(new File(fComp1, "abc").mkdirs());
+				assertTrue(new File(fComp1, "def").mkdirs());
+				assertTrue(new File(fComp1, "hij").mkdirs());
+				
+				String fileName1 = "iu-comp1-1.txt";
+				String folderName1 = "iu-comp1-1";
+
+				// make some changes
+				Map<String, String> setupArtifacts1 = (Map<String, String>)getTestingFacade().invoke(
+						"setUpBuildDefinition_incrementalChanges",
+						new Class[] { String.class, // serverURL
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								String.class, // buildDefinitionId
+								String.class, // workspaceItemId
+								String.class, // componentItemId
+								boolean.class, // isPersonalBuild
+								String.class, // folderName
+								String.class }, //fileName
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						setupArtifacts.get(ARTIFACT_BUILD_DEFINITION_ID), setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID),
+						setupArtifacts.get(ARTIFACT_COMPONENT1_ITEM_ID), true, folderName1, fileName1);
+				setupArtifacts.put("buildResultItemId1", setupArtifacts1.get("buildResultItemId"));
+
+				changeLog.close();
+				changeLogFile.delete();
+
+				changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				changeLog = new FileOutputStream(changeLogFile);
+
+				// checkout the changes
+				// subsequentLoad should not go through incremental update as it is a personal build, so local changes
+				// should be reverted
+				buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts1.get("buildResultItemId"), null, loadDir.getCanonicalPath(), changeLog, "Snapshot",
+						listener, Locale.getDefault());
+
+				children = loadDir.list();
+				Assert.assertEquals(8, children.length); // all contents of component1(including the newly added
+															// folder) and component2 + metadata
+
+				// Validate contents of component1
+				fComp1 = new File(loadDir, "f-comp1");
+				Assert.assertTrue(fComp1.exists());
+				Assert.assertTrue(fComp1.isDirectory());
+				Assert.assertTrue(new File(fComp1, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(fComp1, "h-comp1.txt").exists());
+
+				// Validate that local changes are not retained as incremental update wouldn't have happened for
+				// personal build
+				Assert.assertFalse(new File(fComp1, "abc").exists());
+				Assert.assertFalse(new File(fComp1, "def").exists());
+				Assert.assertFalse(new File(fComp1, "hij").exists());
+
+				gComp1 = new File(loadDir, "g-comp1");
+				Assert.assertTrue(gComp1.exists());
+				Assert.assertTrue(gComp1.isDirectory());
+				Assert.assertTrue(new File(gComp1, "b-comp1.txt").exists());
+				Assert.assertTrue(new File(gComp1, "i-comp1.txt").exists());
+
+				hComp1 = new File(loadDir, "h-comp1");
+				Assert.assertTrue(hComp1.exists());
+				Assert.assertTrue(hComp1.isDirectory());
+				Assert.assertTrue(new File(hComp1, "c-comp1.txt").exists());
+
+				File iuComp1 = new File(loadDir, folderName1);
+				Assert.assertTrue(iuComp1.exists());
+				Assert.assertTrue(iuComp1.isDirectory());
+				Assert.assertTrue(new File(iuComp1, fileName1).exists());
+
+				// Validate contents of component2
+				fComp2 = new File(loadDir, "f-comp2");
+				Assert.assertTrue(fComp2.exists());
+				Assert.assertTrue(fComp2.isDirectory());
+				Assert.assertTrue(new File(fComp2, "a.txt").exists());
+
+				gComp2 = new File(loadDir, "g-comp2");
+				Assert.assertTrue(gComp2.exists());
+				Assert.assertTrue(gComp2.isDirectory());
+				Assert.assertTrue(new File(gComp2, "b.txt").exists());
+
+				hComp2 = new File(loadDir, "h-comp2");
+				Assert.assertTrue(hComp2.exists());
+				Assert.assertTrue(hComp2.isDirectory());
+				Assert.assertTrue(new File(hComp2, "c.txt").exists());
+
+				parser = new RTCChangeLogParser();
+				changeLogReader = new FileReader(changeLogFile);
+				result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(0, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, false, null, null,
+						"optimizedIncrementalLoad", buildProperties);
+				
+				// put extraneous stuff in the load directory, these changes should not be retained as we will not go
+				// through incremental update in a regular build after personal build
+				assertTrue(new File(fComp1, "abc").mkdirs());
+				assertTrue(new File(fComp1, "def").mkdirs());
+				assertTrue(new File(fComp1, "hij").mkdirs());
+				
+				String fileName2 = "iu-comp1-2.txt";
+				String folderName2 = "iu-comp1-2";
+
+				// make some changes
+				setupArtifacts1 = (Map<String, String>)getTestingFacade().invoke(
+						"setUpBuildDefinition_incrementalChanges",
+						new Class[] { String.class, // serverURL
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								String.class, // buildDefinitionId
+								String.class, // workspaceItemId
+								String.class, // componentItemId
+								boolean.class, // isPersonalBuild
+								String.class, // folderName
+								String.class }, // fileName
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						setupArtifacts.get(ARTIFACT_BUILD_DEFINITION_ID), setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID),
+						setupArtifacts.get(ARTIFACT_COMPONENT1_ITEM_ID), false, folderName2, fileName2);
+				setupArtifacts.put("buildResultItemId2", setupArtifacts1.get("buildResultItemId"));
+
+				changeLog.close();
+				changeLogFile.delete();
+
+				changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				changeLog = new FileOutputStream(changeLogFile);
+
+				// checkout the changes
+				// subsequentLoad should not go through incremental update as it is a regular build after personal
+				// build, so local changes should be reverted
+				buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts1.get("buildResultItemId"), null, loadDir.getCanonicalPath(), changeLog, "Snapshot",
+						listener, Locale.getDefault());
+
+				children = loadDir.list();
+				Assert.assertEquals(9, children.length); // all contents of component1(including the newly added
+															// folder) and component2 + metadata
+
+				// Validate contents of component1
+				fComp1 = new File(loadDir, "f-comp1");
+				Assert.assertTrue(fComp1.exists());
+				Assert.assertTrue(fComp1.isDirectory());
+				Assert.assertTrue(new File(fComp1, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(fComp1, "h-comp1.txt").exists());
+
+				// Validate that local changes are not retained as incremental update wouldn't have happened for
+				// regular build after personal build
+				Assert.assertFalse(new File(fComp1, "abc").exists());
+				Assert.assertFalse(new File(fComp1, "def").exists());
+				Assert.assertFalse(new File(fComp1, "hij").exists());
+
+				gComp1 = new File(loadDir, "g-comp1");
+				Assert.assertTrue(gComp1.exists());
+				Assert.assertTrue(gComp1.isDirectory());
+				Assert.assertTrue(new File(gComp1, "b-comp1.txt").exists());
+				Assert.assertTrue(new File(gComp1, "i-comp1.txt").exists());
+
+				hComp1 = new File(loadDir, "h-comp1");
+				Assert.assertTrue(hComp1.exists());
+				Assert.assertTrue(hComp1.isDirectory());
+				Assert.assertTrue(new File(hComp1, "c-comp1.txt").exists());
+
+				iuComp1 = new File(loadDir, folderName1);
+				Assert.assertTrue(iuComp1.exists());
+				Assert.assertTrue(iuComp1.isDirectory());
+				Assert.assertTrue(new File(iuComp1, fileName1).exists());
+				
+				File iuComp2 = new File(loadDir, folderName2);
+				Assert.assertTrue(iuComp2.exists());
+				Assert.assertTrue(iuComp2.isDirectory());
+				Assert.assertTrue(new File(iuComp2, fileName2).exists());
+
+				// Validate contents of component2
+				fComp2 = new File(loadDir, "f-comp2");
+				Assert.assertTrue(fComp2.exists());
+				Assert.assertTrue(fComp2.isDirectory());
+				Assert.assertTrue(new File(fComp2, "a.txt").exists());
+
+				gComp2 = new File(loadDir, "g-comp2");
+				Assert.assertTrue(gComp2.exists());
+				Assert.assertTrue(gComp2.isDirectory());
+				Assert.assertTrue(new File(gComp2, "b.txt").exists());
+
+				hComp2 = new File(loadDir, "h-comp2");
+				Assert.assertTrue(hComp2.exists());
+				Assert.assertTrue(hComp2.isDirectory());
+				Assert.assertTrue(new File(hComp2, "c.txt").exists());
+
+				parser = new RTCChangeLogParser();
+				changeLogReader = new FileReader(changeLogFile);
+				result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(2, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, false, null, null,
+						"optimizedIncrementalLoad", buildProperties);
+				
+				// put extraneous stuff in the load directory, these changes should be retained as we will go
+				// through incremental update in a regular build after a regular build
+				assertTrue(new File(fComp1, "abc").mkdirs());
+				assertTrue(new File(fComp1, "def").mkdirs());
+				assertTrue(new File(fComp1, "hij").mkdirs());
+				
+				String fileName3 = "iu-comp1-3.txt";
+				String folderName3 = "iu-comp1-3";
+
+				// make some changes
+				setupArtifacts1 = (Map<String, String>)getTestingFacade().invoke(
+						"setUpBuildDefinition_incrementalChanges",
+						new Class[] { String.class, // serverURL
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								String.class, // buildDefinitionId
+								String.class, // workspaceItemId
+								String.class, // componentItemId
+								boolean.class, // isPersonalBuild
+								String.class, // folderName
+								String.class }, // fileName
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						setupArtifacts.get(ARTIFACT_BUILD_DEFINITION_ID), setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID),
+						setupArtifacts.get(ARTIFACT_COMPONENT1_ITEM_ID), false, folderName3, fileName3);
+				setupArtifacts.put("buildResultItemId3", setupArtifacts1.get("buildResultItemId"));
+
+				changeLog.close();
+				changeLogFile.delete();
+
+				changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				changeLog = new FileOutputStream(changeLogFile);
+
+				// checkout the changes
+				// subsequentLoad should go through incremental update as it is a regular build after regular build, so
+				// local changes should not be reverted
+				buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts1.get("buildResultItemId"), null, loadDir.getCanonicalPath(), changeLog, "Snapshot",
+						listener, Locale.getDefault());
+
+				children = loadDir.list();
+				Assert.assertEquals(10, children.length); // all contents of component1(including the newly added
+															// folder) and component2 + metadata
+
+				// Validate contents of component1
+				fComp1 = new File(loadDir, "f-comp1");
+				Assert.assertTrue(fComp1.exists());
+				Assert.assertTrue(fComp1.isDirectory());
+				Assert.assertTrue(new File(fComp1, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(fComp1, "h-comp1.txt").exists());
+
+				// Validate that local changes are retained as incremental update would  have happened for
+				// a regular buid after regular build
+				Assert.assertTrue(new File(fComp1, "abc").exists());
+				Assert.assertTrue(new File(fComp1, "def").exists());
+				Assert.assertTrue(new File(fComp1, "hij").exists());
+
+				gComp1 = new File(loadDir, "g-comp1");
+				Assert.assertTrue(gComp1.exists());
+				Assert.assertTrue(gComp1.isDirectory());
+				Assert.assertTrue(new File(gComp1, "b-comp1.txt").exists());
+				Assert.assertTrue(new File(gComp1, "i-comp1.txt").exists());
+
+				hComp1 = new File(loadDir, "h-comp1");
+				Assert.assertTrue(hComp1.exists());
+				Assert.assertTrue(hComp1.isDirectory());
+				Assert.assertTrue(new File(hComp1, "c-comp1.txt").exists());
+
+				iuComp1 = new File(loadDir, folderName1);
+				Assert.assertTrue(iuComp1.exists());
+				Assert.assertTrue(iuComp1.isDirectory());
+				Assert.assertTrue(new File(iuComp1, fileName1).exists());
+				
+				File iuComp3 = new File(loadDir, folderName3);
+				Assert.assertTrue(iuComp3.exists());
+				Assert.assertTrue(iuComp3.isDirectory());
+				Assert.assertTrue(new File(iuComp3, fileName3).exists());
+				
+				iuComp2 = new File(loadDir, folderName2);
+				Assert.assertTrue(iuComp2.exists());
+				Assert.assertTrue(iuComp2.isDirectory());
+				Assert.assertTrue(new File(iuComp2, fileName2).exists());
+
+				// Validate contents of component2
+				fComp2 = new File(loadDir, "f-comp2");
+				Assert.assertTrue(fComp2.exists());
+				Assert.assertTrue(fComp2.isDirectory());
+				Assert.assertTrue(new File(fComp2, "a.txt").exists());
+
+				gComp2 = new File(loadDir, "g-comp2");
+				Assert.assertTrue(gComp2.exists());
+				Assert.assertTrue(gComp2.isDirectory());
+				Assert.assertTrue(new File(gComp2, "b.txt").exists());
+
+				hComp2 = new File(loadDir, "h-comp2");
+				Assert.assertTrue(hComp2.exists());
+				Assert.assertTrue(hComp2.isDirectory());
+				Assert.assertTrue(new File(hComp2, "c.txt").exists());
+
+				parser = new RTCChangeLogParser();
+				changeLogReader = new FileReader(changeLogFile);
+				result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(1, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, false, null, null,
+						"optimizedIncrementalLoad", buildProperties);
+
+			} finally {
+				// clean up
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						Map.class }, // setupArtifacts
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
+			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testBuildDefinitionConfig_doIncrementalUpdate() throws Exception {
+		// create a build definition
+		// load directory "."
+		// delete directory before loading (dir has other stuff that will be deleted)
+		// accept changes before loading
+
+		// create a build engine
+		// create a build request
+
+		// verify that the buildConfiguration is setup as expected
+
+		// checkout based on the request
+		// verify changes accepted
+
+		// Tests following scenarios
+		// 1. Load all components, do not create folders for components, do not exclude components, do not specify load
+		// rules, do incremental update
+		if (Config.DEFAULT.isConfigured()) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+
+			// Scenario#1
+			// Load all components, do not create folders for components, do not
+			// exclude components, do not specify load rules, do incremental
+			// update
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
+			String fetchLocation = ".";
+
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
+					"testBuildDefinitionConfig_doIncrementalUpdate",
+					new Class[] { String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							int.class, // timeout,
+							String.class, // workspaceName,
+							String.class, // componentName,
+							String.class, // hjPath,
+							String.class, // buildPath
+							boolean.class, // shouldCreateFoldersForComponents
+							String.class, // loadPolicy
+							String.class, // componentLoadConfig
+							boolean.class, // isPersonalBuild
+							boolean.class }, // shouldDoIncrementalUpdate
+					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
+					getSandboxDir().getPath(), fetchLocation, false, null, null, false, true);
+			try {
+				ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+				TaskListener listener = new StreamTaskListener(new PrintStream(byteArrayOutputStream), null);
+
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
+
+				File loadDir = new File(getSandboxDir(), "loadDir");
+
+				// checkout the changes
+				// initial load
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
+						changeLog, "Snapshot", listener, Locale.getDefault());
+				
+				// validate that build log doesn't contain invoking incremental update message
+				listener.getLogger().flush();
+				Assert.assertFalse(byteArrayOutputStream.toString().contains("Invoking optimized incremental load"));
+
+				String[] children = loadDir.list();
+				Assert.assertEquals(7, children.length); // all contents of component1 and component2 + metadata
+				// Validate contents of component1
+				File fComp1 = new File(loadDir, "f-comp1");
+				Assert.assertTrue(fComp1.exists());
+				Assert.assertTrue(fComp1.isDirectory());
+				Assert.assertTrue(new File(fComp1, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(fComp1, "h-comp1.txt").exists());
+
+				File gComp1 = new File(loadDir, "g-comp1");
+				Assert.assertTrue(gComp1.exists());
+				Assert.assertTrue(gComp1.isDirectory());
+				Assert.assertTrue(new File(gComp1, "b-comp1.txt").exists());
+				Assert.assertTrue(new File(gComp1, "i-comp1.txt").exists());
+
+				File hComp1 = new File(loadDir, "h-comp1");
+				Assert.assertTrue(hComp1.exists());
+				Assert.assertTrue(hComp1.isDirectory());
+				Assert.assertTrue(new File(hComp1, "c-comp1.txt").exists());
+
+				// Validate contents of component2
+				File fComp2 = new File(loadDir, "f-comp2");
+				Assert.assertTrue(fComp2.exists());
+				Assert.assertTrue(fComp2.isDirectory());
+				Assert.assertTrue(new File(fComp2, "a.txt").exists());
+
+				File gComp2 = new File(loadDir, "g-comp2");
+				Assert.assertTrue(gComp2.exists());
+				Assert.assertTrue(gComp2.isDirectory());
+				Assert.assertTrue(new File(gComp2, "b.txt").exists());
+
+				File hComp2 = new File(loadDir, "h-comp2");
+				Assert.assertTrue(hComp2.exists());
+				Assert.assertTrue(hComp2.isDirectory());
+				Assert.assertTrue(new File(hComp2, "c.txt").exists());
+
+				RTCChangeLogParser parser = new RTCChangeLogParser();
+				FileReader changeLogReader = new FileReader(changeLogFile);
+				RTCChangeLogSet result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				int changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(1, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, false, null, null,
+						"optimizedIncrementalLoad", buildProperties);
+
+				// put extraneous stuff in the load directory, these changes should be retained as we will go through
+				// incremental update in the subesequent load
+				assertTrue(new File(fComp1, "abc").mkdirs());
+				assertTrue(new File(fComp1, "def").mkdirs());
+				assertTrue(new File(fComp1, "hij").mkdirs());
+				
+				String folderName = "iu-comp1";
+				String fileName = "iu-comp1.txt";
+
+				// make some changes
+				Map<String, String> setupArtifacts1 = (Map<String, String>)getTestingFacade().invoke(
+						"setUpBuildDefinition_incrementalChanges",
+						new Class[] { String.class, // serverURL
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								String.class, // buildDefinitionId
+								String.class, // workspaceItemId
+								String.class, // componentItemId
+								boolean.class, // isPersonalBuild
+								String.class, // folderName
+								String.class }, // fileName
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						setupArtifacts.get(ARTIFACT_BUILD_DEFINITION_ID), setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID),
+						setupArtifacts.get(ARTIFACT_COMPONENT1_ITEM_ID), false, folderName, fileName);
+				setupArtifacts.put("buildResultItemId1", setupArtifacts1.get("buildResultItemId"));
+
+				changeLog.close();
+				changeLogFile.delete();
+
+				changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				changeLog = new FileOutputStream(changeLogFile);
+
+				// checkout the changes
+				// subsequentLoad should go through incremental update and local changes should not be reverted
+				byteArrayOutputStream = new ByteArrayOutputStream();
+				listener = new StreamTaskListener(new PrintStream(byteArrayOutputStream), null);
+				buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts1.get("buildResultItemId"), null, loadDir.getCanonicalPath(), changeLog, "Snapshot",
+						listener, Locale.getDefault());
+				
+				// validate that build log contains invoking incremental update message
+				listener.getLogger().flush();
+				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+					// validate only when using 701 build toolkit
+					Assert.assertTrue(byteArrayOutputStream.toString().contains("Invoking optimized incremental load"));
+				}
+
+				children = loadDir.list();
+				Assert.assertEquals(8, children.length); // all contents of component1(including the newly added
+															// folder) and component2 + metadata
+
+				// Validate contents of component1
+				fComp1 = new File(loadDir, "f-comp1");
+				Assert.assertTrue(fComp1.exists());
+				Assert.assertTrue(fComp1.isDirectory());
+				Assert.assertTrue(new File(fComp1, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(fComp1, "h-comp1.txt").exists());
+
+				// Validate that local changes are retained as incremental update wouldn't revert local changes
+				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+					Assert.assertTrue(new File(fComp1, "abc").exists());
+					Assert.assertTrue(new File(fComp1, "def").exists());
+					Assert.assertTrue(new File(fComp1, "hij").exists());
+				} else {
+					// in pre701 build toolkits incremental update wouldn't happen
+					Assert.assertFalse(new File(fComp1, "abc").exists());
+					Assert.assertFalse(new File(fComp1, "def").exists());
+					Assert.assertFalse(new File(fComp1, "hij").exists());
+				}
+
+				gComp1 = new File(loadDir, "g-comp1");
+				Assert.assertTrue(gComp1.exists());
+				Assert.assertTrue(gComp1.isDirectory());
+				Assert.assertTrue(new File(gComp1, "b-comp1.txt").exists());
+				Assert.assertTrue(new File(gComp1, "i-comp1.txt").exists());
+
+				hComp1 = new File(loadDir, "h-comp1");
+				Assert.assertTrue(hComp1.exists());
+				Assert.assertTrue(hComp1.isDirectory());
+				Assert.assertTrue(new File(hComp1, "c-comp1.txt").exists());
+
+				File iuComp1 = new File(loadDir, folderName);
+				Assert.assertTrue(iuComp1.exists());
+				Assert.assertTrue(iuComp1.isDirectory());
+				Assert.assertTrue(new File(iuComp1, fileName).exists());
+
+				// Validate contents of component2
+				fComp2 = new File(loadDir, "f-comp2");
+				Assert.assertTrue(fComp2.exists());
+				Assert.assertTrue(fComp2.isDirectory());
+				Assert.assertTrue(new File(fComp2, "a.txt").exists());
+
+				gComp2 = new File(loadDir, "g-comp2");
+				Assert.assertTrue(gComp2.exists());
+				Assert.assertTrue(gComp2.isDirectory());
+				Assert.assertTrue(new File(gComp2, "b.txt").exists());
+
+				hComp2 = new File(loadDir, "h-comp2");
+				Assert.assertTrue(hComp2.exists());
+				Assert.assertTrue(hComp2.isDirectory());
+				Assert.assertTrue(new File(hComp2, "c.txt").exists());
+
+				parser = new RTCChangeLogParser();
+				changeLogReader = new FileReader(changeLogFile);
+				result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(1, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, false, null, null,
+						"optimizedIncrementalLoad", buildProperties);
+
+			} finally {
+				// clean up
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						Map.class }, // setupArtifacts
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2019 IBM Corporation and others.
+ * Copyright © 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -31,6 +31,7 @@ import com.ibm.team.build.common.model.IBuildResult;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
+import com.ibm.team.build.internal.hjplugin.rtc.Constants;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils;
@@ -2114,5 +2115,41 @@ public class TestSetupTearDownUtil extends BuildClient {
 			}
 		}
 		return true;
+	}
+	
+	public Map<String, String> testBuildDefinitionConfig_doIncrementalUpdate(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String hjPath, String buildPath, boolean shouldCreateFoldersForComponents, String loadPolicy,
+			String componentLoadConfig, boolean isPersonalBuild, boolean shouldDoIncrementalUpdate, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests.setupBuildDefinition_toTestIncrementalUpdate(workspaceName, componentName,
+				buildDefinitionId, hjPath, buildPath, shouldCreateFoldersForComponents, loadPolicy, componentLoadConfig, isPersonalBuild,
+				shouldDoIncrementalUpdate? Constants.LOAD_METHOD_OPTIMIZED_INCREMENTAL_LOAD : Constants.LOAD_METHOD_INCREMENTAL_LOAD);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_doIncrementalUpdate(workspaceName, buildDefinitionId, hjPath, buildPath, artifactIds,
+					shouldCreateFoldersForComponents, loadPolicy, componentLoadConfig, isPersonalBuild,
+					shouldDoIncrementalUpdate ? Constants.LOAD_METHOD_OPTIMIZED_INCREMENTAL_LOAD : Constants.LOAD_METHOD_INCREMENTAL_LOAD);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put(ARTIFACT_BUILD_DEFINITION_ID, buildDefinitionId);
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		artifactIds.put("isPre701BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre701BuildToolkit()));
+		return artifactIds;
+	}
+	
+	public Map<String, String> setUpBuildDefinition_incrementalChanges(ConnectionDetails connectionDetails, String buildDefinitionId,
+			String workspaceItemId, String componentItemId, boolean isPersonalBuild, String folderName, String fileName, IProgressMonitor monitor)
+			throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		return buildConfigurationTests.setUpBuildDefinition_incrementalChanges(buildDefinitionId, workspaceItemId, componentItemId, isPersonalBuild,
+				folderName, fileName, monitor);
 	}
 }

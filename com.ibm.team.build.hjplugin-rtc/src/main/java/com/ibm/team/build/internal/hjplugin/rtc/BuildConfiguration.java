@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2019 IBM Corporation and others.
+ * Copyright (c) 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -75,6 +75,7 @@ public class BuildConfiguration {
 	private File fetchDestinationFile;
 	private Path fetchDestinationPath;
 	private boolean deleteNeeded = false;
+	private String loadMethod;
 	private boolean isPersonalBuild = false;
 	private boolean acceptBeforeFetch = true;
 	private boolean includeComponents = false;
@@ -372,6 +373,7 @@ public class BuildConfiguration {
         loadRuleUUIDs = getComponentLoadRuleUUIDs(buildDefinitionInstance);
         components = getLoadComponents(buildDefinitionInstance);
         includeComponents = getIncludeComponents(buildDefinitionInstance);
+		this.loadMethod = getLoadMethod(buildDefinitionInstance);
 		isBuildDefinitionConfiguration = true;
 
         if (workspaceUuid == null) {
@@ -877,7 +879,14 @@ public class BuildConfiguration {
         }
         return null;
     }
-   
+    
+	private String getLoadMethod(IBuildDefinitionInstance instance) {
+		IBuildProperty property = instance.getProperty(Constants.PROPERTY_LOAD_METHOD);
+		if (property != null && property.getValue().length() > 0) {
+			return property.getValue();
+		}
+		return null;
+	}
 
 	public ITeamRepository getTeamRepository() {
 		return teamRepository;
@@ -971,6 +980,14 @@ public class BuildConfiguration {
 		return createFoldersForComponents;
 	}
 	
+	public String getLoadPolicy() {
+		return loadPolicy;
+	}
+	
+	public String getComponentLoadRuleUuids() {
+		return loadRuleUUIDs;
+	}
+	
 	public boolean isLoadPolicySetToUseLoadRules() {
 		return loadPolicy != null && Constants.LOAD_POLICY_USE_LOAD_RULES.equals(loadPolicy);
 	}
@@ -985,6 +1002,10 @@ public class BuildConfiguration {
 
 	public boolean isLoadPolicySet() {
 		return loadPolicy != null;
+	}
+	
+	public String getComponentLoadConfig() {
+		return componentLoadConfig;
 	}
 
 	public boolean isComponentLoadConfigSetToExcludeSomeComponents() {
@@ -1042,6 +1063,10 @@ public class BuildConfiguration {
 	
 	public boolean isStreamLoad() {
 		return (stream != null && workspace != null);
+	}
+	
+	public String getLoadMethod() {
+		return loadMethod;
 	}
 
     /**

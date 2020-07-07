@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2019 IBM Corporation and others.
+ * Copyright © 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -677,5 +677,23 @@ public class RTCTestingFacade extends RTCFacade {
 		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
 		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
 		return testClient.createEmptyChangeSets(connectionDetails, workspaceUUID, componentUUID, count, getProgressMonitor());
+	}
+
+	public Map<String, String> testBuildDefinitionConfig_doIncrementalUpdate(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String hjPath, String buildPath, boolean shouldCreateFoldersForComponents, String loadPolicy,
+			String componentLoadConfig, boolean isPersonalBuild, boolean shouldDoIncrementalUpdate) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_doIncrementalUpdate(connectionDetails, workspaceName, componentName, hjPath, buildPath,
+				shouldCreateFoldersForComponents, loadPolicy, componentLoadConfig, isPersonalBuild, shouldDoIncrementalUpdate, getProgressMonitor());
+	}
+
+	public Map<String, String> setUpBuildDefinition_incrementalChanges(String serverURL, String userId, String password, int timeout,
+			String buildDefinitionId, String workspaceItemId, String componentItemId, boolean isPersonalBuild, String folderName,
+			String fileName) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.setUpBuildDefinition_incrementalChanges(connectionDetails, buildDefinitionId, workspaceItemId, componentItemId,
+				isPersonalBuild, folderName, fileName, getProgressMonitor());
 	}
 }

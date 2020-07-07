@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2017, 2019 IBM Corporation and others.
+ * Copyright © 2017, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -106,11 +106,38 @@ public class Constants {
     public static final String PROPERTY_COMPONENT_LOAD_CONFIG = "team.scm.componentLoadConfig"; //$NON-NLS-1$
     
     /**
-     * Build property for "Add build result links in accepted work items".
-     *
-     * @since 0.12.0 (RTC 7.0)
+     * Build property that determines the type of load i.e. full-load,
+     * incremental-load or optimized-incremental-load.
+     * 
+     * @since 0.12.0.1 (RTC 7.0.1)
      */
-    public static final String PROPERTY_INCLUDE_LINKS_IN_WORKITEMS = "team.scm.createWorkItemIncludeLinks"; //$NON-NLS-1$
+    public static final String PROPERTY_LOAD_METHOD = "team.scm.loadMethod"; //$NON-NLS-1$
+
+    /**
+     * String representing full load - Deletes the directory before loading.
+     * Fetches all the files from the workspace.
+     * 
+     * @since 0.12.0.1 (RTC 7.0.1)
+     */
+    public static final String LOAD_METHOD_FULL_LOAD = "fullLoad"; //$NON-NLS-1$
+
+    /**
+     * String representing incremental load - Does not delete the directory
+     * before loading. Reverts local changes and deletes untracked files.
+     * Fetches only modified files from the workspace.
+     * 
+     * @since 0.12.0.1 (RTC 7.0.1)
+     */
+    public static final String LOAD_METHOD_INCREMENTAL_LOAD = "incrementalLoad"; //$NON-NLS-1$
+
+    /**
+     * String representing optimized incremental load - Does not delete the
+     * directory before loading. Ignores local changes and untracked files.
+     * Fetches only modified files from the workspace.
+     * 
+     * @since 0.12.0.1 (RTC 7.0.1)
+     */
+    public static final String LOAD_METHOD_OPTIMIZED_INCREMENTAL_LOAD = "optimizedIncrementalLoad"; //$NON-NLS-1$
     
     /**
      * Constants related to build URL map sent by RTCScm
@@ -173,4 +200,11 @@ public class Constants {
 	
 	public static final String STATISTICS_DATA_FILE_PREFIX_PROPERTY_NAME = 
 								"statisticsDataFilePrefix"; //$NON-NLS-1$
+	
+    /**
+     * Build property for "Add build result links in accepted work items".
+     *
+     * @since 0.12.0 (RTC 7.0)
+     */
+    public static final String PROPERTY_INCLUDE_LINKS_IN_WORKITEMS = "team.scm.createWorkItemIncludeLinks"; //$NON-NLS-1$
 }

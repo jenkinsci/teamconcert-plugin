@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2019 IBM Corporation and others.
+ * Copyright (c) 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 import com.ibm.team.build.client.ClientFactory;
@@ -3758,4 +3759,201 @@ public class BuildConfigurationTests {
 		AssertUtil.assertTrue("isSnapshotLoad should be true", buildConfiguration.isSnapshotLoad());
 		AssertUtil.assertFalse("isStreamLoad should be false", buildConfiguration.isStreamLoad());
 	}
+
+	public Map<String, String> setupBuildDefinition_toTestIncrementalUpdate(String workspaceName, String componentName, String buildDefinitionId,
+			String hjPath, String buildPath, boolean shouldCreateFoldersForComponents, String loadPolicy, String componentLoadConfig,
+			boolean isPersonalBuild, String loadMethod) throws Exception {
+		// create a build definition
+		// load directory "."
+		// delete directory before loading (dir has other stuff that will be deleted)
+		// accept changes before loading
+		// add and set team.scm.loadPolicy and team.scm.componentLoadConfig properties
+		// select create folders for components option depending on the value of shouldCreateFoldersForComponents
+		// select doIncrementalUpdate option depending on the value of shouldDoIncrementalUpdate
+
+		// create a build engine
+		// create a build request
+
+		// verify that the buildConfiguration returns the load rules
+		// and other settings.
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		Map<String, String> artifactIds = new HashMap<String, String>();
+
+		try {
+			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, false);
+			// create the build definition
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, null, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
+					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
+					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "false",
+					IJazzScmConfigurationElement.PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS, shouldCreateFoldersForComponents ? "true" : "false",
+					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS,
+					new LoadComponents(Collections.<IComponentHandle> emptyList()).getBuildProperty(), Constants.PROPERTY_LOAD_METHOD,
+					loadMethod);
+			if (loadPolicy != null) {
+				BuildUtil.addPropertyToBuildDefiniion(repo, buildDefinitionId, Constants.PROPERTY_LOAD_POLICY, loadPolicy);
+			}
+			if (componentLoadConfig != null) {
+				BuildUtil.addPropertyToBuildDefiniion(repo, buildDefinitionId, Constants.PROPERTY_COMPONENT_LOAD_CONFIG, componentLoadConfig);
+			}
+
+			if (isPersonalBuild) {
+				Exception[] failure = new Exception[] { null };
+				IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
+				IBuildResultHandle buildResultHandle = createPersonalBuildResult(
+						buildDefinitionId,
+						(IWorkspaceHandle)IWorkspace.ITEM_TYPE.createItemHandle(
+								UUID.valueOf(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID)), null), "my buildLabel", listener);
+				artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultHandle.getItemId().getUuidValue());
+				if (failure[0] != null) {
+					throw failure[0];
+				}
+			} else {
+				BuildUtil.createBuildResult(buildDefinitionId, connection, "my buildLabel", artifactIds);
+			}
+			return artifactIds;
+		} catch (Exception e) {
+			// cleanup artifacts created
+			BuildUtil.deleteBuildArtifacts(repo, artifactIds);
+			throw e;
+		}
+	}
+
+	public void testBuildDefinitionConfig_doIncrementalUpdate(String workspaceName, String buildDefinitionId, String hjPath, String buildPath,
+			Map<String, String> artifactIds, boolean shouldCreateFoldersForComponents, String loadPolicy, String componentLoadConfig,
+			boolean isPersonalBuild, String loadMethod) throws Exception {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		Exception[] failure = new Exception[] { null };
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
+
+		// get the build result
+		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+		IBuildResultHandle buildResultHandle = (IBuildResultHandle)IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
+
+		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
+		buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", false, listener, null, Locale.getDefault());
+		if (failure[0] != null) {
+			throw failure[0];
+		}
+
+		AssertUtil.assertTrue("Personal build property is not as expected", buildConfiguration.isPersonalBuild() == isPersonalBuild);
+		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
+		AssertUtil.assertEquals(
+				(isPersonalBuild ? artifactIds.get(TestSetupTearDownUtil.ARTIFACT_STREAM_ITEM_ID) : artifactIds
+						.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID)), workspaceDescriptor.getWorkspaceHandle().getItemId().getUuidValue());
+		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil
+				.assertTrue(
+						"Create folders for components is not as expected",
+						shouldCreateFoldersForComponents
+								&& (loadPolicy == null || loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy)) ? buildConfiguration
+								.createFoldersForComponents() == true : buildConfiguration.createFoldersForComponents() == false);
+		AssertUtil.assertEquals(
+				0,
+				buildConfiguration.getComponentLoadRules(workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null,
+						System.out, null, Locale.getDefault()).size());
+		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
+		File expectedLoadDir = new File(hjPath);
+		expectedLoadDir = new File(expectedLoadDir, buildPath);
+		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
+		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertFalse("Deletion is not needed", buildConfiguration.isDeleteNeeded());
+		AssertUtil
+				.assertTrue(
+						"isLoadPolicySetToUseLoadRules is not as expected ",
+						loadPolicy != null && Constants.LOAD_POLICY_USE_LOAD_RULES.equals(loadPolicy) ? buildConfiguration
+								.isLoadPolicySetToUseLoadRules() == true : buildConfiguration.isLoadPolicySetToUseLoadRules() == false);
+		AssertUtil.assertTrue(
+				"isLoadPolicySetToUseComponentLoadConfig is not as expected ",
+				loadPolicy != null && Constants.LOAD_POLICY_USE_COMPONENT_LOAD_CONFIG.equals(loadPolicy) ? buildConfiguration
+						.isLoadPolicySetToUseComponentLoadConfig() == true : buildConfiguration.isLoadPolicySetToUseComponentLoadConfig() == false);
+		AssertUtil.assertTrue("isLoadPolicySet is not as expected",
+				loadPolicy != null ? buildConfiguration.isLoadPolicySet() == true : buildConfiguration.isLoadPolicySet() == false);
+		AssertUtil
+				.assertTrue(
+						"isComponentLoadConfigSetToExcludeSomeComponents is not as expected",
+						componentLoadConfig != null && componentLoadConfig.equals(Constants.COMPONENT_LOAD_CONFIG_EXCLUDE_SOME_COMPONENTS) ? buildConfiguration
+								.isComponentLoadConfigSetToExcludeSomeComponents() == true : buildConfiguration
+								.isComponentLoadConfigSetToExcludeSomeComponents() == false);
+		AssertUtil.assertEquals(loadMethod, buildConfiguration.getLoadMethod());
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
+	}
+
+	public Map<String, String> setUpBuildDefinition_incrementalChanges(String buildDefinitionId, String workspaceItemId, String componentItemId,
+			boolean isPersonalBuild, String folderName, String fileName, IProgressMonitor monitor) throws Exception {
+		IWorkspaceHandle wsHandle = (IWorkspaceHandle)IWorkspace.ITEM_TYPE.createItemHandle(UUID.valueOf(workspaceItemId), null);
+		IWorkspaceConnection wsConnection = SCMPlatform.getWorkspaceManager(connection.getTeamRepository()).getWorkspaceConnection(wsHandle, monitor);
+		IComponentHandle compHandle = (IComponentHandle)IComponent.ITEM_TYPE.createItemHandle(UUID.valueOf(componentItemId), null);
+		IChangeSetHandle cs = wsConnection.createChangeSet(compHandle, null);
+		IComponent component = (IComponent)connection.getTeamRepository().itemManager().fetchCompleteItem(compHandle, IItemManager.DEFAULT, null);
+		// add new files and folders, that are expected to be loaded by IncrementalUpdateOperation in subsequent builds.
+		SCMUtil.addVersionables(wsConnection, component, cs, new HashMap<String, IItemHandle>(), new String[] { "/" + folderName + "/",
+				"/" + folderName + "/" + fileName }, null, "setupWorkspace_toTestLoadPolicy");
+		
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		Exception[] failure = new Exception[] { null };
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
+		if (isPersonalBuild) {
+			IBuildResultHandle buildResultHandle = createPersonalBuildResult(buildDefinitionId, wsConnection.getResolvedWorkspace(),
+					"my-personal-build-label-for-incremental-changes", listener);
+			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID, buildResultHandle.getItemId().getUuidValue());
+			if (failure[0] != null) {
+				throw failure[0];
+			}
+		} else {
+			BuildUtil.createBuildResult(buildDefinitionId, connection, "my buildLabel for incremental changes", artifactIds);
+		}
+		wsConnection.closeChangeSets(Collections.singletonList(cs), null);
+		return artifactIds;
+	}
+
+	private IBuildResultHandle createPersonalBuildResult(String buildDefinitionId, IWorkspaceHandle personalBuildWorkspace, String buildLabel,
+			IConsoleOutput listener) throws TeamRepositoryException, RTCConfigurationException {
+
+		ITeamRepository repo = connection.getTeamRepository();
+		BuildConnection buildConnection = new BuildConnection(repo);
+		IBuildDefinition buildDefinition = buildConnection.getBuildDefinition(buildDefinitionId, null);
+		if (buildDefinition == null) {
+			throw new RTCConfigurationException(Messages.getDefault().BuildConnection_build_definition_not_found(buildDefinitionId));
+		}
+		List<IBuildProperty> modifiedProperties = new ArrayList<IBuildProperty>();
+		IBuildProperty originalProperty = buildDefinition.getProperty(IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID);
+		if (originalProperty != null && !originalProperty.getValue().equals(personalBuildWorkspace.getItemId().getUuidValue())) {
+			modifiedProperties.add(BuildItemFactory.createBuildProperty(IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, personalBuildWorkspace
+					.getItemId().getUuidValue()));
+		} else {
+			AssertUtil.fail("Should override build workspace");
+		}
+
+		IBuildEngineHandle buildEngine = buildConnection.getBuildEngine(buildDefinition, null);
+		if (buildEngine == null) {
+			throw new RTCConfigurationException(Messages.getDefault().BuildConnection_no_build_engine_for_defn(buildDefinitionId));
+		}
+
+		IBuildRequestParams params = BuildItemFactory.createBuildRequestParams();
+		params.setBuildDefinition(buildDefinition);
+		params.getNewOrModifiedBuildProperties().addAll(modifiedProperties);
+		params.setAllowDuplicateRequests(true);
+		params.setPersonalBuild(true);
+		params.getPotentialHandlers().add(buildEngine);
+		params.setStartBuild(true);
+		IBuildRequest buildRequest = ClientFactory.getTeamBuildRequestClient(repo).requestBuild(params, new NullProgressMonitor());
+		IBuildResultHandle buildResultHandle = buildRequest.getBuildResult();
+
+		if (buildLabel != null) {
+			IBuildResult buildResult = (IBuildResult)repo.itemManager().fetchPartialItem(buildResultHandle, IItemManager.REFRESH,
+					Arrays.asList(IBuildResult.PROPERTIES_VIEW_ITEM), new NullProgressMonitor());
+
+			buildResult = (IBuildResult)buildResult.getWorkingCopy();
+			buildResult.setLabel(buildLabel);
+			ClientFactory.getTeamBuildClient(repo).save(buildResult, new NullProgressMonitor());
+		}
+
+		return buildResultHandle;
+	}
+
 }

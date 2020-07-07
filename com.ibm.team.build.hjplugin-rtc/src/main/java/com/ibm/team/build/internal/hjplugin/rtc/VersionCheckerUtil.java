@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017, 2018 IBM Corporation and others.
+ * Copyright (c) 2017, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -77,15 +77,26 @@ public class VersionCheckerUtil {
 		return isPre603BuildToolkit;
 	}
 	
-	public static boolean isPre70BuildToolkit() {
-		boolean isPre70BuildToolkit = true; // Assume that we are dealing with a toolkit v 6.0.6.1 or below.
+	/**
+	 * This method determines if the build toolkit in context is pre-701 or not,
+	 * depending on the presence of
+	 * com.ibm.team.build.internal.scm.BuildScmLoadOptions class.
+	 * 
+	 * @return true if the class is not found otherwise return false.
+	 */
+	public static boolean isPre701BuildToolkit() {
+		boolean isPre701BuildToolkit = true;
 		try {
-			WorkItemPublisher.class.getMethod("publish", IBuildResultHandle.class, Array.class, boolean.class, ITeamRepository.class);
-			isPre70BuildToolkit = false;
-		} catch (NoSuchMethodException | SecurityException exp) {
-			
-		} 
-		return isPre70BuildToolkit;
+			 Class.forName("com.ibm.team.build.internal.scm.BuildScmLoadOptions");
+			 isPre701BuildToolkit = false;
+		} catch (ClassNotFoundException e) {
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finer("com.ibm.team.build.internal.scm.BuildScmLoadOptions class not found. " //$NON-NLS-1$
+						+ "Jenkins job should have been configured with a pre-701 build toolkit: " //$NON-NLS-1$
+						+ e.getMessage());
+			}
+		}
+		return isPre701BuildToolkit;
 	}
 	
 	public static String getBuildToolkitVersion(Locale clientLocale) throws RTCVersionCheckException {
@@ -131,5 +142,18 @@ public class VersionCheckerUtil {
 			throw new RTCVersionCheckException(Messages.get(clientLocale).VersionCheckerUtil_parser_error(e.getMessage()), e);
 		}
 		return buildtoolkitVersion;
+	}
+	
+	public static boolean isPre70BuildToolkit() {
+		boolean isPre70BuildToolkit = true; // Assume that we are dealing with a toolkit v 6.0.6.1 or below.
+		try {
+			WorkItemPublisher.class.getMethod("publish", IBuildResultHandle.class, Array.class, boolean.class, ITeamRepository.class);
+			isPre70BuildToolkit = false;
+		} catch (NoSuchMethodException | SecurityException exp) {
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finer("WorkItemPublisher.publish(IBuildResult, IChangeSet[], boolean, ITeamRepository) not found"); //$NON-NLS-1$
+			}
+		} 
+		return isPre70BuildToolkit;
 	}
 }
