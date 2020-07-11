@@ -2,7 +2,7 @@ Team Concert Plugin
 ===================
 :toc:
 :toc-placement: preamble
-:toclevels: 3
+:toclevels: 4
 
 
 [.conf-macro .output-inline .aui-icon .aui-icon-small .aui-iconfont-info .confluence-information-macro-icon]#Older versions of this plugin may not be safe to use. Please review the following warnings before using an older version:
@@ -176,6 +176,7 @@ NOTE: Applicable only to Repository workspace and Stream configuration
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/JenkinsBuildStreamAddLinkOption.png?version=1&modificationDate=1556704560000&api=v2[image,height=145]#::
 [%hardbreaks]
 
+[[TeamConcertPlugin-BuildTriggers]]
 === Build Triggers
 ==== Triggering builds by polling for changes
 When *Poll SCM* is selected, builds will be triggered only if Team Concert Plugin detects *new* changes. The logic for computing of new changes varies for Build Definition, Repository Workspace and Stream configurations. For Build Definition and Repository Workspace, Team Concert Plugin compares the repository workspace against the flow targets. In case of Stream, the snapshot from the *previous* build is compared against the stream. If the previous build does not have a snapshot, then the build previous to that one is considered.
@@ -224,12 +225,45 @@ To configure for Post  Build Deliver,
 step([$class: 'RTCPostBuildDeliverPublisher', failOnError: true])
 ----
 
+[[TeamConcertPlugin-GeneratingPipelineSnippetforTeamConcertPluginfromSnippetGenerator]]
+=== Generating Pipeline Snippet for Team Concert Plugin from Snippet Generator for RTC SCM and Post Build Deliver
+
+For pipeline jobs, you can generate the snippet for Team Concert Plugin using the Pipeline snippet generator. See the https://www.jenkins.io/doc/book/pipeline/getting-started/#snippet-generator[help documentation] for more information on how to create a snippet. In the snippet generator, 
+
+* For RTC SCM snippet,
+** Click the `Sample Step` dropdown and select checkout. Then select `Rational Team 
+Concert` from the dropdown. 
+*For Post Build Deliver snippet,
+** Select `step` in the `Sample Step` dropdown and select `RTC Post Build Deliver`
+
+[%hardbreaks]
+
+[[TeamConcertPlugin-BestPracticesWhenUsingSnippetGenerator]]
+=== Best practices when using Snippet Generator
+
+[%hardbreaks]
+
+Remove references to serverURI, credentialsId if you choose to use the Team Concert Plugin's global configuration (in Jenkins->Settings) in your pipeline snippet.
+
+Even if you do not choose to override global configuration for Team Concert Plugin defined in System Settings, the snippet generator will copy the values for *serverUri*, *credentialsId* and *buildtoolkit* copied from the global configuration in the snippet. If you copy this snippet into your pipeline script, it can create maintenance issues when you intend to change the global server URI, credentials and build toolkit. If you intend to use the global settings for RTCScm configuration, then remove
+the following attributes in the snippet 
+
+* serverURI
+* credentialsId
+* timeout
+* buildTool
+* overrideGlobal
+
+and then copy the resulting snippet into your pipeline script.
+
+[%hardbreaks]
+
 [[TeamConcertPlugin-UsingPipelineasSCM]]
 === Using Pipeline as SCM
 
 Team Concert Plugin supports Pipeline as SCM but doesn't support lightweight checkout. Captured below are some ways to use this pipeline feature with RTC SCM.
 
-[[TeamConcertPlugin-WhenyouwishtocheckoutthesamecontentthatwasinitiallyloadedinthemasterunderpipelineatscriptfolderbyPipelinescriptfromSCM]]
+[TeamConcertPlugin-WhenyouwishtocheckoutthesamecontentthatwasinitiallyloadedinthemasterunderpipelineatscriptfolderbyPipelinescriptfromSCM]]
 ==== Checkout same content in master and slave with JenkinsFile after Pipeline as SCM checkout
 
 When you wish to checkout the same content that was initially loaded in the master under pipeline@script folder into the agent or into master at a different location, follow the steps mentioned in the scnearios below.
@@ -247,9 +281,9 @@ options {skipDefaultCheckout()}
 
 NOTE: We recommend loading JenkinsFile with load rules. This makes the build faster.
 
-The first checkout happens in the master inside pipeline@script folder. The second or subsequent checkouts happen when you use the checkout step inside the JenkinsFile.
+NOTE: The first checkout happens in the master inside pipeline@script folder. The second or subsequent checkouts happen when you use the checkout step inside the JenkinsFile. In the second checkout, if you are loading all the sources, then follow the snippets 
 
-{empty}1. Checkout only the JenkinsFile using minimal load rules. Configure the pipeline job's Team Concert Plugin configuration to load just the JenkinsFile and nothing else through load rules. You can configure load rules for build definition, repository workspace, snapshot and stream configuration. This keeps the loading time very minimal in the master.
+{empty}1. Checkout only the JenkinsFile using minimal load rules. Configure the pipeline job's Team Concert Plugin configuration to load just the JenkinsFile and nothing else through load rules. You can configure load rules for build definition, repository workspace, snapshot and stream configuration. This keeps the time to load source code in master to the minimum.
 
 {empty}2. Inside the JenkinsFile, if you want to checkout on a slave, or on master again in a different path, load the snapshot generated by the first checkout. For personal builds triggered from RTC, checkout the build definition once again using `checkout` step.
 
@@ -309,7 +343,7 @@ node ("slavexyz") {
 
 NOTE: We recommend loading JenkinsFile with load rules. This makes the build faster.
 
-Perform the first checkout happens in the master inside pipeline@script folder. The second or subsequent checkouts happen when you use the checkout step inside the JenkinsFile. If you wish to selectively load files and folders in the second checkout, then you can review the pipeline snippets provided below point 2.
+The first checkout happens in the master inside pipeline@script folder. The second or subsequent checkouts happen when you use the checkout step inside the JenkinsFile. If you wish to selectively load files and folders in the second checkout, then you can review the pipeline snippets provided below point 2.
 
 {empty}1. Checkout the JenkinsFile using minimal load rules. Configure  load rules  in the pipeline job's Team Concert Plugin configuration to load just the JenkinsFile and nothing else. This can be done for build definition, repository workspace, snapshot and stream configuration. This keeps the loading time very minimal in the master.
 
@@ -317,7 +351,7 @@ Perform the first checkout happens in the master inside pipeline@script folder. 
 
 NOTE: For Build definition, personal builds are not supported when load rules or components to exclude are used in the Jazz SCM configuration in the build defintion. Therefore, the following sample will error out when it encounters a personal build.
 
-NOTE: In the pipeline snippets provided below, load rules is used in the checkout step. You can substitute loadPolicy with useComponenLoadConfig and providecomponents to exclude.
+NOTE: In the pipeline snippets provided below, load rules is used in the checkout step. You can substitute loadPolicy with useComponenLoadConfig and provide components to exclude.
 
 [%hardbreaks]
 Build Definition
@@ -372,9 +406,9 @@ node ("slavexyz") {
 
 The first checkout happens in the master inside pipeline@script folder with Pipeline as SCM. The second or subsequent checkouts happen when you use the checkout step inside the JenkinsFile.
 
-In the subsequent checkouts, you can reference the build definitoin, stream or repository workspace, instead of referencing the snapshot created by the first checkout. In these checkouts, the latest content in the build defiition, stream or repository workspace will be loaded, instead of the content of th snapshot from the first checkout.
+In the subsequent checkouts, you can reference the build definition, stream or repository workspace, instead of referencing the snapshot created by the first checkout. In these checkouts, the latest content in the build defiition, stream or repository workspace will be loaded, instead of the snapshot from the first checkout.
 
-NOTE: If the job is conifgured with build definition configuration and the Jenkins build is triggered from RTC, then multiple checkouts inside the JenkinsFile referencing the build definition will reuse the RTC build result instead of creating new build results. This is different from how it works when the build is triggered from Jenkins where each checkout step with the same build definition will create new build results.
+NOTE: If the job is conifgured with build definition configuration and the Jenkins build is triggered from RTC, then multiple checkouts inside the JenkinsFile referencing the same build definition will reuse the RTC build result instead of creating new build results. This is different from how it works when the build is triggered from Jenkins where each checkout step with the same build definition will create new build results.
 
 [%hardbreaks]
 
@@ -386,33 +420,6 @@ If you are using declarative pipeline, then every `agent` directive will cause a
 ....
 options {skipDefaultCheckout(true)}
 ....
-[%hardbreaks]
-
-[[TeamConcertPlugin-GeneratingPipelineSnippetforTeamConcertPluginfromSnippetGenerator]]
-=== Generating Pipeline Snippet for Team Concert Plugin from Snippet Generator for RTC SCM and Post Build Deliver
-
-For pipeline jobs, you can generate the snippet for Team Concert Plugin using the Pipeline snippet generator. See the https://www.jenkins.io/doc/book/pipeline/getting-started/#snippet-generator[help documentation] for more information on how to create a snippet. In the snippet generator, 
-
-* For RTC SCM snippet,
-** Click the `Sample Step` dropdown and select checkout. Then select `Rational Team 
-Concert` from the dropdown. 
-*For Post Build Deliver snippet,
-** Select `step` in the `Sample Step` dropdown and select `RTC Post Build Deliver`
-+
-
-
-==== Best practices when using Snippet Generator
- 
-Remove references to serverURI, credentialsId if you choose to use the Team Concert Plugin's global configuration (in Jenkins->Settings) in your pipeline snippet.
-
-Even if you do not choose to override global configuration for Team Concert Plugin defined in System Settings, the snippet generator will copy the values for *serverUri*, *credentialsId* and *buildtoolkit* copied from the global configuration in the snippet. If you copy this snippet into your pipeline script, it can create maintenance issues when you intend to change the global server URI, credentials and build toolkit. If you intend to use the global settings for RTCScm configuration, then remove
-the following attributes in the snippet and then copy the resulting snippet into your pipeline script.
-
-* serverURI
-* credentialsId
-* timeout
-* buildTool
-* overrideGlobal
 [%hardbreaks]
 
 [[TeamConcertPlugin-MasterSlaveConfiguration]]
@@ -603,8 +610,8 @@ Team Concert Plugin exports some standard properties and user defined build prop
 
 [%hardbreaks]
 
-[TeamConcertPlugin-AccessingRTCBuildpropertiesinaPipelinejobbeforecheckoutsteprunsonlyforBuilddefinitionconfiguration]]
-=== Accessing RTC Build Definition properties in a Pipeline job before checkout step runs
+[[TeamConcertPlugin-AccessingRTCBuildpropertiesinaPipelinejobbeforecheckoutsteprunsonlyforBuilddefinitionconfiguration]]
+=== Accessing RTC Build Definition properties in a Pipeline job before checkout step
 
 In a build definition configuration, if the Jenkins build is started from RTC, you can access build properties set in the RTC build result in a pipeline build even before the checkout step runs. These properties can be any of the RTC built-in properties set in the build result or user defined build properties.
 
@@ -647,8 +654,7 @@ not.
 . First create a Job parameter "personalBuild" type is String in the
 Jenkins pipeline job and  set the default value to false.
 
-[[TeamConcertPlugin-]]
-=== [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/2-CreateNewStringParameterForPersonalBuild.png?version=1&modificationDate=1559037996000&api=v2[image,height=250]#
+[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/2-CreateNewStringParameterForPersonalBuild.png?version=1&modificationDate=1559037996000&api=v2[image,height=250]#
 
 {empty}2. Request a personal build in the RTC build definition associated with the Jenkins job.
 
@@ -678,8 +684,8 @@ if ("${personalBuild}" == "true") {
 NOTE: This is different from accessing personalBuild property after the checkout step runs. In that case, the personalBuild property will be reset by the checkout step and can be accessed only through the $\{env} variable. Here, the property is set by the RTC when starting the Jenkins build, even before the checkout step runs.
 
 
-[[TeamConcertPlugin-AccessingRTCEnvironmentVariablesinaPipelineJobaftercheckoutstepruns]]
-=== Accessing RTC Environment Properties in a Pipeline Job after checkout step runs
+[[TeamConcertPlugin-AccessingRTCEnvironmentVariablesinaPipelineJobaftercheckoutstep]]
+=== Accessing RTC Environment Properties in a Pipeline Job after checkout step
 Prop
 _checkout_ step now returns a map that is populated by Team Concert
 plugin. For instance, you can store the return value from the checkout step into the scmvars variable and access them using the syntax
@@ -698,7 +704,7 @@ def scmvars = checkout([$class: 'RTCScm'...])
 This feature is available when you use Team Concert Plugin version > 1.2.0.5, Jenkins version > 2.60, workflow-cps version > 2.40. Refer to 
 https://issues.jenkins-ci.org/browse/JENKINS-26100[Issue 26100] for the related issue.
 
-[[TeamConcertPlugin-Note1:]]
+[[TeamConcertPlugin-AccessingRTCEnvironmentPropertiesUsingEnvObject]]
 ==== Accessing RTC Environment Properties in a pipeline job using env object
 
 You can access RTC Environment properties after the checkout step runs using the env object. You will need to use workflow-cps plugin version > 2.40. 
@@ -846,7 +852,7 @@ there will be a checkout of the source code from RTC. A RTCBuildResultAction wil
 [[TeamConcertPlugin-SymbolicLinksupport]]
 === Symbolic Link support
 
-NOTE: Symbolic links works out of the box from Java version 7 and above. The following information is retained for older Java versions.
+NOTE: Symbolic links works out of the box from Java version 7 and greater. The following information is retained for older Java versions.
 
 RTC support for symbolic links requires one or two additional libraries
 (.dll/.so files).
