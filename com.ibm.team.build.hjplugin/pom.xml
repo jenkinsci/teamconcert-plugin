@@ -19,12 +19,12 @@
 
 	<groupId>org.jenkins-ci.plugins</groupId>
 	<artifactId>teamconcert</artifactId>
-	<version>1.4.0-SNAPSHOT</version> 
+	<version>1.3.2-SNAPSHOT</version> 
 	<packaging>hpi</packaging>
 
 	<name>Team Concert Plugin</name>
 	<description>Integrates Jenkins with Rational Team Concert source control and build using the richer features of the build toolkit instead of the command line.</description>
-	<url>https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin</url>
+	<url>https://github.com/jenkinsci/teamconcert-plugin</url>
 
 	<licenses>
 		<license>
