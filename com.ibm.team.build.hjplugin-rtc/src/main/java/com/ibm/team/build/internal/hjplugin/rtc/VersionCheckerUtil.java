@@ -36,6 +36,7 @@ import com.ibm.team.build.internal.scm.SourceControlUtility;
 import com.ibm.team.filesystem.client.operations.ILoadRule2;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.scm.client.IWorkspaceConnection;
+import com.ibm.team.scm.common.IChangeSetHandle;
 
 /**
  * This class contains utility methods to determine the version of build toolkit and RTC server.
@@ -147,7 +148,7 @@ public class VersionCheckerUtil {
 	public static boolean isPre70BuildToolkit() {
 		boolean isPre70BuildToolkit = true; // Assume that we are dealing with a toolkit v 6.0.6.1 or below.
 		try {
-			WorkItemPublisher.class.getMethod("publish", IBuildResultHandle.class, Array.class, boolean.class, ITeamRepository.class);
+			WorkItemPublisher.class.getMethod("publish", IBuildResultHandle.class, IChangeSetHandle[].class, boolean.class, ITeamRepository.class);
 			isPre70BuildToolkit = false;
 		} catch (NoSuchMethodException | SecurityException exp) {
 			if (LOGGER.isLoggable(Level.FINER)) {

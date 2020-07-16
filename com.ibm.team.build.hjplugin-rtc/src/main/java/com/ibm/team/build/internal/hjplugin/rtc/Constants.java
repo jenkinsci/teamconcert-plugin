@@ -206,5 +206,5 @@ public class Constants {
      *
      * @since 0.12.0 (RTC 7.0)
      */
-    public static final String PROPERTY_INCLUDE_LINKS_IN_WORKITEMS = "team.scm.createWorkItemIncludeLinks"; //$NON-NLS-1$
+    public static final String PROPERTY_INCLUDE_LINKS_IN_WORKITEMS = "team.build.createWorkItemIncludeLinks"; //$NON-NLS-1$
 }

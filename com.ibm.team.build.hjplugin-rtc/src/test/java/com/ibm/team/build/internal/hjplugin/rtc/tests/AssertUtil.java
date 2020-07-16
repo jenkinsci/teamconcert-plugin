@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -35,6 +35,18 @@ public class AssertUtil {
 	public static void assertFalse(String message, boolean condition) {
 		if (condition) {
 			throw new AssertionFailedException(message);
+		}
+	}
+	
+	public static void assertNotNull(String message, Object actual) {
+		if (actual == null) {
+			throw new AssertionFailedException(message);
+		}
+	}
+	
+	public static void assertNotNull(Object actual) {
+		if (actual == null) {
+			throw new AssertionFailedException("Object is null");
 		}
 	}
 	

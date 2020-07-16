@@ -522,6 +522,10 @@ public class RepositoryConnection {
 	            		// Default value if the property doesn't exist is true.
 	            		String includeBuildResultLinksInWorkItems = 
 	            						buildConfiguration.getBuildProperty(Constants.PROPERTY_INCLUDE_LINKS_IN_WORKITEMS, "true");
+	            		// Extra check to see if the property value is empty string, then assume it to be true
+	            		if (Utils.fixEmptyAndTrim(includeBuildResultLinksInWorkItems) == null) {
+	            			includeBuildResultLinksInWorkItems = "true";
+	            		}
 	            		workItemPublisher.publish(buildResultHandle, acceptReport.getAcceptChangeSets(), 
 	            						Boolean.parseBoolean(includeBuildResultLinksInWorkItems), getTeamRepository());
 	            	}
