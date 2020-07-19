@@ -21,6 +21,9 @@ With the build toolkit this plugin adds traceability links from a Jenkins build 
 [[TeamConcertPlugin-Documentation]]
 == Documentation
 
+=== Product Name Change
+As of 7.0 release, Rational Team Concert is now called Engineering Workflow Management. Team Concert Plugin supports RTC releases 6.0 to 6.0.6.1 and EWM releases 7.0 to 7.0.1. In this documentation, wherever you find Rational Team Concert(RTC), you can substitute it with Engineering Workflow Management (EWM)
+
 [[TeamConcertPlugin-RationalTeamConcertHelpTopics]]
 === Rational Team Concert Help Topics
 
@@ -36,6 +39,7 @@ With the build toolkit this plugin adds traceability links from a Jenkins build 
 [[TeamConcertPlugin-Jenkins]]
 ==== Jenkins
 
+* Team Concert Plugin v 2.1.0 and above required Jenkins 2.60.1 and above, Java 8 and above.
 * Team Concert Plugin v 1.2.0.5 and above requires Jenkins 1.625.1 and above. Fix for JENKINS-26100 requires Jenkins 2.60 and above, workflow-job 2.12 and above
 * Team Concert Plugin v 1.1.9.3 till v 1.2.0.4 requires Jenkins 1.580.1 and above. 
 * Team Concert Plugin v 1.1.2 and later depends on the https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Jenkins Credentials plugin version] 1.10 or later. +
@@ -44,14 +48,14 @@ With the build toolkit this plugin adds traceability links from a Jenkins build 
 [[TeamConcertPlugin-RTC]]
 ==== RTC
 
-* This plugin requires link:https://jazz.net/products/rational-team-concert/features/build#build-toolkit[Rational Team Concert Build Toolkit] version 4.0.7 or newer. Older versions of the plugin supports build toolkit versions starting from 3.0.1.5. See the https://jazz.net/help-dev/clm/topic/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
+* This plugin requires link:https://jazz.net/products/rational-team-concert/features/build#build-toolkit[Rational Team Concert Build Toolkit] version 6.0 or newer. Older versions of the plugin supports build toolkit versions starting from 3.0.1.5. See the https://jazz.net/help-dev/clm/topic/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
 * For all the supported build configurations - Build Definition, Repository Workspace, Stream and Snapshot - *a valid build toolkit should be present on both the master and slave machines* and the Jenkins jobs should be configured to use this toolkit. 
 * Some features depend on specific Rational Team Concert build toolkit or server versions. See below.
-** Stream configuration works only from build toolkit v. 5.0 or higher.
+** Stream configuration works only from build toolkit v. 560 or higher.
 ** Post Build Deliver for Build Definition configuration introduced in Team Concert Plugin v. 1.2.0.3 depends on Rational Team Concert server version 6.0.4 or higher.
 ** Support for Load Rules in build definition has some requirements on the version of RTC client used to create the build definition. See xref:TeamConcertPlugin-LoadRulesSupport[Load Rules Support] section for more details.
 ** If you will be fetching workspaces that contain symbolic links, there is some additional symbolic link setup required. See xref:TeamConcertPlugin-SymbolicLinksupport[Symbolic Link Support] section for more details.
-** Version details of build toolkit can be obtained in the build log only if you are using build toolkit version 5.0.2 and above.
+** Version details of build toolkit can be obtained in the build log only if you are using build toolkit version 6.0 and above.
 
 [[TeamConcertPlugin-JenkinsConfiguration]]
 === Jenkins Configuration
@@ -1069,6 +1073,14 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 
 [[TeamConcertPlugin-Releases]]
 == Releases
+
+[[TeamConcertPlugin-2.1.0July18-2020]]
+=== 2.1.0 July 18,2020
+* Support for optimized incremental load when using Build Definition configuration with EWM 7.0.1. This feature is supported only when both EWM server and build toolkit version is 7.0.1. For more information, see EWM 7.0.1 https://jazz.net/pub/new-noteworthy/ewm/7.0.1/7.0.1/index.html#2[release notes]
+* Upgrade to Jenkins version 2.60.1 and Java 8
+* Remove support for RTC 5.x releases.
+
+https://github.com/jenkinsci/teamconcert-plugin/commit/9a6a46c6aeab0fc2137820e3523e50dcb95b2370[GitHub commit - 9a6a46c6ae]
 
 [[TeamConcertPlugin-1.3.1January7-2020]]
 === 1.3.1 January 7,2020
