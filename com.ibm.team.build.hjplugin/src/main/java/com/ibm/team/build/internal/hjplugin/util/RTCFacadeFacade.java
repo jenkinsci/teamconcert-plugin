@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2019 IBM Corporation and others.
+ * Copyright (c) 2014, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,12 +22,15 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.SimpleTimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
@@ -121,6 +124,25 @@ public class RTCFacadeFacade {
 
         _RFC3339DateFormatInternal = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH); //$NON-NLS-1$
         _RFC3339DateFormatInternal.setTimeZone(_gmtTimeZoneInternal);
+	}
+	
+	protected static HttpUtilsHelper httpUtilsHelper = new HttpUtilsHelper();
+	
+	/**
+	 * Used only for testing purposes
+	 * 
+	 * @param h
+	 */
+	protected static void setHttpUtilsHelper(HttpUtilsHelper h) {
+		httpUtilsHelper = h;
+	}
+	
+	/**
+	 * Used only for testing purposes
+	 * 
+	 */
+	private static HttpUtilsHelper getHttpUtilsHelper() {
+		return httpUtilsHelper;
 	}
 
 	/**
@@ -367,7 +389,8 @@ public class RTCFacadeFacade {
 			String serverURI, String userId, String password, int timeout,
 			boolean avoidUsingtoolkit) throws Exception {
 		return testConnection(buildToolkitPath, serverURI, userId, password,
-				timeout, RTCBuildConstants.URI_COMPATIBILITY_CHECK, avoidUsingtoolkit);
+				timeout, RTCBuildConstants.URI_COMPATIBILITY_CHECK,
+				RTCBuildConstants.MINIMUM_SERVER_VERSION, avoidUsingtoolkit);
 	}
 			
 	/**
@@ -387,31 +410,16 @@ public class RTCFacadeFacade {
 	 */
 	public static String testConnection(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
-			String compatibilityURI, boolean avoidUsingToolkit)
+			String compatibilityURI, String minimumServerVersion, 
+			boolean avoidUsingToolkit)
 			throws Exception {
 		
-		// Attempt to use Rest api if this is for a build definition
+		// Attempt to use Rest API if this is for a build definition
 		if (avoidUsingToolkit) {
-			String errorMessage = null;
-			String uri = compatibilityURI;
-			try {
-				
-				// Validate that the server version is sufficient 
-				JSON json = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, null).getJson();
-				errorMessage = ensureCompatability(json);
-				
-				if (errorMessage == null) {
-					// Make sure the credentials are good
-					HttpUtils.validateCredentials(serverURI, userId, password, timeout);
-				}
-			} catch (InvalidCredentialsException e) {
-				errorMessage = e.getMessage();
-			} catch (IOException e) {
-				errorMessage = e.getMessage();
-			}
-			return errorMessage;
+			Tuple<String, GetResult> t = testConnectionHTTP(serverURI, userId, password, timeout, 
+										compatibilityURI, minimumServerVersion);
+			return t.getFirst();
 		} else {
-			
 			// use the toolkit to test the connection
 			RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(buildToolkitPath, null);
 			String errorMessage = (String) facade.invoke("testConnection", new Class[] { //$NON-NLS-1$
@@ -427,34 +435,77 @@ public class RTCFacadeFacade {
 		}
 	}
 	
-	private static String ensureCompatability(JSON compatibilityCheckResult) throws GeneralSecurityException {
-		String errorMessage = null;
-
-		// Validate that the server version is sufficient 
-		Boolean isJTS = JSONHelper.getBoolean(compatibilityCheckResult, JSON_PROP_IS_JTS);
-
-		// isJTS might be null in 3.0 RC0 and earlier, because earlier versions of
-		// the VersionCompatibilityRestService did not include this functionality.
-		// If null, don't throw  an error in this block, but instead fall through
-		// handle as a version mismatch below
-		if ((isJTS != null) && (isJTS == true)) {
-			errorMessage = Messages.RTCFacadeFacade_client_not_allowed_to_connect_to_JTS();
-		}
-
-		Boolean compatible = JSONHelper.getBoolean(compatibilityCheckResult, JSON_PROP_COMPATIBLE);
-		if (compatible == null) {
-			errorMessage = Messages.RTCFacadeFacade_invalid_response_invoking_version_compatibility_service();
-		} else if (compatible == false) {
-			String upgradeURI = JSONHelper.getString(compatibilityCheckResult, JSON_PROP_URI);
-			String upgradeMessage = JSONHelper.getString(compatibilityCheckResult, JSON_PROP_MESSAGE);
-			String serverVersion = JSONHelper.getString(compatibilityCheckResult, JSON_PROP_SERVER_VERSION);
-			if ((upgradeURI == null) || (upgradeMessage == null) || (serverVersion == null)) {
-				errorMessage = Messages.RTCFacadeFacade_invalid_response_invoking_version_compatibility_service();
-			} else {
-				errorMessage = Messages.RTCFacadeFacade_incompatible2(serverVersion);
+	/**
+	 * Checks the version compatibility of the client with the EWM server. 
+	 * It first checks if the minimum client compatibility requirement is satisfied.
+	 * If yes, then it authenticates to the server.
+	 * If no and the response is a version compatibility error, it extracts the server version.
+	 *    It then checks if the server version is greater than the client version. 
+	 *    If yes, then it retries the client compatibility check with the exact server version
+	 *    If no, then it errors out.
+	 * If no and the response is not a version compatibility error, it errors out as before.
+	 *   
+	 * @param serverURI - The EWM server URI to check 
+	 * @param userId - The user Id 
+	 * @param password - The password
+	 * @param timeout - The timeout for the server connection
+	 * @param compatibilityURI - The compatibility URI fragment
+	 * @param minimumServerVersion - The minimum server version to start the  compatibility check with
+	 *   For some specific services, a different version will be sent. The method will redo the compatibility 
+	 *   check with the same server version only if the advertised server version is greater than the version
+	 *   specified by <code>minimumServerVersion</code>
+	 * @return a {@link Tuple> that contains the error message (if any) and the result of the HTTP Get call
+	 * @throws Exception
+	 */
+	public static Tuple<String, GetResult> testConnectionHTTP(String serverURI, String userId, String password, int timeout,
+							String compatibilityURI, String minimumServerVersion) throws Exception {
+		LOGGER.finest("testConnectionHTTP :Enter");
+		Tuple<CompatibilityResult, GetResult> t = testConnectionHTTPHelper(serverURI, userId, password, timeout, compatibilityURI);
+		GetResult result = t.getSecond();
+		CompatibilityResult compatibilityResult = t.getFirst();
+		String errorMessage = compatibilityResult.getErrorMessage();
+		// If errorMessage is non null, then the error can be invalid server, 
+		// invalid response, invalid credentials, or version compatibility check error. 
+		// If the errorMessage is non null, then serverVersion should be non null 
+		// for the error to be a version compatibility error. Otherwise, we just 
+		// return the error message as is.
+		if (errorMessage != null) {
+			String serverVersion = Util.fixEmptyAndTrim(compatibilityResult.getServerVersion());
+			// It is possible that serverVersion is null because the error is 
+			// not a client compatibility error. In that case, just return the error 
+			// message as is. If the server version is not present because the server is JTS, then 
+			// serverVersion will still be null.
+			if (serverVersion != null) {
+				LOGGER.finest("EWM server version is " + serverVersion);
+				// If server version came back along with the error message, we can check whether
+				// the server version is greater than the minimum client version. 
+				// If yes, then retry the HTTP Get call with the server version itself.
+				String serverVersionWithoutMileStone = extractServerVersionWithoutMilestone(serverVersion);
+				LOGGER.finest("EWM server version without milestone is " + serverVersionWithoutMileStone);
+				// If extraction failed, then print out an error message
+				if (serverVersionWithoutMileStone != null) {
+					boolean isServerVersionHigher = isServerVersionEqualOrHigher(
+							serverVersionWithoutMileStone, minimumServerVersion);
+					if (isServerVersionHigher) {
+						t = testConnectionHTTPHelper(serverURI, userId, password, timeout,
+										RTCBuildConstants.URI_COMPATIBILITY_CHECK_WITHOUT_VERSION + serverVersion);
+						errorMessage = t.getFirst().getErrorMessage();
+						result = t.getSecond();
+					}
+				} else {
+					// Make sure that we send a  error message back to the caller.
+					// This part of the error should say that the server version could not be extracted - 
+					// add it to the existing error message and send it back.
+					LOGGER.finest("Unable to extract server version information in the "
+							+ "response from version compatibility service");
+					errorMessage = errorMessage + "\n" + 
+									Messages.RTCFacadeFacade_error_extract_server_version();
+				}
 			}
 		}
-		return errorMessage;
+		// At this point, result and errorMessage could have been modified in the 
+		// if / else sections.
+		return new Tuple<>(errorMessage, result);
 	}
 
 	/**
@@ -478,20 +529,20 @@ public class RTCFacadeFacade {
 			throws Exception {
 		LOGGER.finest("RTCFacadeFacade.testBuildDefinition : Enter");
 		if (avoidUsingToolkit) {
-			// Make sure that the server is compatible. Rest api on older releases ignores
+			// Make sure that the server is compatible. Rest API on older releases ignores
 			// the query parameter which would mean it finding more than returning possibly > 1 element
 			String errorMessage = null;
 			String uri = RTCBuildConstants.URI_COMPATIBILITY_CHECK;
 			try {
 				
 				// Validate that the server version is sufficient 
-				GetResult getResult = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, null);
-				errorMessage = ensureCompatability(getResult.getJson());
-				
+				Tuple<String, GetResult> t = testConnectionHTTP(serverURI, userId, password, timeout, uri,
+										RTCBuildConstants.MINIMUM_SERVER_VERSION);
+				errorMessage = t.getFirst();
 				if (errorMessage != null) {
 					return errorMessage;
 				}
-
+				GetResult getResult = t.getSecond();
 				// validate the build definition exists
 				uri = RTCBuildConstants.URI_DEFINITIONS + "?" //$NON-NLS-1$
 						+ RTCBuildConstants.QUERY_PARAM_BUILD_DEFINITION + "=" //$NON-NLS-1$
@@ -597,12 +648,14 @@ public class RTCFacadeFacade {
 
 			try {
 				// Validate that the server version is sufficient 
-				GetResult getResult = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, null);
-				errorMessage = ensureCompatability(getResult.getJson());
-				
+				Tuple<String, GetResult> t = testConnectionHTTP(serverURI, userId, password, timeout, uri,
+										RTCBuildConstants.MINIMUM_SERVER_VERSION);
+				errorMessage = t.getFirst();
+
 				if (errorMessage != null) {
 					return errorMessage;
 				}
+				GetResult getResult = t.getSecond();
 				validateWorkspaceExists(serverURI, userId, password, timeout, getResult.getHttpContext(), buildWorkspace);
 			} catch (InvalidCredentialsException e) {
 				errorMessage = e.getMessage();
@@ -645,12 +698,15 @@ public class RTCFacadeFacade {
 			String uri = RTCBuildConstants.URI_COMPATIBILITY_CHECK;
 			
 			try {
-				GetResult result =   HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, null);
-				errorMessage = ensureCompatability(result.getJson());
-				
+				// Validate that the server version is sufficient 
+				Tuple<String, GetResult> t = testConnectionHTTP(serverURI, userId, password, timeout, uri,
+										RTCBuildConstants.MINIMUM_SERVER_VERSION);
+				errorMessage = t.getFirst();
+
 				if (errorMessage != null) {
 					return errorMessage;
 				}
+				GetResult result = t.getSecond();
 				
 				uri = RTCBuildConstants.URI_SEARCH_STREAMS + Util.encode(buildStream);
 				JSON jsonResult = HttpUtils.performGet(serverURI, uri, userId, password, timeout, result.getHttpContext(), null).getJson();
@@ -735,14 +791,15 @@ public class RTCFacadeFacade {
 				String uri = RTCBuildConstants.URI_COMPATIBILITY_CHECK;
 				
 				// Validate that the server version is sufficient 
-				GetResult getResult = HttpUtils.performGet(serverURI, uri, userId, password, timeout, null, null);
-				errorMessage = ensureCompatability(getResult.getJson());
-				context = getResult.getHttpContext();
+				Tuple<String, GetResult> t = testConnectionHTTP(serverURI, userId, password, timeout, uri, 
+											RTCBuildConstants.MINIMUM_SERVER_VERSION);
+				errorMessage = t.getFirst();
 				
 				if (errorMessage != null) {
 					errorMessage = Messages.RTCFacadeFacade_build_termination_status_incomplete(errorMessage);
 					listener.error(errorMessage);
 				}
+				context = t.getSecond().getHttpContext();
 			}
 			String uri = RTCBuildConstants.URI_RESULT + buildResultUUID + SLASH + RTCBuildConstants.URI_SEGMENT_BUILD_STATE;
 
@@ -1051,7 +1108,6 @@ public class RTCFacadeFacade {
 						(versionableJsonResponse == null ? "null" : versionableJsonResponse.toString(4)))); //$NON-NLS-1$
 			}
 		}
-
 		return component;
 	}
 
@@ -1414,5 +1470,226 @@ public class RTCFacadeFacade {
 			listener.getLogger().println(Messages.RTCFacadeFacade_checking_incoming_changes_for(item));
 		}
 	}
+	
+	/**
+	 * Check if the serverVersion without milestone is greater than or equal to the minimum server 
+	 * version.
+	 * 
+	 * @param serverVersionWithoutMilestone -The server version without milestone
+	 * @param minimumServerVersion - The minimum server version.
+	 * @return - <code>true</code> if the server version is greater than or equal to minimum server 
+	 * 			version, <code>false</code> otherwise. 
+	 * 
+	 * Note: This is protected for testing purposes
+	 */
+	protected static boolean isServerVersionEqualOrHigher(String serverVersionWithoutMilestone, 
+						String minimumServerVersion) {
+		if (Util.fixEmptyAndTrim(serverVersionWithoutMilestone) == null 
+				|| Util.fixEmptyAndTrim(minimumServerVersion) == null) {
+			// This indicates invalid input but we already log the fact that 
+			// serverVersionWithoutMileStone was null before making this call
+			return false;
+		}
+		String [] serverFields = serverVersionWithoutMilestone.split("\\.");
+		String [] minimumServerFields = minimumServerVersion.split("\\.");
+		LOGGER.finest("EWM Client fields "  + Arrays.toString(minimumServerFields) +
+				"EWM Server fields " + Arrays.toString(serverFields));
+		Boolean isEqualOrGreater = null;
+		int i = 0, j=0;
+		while ( i < serverFields.length  && j < minimumServerFields.length) {
+			int sf = (int)serverFields[i].charAt(0);
+			int cf = (int)minimumServerFields[j].charAt(0);
+			if (sf > cf) {
+				isEqualOrGreater = Boolean.TRUE;
+				break;
+			} else if (sf < cf){
+				isEqualOrGreater = Boolean.FALSE;
+				break;
+			} else {
+				// Continue to the next digit
+				i++;
+				j++;
+			}
+		}
+		if (isEqualOrGreater == null) {
+			// The scenario is when the server version is a prefix of the client version 
+			// and client version is greater than the server 
+			// (or)
+			// The client version is a prefix of the server version and server version is greater 
+			// than the client 
+			// (or)
+			// The server and client are of the same version
+			if (serverFields.length < minimumServerFields.length) {
+				// Clearly the server version is smaller than the client version 
+				isEqualOrGreater = Boolean.FALSE;
+			}
+			else if (serverFields.length > minimumServerFields.length) {
+				// The server version is greater than minimum server version
+				isEqualOrGreater = Boolean.TRUE;
+			} else {
+				// Both strings are of equal length and server version is same as minimum 
+				// server version
+				isEqualOrGreater = Boolean.TRUE;
+			}
+		}
+		LOGGER.finest("Is server version greater than client ? " + isEqualOrGreater);
+		return isEqualOrGreater;
+	}
 
+
+	/**
+	 * This extracts the server version without the milestone.
+	 * 
+	 * @param serverVersion
+	 * @return the extracted server version without milestone identifiers (S1,M2,RC1 etc.,)
+	 * 
+	 * Note: This is protected for testing purposes
+	 */
+	protected static String extractServerVersionWithoutMilestone(String serverVersion) {
+		Pattern p = Pattern.compile("\\d\\.\\d(\\.\\d(\\.\\d)?)?");
+		Matcher m = p.matcher(serverVersion);
+		while (m.find()) {
+			return m.group();
+		}
+		return null;
+	}
+
+	/**
+	 * Helper for test connection using HTTP
+	 * 
+	 * @param serverURI The server URI
+	 * @param userId The user's id
+	 * @param password The user's password
+	 * @param timeout The timeout for the connection 
+	 * @param compatibilityURI The URI fragment for compatibility check
+	 * @return a tuple with {@link CompatibilityResult} and the {@link GetResult}
+	 * @throws Exception if there is a problem in communicating with RTC server, 
+	 * 			invalid credentials or some security exception
+	 * 
+	 * Note: This is protected for testing purposes
+	 */
+	protected static Tuple<CompatibilityResult, GetResult> testConnectionHTTPHelper(String serverURI, String userId, String password, int timeout,
+										String compatibilityURI) throws Exception  {
+		String errorMessage = null;
+		String uri = compatibilityURI;
+		CompatibilityResult compatibilityResult = null;
+		String serverVersion = null;
+		GetResult result = null;
+		try {
+			// Validate that the server version is sufficient 
+			result = getHttpUtilsHelper().performGet(serverURI, uri, userId, password, timeout, null, null);
+			JSON json = result.getJson();
+			compatibilityResult  = ensureCompatability(json);
+			errorMessage = compatibilityResult.getErrorMessage();
+			serverVersion = compatibilityResult.getServerVersion();
+			if (errorMessage == null) {
+				// Make sure the credentials are good
+				getHttpUtilsHelper().validateCredentials(serverURI, userId, password, timeout);
+			}			
+		} catch (InvalidCredentialsException e) {
+			errorMessage = e.getMessage();
+		} catch (IOException e) {
+			errorMessage = e.getMessage();
+		}
+		// At this point, the error can be a compatibility error or invalid credentials
+		// error or any kind of server error. We capture the error message in the compatibility result
+		return new Tuple<>(new CompatibilityResult(serverVersion, errorMessage), result);
+	}
+	
+	/**
+	 * Check the compatibilty result and return a {@link CompatibilityResult}
+	 *  
+	 * @param compatibilityCheckResult
+	 * @return a {@link CompatibilityResult}
+	 * @throws GeneralSecurityException
+	 * 
+	 * A non null errorMessage indicate something is wrong. If serverVersion is non null, then it is a compatibility error.
+	 * We can add isCompatible boolean but that has to be tristate - to discount the possibility of misinterpreting a generic 
+	 * error as a version compatibility error. Currently, I have decided not to have this additional boolean and use the 
+	 * non emptiness of serverVersion as an indicator of version compatibility failure. 
+	 */
+	static CompatibilityResult ensureCompatability(JSON compatibilityCheckResult) throws GeneralSecurityException {
+		String errorMessage = null;
+		String serverVersion = null;
+		// Validate that the server version is sufficient 
+		Boolean isJTS = JSONHelper.getBoolean(compatibilityCheckResult, JSON_PROP_IS_JTS);
+
+		// isJTS might be null in 3.0 RC0 and earlier, because earlier versions of
+		// the VersionCompatibilityRestService did not include this functionality.
+		// If null, don't throw  an error in this block, but instead fall through
+		// handle as a version mismatch below
+		
+		if ((isJTS != null) && (isJTS == true)) {
+			errorMessage = Messages.RTCFacadeFacade_client_not_allowed_to_connect_to_JTS();
+		}
+
+		Boolean compatible = JSONHelper.getBoolean(compatibilityCheckResult, JSON_PROP_COMPATIBLE);
+		if (compatible == null) {
+			errorMessage = Messages.RTCFacadeFacade_invalid_response_invoking_version_compatibility_service();
+		} else if (compatible == false) {
+			// Create a object with the details. We can use this to determine if we want to retry with higher 
+			// values for version compatibility.
+			String upgradeURI = JSONHelper.getString(compatibilityCheckResult, JSON_PROP_URI);
+			String upgradeMessage = JSONHelper.getString(compatibilityCheckResult, JSON_PROP_MESSAGE);
+			serverVersion = JSONHelper.getString(compatibilityCheckResult, JSON_PROP_SERVER_VERSION);
+			if ((upgradeURI == null) || (upgradeMessage == null) || (serverVersion == null)) {
+				errorMessage = Messages.RTCFacadeFacade_invalid_response_invoking_version_compatibility_service();
+			} else {
+				errorMessage = Messages.RTCFacadeFacade_incompatible2(serverVersion);
+			}
+		}
+		return new CompatibilityResult(serverVersion, errorMessage);
+	}
+
+	/**
+	 * Class to store the compatibility error information
+	 */
+	public static class CompatibilityResult {
+		private final String errorMessage;
+		private final String serverVersion;
+
+		public CompatibilityResult(String serverVersion, String errorMessage) {
+			this.serverVersion = serverVersion;
+			this.errorMessage = errorMessage;
+		}
+
+		public boolean isCompatible() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		public String getErrorMessage() {
+			return errorMessage;
+		}
+
+		public String getServerVersion() {
+			return serverVersion;
+		}
+	}
+	
+	/**
+	 * This helper class allows to inject alternatives for testing purposes 
+	 * A default static instance is created in {@link RTCFacadeFacade}. 
+	 * While testing, the test class can set an instance that mocks out the 
+	 * n/w calls and additional logic to track the number of calls made.
+	 * 
+	 * Currently this helper instance is used in 
+	 *  {@link RTCFacadeFacade#testConnection(String, String, String, String, int, String, String, boolean)
+	 *  and {@link RTCFacadeFacade#testConnectionHTTPHelper(String, String, String, int, String) to 
+	 *  test those methods. If new methods are to be extensively tested and n/w depenendencies should be mocked out,
+	 *  then use the helper instance {@link RTCFacadeFacade#httpUtilsHelper} 
+	 */
+	public static class HttpUtilsHelper {
+		
+		public GetResult performGet(String serverURI, String uri, String userId, String password, 
+				int timeout, HttpClientContext context, TaskListener listener )	throws InvalidCredentialsException, IOException, GeneralSecurityException {
+			return HttpUtils.performGet(serverURI, uri, userId, password, timeout, context, listener);
+		}
+		
+		public void validateCredentials(String serverURI, String userId, String password, int timeout) 
+				throws InvalidCredentialsException, IOException, GeneralSecurityException {
+			// Make sure the credentials are good
+			HttpUtils.validateCredentials(serverURI, userId, password, timeout);
+		}
+	}
 }

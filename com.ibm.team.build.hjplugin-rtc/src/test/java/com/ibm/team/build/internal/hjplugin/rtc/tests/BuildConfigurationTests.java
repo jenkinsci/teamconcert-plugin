@@ -3955,5 +3955,94 @@ public class BuildConfigurationTests {
 
 		return buildResultHandle;
 	}
+	
+	public Map<String, String> setupBuildDefinition_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad(String workspaceName, String componentName,
+			String buildDefinitionId, String hjPath, String buildPath, boolean configureLoadRules) throws Exception {
+		// create a build definition with new format load rules
+		// load directory "."	
+		// accept changes before loading
+		// set loadPolicy to useLoadRules
+		// set loadMethod to optimized incremental load
+
+		// create a build engine
+		// create a build request
+
+		// verify that the buildConfiguration returns the load rules
+		// and other settings.
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		Map<String, String> artifactIds = new HashMap<String, String>();
+
+		try {
+			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, configureLoadRules);
+			// create the build definition
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+					null,
+					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
+					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
+					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "false",
+					IJazzScmConfigurationElement.PROPERTY_CREATE_FOLDERS_FOR_COMPONENTS, "false",
+					IJazzScmConfigurationElement.PROPERTY_LOAD_COMPONENTS,
+					new LoadComponents(Collections.<IComponentHandle> emptyList()).getBuildProperty(), Constants.PROPERTY_LOAD_POLICY,
+					Constants.LOAD_POLICY_USE_LOAD_RULES, Constants.PROPERTY_LOAD_METHOD, Constants.LOAD_METHOD_OPTIMIZED_INCREMENTAL_LOAD);
+			if (configureLoadRules) {
+				BuildUtil.addPropertyToBuildDefiniion(repo, buildDefinitionId, IJazzScmConfigurationElement.PROPERTY_COMPONENT_LOAD_RULES,
+						artifactIds.get("LoadRuleProperty"));
+			}
+
+			BuildUtil.createBuildResult(buildDefinitionId, connection, "my buildLabel", artifactIds);
+
+			return artifactIds;
+		} catch (Exception e) {
+			// cleanup artifacts created
+			BuildUtil.deleteBuildArtifacts(repo, artifactIds);
+			throw e;
+		}
+	}
+
+	public void testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad(String workspaceName, String buildDefinitionId, String hjPath,
+			String buildPath, Map<String, String> artifactIds, boolean configureLoadRules) throws Exception {
+		connection.ensureLoggedIn(null);
+		ITeamRepository repo = connection.getTeamRepository();
+		Exception[] failure = new Exception[] { null };
+		IConsoleOutput listener = TestSetupTearDownUtil.getListener(failure);
+
+		// get the build result
+		String buildResultItemId = artifactIds.get(TestSetupTearDownUtil.ARTIFACT_BUILD_RESULT_ITEM_ID);
+		IBuildResultHandle buildResultHandle = (IBuildResultHandle)IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultItemId), null);
+
+		BuildConfiguration buildConfiguration = new BuildConfiguration(repo, hjPath);
+		buildConfiguration.initialize(buildResultHandle, false, "builddef_my buildLabel", false, listener, null, Locale.getDefault());
+		if (failure[0] != null) {
+			throw failure[0];
+		}
+
+		AssertUtil.assertFalse("Should NOT be a personal build", buildConfiguration.isPersonalBuild());
+		BuildWorkspaceDescriptor workspaceDescriptor = buildConfiguration.getBuildWorkspaceDescriptor();
+		AssertUtil.assertEquals(artifactIds.get(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID), workspaceDescriptor.getWorkspaceHandle()
+				.getItemId().getUuidValue());
+		AssertUtil.assertEquals("my buildLabel", buildConfiguration.getBuildProperties().get("buildLabel"));
+		AssertUtil.assertTrue("Should be accepting before fetching", buildConfiguration.acceptBeforeFetch());
+		AssertUtil.assertFalse("Should be a list of components to exclude", buildConfiguration.includeComponents());
+		AssertUtil.assertFalse("Should not be creating a folder for the component", buildConfiguration.createFoldersForComponents());
+		@SuppressWarnings("rawtypes")
+		Collection loadRules = buildConfiguration.getComponentLoadRules(
+				workspaceDescriptor.getConnection(connection.getRepositoryManager(), false, null), null, System.out, null, Locale.getDefault());
+		AssertUtil.assertTrue("Load rules not as expected", configureLoadRules ? loadRules.size() == 1 : loadRules.size() == 0);
+		AssertUtil.assertEquals(0, buildConfiguration.getComponents().size());
+		File expectedLoadDir = new File(hjPath);
+		expectedLoadDir = new File(expectedLoadDir, buildPath);
+		AssertUtil.assertEquals(expectedLoadDir.getCanonicalPath(), buildConfiguration.getFetchDestinationFile().getCanonicalPath());
+		AssertUtil.assertEquals(buildDefinitionId + "_builddef_my buildLabel", buildConfiguration.getSnapshotName());
+		AssertUtil.assertTrue("Deletion is not needed", !buildConfiguration.isDeleteNeeded());
+		AssertUtil.assertTrue("isLoadPolicySetToUseLoadRules should be true", buildConfiguration.isLoadPolicySetToUseLoadRules());
+		AssertUtil.assertTrue("isLoadPolicySet should be true", buildConfiguration.isLoadPolicySet());
+		AssertUtil.assertFalse("isLoadPolicySetToUseComponentLoadConfig should be false", buildConfiguration.isLoadPolicySetToUseComponentLoadConfig());
+		AssertUtil.assertFalse("isComponentLoadConfigSetToExcludeSomeComponents should be false",
+				buildConfiguration.isComponentLoadConfigSetToExcludeSomeComponents());
+		AssertUtil.assertEquals(Constants.LOAD_METHOD_OPTIMIZED_INCREMENTAL_LOAD, buildConfiguration.getLoadMethod());
+		AssertUtil.assertTrue("isBuildDefinitionConfiguration should be true", buildConfiguration.isBuildDefinitionConfiguration());
+	}
 
 }

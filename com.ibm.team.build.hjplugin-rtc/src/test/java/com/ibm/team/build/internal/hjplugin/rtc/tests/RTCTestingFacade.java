@@ -696,4 +696,21 @@ public class RTCTestingFacade extends RTCFacade {
 		return testClient.setUpBuildDefinition_incrementalChanges(connectionDetails, buildDefinitionId, workspaceItemId, componentItemId,
 				isPersonalBuild, folderName, fileName, getProgressMonitor());
 	}
+	
+	public Map<String, String> testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad(String serverURL, String userId, String password,
+			int timeout, String workspaceName, String componentName, String hjPath, String buildPath, boolean configureLoadRules) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil();
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		return testClient.testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad(connectionDetails, workspaceName, componentName, hjPath,
+				buildPath, configureLoadRules, getProgressMonitor());
+	}
+	
+	public Map<String, String> setupBuildResultContributions_toTestLoadPolicy_doOptimizedIncrementalLoad(String serverURL, String userId, String password, int timeout,
+			String workspaceName, String componentName, String buildDefinitionId) throws Exception {
+		TestSetupTearDownUtil testClient = getTestSetupTearDownUtil(); 
+		ConnectionDetails connectionDetails = testClient.getConnectionDetails(serverURL, userId, password, timeout);
+		Map<String, String> setup = testClient.setupBuildResultContributions_toTestLoadPolicy_doOptimizedIncrementalLoad(connectionDetails, workspaceName,
+				componentName, buildDefinitionId, getProgressMonitor());
+		return setup;
+	}
 }

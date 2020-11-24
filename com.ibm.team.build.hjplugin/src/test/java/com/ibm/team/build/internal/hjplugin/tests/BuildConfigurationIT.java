@@ -5096,11 +5096,18 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				Assert.assertTrue(new File(fComp1, "a-comp1.txt").exists());
 				Assert.assertTrue(new File(fComp1, "h-comp1.txt").exists());
 
-				// Validate that local changes are retained as incremental update would  have happened for
+				// Validate that local changes are retained as incremental update would have happened for
 				// a regular buid after regular build
-				Assert.assertTrue(new File(fComp1, "abc").exists());
-				Assert.assertTrue(new File(fComp1, "def").exists());
-				Assert.assertTrue(new File(fComp1, "hij").exists());
+				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+					Assert.assertTrue(new File(fComp1, "abc").exists());
+					Assert.assertTrue(new File(fComp1, "def").exists());
+					Assert.assertTrue(new File(fComp1, "hij").exists());
+				} else {
+					// in pre701 build toolkits incremental update wouldn't happen
+					Assert.assertFalse(new File(fComp1, "abc").exists());
+					Assert.assertFalse(new File(fComp1, "def").exists());
+					Assert.assertFalse(new File(fComp1, "hij").exists());
+				}
 
 				gComp1 = new File(loadDir, "g-comp1");
 				Assert.assertTrue(gComp1.exists());
@@ -5173,7 +5180,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	public void testBuildDefinitionConfig_doIncrementalUpdate() throws Exception {
 		// create a build definition
 		// load directory "."
-		// delete directory before loading (dir has other stuff that will be deleted)
+		// do optimized incremental load
 		// accept changes before loading
 
 		// create a build engine
@@ -5406,6 +5413,173 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						Map.class }, // setupArtifacts
 						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
 			}
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad() throws Exception {
+		// create a build definition
+		// load directory "."
+		// invoke optimized incremental load
+		// accept changes before loading
+		
+		// create a build engine
+		// create a build request
+
+		// verify that the buildConfiguration returns the load rules
+		// and other settings.
+
+		// checkout based on the request
+		// make sure only the contents identified by the load rule was loaded
+		
+		// Tests following scenarios
+		// set loadPolicy to useLoadRules and specify load rules, invoke optimized incremental load
+		if (Config.DEFAULT.isConfigured()) {
+			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
+			
+			// Scenario#1
+			// configure load rules and verify that only those components for which load rules are specified are loaded,
+			// according to the specified load rules
+			String workspaceName = getRepositoryWorkspaceUniqueName();
+			String componentName = getComponentUniqueName();
+			String fetchLocation = ".";
+
+			Map<String, String> setupArtifacts = (Map<String, String>)getTestingFacade().invoke(
+					"testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad",
+					new Class[] { String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							int.class, // timeout,
+							String.class, // workspaceName,
+							String.class, // componentName,
+							String.class, // hjPath,
+							String.class, // buildPath
+							boolean.class }, // configureLoadRules
+					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
+					getSandboxDir().getPath(), fetchLocation, true);
+			try {
+				ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+				TaskListener listener = new StreamTaskListener(new PrintStream(byteArrayOutputStream), null);
+
+				File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
+
+				// put extraneous stuff in the load directory (which is different from sandbox cause
+				// we want to get a the change log.
+				File loadDir = new File(getSandboxDir(), "loadDir");
+				assertTrue(loadDir.mkdirs());
+
+				// checkout the changes
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(),
+						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
+						changeLog, "Snapshot", listener, Locale.getDefault());
+				
+				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+					// validate only when using 701 build toolkit
+					Assert.assertFalse(byteArrayOutputStream.toString().contains("Invoking optimized incremental load."));
+					Assert.assertTrue(byteArrayOutputStream.toString().contains("Optimized incremental load is selected."));
+				}
+
+				String[] children = loadDir.list();
+				Assert.assertEquals(3, children.length); // just what the load rule says to load (children of f_comp1) + metadata
+				Assert.assertTrue(new File(loadDir, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(loadDir, "h-comp1.txt").exists());
+
+				RTCChangeLogParser parser = new RTCChangeLogParser();
+				FileReader changeLogReader = new FileReader(changeLogFile);
+				RTCChangeLogSet result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				int changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(1, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, 
+						false, "useLoadRules", null, "optimizedIncrementalLoad", buildProperties);
+				
+				String folderName = "iu-comp1";
+				String fileName = "iu-comp1.txt";
+				
+				// make some changes
+				Map<String, String> setupArtifacts1 = (Map<String, String>)getTestingFacade().invoke(
+						"setUpBuildDefinition_incrementalChanges",
+						new Class[] { String.class, // serverURL
+								String.class, // userId
+								String.class, // password
+								int.class, // timeout
+								String.class, // buildDefinitionId
+								String.class, // workspaceItemId
+								String.class, // componentItemId
+								boolean.class, // isPersonalBuild
+								String.class, // folderName
+								String.class }, // fileName
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
+						setupArtifacts.get(ARTIFACT_BUILD_DEFINITION_ID), setupArtifacts.get(ARTIFACT_STREAM_ITEM_ID),
+						setupArtifacts.get(ARTIFACT_COMPONENT1_ITEM_ID), false, folderName, fileName);
+				setupArtifacts.put("buildResultItemId1", setupArtifacts1.get("buildResultItemId"));
+
+				changeLog.close();
+				changeLogFile.delete();
+
+				changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
+				changeLog = new FileOutputStream(changeLogFile);				
+
+				// checkout the changes
+				// subsequentLoad should go through optimized incremental load
+				byteArrayOutputStream = new ByteArrayOutputStream();
+				listener = new StreamTaskListener(new PrintStream(byteArrayOutputStream), null);
+				buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+						loginInfo.getTimeout(), setupArtifacts1.get("buildResultItemId"), null, loadDir.getCanonicalPath(), changeLog, "Snapshot",
+						listener, Locale.getDefault());
+				
+				// validate that build log contains invoking optimized incremental load message
+				listener.getLogger().flush();
+				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+					// validate only when using 701 build toolkit
+					Assert.assertTrue(byteArrayOutputStream.toString().contains("Invoking optimized incremental load."));
+					Assert.assertTrue(byteArrayOutputStream.toString().contains("Optimized incremental load is selected."));
+				}
+				
+				// incremental changes should not be loaded as per the load rule
+				children = loadDir.list();
+				Assert.assertEquals(3, children.length); // just what the load rule says to load (children of f_comp1) + metadata
+				Assert.assertTrue(new File(loadDir, "a-comp1.txt").exists());
+				Assert.assertTrue(new File(loadDir, "h-comp1.txt").exists());
+
+				parser = new RTCChangeLogParser();
+				changeLogReader = new FileReader(changeLogFile);
+				result = (RTCChangeLogSet)parser.parse(null, null, changeLogReader);
+
+				// verify the result
+				changeCount = result.getComponentChangeCount() + result.getChangeSetsAcceptedCount() + result.getChangeSetsDiscardedCount();
+				Assert.assertEquals(1, changeCount);
+
+				validateBuildProperties(setupArtifacts.get(ARTIFACT_WORKSPACE_ITEM_ID), fetchLocation, false, true,
+						setupArtifacts.get("LoadRuleProperty"), false, "", result.getBaselineSetItemId(), changeCount, 
+						false, "useLoadRules", null, "optimizedIncrementalLoad", buildProperties);
+
+			} catch (Exception e) {
+				// when loadPolicy is set to useLoadRules and load rules are specified, we need a 603 or
+				// above build toolkit as the interface to drive the load exclusively with load rules was introduced only in
+				// 603. So the load operation would fail with an RTCConfigurationException
+				if (Boolean.valueOf(setupArtifacts.get("isPre603BuildToolkit")) && "RTCConfigurationException".equals(e.getClass().getSimpleName())) {
+					Assert.assertTrue(e.getMessage().startsWith("Please check the version of the build toolkit"));
+				} else {
+					e.printStackTrace();
+					Assert.fail("Exception not expected: " + e.getMessage());
+				}
+			}
+			finally {
+				// clean up
+				getTestingFacade().invoke("tearDown", new Class[] { String.class, // serverURL,
+						String.class, // userId,
+						String.class, // password,
+						int.class, // timeout,
+						Map.class }, // setupArtifacts
+						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
+			}
+
 		}
 	}
 

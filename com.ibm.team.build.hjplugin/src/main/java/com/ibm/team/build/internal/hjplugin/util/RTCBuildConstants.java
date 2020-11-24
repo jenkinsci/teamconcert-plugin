@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2016 IBM Corporation and others.
+ * Copyright (c) 2014, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -105,10 +105,10 @@ public interface RTCBuildConstants {
 
     /**
      * URI for checking compatibility of the RTC server. We need 6.0 or higher in order to
-     * use the Rest services. Dropping support for 5.0 servers.
+     * use the Rest services. Servers 5.0.2 or lesser will not be supported
      */
     public static final String URI_COMPATIBILITY_CHECK = "versionCompatibility?clientVersion=6.0"; //$NON-NLS-1$
-    
+       
     /**
      * URI for checking compatibility of the RTC server version 6.0.4
      */
@@ -118,6 +118,12 @@ public interface RTCBuildConstants {
      * URI for checking compatibility of the RTC server version 6.0.4 M5
      */
     public static final String URI_COMPATIBILITY_CHECK_604_M5 = "versionCompatibility?clientVersion=6.0.4M5"; //$NON-NLS-1$
+
+    public static final String MINIMUM_SERVER_VERSION = "6.0";
+    
+    public static final String MINIMUM_SERVER_VERSION_FOR_PBDELIVER = "6.0.4";
+    
+    public static final String URI_COMPATIBILITY_CHECK_WITHOUT_VERSION = "versionCompatibility?clientVersion=";
 
     /**
      * URI for searching for workspaces (uses ITeamModelledRestService)

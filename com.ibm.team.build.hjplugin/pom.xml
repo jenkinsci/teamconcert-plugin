@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright © 2013, 2018 IBM Corporation and others.
+    Copyright © 2013, 2020 IBM Corporation and others.
     All rights reserved. This program and the accompanying materials
     are made available under the terms of the Eclipse Public License v1.0
     which accompanies this distribution, and is available at
@@ -51,7 +51,7 @@
 		</developer>
 		<developer>
 		    <id>lvaikunt</id>
-			<name>Lakshmi Narasimhan T V</name>
+		    <name>Lakshmi Narasimhan T V</name>
 		</developer>
 	</developers>
 
@@ -76,7 +76,7 @@
         <excludeTests>**/UnknownTests.java</excludeTests>
         <includeTests>**/*IT.java</includeTests>
         <dumpLogFiles>false</dumpLogFiles>
-        <rtcJarVersion>2.1.0</rtcJarVersion>
+        <rtcJarVersion>2.1.1</rtcJarVersion>
         <!--  minimum Jenkins LTS version with Java 8 compatibility -->
         <jenkins.version>2.60.1</jenkins.version>
         <maven.javadoc.skip>true</maven.javadoc.skip>
@@ -132,7 +132,7 @@
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
-			<version>4.3.6</version>
+			<version>4.5.6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jenkins-ci.plugins.workflow</groupId>

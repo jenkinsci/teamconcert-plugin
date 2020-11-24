@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2019 IBM Corporation and others.
+ * Copyright © 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -103,6 +103,21 @@ public class RTCFacadeIT extends AbstractTestCase {
 			assertTrue("Successful testConnection with invalid password", errorMessage != null && errorMessage.length() != 0);
 
 		}
+	}
+	
+	@Test public void testTestConnectionWithInvalidServer() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		String errorMessage = RTCFacadeFacade.testConnection( 
+				Config.DEFAULT.getToolkit(),
+				"https://localhost:44921", Config.DEFAULT.getUserId(),
+				Config.DEFAULT.getPassword(), 
+				Config.DEFAULT.getTimeout(),
+				true);
+		// We cannot assert on the actual message because it could change based on the server OS and the java being 
+		// used
+		assertTrue("Successful testConnection with invalid server", errorMessage != null && errorMessage.length() != 0);
 	}
 
 	/**

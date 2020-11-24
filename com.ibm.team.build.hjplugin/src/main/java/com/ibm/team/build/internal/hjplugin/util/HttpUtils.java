@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,9 +21,13 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.Charset;
 import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -47,35 +51,66 @@ import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpMessage;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
+import org.apache.http.NoHttpResponseException;
+import org.apache.http.ProtocolException;
+import org.apache.http.auth.AuthProtocolState;
+import org.apache.http.auth.AuthScheme;
+import org.apache.http.auth.AuthSchemeProvider;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.AuthState;
+import org.apache.http.auth.AuthenticationException;
+import org.apache.http.auth.Credentials;
 import org.apache.http.auth.InvalidCredentialsException;
+import org.apache.http.auth.MalformedChallengeException;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.AuthCache;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpRequestWrapper;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.client.utils.HttpClientUtils;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.config.Lookup;
+import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.X509HostnameVerifier;
 import org.apache.http.cookie.Cookie;
 import org.apache.http.entity.ContentProducer;
 import org.apache.http.entity.EntityTemplate;
+import org.apache.http.impl.auth.AuthSchemeBase;
 import org.apache.http.impl.auth.BasicScheme;
+import org.apache.http.impl.auth.BasicSchemeFactory;
+import org.apache.http.impl.auth.SPNegoSchemeFactory;
 import org.apache.http.impl.client.BasicAuthCache;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpCoreContext;
+import org.apache.http.util.CharArrayBuffer;
 
 import com.ibm.team.build.internal.hjplugin.Messages;
 
@@ -86,6 +121,11 @@ import com.ibm.team.build.internal.hjplugin.Messages;
  */
 public class HttpUtils {
 
+	//As of now we are not explicitly supporting KERBEROSSPNEGO, CLIENTCERTS, WINDOWSINTEGRATED
+	public enum AuthenticationType {
+	    USERIDPASSWD, KERBEROSSPNEGO, CLIENTCERTS, WINDOWSINTEGRATED
+	}
+	
 	private static final String SLASH = "/";  //$NON-NLS-1$
 
 	private static final String TEXT_JSON = "text/json"; //$NON-NLS-1$
@@ -98,12 +138,16 @@ public class HttpUtils {
 
 	// aka "http.conn-manager.timeout"
 	// Its how long we should wait to get a connection from the connection manager
-	private static final int CONNECTION_REQUEST_TIMEOUT = 480000;
+	private static final int CONNECTION_REQUEST_TIMEOUT_MILLIS = 480000;
 	
 	private static final String FORM_AUTHREQUIRED_HEADER = "X-com-ibm-team-repository-web-auth-msg"; //$NON-NLS-1$
 	private static final String FORM_AUTHREQUIRED_HEADER_VALUE = "authrequired"; //$NON-NLS-1$
 	private static final String AUTHFAILED_HEADER_VALUE = "authfailed"; //$NON-NLS-1$
 	private static final String BASIC_AUTHREQUIRED_HEADER = "WWW-Authenticate"; //$NON-NLS-1$
+	public static final String SCHEME_HTTP = "http"; //$NON-NLS-1$
+	public static final String SCHEME_HTTPS = "https"; //$NON-NLS-1$
+	public static final String X_SERVICE_VERSION = "X-com-ibm-team-service-version";
+	public static final int HTTP_RETRY_REQUEST_COUNT = 3;
     private static Pattern JAUTH_PATTERN = Pattern.compile("^[Jj][Aa][Uu][Tt][Hh]\\s+.*"); //$NON-NLS-1$
     private static Pattern BASIC_PATTERN = Pattern.compile("^[Bb][Aa][Ss][Ii][Cc]\\s+.*"); //$NON-NLS-1$
     private static final String LOCATION = "Location"; //$NON-NLS-1$
@@ -112,6 +156,14 @@ public class HttpUtils {
 
 	private static SSLConnectionSocketFactory SSL_CONNECTION_SOCKET_FACTORY;
 	
+	public static final String APP_PASSWORD_ENABLED = " app-password-enabled"; //$NON-NLS-1$
+    private static final String JAZZ_NATIVE_CLIENT = "Jazz Native Client" + APP_PASSWORD_ENABLED;
+    private final static String RETRYING_AUTH_SERVER_CHALLENGE = "RetryingAuthServerChallenge"; //$NON-NLS-1$
+    private final static String AuthSchemeBearer = "Bearer"; //$NON-NLS-1$
+    private final static Collection<String> authSchemePreferences = Arrays
+            .asList(new String[] { AuthSchemeBearer, AuthSchemes.SPNEGO, AuthSchemes.BASIC });
+ // the default is USERIDPASSWD. This is mostly to cater for JUNITS
+    private static volatile AuthenticationType _authenticationType = AuthenticationType.USERIDPASSWD;
 //	static {
 //		LOGGER.setLevel(Level.FINER);
 //		ConsoleHandler handler = new ConsoleHandler();
@@ -119,11 +171,226 @@ public class HttpUtils {
 //		LOGGER.addHandler(handler);
 //	}
 
+    public static class AdaptedSPNegoSchemeFactory extends SPNegoSchemeFactory {
+
+        /**
+         * 
+         */
+        public AdaptedSPNegoSchemeFactory() {
+            super();
+        }
+
+        /**
+         * @param stripPort
+         */
+        public AdaptedSPNegoSchemeFactory(boolean stripPort) {
+            super(stripPort);
+        }
+
+    }
+    
+    public static class BearerSchemeProvider implements AuthSchemeProvider {
+
+        @Override
+        public AuthScheme create(HttpContext context) {
+            return new BearerScheme();
+        }
+    }
+    
+    public static class BearerScheme extends AuthSchemeBase {
+        private final static String BEARER = "bearer"; //$NON-NLS-1$
+        private final static String JSA_REALM = "jsa"; //$NON-NLS-1$
+
+        public BearerScheme() {
+        }
+
+        @Override
+        public String getSchemeName() {
+            return BEARER;
+        }
+
+        @Override
+        public String getParameter(String name) {
+            return null;
+        }
+
+        @Override
+        public String getRealm() {
+            return JSA_REALM;
+        }
+
+        @Override
+        public boolean isConnectionBased() {
+            return false;
+        }
+
+        @Override
+        public boolean isComplete() {
+            return true;
+        }
+
+        @Override
+        public Header authenticate(Credentials credentials, HttpRequest request) throws AuthenticationException {
+            // return null means the Authorization header is not set to begin with. This will lead to a 401 which is reported back to the 
+            // RemoteTeamServer as no other AuthScheme's will be attempted. Therefore, this avoid that credentials are sent to the RP
+            return null;
+        }
+
+        @Override
+        protected void parseChallenge(CharArrayBuffer buffer, int beginIndex, int endIndex) throws MalformedChallengeException {
+            // nothing to parse
+        }
+
+    }
+    
+    /**
+     * A custom redirect strategy that allows redirects on the following methods. The assumption here is that a redirect on a non-idempotent method is for the
+     * purposes of authentication redirect, and will not cause the original method to replay. E.G. when a POST request is redirected by the team server, that is
+     * because: a) the container is redirected from http to https; b) the caller is being redirected to an URL that requires authentication. The subsequent
+     * return to the original request in that case will be a GET, which will get replayed in subsequent authentication logic in this class.
+     */
+    private static class AuthRedirectStrategy extends DefaultRedirectStrategy {
+
+        static private String[] METHODS = new String[] {
+                HttpDelete.METHOD_NAME,
+                HttpGet.METHOD_NAME,
+                HttpHead.METHOD_NAME,
+                HttpOptions.METHOD_NAME,
+                HttpPost.METHOD_NAME,
+                HttpPut.METHOD_NAME
+        };
+
+        @Override
+        protected boolean isRedirectable(String method) {
+        	LOGGER.finer("Entering isRedirectable: "+ method);
+        	for (String name : METHODS)
+                if (name.equalsIgnoreCase(method))
+                    return true;
+
+            return false;
+        }
+
+        /*
+         * (non-Javadoc)
+         *
+         * @see org.apache.http.impl.client.DefaultRedirectStrategy#isRedirected(org.apache.http.HttpRequest, org.apache.http.HttpResponse,
+         * org.apache.http.protocol.HttpContext)
+         *
+         * Overridden here to not redirect on 301. The previous version of this rich client library did not redirect on 301s, and we're following that to
+         * maintain compatibility (which at this time, appears to be only tests). Note also the the location header returned via the ContentMovedException on
+         * the server is typically not one amenable to a GET redirect.
+         *
+         * For example, in the test that I observed, a DELETE was sent to the a URL that mapped to the ItemRestService on a fronting-app, which failed with a
+         * ContentMovedException, containing a location to the itemName/Contributor/ADMIN URI, which will map on the server to the ItemRenderService. The
+         * ItemRenderService doesn't expect to be called with the rich client and service versioning information, and fails that versioning check.
+         */
+        @Override
+        public boolean isRedirected(
+                final HttpRequest request,
+                final HttpResponse response,
+                final HttpContext context) throws ProtocolException
+        {
+            final int statusCode = response.getStatusLine().getStatusCode();
+            final String method = request.getRequestLine().getMethod();
+            final Header locationHeader = response.getFirstHeader("location"); //$NON-NLS-1$
+
+            LOGGER.finer("Entering isRedirected: statusCode="+statusCode+";"+ "method="+method+";"+"locationHeader="+locationHeader);
+            switch (statusCode) {
+            case HttpStatus.SC_MOVED_TEMPORARILY:
+                /*
+                 * If the original request used a non-secure URL (i.e. http instead of https), and the new Location does use a secure URL, we do not allow the
+                 * redirect. This allows executeMethod(), below, to see the redirect and throw InsecureProtocolException, which is expected by callers when the
+                 * server is configured to require secure connections. In 5.0.2 and earlier, redirects were followed manually, and this same logic was applied
+                 * to each 302 response. Note that in 5.0.2 we did not check if the redirect target URI was secure. This is different now because we may have
+                 * redirections for other reasons and if a server is set up in non-secure mode, this would cause problems with the other authentication
+                 * protocols
+                 */
+                HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
+                if (targetHost != null && SCHEME_HTTP.equalsIgnoreCase(targetHost.getSchemeName())) {
+                    if (locationHeader != null) {
+                        URI redirectTarget = URI.create(locationHeader.getValue());
+                        if (SCHEME_HTTPS.equalsIgnoreCase(redirectTarget.getScheme())) {
+                            return false;
+                        }
+                    }
+                }
+
+                return isRedirectable(method) && locationHeader != null;
+            case HttpStatus.SC_TEMPORARY_REDIRECT:
+                return isRedirectable(method);
+            case HttpStatus.SC_SEE_OTHER:
+                return true;
+            default:
+                return false;
+            }
+        }
+
+        /**
+         * This method is overridden so that any service version header can be stripped from the request when following redirects. It doesn't make sense to send
+         * the version for the originally requested server to redirect targets, because they will not be the same service, in general.
+         */
+        @Override
+        public HttpUriRequest getRedirect(HttpRequest request, HttpResponse response, HttpContext context) throws ProtocolException {
+            LOGGER.finer("Entering getRedirect: locationHeader="+ response.getFirstHeader("location")); //$NON-NLS-1$ //$NON-NLS-2$
+            /*
+             * The base DefaultRedirectStrategy class will generate the redirect request without any headers. Then, by default, the redirect executor class will
+             * copy all the headers from the original request to the redirect request, but only if the redirect request doesn't have any headers. So we do the
+             * copy ourselves, without the service version header.
+             *
+             * The request should be wrapped, so we want the original headers, without the request-specific headers that would be added by protocol
+             * interceptors.
+             */
+            Header[] originalHeaders;
+            if (request instanceof HttpRequestWrapper) {
+                originalHeaders = ((HttpRequestWrapper) request).getOriginal().getAllHeaders();
+            } else {
+                originalHeaders = request.getAllHeaders();
+            }
+
+            HttpUriRequest redirectRequest = super.getRedirect(request, response, context);
+            redirectRequest.setHeaders(originalHeaders);
+
+            Header serviceVersionHeader = redirectRequest.getFirstHeader(X_SERVICE_VERSION);
+            if (serviceVersionHeader != null) {
+                redirectRequest.removeHeader(serviceVersionHeader);
+            }
+
+            /*
+             * If this redirect is happening as a result of retrying authentication with an OIDC identity provider,
+             * and the authentication has succeeded,
+             * then clear any cached credentials so that they are not sent to the target host.
+             * Otherwise, if both the identity provider (auth server) and target are on the same host, then
+             * doing both OIDC authentication and Basic authentication with the target is an error.
+             */
+            Object retryingAuthServerChallenge = context.getAttribute(RETRYING_AUTH_SERVER_CHALLENGE);
+            Object authState = context.getAttribute(HttpClientContext.TARGET_AUTH_STATE);
+            LOGGER.finer("retryingAuthServerChallenge: "+retryingAuthServerChallenge+", authState: "+authState); //$NON-NLS-1$
+            if (retryingAuthServerChallenge != null && ((Boolean) retryingAuthServerChallenge).booleanValue()) {
+                AuthProtocolState state = authState == null ? AuthProtocolState.UNCHALLENGED : ((AuthState) authState).getState();
+                if (state == AuthProtocolState.UNCHALLENGED || state == AuthProtocolState.SUCCESS) {
+                	LOGGER.finer("OIDC clearing credentials before redirecting to "+redirectRequest.getURI()); //$NON-NLS-1$
+                    clearCredentialsInContext(context);
+                }
+            }
+            
+            return redirectRequest;
+        }
+    }
+    
+    /**
+     * Clear any credentials that have been cached in the HTTP execution context.
+     */
+    private static void clearCredentialsInContext(HttpContext context) {
+        context.removeAttribute(HttpClientContext.AUTH_CACHE);
+        context.removeAttribute(HttpClientContext.TARGET_AUTH_STATE);
+        context.removeAttribute(HttpClientContext.CREDS_PROVIDER);
+    }
+    
 	public static class GetResult {
 		private HttpClientContext httpContext;
 		private JSON json;
 		
-		GetResult(HttpClientContext httpContext, JSON json) {
+		public GetResult(HttpClientContext httpContext, JSON json) {
 			this.httpContext = httpContext;
 			this.json = json;
 		}
@@ -171,7 +438,6 @@ public class HttpUtils {
 		if (httpContext == null) {
 			httpContext = createHttpContext();
 		}
-		
 		LOGGER.finer("GET: " + request.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse response = httpClient.execute(request, httpContext);
 		try {
@@ -703,21 +969,61 @@ public class HttpUtils {
 			HttpClientBuilder clientBuilder = HttpClientBuilder.create();
 
 			clientBuilder.setSSLSocketFactory(getSSLConnectionSocketFactory());
-			
-			// TODO to find out if this is sufficient, we can periodically dump the PoolStats
+
+			// TODO to find out if this is sufficient, we can periodically dump
+			// the PoolStats
 			clientBuilder.setMaxConnPerRoute(10);
 			clientBuilder.setMaxConnTotal(100);
+
+			RegistryBuilder<AuthSchemeProvider> authSchemeRegistryBuilder = RegistryBuilder.<AuthSchemeProvider> create();
+
+	        // we are always at least supporting bearer
+	        authSchemeRegistryBuilder.register(AuthSchemeBearer, new BearerSchemeProvider());
+	        
+	        switch (_authenticationType) {
+	        case USERIDPASSWD:
+	            // if we use user creds, we do not want to handle spnego, but deal with it in the main body, but we do want to support basic
+	            authSchemeRegistryBuilder.register(AuthSchemes.BASIC, new BasicSchemeFactory(Charset.forName("UTF-8"))); //$NON-NLS-1$
+	            break;
+	        default:
+	            // in all other cases, we don't want to deal with basic or spnego, notably clien creds
+	            break;
+	        }
+	        
+			
+	        Lookup<AuthSchemeProvider> authSchemeRegistry = authSchemeRegistryBuilder.build();
+	        clientBuilder.setDefaultAuthSchemeRegistry(authSchemeRegistry);
 			
 			// allow redirects on POST
-			clientBuilder.setRedirectStrategy(new LaxRedirectStrategy());
+			clientBuilder.setRedirectStrategy(new AuthRedirectStrategy());
 
-			// How long to wait to get a connection from our connection manager. The default
-			// timeouts are forever which is probably not good. 
-			// TODO If we set it when creating the GET, PUT & POST maybe its not really needed here
-			RequestConfig config = getRequestConfig(CONNECTION_REQUEST_TIMEOUT);
-			clientBuilder.setDefaultRequestConfig(config);
+			// How long to wait to get a connection from our connection manager.
+			// The default
+			// timeouts are forever which is probably not good.
+			// TODO If we set it when creating the GET, PUT & POST maybe its not
+			// really needed here
+			clientBuilder.setDefaultRequestConfig(getRequestConfig(CONNECTION_REQUEST_TIMEOUT_MILLIS).build());
 
-			// This will create a client with the defaults (which includes the PoolingConnectionManager)
+			clientBuilder.setUserAgent(JAZZ_NATIVE_CLIENT);
+			
+			 /* We occasionally see NoHttpResponseException.  Evidently this can
+		         * happen when the server shuts down a connection but the client has not
+		         * noticed yet.  One suggested workaround is to retry. */
+		        HttpRequestRetryHandler retryHandler = new HttpRequestRetryHandler() {
+		            @Override
+		            public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+		                if (executionCount > HTTP_RETRY_REQUEST_COUNT) {
+		                    LOGGER.finer("httpClient retry overflow"); //$NON-NLS-1$
+		                    return false;
+		                } else if (exception instanceof NoHttpResponseException) {
+		                    LOGGER.finer("httpClient retry on NoHttpResponseException"); //$NON-NLS-1$
+		                    return true;
+		                } else
+		                    return false;
+		            }
+		        };
+		        clientBuilder.setRetryHandler(retryHandler);
+			
 			HTTP_CLIENT = clientBuilder.build();
 		}
 
@@ -780,7 +1086,7 @@ public class HttpUtils {
 		HttpGet get = new HttpGet(fullURI);
 		get.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
 		get.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
-		get.setConfig(getRequestConfig(timeout));
+		get.setConfig(getRequestConfig(timeout).build());
 		return get;
 	}
 
@@ -795,7 +1101,7 @@ public class HttpUtils {
 		put.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
 		put.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
 		put.addHeader("Content-type", TEXT_JSON); //$NON-NLS-1$
-		put.setConfig(getRequestConfig(timeout));
+		put.setConfig(getRequestConfig(timeout).build());
 		return put;
 	}
 
@@ -810,7 +1116,7 @@ public class HttpUtils {
 		post.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
 		post.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
 		post.addHeader("Content-type", TEXT_JSON); //$NON-NLS-1$
-		post.setConfig(getRequestConfig(timeout));
+		post.setConfig(getRequestConfig(timeout).build());
 		return post;
 	}
 	
@@ -824,7 +1130,7 @@ public class HttpUtils {
 		HttpDelete delete = new HttpDelete(fullURI);
 		delete.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
 		delete.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
-		delete.setConfig(getRequestConfig(timeout));
+		delete.setConfig(getRequestConfig(timeout).build());
 		return delete;
 	}
 
@@ -838,7 +1144,7 @@ public class HttpUtils {
 		HttpPost post = new HttpPost(fullURI);
 		post.setHeader("Accept-Charset", UTF_8); //$NON-NLS-1$
 		post.addHeader("Accept", TEXT_JSON); //$NON-NLS-1$
-		post.setConfig(getRequestConfig(timeout));
+		post.setConfig(getRequestConfig(timeout).build());
 		return post;
 	}
 
@@ -848,14 +1154,17 @@ public class HttpUtils {
 	 * @param timeout The timout period in seconds
 	 * @return The request configuration
 	 */
-	private static RequestConfig getRequestConfig(int timeout) {
-		RequestConfig requestConfig = RequestConfig.custom()
-		        .setSocketTimeout(timeout * 1000)
-		        .setConnectTimeout(timeout * 1000)
-				.setConnectionRequestTimeout(timeout * 1000)
-				.setCircularRedirectsAllowed(true)
-		        .build();
-		return requestConfig;
+	private static RequestConfig.Builder getRequestConfig(int timeout) {
+		return RequestConfig.custom()
+                .setConnectionRequestTimeout(timeout * 1000)
+                .setConnectTimeout(timeout * 1000) // changed form timeouts[1]
+                .setCookieSpec(CookieSpecs.STANDARD)
+                .setSocketTimeout(timeout * 1000)
+                .setStaleConnectionCheckEnabled(true)
+                .setAuthenticationEnabled(true)
+                .setCircularRedirectsAllowed(true)
+                .setTargetPreferredAuthSchemes(authSchemePreferences)
+                .setRedirectsEnabled(true);
 	}
 
 	public static String getFullURI(String serverURI, String relativeURI) {
@@ -909,13 +1218,23 @@ public class HttpUtils {
 		int statusCode = response.getStatusLine().getStatusCode();
 		Header formHeader = response.getFirstHeader(FORM_AUTHREQUIRED_HEADER);
 		Header basicHeader = response.getFirstHeader(BASIC_AUTHREQUIRED_HEADER);
+		
+		//collect all the WWW-Authenticate headers
+				Header bearer[] = response.getHeaders(BASIC_AUTHREQUIRED_HEADER);
+				
+				//store the headers value in string format
+				String bearerHeader = "";
+				for(Header b:bearer)
+					bearerHeader += b.getValue();
+				
 		if (formHeader!=null && FORM_AUTHREQUIRED_HEADER_VALUE.equals(formHeader.getValue())) {
 			closeResponse(response);
 			
 			// login using Form based auth
 			return handleFormBasedChallenge(httpClient, httpContext, serverURI, userId, password, timeout, listener);
-		}
-		if (statusCode == 401 && basicHeader != null) {
+		}else if(statusCode == 401 && bearerHeader.toLowerCase().matches("(.*)bearer(.*)")){
+			return handleBearerChallenge(response, httpClient, httpContext, serverURI, userId, password);
+		}else if (statusCode == 401 && basicHeader != null) {
 	        if (JAUTH_PATTERN.matcher(basicHeader.getValue()).matches()) {
 	        	throw new UnsupportedOperationException();
 	
@@ -930,6 +1249,194 @@ public class HttpUtils {
 		return response;
 	}
 
+	
+	private static CloseableHttpResponse handleBearerChallenge(CloseableHttpResponse response, CloseableHttpClient httpClient,
+			HttpClientContext httpContext, String serverURI, String userId, String password) throws IOException, GeneralSecurityException, InvalidCredentialsException {
+		
+		Header opAuthorizationRequestHeader = response.getFirstHeader("X-JSA-AUTHORIZATION-REDIRECT");
+		
+		CloseableHttpResponse httpResponse = null;
+
+		// if the header were to be null because target application is not developed with the OIDC SDK, we return and let the 401 reach the client
+        if (opAuthorizationRequestHeader == null) {
+           LOGGER.info("Bearer challenge received but target not developed with OIDC SDK"); //$NON-NLS-1$
+           int statusCode = response.getStatusLine().getStatusCode();
+           throw new IOException(Messages.HttpUtils_LOGIN_failed(userId, serverURI, statusCode));
+        }
+        try {
+        	// if server supports application passwords, get the redirect URL from the response
+            Header appPasswordRequestHeader = response.getFirstHeader("X-JSA-APP-PASSWORD-REDIRECT");
+            
+			URIBuilder authorizationRequestUriBuilder = new URIBuilder(opAuthorizationRequestHeader.getValue());
+			closeResponse(response);
+			
+			 URI authorizationRequestUri = authorizationRequestUriBuilder.build();
+	         // auth code flow uri with prompt=none
+	         URIBuilder authorizationRequestUriBuilderWithNoPrompt = authorizationRequestUriBuilder.addParameter("prompt", "none"); //$NON-NLS-1$ //$NON-NLS-2$
+	         // get the OP host
+	         HttpHost opHost = new HttpHost(authorizationRequestUriBuilder.getHost(), authorizationRequestUriBuilder.getPort(),
+	                    authorizationRequestUriBuilder.getScheme());
+
+	         LOGGER.finer("OIDC OP Host: "+opHost);
+	         HttpGet noPromptAuthorizationRequest = new HttpGet(authorizationRequestUriBuilderWithNoPrompt.build());
+	         String newUserAgent = JAZZ_NATIVE_CLIENT;
+	         noPromptAuthorizationRequest.setHeader(HTTP.USER_AGENT, newUserAgent);
+	         noPromptAuthorizationRequest.setHeader("Accept", TEXT_JSON);
+	         noPromptAuthorizationRequest.setHeader("Accept-Charset", UTF_8);
+	         LOGGER.finer("OIDC Authorization uri with prompt is none : " + noPromptAuthorizationRequest.getURI());
+	         
+	         // This request will fail if this client is connecting for the first time. It may succeed
+	         // if an OP session is already in place in which case some previous level-setting had already been done
+	          CloseableHttpResponse closeableResponse = executePrimitiveRequest(noPromptAuthorizationRequest, opHost, httpContext);
+	          int status = closeableResponse.getStatusLine().getStatusCode();
+	          
+	          if (status == 200) {
+	        	  LOGGER.finer("OIDC Authorization request with prompt is none returned 200"); //$NON-NLS-1$
+	                
+	                // check if we have to deal with challenge
+	                Header login_required_header = closeableResponse.getFirstHeader("X-JSA-LOGIN-REQUIRED");
+	                if (login_required_header != null) {
+	                	LOGGER.finer("OIDC login required header returned"); //$NON-NLS-1$
+	                    // close the response
+	                    HttpClientUtils.closeQuietly(closeableResponse);
+
+	                    // (1) this means we haven't yet signed into the authorization server, so deal with this challenge
+	                    HttpGet authorizationRequest = new HttpGet(authorizationRequestUri);
+	                    authorizationRequest.setHeader("Accept", TEXT_JSON);
+	                    authorizationRequest.setHeader("Accept-Charset", UTF_8);
+	                    httpResponse = handleAuthorizationServerChallenge(opHost, authorizationRequest, httpContext, userId, password, serverURI);
+					} else if (appPasswordRequestHeader != null) {
+	                    // application passwords are supported and either application password usage is forced on by a system property,
+	                    // or the response is a recognized delegated authentication challenge;
+	                    // assume we have an application password and try to authenticate with it
+						HttpClientUtils.closeQuietly(closeableResponse);
+						
+						LOGGER.finer("Using password as an application password for a delegated authentication challenge"); //$NON-NLS-1$
+						httpResponse = handleAppPasswordChallenge(httpContext, appPasswordRequestHeader.getValue(), serverURI
+	                    		, userId, password);
+	                }
+	            }else {
+	            	LOGGER.finer("OIDC Authorization request with prompt is none returned with status "+ closeableResponse.getStatusLine().getStatusCode());
+	            }
+		} catch (URISyntaxException e) {
+			throw new IOException(e);
+		}
+        return httpResponse;
+        
+	}
+	
+	
+	private static CloseableHttpResponse handleAppPasswordChallenge(HttpClientContext httpContext, String appPasswordRequestUri, String serverURI, String userId, String password) throws IOException, URISyntaxException, GeneralSecurityException, InvalidCredentialsException {
+
+        URIBuilder appAuthorizationRequestUriBuilder = new URIBuilder(appPasswordRequestUri);
+		URI appAuthorizationRequestUri = appAuthorizationRequestUriBuilder.build();
+        HttpHost _targetHost = new HttpHost(appAuthorizationRequestUriBuilder.getHost(), appAuthorizationRequestUriBuilder.getPort(), 
+        		appAuthorizationRequestUriBuilder.getScheme());
+        URL url = new URL(serverURI);
+        // setup Basic credentials for the request, assuming the user's password is really an application password
+        AuthCache authCache = new BasicAuthCache();
+        authCache.put(_targetHost, new BasicScheme(Charset.forName("UTF-8"))); //$NON-NLS-1$
+        CredentialsProvider credsProvider = new BasicCredentialsProvider();
+	    credsProvider.setCredentials(
+	            new AuthScope(_targetHost.getHostName(), _targetHost.getPort(), _targetHost.getSchemeName()),
+	            new UsernamePasswordCredentials(userId, password));
+        httpContext.setAuthCache(authCache);
+        httpContext.setCredentialsProvider(credsProvider);
+        httpContext.setAttribute(HttpClientContext.TARGET_AUTH_STATE, new AuthState());
+
+        HttpGet appPasswordRequest = new HttpGet(appAuthorizationRequestUri);
+        appPasswordRequest.setHeader("Accept", TEXT_JSON);
+        appPasswordRequest.setHeader("Accept-Charset", UTF_8);
+        // flag that an auth challenge is being retried so that Basic credentials are cleared when following redirects
+        httpContext.setAttribute(RETRYING_AUTH_SERVER_CHALLENGE, Boolean.TRUE);
+        CloseableHttpResponse appPasswordResponse;
+        try {
+            appPasswordResponse = executePrimitiveRequest(appPasswordRequest, _targetHost, httpContext);
+        } finally {
+            httpContext.removeAttribute(RETRYING_AUTH_SERVER_CHALLENGE);
+        }
+        if (appPasswordResponse.getStatusLine().getStatusCode() == 200) {
+        	LOGGER.finer("Application password auth sequence reached protected resource"); //$NON-NLS-1$
+        } else if(appPasswordResponse.getStatusLine().getStatusCode() == 401) {
+        	LOGGER.finer("Application password auth request returned " + appPasswordResponse.getStatusLine().getStatusCode()); //$NON-NLS-1$
+        	throw new InvalidCredentialsException(
+						Messages.HttpUtils_authentication_failed(userId, serverURI));
+        }else {
+        	LOGGER.finer("Application password auth request returned " + appPasswordResponse.getStatusLine().getStatusCode());
+        }
+        	
+        return appPasswordResponse;	
+    }
+ 
+ private static CloseableHttpResponse handleAuthorizationServerChallenge(HttpHost opHost, HttpGet authorizationRequest,
+		 HttpClientContext httpContext, String userId, String password, String serverURI) throws IOException, GeneralSecurityException, InvalidCredentialsException {
+        // we set the idpHost to be the OP for now so we can react to challenges from it
+       HttpHost _idpHost = opHost;
+
+       LOGGER.finer("OIDC resending authorization request without prompt = none"); //$NON-NLS-1$
+        CloseableHttpResponse closeableResponse = executePrimitiveRequest(authorizationRequest, opHost, httpContext);
+     // so if we see a 200 at this stage, we are dealing with a FORM produced by the OP or some other IDP
+        // in which case we will simply set http client to send Basic Creds to the last request preemptively
+        if (closeableResponse.getStatusLine().getStatusCode() == 200) {
+        	LOGGER.finer("OIDC resending authorization request with Basic credentials cached"); //$NON-NLS-1$
+             
+             HttpClientUtils.closeQuietly(closeableResponse);
+
+             // fetch the last request from the context
+             _idpHost = httpContext.getTargetHost();
+             // on top of that, for the duration of this context, we will send the basic credentials to any request towards the IdP
+             AuthCache authCache = new BasicAuthCache();
+             authCache.put(_idpHost, new BasicScheme(Charset.forName("UTF-8"))); //$NON-NLS-1$
+             CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+             AuthScope idpScope = new AuthScope(_idpHost.getHostName(), AuthScope.ANY_PORT, AuthScope.ANY_REALM, AuthScope.ANY_SCHEME);
+             credentialsProvider.setCredentials(idpScope, new UsernamePasswordCredentials(userId, password));
+             httpContext.setAuthCache(authCache);
+             httpContext.setCredentialsProvider(credentialsProvider);
+             httpContext.setAttribute(HttpClientContext.TARGET_AUTH_STATE, new AuthState());
+             
+             // Set a flag indicating that auth server authentication is being retried.
+             // This is used by the getRedirect method to clear the cached credentials after auth server authentication succeeds,
+             // to avoid sending credentials to the target server when it has the same hostname as the auth server.
+             httpContext.setAttribute(RETRYING_AUTH_SERVER_CHALLENGE, Boolean.TRUE);
+             closeableResponse = executePrimitiveRequest(authorizationRequest, opHost, httpContext);
+             httpContext.removeAttribute(RETRYING_AUTH_SERVER_CHALLENGE);
+             
+             // In case the redirect interceptor didn't clear the cached credentials, do it now
+             LOGGER.finer("OIDC clearing credentials for host "+ _idpHost.getHostName()); //$NON-NLS-1$
+             clearCredentialsInContext(httpContext);
+             if(closeableResponse.getStatusLine().getStatusCode() == 401)
+             {
+            	 throw new InvalidCredentialsException(
+ 						Messages.HttpUtils_authentication_failed(userId, serverURI));
+             }
+             return closeableResponse;
+        }
+        return null;
+ }
+
+private static CloseableHttpResponse executePrimitiveRequest(HttpRequest request, HttpHost targetHost, HttpClientContext context) throws IOException, GeneralSecurityException {
+	LOGGER.finer("Entering executePrimitiveRequest"); //$NON-NLS-1$
+    try {
+    	LOGGER.finer("PRIOR REQUEST EXECUTION CONTEXT "+context); //$NON-NLS-1$
+
+        // replace user-agent with one which indicates it can handle spnego and application passwords
+        Header userAgent = request.getFirstHeader(HTTP.USER_AGENT);
+        if (userAgent != null) {
+            String newUserAgent = userAgent.getValue();
+            LOGGER.finer("Adjusted user agent to: " + newUserAgent); //$NON-NLS-1$
+            request.setHeader(HTTP.USER_AGENT, newUserAgent);
+       }
+        CloseableHttpResponse response = getClient().execute(targetHost, request, context);
+        LOGGER.finer("AFTER REQUEST EXECUTION CONTEXT " + context); //$NON-NLS-1$
+        return response;
+    }
+
+    catch(IOException ex)
+    {
+    	throw ex;
+    }
+}
+	
 	/**
 	 * Post a login form to the server when authentication was required by the previous request
 	 * @param httpClient The httpClient to use for the requests

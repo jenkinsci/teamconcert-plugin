@@ -2152,4 +2152,81 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return buildConfigurationTests.setUpBuildDefinition_incrementalChanges(buildDefinitionId, workspaceItemId, componentItemId, isPersonalBuild,
 				folderName, fileName, monitor);
 	}
+	
+
+	public Map<String, String> testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad(
+			ConnectionDetails connectionDetails, String workspaceName, String componentName, String hjPath,
+			String buildPath, boolean configureLoadRules, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		BuildConfigurationTests buildConfigurationTests = new BuildConfigurationTests(connection);
+		String buildDefinitionId = TestUtils.getBuildDefinitionUniqueName();
+		Map<String, String> artifactIds = buildConfigurationTests
+				.setupBuildDefinition_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad(workspaceName, componentName,
+						buildDefinitionId, hjPath, buildPath, configureLoadRules);
+		try {
+			buildConfigurationTests.testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad(workspaceName,
+					buildDefinitionId, hjPath, buildPath, artifactIds, configureLoadRules);
+		} catch (Exception e) {
+			try {
+				tearDown(connectionDetails, artifactIds, progress);
+			} catch (Exception e2) {
+				// don't let cleanup exception bury the details of the original failure
+			}
+			throw e;
+		}
+		artifactIds.put(ARTIFACT_BUILD_DEFINITION_ID, buildDefinitionId);
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		artifactIds.put("isPre701BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre701BuildToolkit()));
+		return artifactIds;
+	}
+	
+	public Map<String, String> setupBuildResultContributions_toTestLoadPolicy_doOptimizedIncrementalLoad(ConnectionDetails connectionDetails,
+			String workspaceName, String componentName, String buildDefinitionId, IProgressMonitor progress)
+			throws Exception {
+
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+
+		Map<String, String> artifactIds = new HashMap<String, String>();
+
+		IWorkspaceConnection buildStream = SCMUtil.createWorkspace(workspaceManager, workspaceName + "_stream");
+		String c1 = "/" + componentName;
+		Map<String, IItemHandle> pathToHandle = SCMUtil.addComponent(workspaceManager, buildStream, componentName,
+				new String[] { c1 + "/", c1 + "/f/", c1 + "/f/a.txt", c1 + "/f/b.txt", c1 + "/f/c.txt", c1 + "/f/d.txt",
+						c1 + "/f/n.txt", c1 + "/f/tree/", c1 + "/f/tree/e.txt", c1 + "/f2/", });
+
+		String c2 = c1 + "c2";
+		SCMUtil.addComponent(workspaceManager, buildStream, componentName + "c2",
+				new String[] { c2 + "/", c2 + "/f/", c2 + "/f/a.txt", c2 + "/f/b.txt", c2 + "/f/c.txt" });
+
+		IWorkspaceConnection buildWorkspace = SCMUtil.createBuildWorkspace(workspaceManager, buildStream,
+				workspaceName);
+		IComponent component = (IComponent) pathToHandle.get(componentName);
+
+		// capture interesting uuids to verify against
+		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
+		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/a.txt", pathToHandle.get(c1 + "/f/a.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/c.txt", pathToHandle.get(c1 + "/f/c.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/tree/e.txt", pathToHandle.get(c1 + "/f/tree/e.txt").getItemId().getUuidValue());
+		artifactIds.put(c1 + "/f/tree/", pathToHandle.get(c1 + "/f/tree/").getItemId().getUuidValue());
+
+		createChangeSet3(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
+		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
+
+		BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+				null,
+				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+				buildWorkspace.getContextHandle().getItemId().getUuidValue(),
+				IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
+				IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
+				Constants.PROPERTY_LOAD_METHOD, Constants.LOAD_METHOD_OPTIMIZED_INCREMENTAL_LOAD);
+
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		artifactIds.put("isPre701BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre701BuildToolkit()));
+		return artifactIds;
+	}
 }

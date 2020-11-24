@@ -1,3 +1,11 @@
-.DS_Store
-.project
-README.adoc~
+com.ibm.team.build.hjplugin/.settings
+com.ibm.team.build.hjplugin/build
+com.ibm.team.build.hjplugin/launches
+com.ibm.team.build.hjplugin/loadrules
+com.ibm.team.build.hjplugin/META-INF
+com.ibm.team.build.hjplugin/target
+com.ibm.team.build.hjplugin/work
+com.ibm.team.build.hjplugin/.classpath
+com.ibm.team.build.hjplugin/.jazzignore
+com.ibm.team.build.hjplugin/.project
+com.ibm.team.build.hjplugin/build.properties

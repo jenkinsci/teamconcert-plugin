@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2017, 2018 IBM Corporation and others.
+ * © Copyright 2017, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -189,7 +189,8 @@ public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuil
 			// return a reasonable message and skip to the next SCM action
 			String errorMessage = RTCFacadeFacade.testConnection(null, loginInfo.getServerUri(), 
 								loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), 
-								RTCBuildConstants.URI_COMPATIBILITY_CHECK_604, true);
+								RTCBuildConstants.URI_COMPATIBILITY_CHECK_604, 
+								RTCBuildConstants.MINIMUM_SERVER_VERSION_FOR_PBDELIVER, true);
 			if (errorMessage != null && errorMessage.length() > 0) {
 					listener.getLogger().println(
 							Messages.RTCPostBuildDeliverPublisher_incompatible_server_version(loginInfo.getServerUri(), EXPECTED_SERVER_VERSION, errorMessage));

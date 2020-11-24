@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -2752,5 +2752,315 @@ public class RTCScmIT extends AbstractTestCase {
 		// Verify that the console output has the log message		
 		assertNotNull(Utils.getMatch(build.getLogFile(),
 				java.util.regex.Pattern.quote(Messages.RTCScm_empty_resolved_snapshot_name("${emptyParam}"))));
+	}
+	
+	/**
+	 * Validate invocation of dynamic load rules for build definition configuration.
+	 * 
+	 * @throws Exception
+	 */
+	@WithTimeout(1200)
+	@Test
+	public void testBuildDefinitionConfiguration_dynamicLoadRules_doOptimizedIncrementalLoad() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		Config defaultC = Config.DEFAULT;
+		RTCFacadeWrapper testingFacade = Utils.getTestingFacade();
+		String workspaceName = getRepositoryWorkspaceUniqueName();
+		String componentName = getComponentUniqueName();
+		String buildDefinitionId = getBuildDefinitionUniqueName();
+		Map<String, String> setupArtifacts = Utils.setupBuildDefinition_toTestLoadPolicy_doOptimizedIncrementalLoad(testingFacade, defaultC, buildDefinitionId, 
+				workspaceName, componentName);
+		try {
+			// Create a basic project configuration
+			FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
+			
+			// set useDynamicLoadRules to true and validate that the workspace is loaded according to the dynamic load
+			// rules
+			RTCScm rtcScm = (RTCScm)prj.getScm();
+			File tempDir = new File(System.getProperty("java.io.tmpdir"));
+			File buildTestDir = new File(tempDir, "HJPluginTests");
+			File loadDir = new File(buildTestDir, getFileUniqueName());
+			loadDir.mkdirs();
+			loadDir.deleteOnExit();
+			Assert.assertTrue(loadDir.exists());
+			BuildType buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(true);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(false);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			RTCBuildResultAction action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID, action.getBuildResultUUID());
+
+			String[] children = null;
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				boolean isPre603BuildToolkit = Boolean.valueOf(setupArtifacts.get("isPre603BuildToolkit"));
+				String buildToolkitVersionString = "FATAL: RTC : checkout failure: Please check the version of the build toolkit. Build toolkit version 6.0.3 or above is required to load components using load rules.";
+
+				if (!isPre603BuildToolkit || (isPre603BuildToolkit && Utils.getMatch(build.getLogFile(), buildToolkitVersionString) == null)) {
+					Assert.fail("Failure not expected");
+				}
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(2, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/c.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/d.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/n.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree/e.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree/newFile.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+			}
+			
+			if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+				// validate only when using 701 or above build toolkit
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is selected.") != null);
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is not invoked as the buildScmLoadOptions file does not exist.") != null);
+			}
+			
+			ParametersDefinitionProperty useExtensionProperty = new ParametersDefinitionProperty(Arrays.asList(new ParameterDefinition[] { new StringParameterDefinition(
+					RTCJobProperties.USE_DYNAMIC_LOAD_RULE, " ") }));
+			
+			// set useDynamicLoadRules to false, set useExtension parameter to true and validate that the workspace is
+			// loaded according to dynamic load rules
+			// set useOldLoadRuleGenerator property to true so that the deprecated method getComponentLoadRules()
+			// returns load rules
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(false);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+			
+			prj.addProperty(useExtensionProperty);			
+			List<ParametersAction> pAction = new ArrayList<ParametersAction>();
+			pAction.addAll(Utils.getPactionsWithEmptyBuildResultUUID());
+			pAction.add(new ParametersAction(new StringParameterValue(RTCJobProperties.USE_DYNAMIC_LOAD_RULE, "true")));
+			pAction.add(new ParametersAction(new StringParameterValue("useOldDynamicLoadRuleGenerator", "true")));
+			build = Utils.runBuild(prj, pAction);
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "1", action.getBuildResultUUID());
+
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				Assert.fail("Failure not expected");
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(3, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/c.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/d.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/n.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree/e.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree/newFile.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, componentName + "c2/f/c.txt").exists());
+			}
+			
+			if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+				// validate only when using 701 or above build toolkit
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is selected.") != null);
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is not invoked as some of the load options are not supported.") != null);
+			}
+			
+			prj.removeProperty(useExtensionProperty);
+			
+			// set useDynamicLoadRules to true, set useExtension parameter to false and validate that the workspace is
+			// loaded according to dynamic load rules
+			// set useOldLoadRuleGenerator property to true so that the deprecated method getComponentLoadRules()
+			// returns load rules
+			// set excludeComponents property so that the deprecated method getExcludeComponents() returns components to
+			// exclude
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(true);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(false);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			prj.addProperty(useExtensionProperty);
+
+			pAction = new ArrayList<ParametersAction>();
+			pAction.addAll(Utils.getPactionsWithEmptyBuildResultUUID());
+			pAction.add(new ParametersAction(new StringParameterValue(RTCJobProperties.USE_DYNAMIC_LOAD_RULE, "false")));
+			pAction.add(new ParametersAction(new StringParameterValue("useOldDynamicLoadRuleGenerator", "true")));
+			pAction.add(new ParametersAction(new StringParameterValue("excludeComponents", "true")));
+			build = Utils.runBuild(prj, pAction);
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "2", action.getBuildResultUUID());
+
+			if (build.getResult().isWorseOrEqualTo(Result.FAILURE)) {
+				Assert.fail("Failure not expected");
+			} else {
+				children = loadDir.list();
+				Assert.assertEquals(2, children.length);
+				Assert.assertTrue(new File(loadDir, "f/a.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/b.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/c.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/d.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/n.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree").exists());
+				Assert.assertTrue(new File(loadDir, "f/tree/e.txt").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree").exists());
+				Assert.assertTrue(new File(loadDir, "f/newTree/newFile.txt").exists());
+				Assert.assertFalse(new File(loadDir, "f2").exists());
+			}
+			
+			if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+				// validate only when using 701 or above build toolkit
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is selected.") != null);
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is not invoked as some of the load options are not supported.") != null);
+			}
+			
+			prj.removeProperty(useExtensionProperty);
+			
+			// set useDynamicLoadRules to false and validate that the whole workspace is loaded
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(false);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "3", action.getBuildResultUUID());
+
+			children = loadDir.list();
+			Assert.assertEquals(4, children.length); 
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			Assert.assertTrue(new File(loadDir, "newTree2").exists());
+			Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+			File newTree2Dir = new File(loadDir, "newTree2");
+			children = newTree2Dir.list();
+			Assert.assertEquals(257, children.length);
+			File rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree/newFile.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			rootDir = new File(loadDir, componentName + "c2");
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());		
+			
+			if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+				// validate only when using 701 or above build toolkit
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is selected.") != null);
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is not invoked as some of the load options have changed since the last successful workspace load.") != null);
+			}
+
+			// do not set useDynamicLoadRules and validate that the whole workspace is loaded
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(false);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "4", action.getBuildResultUUID());
+
+			children = loadDir.list();
+			Assert.assertEquals(4, children.length);
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+			Assert.assertTrue(new File(loadDir, "newTree2").exists());
+			newTree2Dir = new File(loadDir, "newTree2");
+			children = newTree2Dir.list();
+			Assert.assertEquals(257, children.length);
+			rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree/newFile.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			rootDir = new File(loadDir, componentName + "c2");
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			
+			if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+				// validate only when using 701 or above build toolkit
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is selected.") != null);
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Invoking optimized incremental load.") != null);
+			}
+
+			// set useDynamicLoadRules to false, loadPolicy to useDynamicLoadrules and validate that the whole
+			// workspace is loaded loadPolicy field is not applicable for build definition configuration
+			rtcScm = (RTCScm)prj.getScm();
+			buildType = rtcScm.getBuildType();
+			buildType.setUseDynamicLoadRules(false);
+			buildType.setLoadPolicy(RTCScm.LOAD_POLICY_USE_DYNAMIC_LOAD_RULES);
+			buildType.setLoadDirectory(loadDir.getAbsolutePath());
+			buildType.setClearLoadDirectory(false);
+			prj.setScm(Utils.updateAndGetRTCScm(rtcScm, buildType));
+
+			build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			action = build.getActions(RTCBuildResultAction.class).get(0);
+			setupArtifacts.put(Utils.ARTIFACT_BUILDRESULT_ITEM_ID + "5", action.getBuildResultUUID());
+
+			children = loadDir.list();
+			Assert.assertEquals(4, children.length);
+			Assert.assertTrue(new File(loadDir, componentName).exists());
+			Assert.assertTrue(new File(loadDir, componentName + "c2").exists());
+			Assert.assertTrue(new File(loadDir, "newTree2").exists());
+			newTree2Dir = new File(loadDir, "newTree2");
+			children = newTree2Dir.list();
+			Assert.assertEquals(257, children.length);
+			rootDir = new File(loadDir, componentName);
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/d.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/n.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree").exists());
+			Assert.assertTrue(new File(rootDir, "f/tree/e.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree").exists());
+			Assert.assertTrue(new File(rootDir, "f/newTree/newFile.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f2").exists());
+			rootDir = new File(loadDir, componentName + "c2");
+			Assert.assertTrue(new File(rootDir, "f").exists());
+			Assert.assertTrue(new File(rootDir, "f/a.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/b.txt").exists());
+			Assert.assertTrue(new File(rootDir, "f/c.txt").exists());
+			
+			if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
+				// validate only when using 701 or above build toolkit
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Optimized incremental load is selected.") != null);
+				Assert.assertTrue(Utils.getMatch(build.getLogFile(), "Invoking optimized incremental load.") != null);
+			}
+
+		} finally {
+			Utils.tearDown(testingFacade, defaultC, setupArtifacts);
+		}
 	}
 }

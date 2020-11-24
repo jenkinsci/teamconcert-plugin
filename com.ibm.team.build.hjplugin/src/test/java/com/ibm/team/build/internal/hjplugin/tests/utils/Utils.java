@@ -1561,4 +1561,25 @@ public class Utils {
 		}
 		return false;
 	}
+	
+	public static Map<String, String> setupBuildDefinition_toTestLoadPolicy_doOptimizedIncrementalLoad(RTCFacadeWrapper testingFacade, Config c,
+			String buildDefinitionId, String workspaceName, String componentName) throws Exception {
+	RTCLoginInfo loginInfo = c.getLoginInfo();
+	@SuppressWarnings("unchecked")
+	Map<String, String> setupArtifacts = (Map<String, String>) testingFacade
+			.invoke("setupBuildResultContributions_toTestLoadPolicy_doOptimizedIncrementalLoad",
+					new Class[] { String.class, // serverURL,
+							String.class, // userId,
+							String.class, // password,
+							int.class, // timeout,
+							String.class, // workspaceName,
+							String.class, // componentName
+							String.class}, // buildDefinitionId
+					loginInfo.getServerUri(),
+					loginInfo.getUserId(),
+					loginInfo.getPassword(),
+					loginInfo.getTimeout(), workspaceName,
+					componentName, buildDefinitionId);
+	return setupArtifacts;
+}
 }
