@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2020 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -28,7 +28,8 @@ public class Config {
 	public static final String PASSWORD_FILE = "com.ibm.team.build.passwordFile";
 	public static final String TIMEOUT = "com.ibm.team.build.timeout";
 	public static final String DUMP_LOG_FILES = "com.ibm.team.build.dumpLogFiles";
-	
+	public static final String BUILDTOOLKIT_VERSION = "com.ibm.team.build.buildToolkitVersion";
+
 	public static final String SET_UP_ONLY = "com.ibm.team.build.setUpOnly";
 
 	private static final String MISSING_PROPERTY = "Missing {0} property";
@@ -44,6 +45,7 @@ public class Config {
 	private int timeout;
 	private boolean setUpOnly;
 	private boolean dumpLogFiles;
+	private String buildToolkitVersion;
 
 	public static final Config DEFAULT = new Config();
 
@@ -105,7 +107,18 @@ public class Config {
 				setSetUpOnly(false);
 			}
 			setSetUpOnly(Boolean.parseBoolean(setUpOnlyString));
+			
+			String buildToolkitVersion = System.getProperty(BUILDTOOLKIT_VERSION);
+			if (buildToolkitVersion == null) {
+				buildToolkitVersion = "";
+			}
+			setBuildToolkitVersion(buildToolkitVersion);
 		}
+	}
+
+	private void setBuildToolkitVersion(String buildToolkitVersion) {
+		this.buildToolkitVersion = buildToolkitVersion;
+		
 	}
 
 	public boolean isConfigured() {
@@ -161,6 +174,11 @@ public class Config {
 	public boolean isDumpLogFiles() {
 		validateConfigured();
 		return this.dumpLogFiles;
+	}
+	
+	public String getBuildToolkitVersion() {
+		validateConfigured();
+		return this.buildToolkitVersion;
 	}
 
 	public RTCLoginInfo getLoginInfo() throws InvalidCredentialsException {

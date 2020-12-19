@@ -10,9 +10,6 @@
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.util;
 
-import hudson.model.TaskListener;
-import hudson.util.IOUtils;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -40,12 +37,6 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-
-import net.sf.json.JSON;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONException;
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -105,7 +96,6 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
@@ -113,6 +103,14 @@ import org.apache.http.protocol.HttpCoreContext;
 import org.apache.http.util.CharArrayBuffer;
 
 import com.ibm.team.build.internal.hjplugin.Messages;
+
+import hudson.model.TaskListener;
+import hudson.util.IOUtils;
+import net.sf.json.JSON;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONException;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
 
 /**
  * Collection of methods to handle authentication and providing the response back.
@@ -431,7 +429,34 @@ public class HttpUtils {
 	public static GetResult performGet(String serverURI, String uri, String userId,
 			String password, int timeout, HttpClientContext httpContext, TaskListener listener)
 			throws IOException, InvalidCredentialsException, GeneralSecurityException {
+		return performGetWithItemNotFound(serverURI, uri, userId, password, timeout, false, httpContext, listener);
+	}
+	
 
+	/**
+	 * Perform GET request against an RTC server. This method captures 404 separately and 
+	 * throws an {@link ItemNotFoundException} while {@link #performGet} handles 404 
+	 * like any other HTTP error code.
+	 * 
+	 * @param serverURI The RTC server
+	 * @param uri The relative URI for the GET. It is expected it is already encoded if necessary.
+	 * @param userId The userId to authenticate as
+	 * @param password The password to authenticate with
+	 * @param timeout The timeout period for the connection (in seconds)
+	 * @param catpure404 In this 
+	 * @param httpContext The context from the login if cycle is being managed by the caller
+	 * Otherwise <code>null</code> and this call will handle the login.
+	 * @param listener The listener to report errors to. May be 
+	 * <code>null</code>
+	 * @return Result of the GET (JSON response)
+	 * @throws IOException Thrown if things go wrong
+	 * @throws ItemNotFoundException - Thrown if the item is not found
+	 * @throws InvalidCredentialsException
+	 * @throws GeneralSecurityException 
+	 */
+	public static GetResult performGetWithItemNotFound(String serverURI, String uri, String userId,
+			String password, int timeout, boolean capture404, HttpClientContext httpContext, TaskListener listener)
+			throws IOException, ItemNotFoundException, InvalidCredentialsException, GeneralSecurityException {
 		CloseableHttpClient httpClient = getClient();
 		String fullURI = getFullURI(serverURI, uri);
 		HttpGet request = getGET(fullURI, timeout);
@@ -463,20 +488,31 @@ public class HttpUtils {
 					try {
 						inputStream.close();
 					} catch (IOException e) {
-						LOGGER.finer("Failed to close the result input stream for request: " + fullURI); //$NON-NLS-1$
+						LOGGER.finer("Failed to close the result input stream for request: " + uri); //$NON-NLS-1$
 					}
 				}
 			} else if (statusCode == 401) {
 				// if still un-authorized, then there is a good chance the basic credentials are bad.
 				throw new InvalidCredentialsException(Messages.HttpUtils_authentication_failed(userId, serverURI));
 
-			} else {
-				// capture details about the error
-				LOGGER.finer(Messages.HttpUtils_GET_failed(fullURI, statusCode));
-				if (listener != null) {
-					listener.fatalError(Messages.HttpUtils_GET_failed(fullURI, statusCode));
+			} else if (statusCode == 404) {
+				if (capture404) {
+					throw new ItemNotFoundException(Messages.HttpUtils_item_not_found(fullURI));
+				} else {
+					// capture details about the error, reverting to old behavior
+					LOGGER.finer(Messages.HttpUtils_GET_failed(fullURI, statusCode));
+					if (listener != null) {
+						listener.fatalError(Messages.HttpUtils_GET_failed(fullURI, statusCode));
+					}
+					throw logError(fullURI, response, Messages.HttpUtils_GET_failed(fullURI, statusCode));
 				}
-				throw logError(fullURI, response, Messages.HttpUtils_GET_failed(fullURI, statusCode));
+			} else {
+					// capture details about the error
+					LOGGER.finer(Messages.HttpUtils_GET_failed(fullURI, statusCode));
+					if (listener != null) {
+						listener.fatalError(Messages.HttpUtils_GET_failed(fullURI, statusCode));
+					}
+					throw logError(fullURI, response, Messages.HttpUtils_GET_failed(fullURI, statusCode));
 			}
 		} finally {
 			closeResponse(response);
@@ -641,15 +677,17 @@ public class HttpUtils {
 	
 	/**
 	 * Perform Post request against an RTC server
-	 * 
+	 * NOTE: Make sure to perform a GET on a resource to complete the authentication sequence 
+	 *       before calling this method.
+	 *       
 	 * @param serverURI The RTC server
 	 * @param uri The relative URI for the PUT. It is expected that it is already encoded if necessary.
 	 * @param userId The userId to authenticate as
 	 * @param password The password to authenticate with
 	 * @param timeout The timeout period for the connection (in seconds)
 	 * @param json The JSON object to put to the RTC server
-	 * @param httpContext The context from the login if cycle is being managed by the caller
-	 * Otherwise <code>null</code> and this call will handle the login.
+	 * @param httpContext The context from the login cycle. You can perform a GET on a protected resource
+	 *        Do not pass <code>null</code> context.
 	 * @param listener The listener to report errors to.
 	 * May be <code>null</code> if there is no listener.
 	 * @return The HttpContext for the request. May be reused in subsequent requests
@@ -676,18 +714,25 @@ public class HttpUtils {
 		HttpPost postRequest = getPost(fullURI, timeout);
 		postRequest.setEntity(entity);
 		
+		// A <code>null</code> httpContext will most likely not work due to 
+		// issues with redirect strategy and authentication. 
+		// It is recommended to add a == null check on httpContext and throw 
+		// a invalid argument exception. See the TODO below.
 		if (httpContext == null) {
 			httpContext = createHttpContext();
 		}
-		
+	
 		LOGGER.finer("POST: " + postRequest.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse response = httpClient.execute(postRequest, httpContext);
 		try {
 			/**
 			 * TODO this reauth flow does not work inside POST
-			 * We end up doing a get/reauth and then put or post
+			 * We end up doing a get/reauth first outside this method 
+			 * and then call  POST. We could mandate a non null httpContext
+			 * as an argument to this method.
 			 */
-			// based on the response do any authentication. If authentication requires
+			
+			// Based on the response do any authentication. If authentication requires
 			// the request to be performed again (i.e. Basic auth) re-issue request
 			response = authenticateIfRequired(response,
 					httpClient, httpContext, serverURI, userId, password,
@@ -726,13 +771,16 @@ public class HttpUtils {
 
 	/**
 	 * Perform DELETE request against an RTC server.
+	 * NOTE: Make sure to perform a GET on a resource to complete the authentication sequence 
+	 *       before calling this method.
+	 * 
 	 * @param serverURI The RTC server
 	 * @param uri The relative URI for the DELETE. It is expected that it is already encoded if necessary.
 	 * @param userId The userId to authenticate as
 	 * @param password The password to authenticate with
 	 * @param timeout The timeout period for the connection (in seconds)
-	 * @param httpContext The context from the login if cycle is being managed by the caller
-	 * Otherwise <code>null</code> and this call will handle the login.
+	 * @param httpContext The context from the login cycle. You can perform a GET on a protected resource 
+	 *        Do not pass <code>null</code> context.
 	 * @param listener The listener to report errors to.
 	 * May be <code>null</code> if there is no listener.
 	 * @return The HttpContext for the request. May be reused in subsequent requests
@@ -745,16 +793,22 @@ public class HttpUtils {
 			String password, int timeout, HttpClientContext httpContext, TaskListener listener)
 			throws IOException, InvalidCredentialsException,
 			GeneralSecurityException {
+		LOGGER.finest("performDelete: onEnter"); //$NON-NLS-1$
 
 		CloseableHttpClient httpClient = getClient();
 		String fullURI = getFullURI(serverURI, uri);
 		
+		// A <code>null</code> httpContext will most likely not work due to 
+		// issues with redirect strategy (httpClient 4.5.6) and authentication. 
+		// It is recommended to add a == null check on httpContext and throw 
+		// a invalid argument exception. A similar approach should be applied to  
+		// performPOST method.
 		HttpDelete delete = getDELETE(fullURI, timeout);
 		if (httpContext == null) {
 			httpContext = createHttpContext();
 		}
 		
-		LOGGER.finer("DELETE: " + delete.getURI()); //$NON-NLS-1$
+		LOGGER.finer("performDelete: " + delete.getURI()); //$NON-NLS-1$
 		CloseableHttpResponse response = httpClient.execute(delete, httpContext);
 		try {
 			int statusCode = response.getStatusLine().getStatusCode();
@@ -767,7 +821,7 @@ public class HttpUtils {
 				closeResponse(response);
 				String redirectURI = locationHeader.getValue();
 				HttpGet request = getGET(redirectURI, timeout);
-				LOGGER.finer("DELETE following redirect before auth: " + request.getURI()); //$NON-NLS-1$
+				LOGGER.finer("performDelete: Following redirect before auth: " + request.getURI()); //$NON-NLS-1$
 				response = httpClient.execute(request, httpContext);
 				statusCode = response.getStatusLine().getStatusCode();
 				locationHeader = response.getFirstHeader(LOCATION);
@@ -776,6 +830,7 @@ public class HttpUtils {
 
 			// based on the response do any authentication. If authentication requires
 			// the request to be performed again (i.e. Basic auth) re-issue request
+			LOGGER.finer("performDelete: Authenticating if required"); //$NON-NLS-1$
 			response = authenticateIfRequired(response,
 					httpClient, httpContext, serverURI, userId, password,
 					timeout, listener);
@@ -792,7 +847,7 @@ public class HttpUtils {
 					// follow the redirects. Eventually we will get to a point where we can authenticate
 					closeResponse(response);
 					HttpDelete request = getDELETE(fullURI, timeout);
-					LOGGER.finer("DELETE following redirect after auth: " + request.getURI()); //$NON-NLS-1$
+					LOGGER.finer("performDelete: Following redirect after auth: " + request.getURI()); //$NON-NLS-1$
 					response = httpClient.execute(request, httpContext);
 					statusCode = response.getStatusLine().getStatusCode();
 					locationHeader = response.getFirstHeader(LOCATION);
@@ -807,6 +862,7 @@ public class HttpUtils {
 			return httpContext;
 		} finally {
 			closeResponse(response);
+			LOGGER.finest("performDelete: end"); //$NON-NLS-1$
 		}
 	}
 
@@ -1283,7 +1339,6 @@ public class HttpUtils {
 	         noPromptAuthorizationRequest.setHeader(HTTP.USER_AGENT, newUserAgent);
 	         noPromptAuthorizationRequest.setHeader("Accept", TEXT_JSON);
 	         noPromptAuthorizationRequest.setHeader("Accept-Charset", UTF_8);
-	         LOGGER.finer("OIDC Authorization uri with prompt is none : " + noPromptAuthorizationRequest.getURI());
 	         
 	         // This request will fail if this client is connecting for the first time. It may succeed
 	         // if an OP session is already in place in which case some previous level-setting had already been done

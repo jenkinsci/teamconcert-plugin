@@ -107,7 +107,8 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				FileOutputStream changeLog = new FileOutputStream(changeLogFile);
 				
 				// checkout the changes
-				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), loginInfo.getServerUri(),
+				Map<String, String> buildProperties = Utils.acceptAndLoad(getTestingFacade(), 
+						loginInfo.getServerUri(),
 						loginInfo.getUserId(),
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
@@ -5239,7 +5240,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				
 				// validate that build log doesn't contain invoking incremental update message
 				listener.getLogger().flush();
-				Assert.assertFalse(byteArrayOutputStream.toString().contains("Invoking optimized incremental load"));
+				assertOILInvokedMessage(byteArrayOutputStream, false);
 
 				String[] children = loadDir.list();
 				Assert.assertEquals(7, children.length); // all contents of component1 and component2 + metadata
@@ -5334,7 +5335,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				listener.getLogger().flush();
 				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
 					// validate only when using 701 build toolkit
-					Assert.assertTrue(byteArrayOutputStream.toString().contains("Invoking optimized incremental load"));
+					assertOILInvokedMessage(byteArrayOutputStream, true);
 				}
 
 				children = loadDir.list();
@@ -5416,6 +5417,56 @@ public class BuildConfigurationIT extends AbstractTestCase {
 		}
 	}
 	
+	private void assertOILSelectedMessage(ByteArrayOutputStream byteArrayOutputStream, boolean assertTrue) {
+		// This message is present only in 702 toolkit
+		if (assertTrue) {
+			Assert.assertTrue(byteArrayOutputStream.toString(), 
+					byteArrayOutputStream.toString().contains("Optimized incremental load is selected.")); 
+		} else {
+			Assert.assertFalse(byteArrayOutputStream.toString(), 
+					byteArrayOutputStream.toString().contains("Optimized incremental load is selected."));
+		}
+	}
+	
+	private void assertOILSelectedMessage(ByteArrayOutputStream byteArrayOutputStream, 
+						String buildToolkitVersion, boolean assertTrue) {
+		// This message is present only in 702 toolkit
+		if (assertTrue) {
+			Assert.assertTrue(byteArrayOutputStream.toString() + "\n" + buildToolkitVersion, 
+					byteArrayOutputStream.toString().contains("Optimized incremental load is selected.")); 
+		} else {
+			Assert.assertFalse(byteArrayOutputStream.toString() + "\n" + buildToolkitVersion, 
+					byteArrayOutputStream.toString().contains("Optimized incremental load is selected."));
+		}
+	}
+
+	private void assertOILInvokedMessage(ByteArrayOutputStream byteArrayOutputStream, boolean assertTrue) {
+		// validate only when using 701 build toolkit
+		if (assertTrue) {
+			Assert.assertTrue(byteArrayOutputStream.toString(), 
+					byteArrayOutputStream.toString().contains("Invoking optimized incremental load") || 
+					byteArrayOutputStream.toString().contains("Invoking incremental update"));
+		} else {
+			Assert.assertFalse(byteArrayOutputStream.toString(), 
+					byteArrayOutputStream.toString().contains("Invoking optimized incremental load") && 
+					byteArrayOutputStream.toString().contains("Invoking incremental update"));
+		}
+	}
+	
+	private void assertOILInvokedMessage(ByteArrayOutputStream byteArrayOutputStream,
+							String buildToolkitVersion, boolean assertTrue) {
+		// validate only when using 701 build toolkit
+		if (assertTrue) {
+			Assert.assertTrue(byteArrayOutputStream.toString() + "\n" + buildToolkitVersion, 
+					byteArrayOutputStream.toString().contains("Invoking optimized incremental load") || 
+					byteArrayOutputStream.toString().contains("Invoking incremental update"));
+		} else {
+			Assert.assertFalse(byteArrayOutputStream.toString() + "\n" + buildToolkitVersion, 
+					byteArrayOutputStream.toString().contains("Invoking optimized incremental load") && 
+					byteArrayOutputStream.toString().contains("Invoking incremental update"));
+		}
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Test
 	public void testBuildDefinitionConfig_loadRulesWithLoadPolicySetToLoadRules_doOptimizedIncrementalLoad() throws Exception {
@@ -5459,6 +5510,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 					loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), workspaceName, componentName,
 					getSandboxDir().getPath(), fetchLocation, true);
 			try {
+
 				ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 				TaskListener listener = new StreamTaskListener(new PrintStream(byteArrayOutputStream), null);
 
@@ -5475,10 +5527,13 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts.get("buildResultItemId"), null, loadDir.getCanonicalPath(),
 						changeLog, "Snapshot", listener, Locale.getDefault());
 				
+				String buildToolkitVersion = Config.DEFAULT.getBuildToolkitVersion();
 				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
 					// validate only when using 701 build toolkit
-					Assert.assertFalse(byteArrayOutputStream.toString().contains("Invoking optimized incremental load."));
-					Assert.assertTrue(byteArrayOutputStream.toString().contains("Optimized incremental load is selected."));
+					assertOILInvokedMessage(byteArrayOutputStream, buildToolkitVersion, false);
+					if (!("7.0.1".equals(buildToolkitVersion))) {
+						assertOILSelectedMessage(byteArrayOutputStream, buildToolkitVersion, true);
+					}
 				}
 
 				String[] children = loadDir.list();
@@ -5536,9 +5591,14 @@ public class BuildConfigurationIT extends AbstractTestCase {
 				// validate that build log contains invoking optimized incremental load message
 				listener.getLogger().flush();
 				if (Boolean.valueOf(setupArtifacts.get("isPre701BuildToolkit")) == false) {
-					// validate only when using 701 build toolkit
-					Assert.assertTrue(byteArrayOutputStream.toString().contains("Invoking optimized incremental load."));
-					Assert.assertTrue(byteArrayOutputStream.toString().contains("Optimized incremental load is selected."));
+					// validate only when using 701 build toolkit and above.
+					assertOILSelectedMessage(byteArrayOutputStream, true);
+					if (!("7.0.1".equals(buildToolkitVersion))) {
+						assertOILInvokedMessage(byteArrayOutputStream, buildToolkitVersion, true);
+					} else {
+						// In 7.0.1, OIL is not invoked because some load options are not supported
+						assertOILInvokedMessage(byteArrayOutputStream, buildToolkitVersion, false);
+					}
 				}
 				
 				// incremental changes should not be loaded as per the load rule
@@ -5579,7 +5639,6 @@ public class BuildConfigurationIT extends AbstractTestCase {
 						Map.class }, // setupArtifacts
 						loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(), setupArtifacts);
 			}
-
 		}
 	}
 

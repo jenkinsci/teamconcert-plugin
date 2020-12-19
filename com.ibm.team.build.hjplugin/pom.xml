@@ -167,6 +167,7 @@
 								<com.ibm.team.build.timeout>${timeout}</com.ibm.team.build.timeout>
 								<com.ibm.team.build.dumpLogFiles>${dumpLogFiles}</com.ibm.team.build.dumpLogFiles>
 								<com.ibm.team.build.jobPropertyOverride>true</com.ibm.team.build.jobPropertyOverride>
+								<com.ibm.team.build.buildToolkitVersion>${buildToolkitVersion}</com.ibm.team.build.buildToolkitVersion>
 							</systemPropertyVariables>
 							<summaryFile>target/failsafe-reports/failsafe-summary.xml</summaryFile>
 							<excludes>

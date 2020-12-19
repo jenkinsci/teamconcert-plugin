@@ -906,7 +906,10 @@ public class RTCFacadeFacade {
 	/**
 	 * Delete an RTC build previously created by running a H/J build (whether initiated from
 	 * RTC or H/J).
-	 * Either the rest service or the build toolkit will be used
+	 * Either the rest service or the build toolkit will be used.
+	 * When the REST service is used, an {@link ItemNotFoundException} could be thrown from 
+	 * {@link HttpUtils#performGetWithItemNotFound}. In that case, the exception is caught and a 
+	 * message is logged. 
 	 *  
  	 * @param buildToolkitPath The path to the build toolkit should the toolkit need to be used
 	 * @param avoidUsingToolkit Whether to avoid using the build toolkit (use rest service instead)
@@ -916,6 +919,7 @@ public class RTCFacadeFacade {
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildResultUUID The UUID for the build result to be ended.
 	 * @throws Exception If any non-recoverable error occurs.
+	 * 
 	 */
 	public static void deleteBuild(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
@@ -923,8 +927,16 @@ public class RTCFacadeFacade {
 		// post to create; put to update
 		if (avoidUsingToolkit) {
 			String uri = RTCBuildConstants.URI_RESULT + buildResultUUID;
-			HttpUtils.performDelete(serverURI, uri, userId, password, timeout, null, TaskListener.NULL);
-			
+			// Perform this Get to avoid the authentication/redirect issues in performDelete method.
+			// It is possible for the build result to have been deleted
+			try {
+				GetResult result = HttpUtils.performGetWithItemNotFound(serverURI, uri, userId, 
+										password, timeout, true, null, TaskListener.NULL);
+				HttpUtils.performDelete(serverURI, uri, userId, password, timeout, result.getHttpContext(), TaskListener.NULL);
+			} catch (ItemNotFoundException exp) {
+				LOGGER.info(String.format("Build result %s not found. It may have been deleted.", buildResultUUID));
+				return;
+			}
 		} else {
 			// use the toolkit
 	
