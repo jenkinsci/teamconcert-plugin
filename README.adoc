@@ -24,7 +24,7 @@ With the build toolkit this plugin adds traceability links from a Jenkins build 
 == Documentation
 
 === Product Name Change
-As of 7.0 release, Rational Team Concert is now called Engineering Workflow Management. Team Concert Plugin supports RTC releases 6.0 to 6.0.6.1 and EWM releases 7.0 to 7.0.1. In this documentation, wherever you find Rational Team Concert(RTC), you can substitute it with Engineering Workflow Management (EWM)
+As of 7.0 release, Rational Team Concert is now called Engineering Workflow Management. Team Concert Plugin supports RTC releases 6.0 to 6.0.6.1 and EWM releases 7.0 to 7.0.2. In this documentation, wherever you find Rational Team Concert(RTC), you can substitute it with Engineering Workflow Management (EWM)
 
 [[TeamConcertPlugin-RationalTeamConcertHelpTopics]]
 === Rational Team Concert Help Topics
@@ -41,9 +41,9 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 [[TeamConcertPlugin-Jenkins]]
 ==== Jenkins
 
-* Team Concert Plugin v 2.1.0 and above required Jenkins 2.60.1 and above, Java 8 and above.
-* Team Concert Plugin v 1.2.0.5 and above requires Jenkins 1.625.1 and above. Fix for JENKINS-26100 requires Jenkins 2.60 and above, workflow-job 2.12 and above
-* Team Concert Plugin v 1.1.9.3 till v 1.2.0.4 requires Jenkins 1.580.1 and above. 
+* Team Concert Plugin v 2.1.0 or later requires Jenkins 2.60.1 or later, Java 8 or later.
+* Team Concert Plugin v 1.2.0.5 or later requires Jenkins 1.625.1 or later. Fix for JENKINS-26100 requires Jenkins 2.60 or later, workflow-job 2.12 or later.
+* Team Concert Plugin v 1.1.9.3 till v 1.2.0.4 requires Jenkins 1.580.1 or later. 
 * Team Concert Plugin v 1.1.2 and later depends on the https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Jenkins Credentials plugin version] 1.10 or later. +
 
 
@@ -51,9 +51,9 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 ==== RTC
 
 * This plugin requires link:https://jazz.net/products/rational-team-concert/features/build#build-toolkit[Rational Team Concert Build Toolkit] version 6.0 or newer. Older versions of the plugin supports build toolkit versions starting from 3.0.1.5. See the https://jazz.net/help-dev/clm/topic/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
-* For all the supported build configurations - Build Definition, Repository Workspace, Stream and Snapshot - *a valid build toolkit should be present on both the master and slave machines* and the Jenkins jobs should be configured to use this toolkit. 
+* For all the supported build configurations - Build Definition, Repository Workspace, Stream and Snapshot - *a valid build toolkit should be present on both the master and agent machines* and the Jenkins jobs should be configured to use this toolkit. 
 * Some features depend on specific Rational Team Concert build toolkit or server versions. See below.
-** Stream configuration works only from build toolkit v. 560 or higher.
+** Stream configuration works only from build toolkit v 5.0.2 or higher.
 ** Post Build Deliver for Build Definition configuration introduced in Team Concert Plugin v. 1.2.0.3 depends on Rational Team Concert server version 6.0.4 or higher.
 ** Support for Load Rules in build definition has some requirements on the version of RTC client used to create the build definition. See xref:TeamConcertPlugin-LoadRulesSupport[Load Rules Support] section for more details.
 ** If you will be fetching workspaces that contain symbolic links, there is some additional symbolic link setup required. See xref:TeamConcertPlugin-SymbolicLinksupport[Symbolic Link Support] section for more details.
@@ -76,7 +76,7 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 . Find the "Rational Team Concert (RTC)" section. This section is used to define global connection settings that will be the defaults for any jobs created with the plugin. If connection settings will be set on each job, then skip this section. 
 . Select a build toolkit
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_3.png?version=3&modificationDate=1461325407000&api=v2[image,width=789,height=246]#::
-. Credentials are managed by the link:https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Credentials plugin]. The Team Concert plugin supports username and password type credentials. Credentials can be defined within a domain or a folder (if you are using the folder's plugin).
+. Credentials are managed by the link:https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Credentials plugin]. The Team Concert plugin supports username and password type credentials. Credentials can be defined within a domain or a folder (if you are using the folder's plugin). You can use an app password in place of a regular password.
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_4.png?version=1&modificationDate=1461325230000&api=v2[image,width=794,height=329]#::
 . Choose the credentials to use when logging into RTC for polling and accepting/loading the source code.
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_5.png?version=1&modificationDate=1461325883000&api=v2[image,width=794,height=235]#::
@@ -271,7 +271,7 @@ and then copy the resulting snippet into your pipeline script.
 Team Concert Plugin supports Pipeline as SCM but doesn't support lightweight checkout. Captured below are some ways to use this pipeline feature with RTC SCM.
 
 [TeamConcertPlugin-WhenyouwishtocheckoutthesamecontentthatwasinitiallyloadedinthemasterunderpipelineatscriptfolderbyPipelinescriptfromSCM]]
-==== Checkout same content in master and slave with JenkinsFile after Pipeline as SCM checkout
+==== Checkout same content in master and agent with JenkinsFile after Pipeline as SCM checkout
 
 When you wish to checkout the same content that was initially loaded in the master under pipeline@script folder into the agent or into master at a different location, follow the steps mentioned in the scnearios below.
 
@@ -292,13 +292,13 @@ NOTE: The first checkout happens in the master inside pipeline@script folder. Th
 
 {empty}1. Checkout only the JenkinsFile using minimal load rules. Configure the pipeline job's Team Concert Plugin configuration to load just the JenkinsFile and nothing else through load rules. You can configure load rules for build definition, repository workspace, snapshot and stream configuration. This keeps the time to load source code in master to the minimum.
 
-{empty}2. Inside the JenkinsFile, if you want to checkout on a slave, or on master again in a different path, load the snapshot generated by the first checkout. For personal builds triggered from RTC, checkout the build definition once again using `checkout` step.
+{empty}2. Inside the JenkinsFile, if you want to checkout on a agent, or on master again in a different path, load the snapshot generated by the first checkout. For personal builds triggered from RTC, checkout the build definition once again using `checkout` step.
 
 Build Definition
 [%hardbreaks]
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
 if ("${env.personalBuild}" == "true") {
    // This is true when a personal build is started from RTC.
    echo "Checking out the build definition in node"
@@ -317,7 +317,7 @@ Stream
 [%hardbreaks]
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
    echo "Checking out a snapshot in node from stream configuration"
    checkout([$class: 'RTCScm', avoidUsingToolkit: false, buildType: [buildSnapshot: "${env.team_scm_snapshotUUID}", buildSnapshotContext: [snapshotOwnerType: 'none'], currentSnapshotOwnerType: 'none', loadDirectory: '.', value: 'buildSnapshot']], timeout: 480])
 }
@@ -327,7 +327,7 @@ Repository workspace
 [%hardbreaks]
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
    echo "Checking out a snapshot in node from snapshot configuration"
    checkout([$class: 'RTCScm', avoidUsingToolkit: false, buildType: [buildSnapshot: "${env.team_scm_snapshotUUID}", buildSnapshotContext: [snapshotOwnerType: 'none'], currentSnapshotOwnerType: 'none', loadDirectory: '.', value: 'buildSnapshot']], timeout: 480])
 } 
@@ -337,7 +337,7 @@ Snapshot
 [%hardbreaks]
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
    echo "Checking out a snapshot in node from snapshot configuration"
    checkout([$class: 'RTCScm', avoidUsingToolkit: false, buildType: [buildSnapshot: "${env.team_scm_snapshotUUID}", buildSnapshotContext: [snapshotOwnerType: 'none'], currentSnapshotOwnerType: 'none', loadDirectory: '.', value: 'buildSnapshot']], timeout: 480])
 }
@@ -354,7 +354,7 @@ The first checkout happens in the master inside pipeline@script folder. The seco
 
 {empty}1. Checkout the JenkinsFile using minimal load rules. Configure  load rules  in the pipeline job's Team Concert Plugin configuration to load just the JenkinsFile and nothing else. This can be done for build definition, repository workspace, snapshot and stream configuration. This keeps the loading time very minimal in the master.
 
-{empty}2. Inside the JenkinsFile, if you want to checkout on a slave or on master again but in a different path, configure different load options like components to load or loadrules to load the content required for the build. You can further parameterize the checkout by using Jenkins Job property to supply the load rules or components to exclude instead of hardcoding the values in the scripts (for stream, repository workspace and snapshot build configurations only).
+{empty}2. Inside the JenkinsFile, if you want to checkout on a agent or master again but in a different path, configure different load options like components to load or loadrules to load the content required for the build. You can further parameterize the checkout by using Jenkins Job property to supply the load rules or components to exclude instead of hardcoding the values in the scripts (for stream, repository workspace and snapshot build configurations only).
 
 NOTE: For Build definition, personal builds are not supported when load rules or components to exclude are used in the Jazz SCM configuration in the build defintion. Therefore, the following sample will error out when it encounters a personal build.
 
@@ -364,7 +364,7 @@ NOTE: In the pipeline snippets provided below, load rules is used in the checkou
 Build Definition
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
 if ("${env.personalBuild}" == "true") { // This is true when a personal build is started from RTC.
          error "Personal builds not supported when using load rules or components to include/exclude"
 } else {
@@ -380,7 +380,7 @@ if ("${env.personalBuild}" == "true") { // This is true when a personal build is
 Stream
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
    echo "Checking out a snapshot in node from stream configuration"
    checkout([$class: 'RTCScm', avoidUsingToolkit: false, buildType: [buildSnapshot: "${env.team_scm_snapshotUUID}", buildSnapshotContext: [snapshotOwnerType: 'none'], currentSnapshotOwnerType: 'none', loadDirectory: '.', value: 'buildSnapshot', loadPolicy: 'useLoadRules', pathToLoadRuleFile: 'Comp1/loadrules/build.loadRule'], timeout: 480])
 }
@@ -390,7 +390,7 @@ node ("slavexyz") {
 Repository workspace
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
    echo "Checking out a snapshot in node from repository workspace configuration"
    checkout([$class: 'RTCScm', avoidUsingToolkit: false, buildType: [buildSnapshot: "${env.team_scm_snapshotUUID}", buildSnapshotContext: [snapshotOwnerType: 'none'], currentSnapshotOwnerType: 'none', loadDirectory: '.', value: 'buildSnapshot', loadPolicy: 'useLoadRules', pathToLoadRuleFile: 'Comp1/loadrules/build.loadRule'], timeout: 480])
 } 
@@ -400,7 +400,7 @@ node ("slavexyz") {
 Snapshot
 
 ....
-node ("slavexyz") {
+node ("agentxyz") {
    echo "Checking out a snapshot in node from snapshot configuration"
    checkout([$class: 'RTCScm', avoidUsingToolkit: false, buildType: [buildSnapshot: "${env.team_scm_snapshotUUID}", buildSnapshotContext: [snapshotOwnerType: 'none'], currentSnapshotOwnerType: 'none', loadDirectory: '.', value: 'buildSnapshot', loadPolicy: 'useLoadRules', pathToLoadRuleFile: 'Comp1/loadrules/build.loadRule'], timeout: 480])
 }
@@ -409,7 +409,7 @@ node ("slavexyz") {
 [%hardbreaks]
 
 [[TeamConcertPlugin-WhenyouwanttoloadnewcontentineveryagentincludingthemasteraftertheinitialPipelinescriptfromSCMcheckout]]
-==== Checkout the latest content in master and slave with JenkinsFile after Pipeline as SCM checkout
+==== Checkout the latest content in master and agent with JenkinsFile after Pipeline as SCM checkout
 
 The first checkout happens in the master inside pipeline@script folder with Pipeline as SCM. The second or subsequent checkouts happen when you use the checkout step inside the JenkinsFile.
 
@@ -429,10 +429,10 @@ options {skipDefaultCheckout(true)}
 ....
 [%hardbreaks]
 
-[[TeamConcertPlugin-MasterSlaveConfiguration]]
-=== Master/Slave Configuration
+[[TeamConcertPlugin-MasterAgentConfiguration]]
+=== Master/Agent Configuration
 
-Master and slave configurations are supported by this plugin.  See the Jenkins documentation on link:https://wiki.jenkins-ci.org/display/JENKINS/Distributed+builds[distributed builds] for more information.  The RTC build toolkit home path is required for the master to be able to test connections and build artifacts.
+Master and agent configurations are supported by this plugin.  See the Jenkins documentation on link:https://wiki.jenkins-ci.org/display/JENKINS/Distributed+builds[distributed builds] for more information.  The RTC build toolkit home path is required for the master to be able to test connections and build artifacts.
 
 
 . Navigate to the Computer page (Jenkins > Manage Jenkins > Manage Nodes) and click the "New Node" link.
@@ -443,7 +443,7 @@ Master and slave configurations are supported by this plugin.  See the Jenkins d
 
 NOTE: If you do not wish to override the tool location, then Team Concert Plugin will try to locate the toolkit at the same location specified in Global Tool configuration
 
-Build toolkits can also be installed automatically on slaves. And labels can be used to match build toolkits to slaves.  However, a valid toolkit is required in the master node to perform connection tests to build artifacts and perform polling. +
+Build toolkits can also be installed automatically on agents. And labels can be used to match build toolkits to agents.  However, a valid toolkit is required in the master node to perform connection tests to build artifacts and perform polling. +
 
 [.confluence-embedded-file-wrapper]#image:https://wiki.jenkins.io/download/attachments/66847632/toolkit_installations.png?version=6&modificationDate=1401898566000&api=v2[image]#
 
@@ -467,8 +467,8 @@ Log) and click the *Add new log recorder* button.
 . Click the *Save* button.
 . Return to this log if a problem is ever experienced using this
 plugin.  The log will help to identify the problem.
-. Logging on Slaves
-.. On the Slave while messages are logged at level FINER, the logs never
+. Logging on Agents
+.. On the agent, while messages are logged at level FINER, the logs never
 come back.
 
 [[TeamConcertPlugin-Logginginthebuildconsolelog]]
@@ -477,8 +477,8 @@ come back.
 . There is support for a debug flag which will result in the debug
 output going into a build's console log
 . The environment variable `com.ibm.team.build.debug` with the value
-`true` will activate the debug logging on a slave.
-. To configure on a single Slave with the debug flag for all builds,
+`true` will activate the debug logging on a agent.
+. To configure on a single agent with the debug flag for all builds,
 .. Go to Jenkins > Manage Jenkins > Manage nodes.
 .. Hover over the link of the node to configure. Choose Configure from
 the popup context menu.
@@ -487,7 +487,7 @@ variables checkbox
 .. Click the Add button beside the List of key value pairs.
 .. Supply `com.ibm.team.build.debug` as the name and *true* as the value
 .. Click the Save button.
-. Alternately to configure the debug flag on Master and all Slaves
+. Alternately to configure the debug flag on Master and all agents
 .. Jenkins > Manage Jenkins > Configure System
 .. In the Global Properties section, select and check the Environment
 variables checkbox
@@ -498,7 +498,7 @@ variables checkbox
 
 The debug flag currently only logs information relating to the class
 loader setup. The rest of the logic should not be affected by running on
-a Master or a Slave so if you need those logs, consider running on the
+a Master or a agent so if you need those logs, consider running on the
 Master to get the detailed logs.
 
 [[TeamConcertPlugin-Loggingtheversionofbuildtoolkit]]
@@ -506,7 +506,7 @@ Master to get the detailed logs.
 
 If you have turned on the variable `com.ibm.team.build.debug`, either
 through the environment variables or as a job parameter, then the
-version of build toolkit used in the master and slave for that build
+version of build toolkit used in the master and agent for that build
 will appear in the build log.
 
 You should see messages such as the following in the build log.
@@ -514,7 +514,7 @@ You should see messages such as the following in the build log.
 [source,console-output]
 ----
 Version of build toolkit "<buildtoolkit-name>" on master is "6.0.4".
-Version of build toolkit "<buildtoolkit-name>" on "<slave-name>" is "6.0.4".
+Version of build toolkit "<buildtoolkit-name>" on "<agent-name>" is "6.0.4".
 ----
 
 [[TeamConcertPlugin-CollectingMetronomeLogsfordifferentbuildconfigurations]]
@@ -578,7 +578,7 @@ build. Only set if the build is using a build definition.
 request/result (if there is a build result). An RTC build engine is not
 actually running, but some ant tasks need the engine id.
 
-|buildEngineHostName |Host name of the Jenkins master or slave that the
+|buildEngineHostName |Host name of the Jenkins master or agent that the
 build is running on.
 
 |buildRequesterUserId |User id of the RTC user that requested the build
@@ -644,7 +644,7 @@ build. Only set if the build is using a build definition.
 request/result (if there is a build result). An RTC build engine is not
 actually running, but some ant tasks need the engine id.
 
-|buildEngineHostName |Host name of the Jenkins master or slave that the
+|buildEngineHostName |Host name of the Jenkins master or agent that the
 build is running on.
 
 |buildRequesterUserId |User id of the RTC user that requested the build
@@ -905,9 +905,9 @@ permission to create symbolic links. The
 https://jazz.net/library/article/970/[Symbolic links article] in the
 jazz.net library describes how.
 
-Note: If you are running your jenkins builds on slaves and the symbolic
+Note: If you are running your jenkins builds on agents and the symbolic
 links fail to load, then the native libraries should be included in the
-JVM library path of slaves too.
+JVM library path of agents too.
 
 [[TeamConcertPlugin-LoadRulesSupport]]
 === Load Rules Support
@@ -986,7 +986,7 @@ to be do with maven dependencies. The issue is tracked in the work item
 https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/366894[Error
 shown when validating a connection with avoid using toolkit on master
 option checked]
-. You may need to recycle Jenkins and slaves when updating the Team
+. You may need to recycle Jenkins and agents when updating the Team
 Concert plugin to a new version, or when automatically installing a new
 build toolkit.
 . Following are knows issues with Workflow support
@@ -1001,12 +1001,12 @@ to teamconcert buildType: [value:"buildDefinition",
 buildDefinition:"<>"]. For more information on this issue refer to
 https://issues.jenkins-ci.org/browse/JENKINS-29711[JENKINS-29711]
 . [.ph .cmd]##Using com.ibm.team.build.debug to know the RTC build
-toolkit version in a slave for a particular job doesn't work in the
-first build processed by the slave. Subsequent build of the job on the
-same slave will output the build tooolkit version in use. See
+toolkit version in a agent for a particular job doesn't work in the
+first build processed by the agent. Subsequent build of the job on the
+same agent will output the build tooolkit version in use. See
 https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/461155[461155:
-Logging version of build toolkit on the slave doesn't work in the first
-build processed by the slave after a slave restart.]##[.ph .cmd]## +
+Logging version of build toolkit on the agent doesn't work in the first
+build processed by the agent after a agent restart.]##[.ph .cmd]## +
 ##
 
 [[TeamConcertPlugin-KnownLimitationswithfixesinnewerreleasesofRTC]]
@@ -1076,9 +1076,15 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 [[TeamConcertPlugin-Releases]]
 == Releases
 
+[[TeamConcertPlugin-2.2.0Dec15-2020]]
+=== 2.2.0 December 15, 2020
+* Support for SAML/OIDC app password.
+** Work Item 515283
+* Support for Optimized incremental load when using build definition configuration and load rules with EWM 7.0.2. This feature is supported only when both EWM server and build toolkit version is 7.0.2. For more information, see https://jazz.net/pub/new-noteworthy/ewm/7.0.2/7.0.2/index.html#0[EWM 7.0.2 New and Noteworthy]
+
 [[TeamConcertPlugin-2.1.0July18-2020]]
 === 2.1.0 July 18,2020
-* Support for optimized incremental load when using Build Definition configuration with EWM 7.0.1. This feature is supported only when both EWM server and build toolkit version is 7.0.1. For more information, see EWM 7.0.1 https://jazz.net/pub/new-noteworthy/ewm/7.0.1/7.0.1/index.html#2[release notes]
+* Support for optimized incremental load when using Build Definition configuration with EWM 7.0.1. This feature is supported only when both EWM server and build toolkit version is 7.0.1. For more information, see EWM 7.0.1 https://jazz.net/pub/new-noteworthy/ewm/7.0.1/7.0.1/index.html#2[EWM 7.0.1 New and Noteworthy]
 * Upgrade to Jenkins version 2.60.1 and Java 8
 * Remove support for RTC 5.x releases.
 
@@ -1140,7 +1146,7 @@ change sets
 ** See WorkItem 388795: In Team Concert Jenkins Plugin, when using build
 workspace/stream configuration, create backlinks in included work item
 (s) to the Jenkins build
-* You can view the version of build toolkit used in master and slave in
+* You can view the version of build toolkit used in master and agent in
 the build log by adding com.ibm.team.build.debug = true to the
 environment or as a job parameter.
 ** See WorkItem 449539: [Jenkins] Log the version of build toolkit in
@@ -1306,7 +1312,7 @@ changes]
 .. https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/379521[379521:
 RTC Jenkins plugin leaving .jazzlock file in the workspace]
 .. https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/380589[380589:
-[Jenkins Integration] Build Toolkit on Slave not found (1.1.9.8)]
+[Jenkins Integration] Build Toolkit on agent not found (1.1.9.8)]
 .. https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/380708[380708:
 During delta computation for determining if a build has to be fired,
 ignore outgoing changes in the build workspace]
@@ -1476,8 +1482,8 @@ https://issues.jenkins-ci.org/browse/JENKINS-21537[issue 21537]
 21038] and https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/295009[work
 item 295009]
 . Work related to starting a build with an RTC build result has been
-moved from the Master to the Slave (assuming the job is running on the
-Slave).
+moved from the Master to the agent (assuming the job is running on the
+agent).
 https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/306172[Work
 item 306172]
 . When builds are started within RTC, the server will manage the
@@ -1494,7 +1500,7 @@ item 308749]
 . New option to use rest service calls to communicate with the RTC
 Server when performing configuration, polling and build result
 management (as opposed to the build toolkit). This means if all the jobs
-have this configured and run on slaves, the toolkit classes will not be
+have this configured and run on agents, the toolkit classes will not be
 loaded on the master. Requires RTC version 5.0 or later.
 
 [[TeamConcertPlugin-1.0.12andearlierOctober23-2013]]
@@ -1507,7 +1513,7 @@ in a
 https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/tcreatepasstxt.html[password
 file].
 . The RTC build toolkit is used perform build related tasks within
-Jenkins Master and Slave processes (as opposed to using a command line
+Jenkins Master and agent processes (as opposed to using a command line
 client). The RTC related tasks include validating the configuration,
 polling and working with the RTC build result as well as performing the
 Accept and Checkout phases of the build.
@@ -1560,7 +1566,7 @@ build. Only set if the build is using a build definition.
 request/result (if there is a build result). An RTC build engine is not
 actually running, but some ant tasks need the engine id.
 
-|buildEngineHostName |Host name of the Jenkins master or slave that the
+|buildEngineHostName |Host name of the Jenkins master or agent that the
 build is running on.
 
 |buildRequesterUserId |User id of the RTC user that requested the build
