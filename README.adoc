@@ -1068,7 +1068,7 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 == Releases
 
 [[TeamConcertPlugin-2.2.0Dec15-2020]]
-=== 2.2.0 December 15, 2020
+=== 2.2.0 December 22, 2020
 * Support for SAML/OIDC app password.
 ** Work Item 515283
 * Support for Optimized incremental load when using build definition configuration and load rules with EWM 7.0.2. This feature is supported only when both EWM server and build toolkit version is 7.0.2. For more information, see https://jazz.net/pub/new-noteworthy/ewm/7.0.2/7.0.2/index.html#0[EWM 7.0.2 New and Noteworthy]
@@ -1091,33 +1091,14 @@ https://github.com/jenkinsci/teamconcert-plugin/commit/c5a48d154166a81fe65fbd9b7
 === 1.3.0 May 1, 2019
 
 
-NOTE: The default behavior of creating "Related artifact" link to a
-Jenkins build in all the accepteed work items when using Repository
-Workspace or Stream job configuration (introduced by work item 388795)
-has changed. In 1.2.0.5, links will be created in all the accepted work items. In
-1.3.0, links will NOT be created in all the accepted work items. There
-is a new option "Add Jenkins build link to accepted work items" in the
-Job configuration to create these links and is unchecked by default. You
-must select the option in the Job configuration to create related
-artifact links to a Jenkins build in all the accepted work items. See
-work item 461859 for more details.
+NOTE: The default behavior of creating "Related artifact" link to a Jenkins build in all the accepteed work items when using Repository Workspace or Stream job configuration (introduced by work item 388795) has changed. In 1.2.0.5, links will be created in all the accepted work items. In 1.3.0, links will NOT be created in all the accepted work items. There is a new option "Add Jenkins build link to accepted work items" in the Job configuration to create these links and is unchecked by default. You must select the option in the Job configuration to create related artifact links to a Jenkins build in all the accepted work items. See work item 461859 for more details.
 
 
-* You can collect metronome information for all build configurations.
-See Collecting Metronome Logs section for more details.
-** See Work Item 438208: Enhance Team Concert Plugin to collect
-metronome log like JBE
-* In this release, we have changed the behavior of creating "Related
-artifact" links to Jenkins builds in all the accepted work items
-originally introduced by work item 388795. You must choose the option
-"Add Jenkins build link to accepted work items" in the Jenkins job
-configuration to create "Related artifact" links to Jenkins builds in
-all the accepted work items.
-** See Work Item 461859: Make the "creation of Jenkins build links to
-work items in accepted change sets" an opt - in for the users in
-Repository Workspace and Stream configuration
-* We have fixed an incompatibility with Pipeline jobs wherein messages
-from Team Concert Plugin were not printed in the build log.
+* You can collect metronome information for all build configurations.See Collecting Metronome Logs section for more details.
+** See Work Item 438208: Enhance Team Concert Plugin to collect metronome log like JBE
+* In this release, we have changed the behavior of creating "Related artifact" links to Jenkins builds in all the accepted work items originally introduced by work item 388795. You must choose the option "Add Jenkins build link to accepted work items" in the Jenkins job configuration to create "Related artifact" links to Jenkins builds in all the accepted work items.
+** See Work Item 461859: Make the "creation of Jenkins build links to work items in accepted change sets" an opt - in for the users in Repository Workspace and Stream configuration
+* We have fixed an incompatibility with Pipeline jobs wherein messages from Team Concert Plugin were not printed in the build log.
 ** See Work Item 478877: Pipeline builds do not output messages from
 RTCScm
 
