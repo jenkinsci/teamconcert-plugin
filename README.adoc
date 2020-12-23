@@ -7,15 +7,6 @@ Team Concert Plugin
 // Reference - See the following page for adding new images
 // https://www.jenkins.io/doc/developer/publishing/wiki-page/
 
-[.conf-macro .output-inline .aui-icon .aui-icon-small .aui-iconfont-info .confluence-information-macro-icon]#
-Older versions of this plugin may not be safe to use. Please review the following warnings before using an older version:
-
-* https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(1)[CSRF
-vulnerability and missing permission checks allows capturing
-credentials]
-* https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(2)[Users
-with Overall/Read access can enumerate credential IDs]
-
 [.conf-macro .output-inline]#Integrates Jenkins with link:https://jazz.net/products/rational-team-concert/[Rational Team Concert] link:https://jazz.net/products/rational-team-concert/features/scm[source control] and link:https://jazz.net/products/rational-team-concert/features/build[build] using the richer features of the build toolkit instead of the command line.#
 
 With the build toolkit this plugin adds traceability links from a Jenkins build to an RTC build result, workspace and snapshot.  It also publishes links to work items, change sets and file contents captured in the snapshot.  It leverages the current RTC features and workflows that users are already familiar with such as,mails, toaster popups, reporting, dashboards, etc.
@@ -1613,4 +1604,15 @@ com.ibm.team.build.credential.edit=true.
 now correctly interpreted as an absolute path.  So, any build definition
 relying on the previous behavior need only prefix the load directory
 with a "." (i.e. "./any/folder").
+
+[[SecurityWarnings]]
+== Security Warnings
+[.conf-macro .output-inline]#Older versions of this plugin (1.3.0 or older) may not be safe to use. Please review the following warnings before using an older version (:
+
+* https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(1)[CSRF
+vulnerability and missing permission checks allows capturing
+credentials]
+* https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(2)[Users
+with Overall/Read access can enumerate credential IDs]
+
 
