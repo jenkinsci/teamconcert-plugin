@@ -1049,18 +1049,19 @@ https://github.com/jenkinsci/teamconcert-plugin/commit/c5a48d154166a81fe65fbd9b7
 [[TeamConcertPlugin-1.3.0May1-2019]]
 === 1.3.0 May 1, 2019
 
-NOTE: The default behavior of creating "Related artifact" link to a Jenkins build in all the accepteed work items when using Repository Workspace or Stream j
+NOTE: The default behavior of creating "Related artifact" link to a Jenkins build in all the accepted work items when using Repository Workspace or Stream job configuration (introduced by work item 388795) has changed. In 1.2.0.5, links will be created in all the accepted work items. In 1.3.0, links will NOT be created in all the accepted work items. There is a new option "Add Jenkins build link to accepted work items" in the Job configuration to create these links and is unchecked by default. You must select the option in the Job configuration to create related artifact links to a Jenkins build in all the accepted work items. See work item 461859 for more details.
 
 * You can collect metronome information for all build configurations.See Collecting Metronome Logs section for more details.
 ** See Work Item 438208: Enhance Team Concert Plugin to collect metronome log like JBE
-* In this release, we have changed the behavior of creating "Related artifact" links to Jenkins builds in all the accepted work items originally introduced b
+* In this release, we have changed the behavior of creating "Related artifact" links to Jenkins builds in all the accepted work items originally introduced by work item 388795. You must choose the option "Add Jenkins build link to accepted work items" in the Jenkins job
+configuration to create "Related artifact" links to Jenkins builds in
+all the accepted work items.
 ** See Work Item 461859: Make the "creation of Jenkins build links to work items in accepted change sets" an opt - in for the users in Repository Workspace a
 * We have fixed an incompatibility with Pipeline jobs wherein messages from Team Concert Plugin were not printed in the build log.
 ** See Work Item 478877: Pipeline builds do not output messages from
 RTCScm
 
-https://github.com/jenkinsci/teamconcert-plugin/commit/660127fb63b0e411db113278738a7[GitHub
-commit - 166456d2a65]
+https://github.com/jenkinsci/teamconcert-plugin/commit/660127fb63b0e411db113278738a7[GitHub commit - 166456d2a65]
 
 [[TeamConcertPlugin-1.2.0.5June15-2018]]
 === 1.2.0.5 June 15, 2018
@@ -1548,6 +1549,4 @@ Please review the following warnings before using an older version:
 
 * https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(1)[CSRF vulnerability and missing permission checks allows capturing credentials]
 * https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(2)[Users with Overall/Read access can enumerate credential IDs]
--
-
 
