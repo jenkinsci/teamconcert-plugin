@@ -913,9 +913,9 @@ In the following snippet, the "Wait for Build" task uses the build result UUID f
   
   // Note that  ${ret1.buildResultUUID} is enclosed in double quotes.
   def ret2 = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildResultUUID: "${ret.buildResultUUID}", name: 'waitForBuild', buildStates: 'COMPLETED,INCOMPLETE,CANCELED', waitBuildTimeout: 120], timeout: 480
-  echo "${ret1.buildState}"
-  echo "${ret1.buildStatus}"
-  echo "${ret1.timedout}"
+  echo "${ret2.buildState}"
+  echo "${ret2.buildStatus}"
+  echo "${ret2.timedout}"
 ----
 
 [[TeamConcertPlugin-Knownlimitations]]
