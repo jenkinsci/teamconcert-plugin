@@ -897,7 +897,7 @@ To generate the pipeline snippet for waiting on a build, perform the following t
 
 NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}"  
 
-In the following snippet, the "Wait for Build" task uses the build result UUID from "Reqeust Build" task to wait for the build result to enter into COMPLETED or INCOMPLETE state for 120 seconds. Once the step completes, it prints the following fields from the return value 
+In the following snippet, the "Wait for Build" task uses the build result UUID from "Request Build" task to wait for the build result to enter into COMPLETED or INCOMPLETE state for 120 seconds. Once the step completes, it prints the following fields from the return value 
 
 [source,syntaxhighlighter-pre]
 ----
