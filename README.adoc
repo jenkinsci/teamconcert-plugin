@@ -67,7 +67,7 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 . Find the "Rational Team Concert (RTC)" section. This section is used to define global connection settings that will be the defaults for any jobs created with the plugin. If connection settings will be set on each job, then skip this section. 
 . Select a build toolkit
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_3.png?version=3&modificationDate=1461325407000&api=v2[image,width=789,height=246]#::
-. Credentials are managed by the link:https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Credentials plugin]. The Team Concert plugin supports username and password type credentials. Credentials can be defined within a domain or a folder (if you are using the folder's plugin). You can use an app password in place of a regular password.
+. Credentials are managed by the link:https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Credentials plugin]. The Team Concert plugin supports username and password type credentials. Credentials can be defined within a domain or a folder (if you are using the folder's plugin). You can use an application password in place of a regular password.
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_4.png?version=1&modificationDate=1461325230000&api=v2[image,width=794,height=329]#::
 . Choose the credentials to use when logging into RTC for polling and accepting/loading the source code.
 [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_5.png?version=1&modificationDate=1461325883000&api=v2[image,width=794,height=235]#::
@@ -342,7 +342,7 @@ variables checkbox
 
 The debug flag currently only logs information relating to the class
 loader setup. The rest of the logic should not be affected by running on
-a master or a agent so if you need those logs, consider running on the
+a master or an agent so if you need those logs, consider running on the
 master to get the detailed logs.
 
 [[TeamConcertPlugin-Loggingtheversionofbuildtoolkit]]
@@ -690,15 +690,14 @@ node {
    checkout([$class: 'RTCScm'...])
 
    // pass 2 or greater if the shared library is fetched from RTC, otherwise pass 1.
-   // If the library is fetched from RTC, then there is one RTCBuildResultAction corresponding to that checkout 
-   // Hence you need to pass 2 or more depending on how many RTC checkouts have been called after @Library directive.
+   // If the library is fetched from RTC, then there is one RTCBuildResultAction corresponding to that checkout. 
+   // Hence you need to pass 2 or more depending on how many EWM (RTC) checkouts have been called after @Library directive.
    def snapshotUUID = rtcutils.getSnapshotUUID(2)
    echo "${snapshotUUID}"
 }
 ----
 
-If you don't have Global Shared Library defined in your environment, consult https://jenkins.io/doc/book/pipeline/shared-libraries/[Extending with Shared Libraries] for creating and accessing a shared library in your pipeline script.Note that if you use RTC for hosting the Global Shared Library, then
-there will be a checkout of the source code from RTC. A RTCBuildResultAction will be added to  the build at the point where the library is checked out into the pipeline script.
+If you do not have Global Shared Library that is defined in your environment, see https://jenkins.io/doc/book/pipeline/shared-libraries[Extending with Shared Libraries] for creating and accessing a shared library in your pipeline script. Note that if you use RTC for hosting the Global Shared Library, then there will be a checkout of the source code from RTC. A RTCBuildResultAction will be added to  the build at the point where the library is checked out into the pipeline script.
 
 [[TeamConcertPlugin-SymbolicLinksupport]]
 === Symbolic Link support
@@ -752,7 +751,7 @@ jazz.net library describes how.
 
 NOTE: If you are running your jenkins builds on agents and the symbolic
 links fail to load, then the native libraries should be included in the
-JVM library path of agents too.
+JVM library path of the agents too.
 
 [[TeamConcertPlugin-LoadRulesSupport]]
 === Load Rules Support
@@ -822,7 +821,7 @@ You can configure a pipeline job to poll on a RTC build definition or a reposito
 
 To enable the polling-only option, add the text "pollingOnly: true" to the checkout step. If you prefer to use the snippet generator to generate a checkout step with the polling-only option, follow the steps below 
 
-==== rtcBuild Build Step
+==== rtcBuild Step
 
 rtcBuild is a pipeline step to interact with RTC Build from a pipeline job. The step provides the following tasks
 
@@ -838,11 +837,11 @@ To generate the pipeline snippet for requesting a build, perform the following t
 . Open the Jenkins Web UI.
 . Navigate to the pipeline job.
 . In the left pane, click "Pipeline Syntax"
-. Under Steps, click the dropdown next to Sample Step and select rtcBuild.
+. Under Steps, select rtcbuild from the Sample Step dropdown list.
 . Select a Build toolkit. 
 . Enter a value for RTC server URI or accept the default.
 . Select the appropriate credentials or accept the default.
-. In the dropdown next to Task, select "Request Build".
+. Select "Request Build" from the Task dropdown list.
 . Enter a Build Definition ID.
 . Click Generate Pipeline Script.
 
@@ -859,13 +858,13 @@ The following snippet prints the build result UUID after rtcBuild step completes
 To make the pipeline build pause until a RTC build to change state or a timeout expires, use the Wait for Build task. Once the step completes successfully, one of the following is true:
 
 * The timeout has expired.
-* The RTC build has reached one of the desired states.
+* The RTC build has reached one of the required states.
 
-The following argument must be provided for waiting on a build, 
+The following argument must be provided for waiting on a build.
 
 * Build result UUID.
 
-The following arguments are optional,
+The following arguments are optional.
 
 * Build states to wait for
 ** The different states of the build result on which the step will wait. If the build result enters into one of the states, then the step returns from execution.
@@ -874,30 +873,30 @@ The following arguments are optional,
 ** The time in seconds up to which this step will wait. By default, the step waits forever to reach the specified build states. 
    For longer builds, it is recommended to wait for a shorter timeout and use looping constructs available in pipeline script to retry.
 
-The step returns the following values,
+The step returns the following values.
 
-* The status of the build - one of OK, ERROR, WARNING, INFO.
-* The state of the build - one of COMPLETE, INCOMPLETE, IN_PROGRESS, CANCELED, NOT_STARTED.
+* The status of the build - either OK, ERROR, WARNING, or INFO.
+* The state of the build - either COMPLETE, INCOMPLETE, IN_PROGRESS, CANCELED, or NOT_STARTED.
 * Whether or not the step timed out. If this value is false, then the status of the build is one of the build states that the step waited on.
 
 To generate the pipeline snippet for waiting on a build, perform the following tasks
 
 . Open the Jenkins Web UI.
 . Navigate to the pipeline job.
-. In the left pane, click "Pipeline Syntax"
-. Under Steps, click the dropdown next to Sample Step and select rtcBuild.
+. In the left pane, click "Pipeline Syntax".
+. Under Steps, select rtcBuild from the sample step dropdown list.
 . Select a Build toolkit. 
 . Enter a value for RTC server URI or accept the default.
 . Select the appropriate credentials or accept the default.
-. In the dropdown next to Task, select "Wait for Build".
+. In the Task dropdown list, select "Wait for Build".
 . In the Build Result UUID text box, enter a value. This value is usually a parameter which is obtained from requesting a build. For example, to refer to the build result UUID obtained from a "Request Build" task, enter ${ret.buildResultUUID}.
-. In the Build States to wait for text box, enter the states to wait for separated by a comma. The default values are COMPLETED and INCOMPLETED. Other values are IN_PROGRESS, CANCELED and NOT_STARTED
+. In the Build States to wait for text box, enter the states to wait for separated by a comma. The default values are COMPLETED and INCOMPLETED. Other values are IN_PROGRESS, CANCELED, and NOT_STARTED.
 . In Wait timeout (in seconds) text box, enter the wait timeout in seconds. This value should be greater than zero. The default value is -1 which makes the step wait until the build result enters into the specified states. 
-. Click Generate Pipeline Script 
+. Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}"  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
 
-In the following snippet, the "Wait for Build" task uses the build result UUID from "Request Build" task to wait for the build result to enter into COMPLETED or INCOMPLETE state for 120 seconds. Once the step completes, it prints the following fields from the return value 
+In the following snippet, the "Wait for Build" task uses the build result UUID from "Request Build" task to wait for the build result to enter into COMPLETED or INCOMPLETE state for 120 seconds. Once the step completes, it prints the following fields from the return value. 
 
 [source,syntaxhighlighter-pre]
 ----
@@ -1056,7 +1055,7 @@ NOTE: The default behavior of creating "Related artifact" link to a Jenkins buil
 * In this release, we have changed the behavior of creating "Related artifact" links to Jenkins builds in all the accepted work items originally introduced by work item 388795. You must choose the option "Add Jenkins build link to accepted work items" in the Jenkins job
 configuration to create "Related artifact" links to Jenkins builds in
 all the accepted work items.
-** See Work Item 461859: Make the "creation of Jenkins build links to work items in accepted change sets" an opt - in for the users in Repository Workspace a
+** See Work Item 461859: Make the "creation of Jenkins build links to work items in accepted change sets" an opt - in for the users in Repository Workspace and Stream configuration.
 * We have fixed an incompatibility with Pipeline jobs wherein messages from Team Concert Plugin were not printed in the build log.
 ** See Work Item 478877: Pipeline builds do not output messages from
 RTCScm
@@ -1549,4 +1548,3 @@ Please review the following warnings before using an older version:
 
 * https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(1)[CSRF vulnerability and missing permission checks allows capturing credentials]
 * https://jenkins.io/security/advisory/2019-12-17/#SECURITY-1605%20(2)[Users with Overall/Read access can enumerate credential IDs]
-
