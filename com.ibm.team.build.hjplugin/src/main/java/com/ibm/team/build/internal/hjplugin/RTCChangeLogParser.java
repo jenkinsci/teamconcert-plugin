@@ -16,7 +16,6 @@ import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowser;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
-import hudson.util.Digester2;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,6 +28,7 @@ import java.nio.charset.CodingErrorAction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.digester3.Digester;
 import org.xml.sax.SAXException;
 
 public class RTCChangeLogParser extends ChangeLogParser {
@@ -59,7 +59,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 		LOGGER.finest("RTCChangeLogParser.parse with Reader : Begin"); //$NON-NLS$1
 		try {
 			RTCChangeLogSet result = new RTCChangeLogSet(build, browser);
-			Digester2 digester = getDigester();
+			Digester digester = getDigester();
 			digester.push(result);
 
 			digester.addSetProperties("changelog"); //$NON-NLS-1$
@@ -133,11 +133,11 @@ public class RTCChangeLogParser extends ChangeLogParser {
 		}
 	}
 	
-	private Digester2 getDigester() {
+	private Digester getDigester() {
 		LOGGER.finest("RTCChangeLogParser.getDigester : Begin");
-		Digester2 digester;
+		Digester digester;
 		try {
-			digester = new Digester2();
+			digester = new Digester();
 			return digester;
 		} catch (Error e) {
 			LOGGER.log(Level.FINER, "Failed to get Digest2 error: " + e.getMessage(), e);
@@ -147,7 +147,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 			ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 			try {
 				Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
-				digester = new Digester2();
+				digester = new Digester();
 				return digester;
 			} finally {
 				Thread.currentThread().setContextClassLoader(classLoader);

@@ -99,11 +99,27 @@
 		</repository>
 	</repositories>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>commons-beanutils</groupId>
+				<artifactId>commons-beanutils</artifactId>
+				<!-- 1.9.4 when this merged https://github.com/stapler/stapler/pull/211 -->
+				<version>1.9.3</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
 			<version>${rtcJarVersion}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-digester3</artifactId>
+			<version>3.2</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
