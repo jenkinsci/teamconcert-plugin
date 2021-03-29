@@ -1067,6 +1067,10 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 [[TeamConcertPlugin-Releases]]
 == Releases
 
+[[TeamConcertPlugin-2.2.1March30-2021]]
+=== 2.2.1 March 30, 2021
+* table to div migration support. Work item 524132
+
 [[TeamConcertPlugin-2.2.0Dec15-2020]]
 === 2.2.0 December 22, 2020
 * Support for SAML/OIDC app password.
