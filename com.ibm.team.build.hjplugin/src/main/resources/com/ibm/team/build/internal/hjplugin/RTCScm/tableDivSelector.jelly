@@ -1,0 +1,160 @@
+<?jelly escape-by-default='true'?>
+<!--
+/*******************************************************************************
+ * Copyright © 2021 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:f="/lib/form">
+	<d:taglib uri="tableDivSelector">	
+		<d:tag name="blockWrapper">
+			<st:documentation>
+			This adds a wrapper for a group of fields.
+			The wrapper will be a 'table' tag on Jenkins Core less than ~2.264, and a 'div' tag after that.
+			'table' or 'div is determined based on the value of 'divBasedFormLayout' which is set by Jenkins Core.
+			No attributes expected.
+			</st:documentation>
+
+			<j:choose>
+				<j:when test="${divBasedFormLayout}">
+					<div style="width:100%">
+						<d:invokeBody/>
+					</div>
+				</j:when>
+				<j:otherwise>
+					<table style="width:100%">
+						<d:invokeBody/>
+					</table>
+				</j:otherwise>
+			</j:choose>
+		</d:tag>
+		
+		<d:tag name="checkboxEntry">
+			<st:documentation>
+				In some cases we do not use the optional block provided by Jenkins forms as it doesn't fit our required UI alignment.
+				Instead we borrow the html from /lib/form/optionalBlock.jelly and make the required alignment changes, 
+				more specifically we add a 'td' element.
+				
+				checkboxEntry custom tag takes care of using 'table' or 'div' depending on what is supported in Jenkins core. 
+				
+				<st:attribute name="name">
+					Name of the checkbox.
+				</st:attribute>
+				
+				<st:attribute name="title">
+					Human readable text that follows the checkbox.
+				</st:attribute>
+				
+				<st:attribute name="field">
+					Used for databinding.
+				</st:attribute>
+				
+				<st:attribute name="checked">
+				  Initial checkbox status. true/false.
+				</st:attribute>
+				
+				<st:attribute name="helpUrl">
+				  Help link, if any.
+				</st:attribute>
+				
+			</st:documentation>
+			
+			<j:choose>
+				<j:when test="${divBasedFormLayout}">
+					<div>
+						<f:checkbox name="${attrs.name}" checked="${attrs.checked}" field="${attrs.field}" title="${attrs.title}" />
+						<j:if test="${attrs.helpUrl!=null}">
+						 	<f:helpLink url="${attrs.helpUrl}" featureName="${attrs.featureName}"/>
+						</j:if>
+					</div>				
+				</j:when>
+				<j:otherwise>
+					<tr>
+						<td class="setting-leftspace"><st:nbsp/></td>
+				        <td colspan="${attrs.helpUrl!=null ? 2 : 3}">
+							<f:checkbox name="${attrs.name}" checked="${attrs.checked}" field="${attrs.field}" title="${attrs.title}" />
+				        </td>
+				    	<j:if test="${attrs.helpUrl!=null}">
+					 		<f:helpLink url="${attrs.helpUrl}" featureName="${attrs.featureName}"/>
+					 	</j:if>
+					 </tr>
+				</j:otherwise>
+			</j:choose>
+		</d:tag>
+		
+		<d:tag name="dropdownListContainer">
+			<st:documentation>
+				Wrapper for dropdown list UI block. Similar to dropdownListBlock.jelly. We do not use out of the box dropdownList/dropdownListBlock 
+				controls as it doesn't provide the current selection in the dropdown list.
+				
+				dropdownListContainer custom tag takes care of using 'table' or 'div' depending on what is supported in Jenkins core.
+				
+				<st:attribute name="name">
+					Name of the wrapping table or div.
+				</st:attribute>
+				
+			</st:documentation>
+			<j:choose>
+				<j:when test="${divBasedFormLayout}">
+					<div class="dropdownList-container tr">
+						<div>
+							<div width="100%" name="${attrs.name}">
+								<d:invokeBody/>
+							</div>
+						</div>
+					</div>
+				</j:when>
+				<j:otherwise>
+					<tr class="dropdownList-container">
+						<td colspan="2"/>
+						<td colspan="2">
+							<table width="100%" name="${attrs.name}">
+								<d:invokeBody/>
+							</table>
+						</td>
+					</tr>      
+				</j:otherwise>
+			</j:choose>
+		</d:tag>
+		
+		<d:tag name="dropdownListStart">
+			<st:documentation>
+				Marker for beginning of dropdownListBlock. The html is framed based on dropdownListBlock.jelly.
+				
+				dropdownListStart custom tag takes care of using 'table' or 'div' depending on what is supported in Jenkins core.
+			</st:documentation>
+			<j:choose>
+				<j:when test="${divBasedFormLayout}">
+					<div class="dropdownList-start rowvg-start tr"></div>
+				</j:when>
+				<j:otherwise>
+					<tr class="dropdownList-start rowvg-start" />
+				</j:otherwise>
+			</j:choose>
+		</d:tag>
+		
+		<d:tag name="dropdownListEnd">
+			<st:documentation>
+				Marker for end of dropdownListBlock. The html is framed based on dropdownListBlock.jelly.
+				
+				dropdownListEnd custom tag takes care of using 'table' or 'div' depending on what is supported in Jenkins core.
+			</st:documentation>
+			<j:choose>
+				<j:when test="${divBasedFormLayout}">
+					<div class="dropdownList-end rowvg-end tr"></div>
+				</j:when>
+				<j:otherwise>
+					<tr class="dropdownList-end rowvg-end" />
+				</j:otherwise>
+			</j:choose>
+		</d:tag>
+		
+	</d:taglib>
+</j:jelly>

@@ -1,7 +1,7 @@
 <?jelly escape-by-default='true'?>
 <!--
 /*******************************************************************************
- * Copyright © 2013, 2018 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,12 +13,14 @@
 -->
 
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
-         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials" xmlns:tds="tableDivSelector">
 
-    <?jelly escape-by-default='true'?>
-    
+	<?jelly escape-by-default='true'?>
+	
+	<j:include uri="tableDivSelector.jelly"/>
+       
     <f:block>
-    <table width="100%">
+    <tds:blockWrapper>
         <f:optionalBlock name="overrideGlobal" title="${%overrideGlobal.title(descriptor.globalServerURI)}" field="overrideGlobal" checked="${instance.overrideGlobal}" inline="true" >
     
         <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" >
@@ -104,11 +106,11 @@
             method="checkJobConnection" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit" />
         
         </f:optionalBlock>
-    </table>
+    </tds:blockWrapper>
     </f:block>
         
-	    <f:block>
-	    <table width="100%">
+	<f:block>
+	    <tds:blockWrapper>
 	    	<f:dropdownList name="buildType" title="${%buildConfiguration.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildConfiguration">
 	    		<!-- Each of the following dropdownListBlocks has an invisibleEntry containing a hidden input.
 	    		The reason for this is to make sure that the structure of underlying config.xml, and
@@ -193,42 +195,38 @@
 							<option selected="${(instance != null &amp;&amp; instance.buildSnapshotContext.snapshotOwnerType == 'workspace') ? 'true' : null}"  value="workspace">${%buildSnapshotContextWorkspace.title}</option>
   						</select>
 					</f:entry>
-	                <tr class="dropdownList-container">
-				      <td colspan="2"/>
-				      <td colspan="2">
-				        <table width="100%" name="buildSnapshotContext">
-				        	 <tr class="dropdownList-start rowvg-start" />
-				        	 	<f:invisibleEntry field="snapshotOwnerType" >
-									<input type="hidden" name="snapshotOwnerType" value="none"/>
-								</f:invisibleEntry>				        	 	
-				        	 <tr class="dropdownList-end rowvg-end" />
-				        	 <tr class="dropdownList-start rowvg-start" />
-				        	 	<f:invisibleEntry field="snapshotOwnerType" >
-									<input type="hidden" name="snapshotOwnerType" value="stream"/>
-								</f:invisibleEntry>				        	 	
-								<f:entry title="${%processArea.title}" field="processAreaOfOwningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-processAreaOfOwningStream">
-						        	<f:textbox name="processAreaOfOwningStream" value="${instance.buildSnapshotContext.processAreaOfOwningStream}" />
-						    	</f:entry>							
-								<f:entry title="${%buildSnapshotContextStream.title}" field="owningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningStream">
-						        	<f:textbox name="owningStream" value="${instance.buildSnapshotContext.owningStream}" />
-						    	</f:entry>	
-				        	 <tr class="dropdownList-end rowvg-end" />
-				        	 <tr class="dropdownList-start rowvg-start" />
-				        	 	<f:invisibleEntry field="snapshotOwnerType" >
-									<input type="hidden" name="snapshotOwnerType" value="workspace"/>
-								</f:invisibleEntry>				        	 	
-							    <f:entry title="${%buildSnapshotContextWorkspace.title}" field="owningWorkspace"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningWorkspace">
-							        <f:textbox name="owningWorkspace" value="${instance.buildSnapshotContext.owningWorkspace}" />
-							    </f:entry>
-				        	 <tr class="dropdownList-end rowvg-end" />
-				        </table>
-				      </td>
-    				</tr>
+	                <tds:dropdownListContainer name="buildSnapshotContext">
+						<tds:dropdownListStart/>
+							<f:invisibleEntry field="snapshotOwnerType" >
+								<input type="hidden" name="snapshotOwnerType" value="none"/>
+							</f:invisibleEntry>				        	 	
+						<tds:dropdownListEnd/>
+						<tds:dropdownListStart/>
+							<f:invisibleEntry field="snapshotOwnerType" >
+								<input type="hidden" name="snapshotOwnerType" value="stream"/>
+							</f:invisibleEntry>				        	 	
+							<f:entry title="${%processArea.title}" field="processAreaOfOwningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-processAreaOfOwningStream">
+								<f:textbox name="processAreaOfOwningStream" value="${instance.buildSnapshotContext.processAreaOfOwningStream}" />
+							</f:entry>							
+							<f:entry title="${%buildSnapshotContextStream.title}" field="owningStream"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningStream">
+								<f:textbox name="owningStream" value="${instance.buildSnapshotContext.owningStream}" />
+							</f:entry>	
+						<tds:dropdownListEnd/>
+						<tds:dropdownListStart/>
+							<f:invisibleEntry field="snapshotOwnerType" >
+								<input type="hidden" name="snapshotOwnerType" value="workspace"/>
+							</f:invisibleEntry>				        	 	
+							<f:entry title="${%buildSnapshotContextWorkspace.title}" field="owningWorkspace"  help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildSnapshotContext-owningWorkspace">
+								<f:textbox name="owningWorkspace" value="${instance.buildSnapshotContext.owningWorkspace}" />
+							</f:entry>
+						<tds:dropdownListEnd/>
+				    </tds:dropdownListContainer>
+				    
 					<f:entry title="${%buildSnapshot.title}"  field="buildSnapshot" >
 				        <f:textbox name="buildSnapshot" value="${instance.buildSnapshot}" />
 				    </f:entry>
 
-				    <st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
+				   	<st:include page="config-loadoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 
 					<f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
 						method="validateBuildSnapshotConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,currentSnapshotOwnerType,processAreaOfOwningStream,owningStream,owningWorkspace,buildSnapshot,pathToLoadRuleFile" />   
@@ -266,7 +264,7 @@
 
 				</f:dropdownListBlock>
 			</f:dropdownList>
-	    </table>
-	    </f:block>
+	    </tds:blockWrapper>
+	</f:block>
             
 </j:jelly>

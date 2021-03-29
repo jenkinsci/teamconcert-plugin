@@ -76,7 +76,7 @@
         <excludeTests>**/UnknownTests.java</excludeTests>
         <includeTests>**/*IT.java</includeTests>
         <dumpLogFiles>false</dumpLogFiles>
-        <rtcJarVersion>2.2.0</rtcJarVersion>
+        <rtcJarVersion>2.2.1</rtcJarVersion>
         <!--  minimum Jenkins LTS version with Java 8 compatibility -->
         <jenkins.version>2.60.1</jenkins.version>
         <maven.javadoc.skip>true</maven.javadoc.skip>

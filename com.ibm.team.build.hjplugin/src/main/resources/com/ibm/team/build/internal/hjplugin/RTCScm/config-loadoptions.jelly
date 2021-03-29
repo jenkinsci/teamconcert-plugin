@@ -1,7 +1,7 @@
 <?jelly escape-by-default='true'?>
 <!--
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright (c) 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,7 +13,8 @@
 -->
 
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
-         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials" xmlns:tds="tableDivSelector">
+
 	<f:section name="LoadOptions" title="${%loadOptions.title}" />                     
     <!-- Load Directory -->
     <f:entry title="${%loadDirectory.title}"  field="loadDirectory" >
@@ -21,12 +22,7 @@
     </f:entry>    
         
     <!-- Delete directory before loading -->
-    <tr>
-		<td class="setting-leftspace"><st:nbsp/></td>
-        <td colspan="3">
-			<f:checkbox name="clearLoadDirectory" checked="${instance.clearLoadDirectory}" 	field="clearLoadDirectory" title="${%loadDirectory.clearDirectory}" />
-        </td>
-	 </tr>
+    <tds:checkboxEntry name="clearLoadDirectory" checked="${instance.clearLoadDirectory}" 	field="clearLoadDirectory" title="${%loadDirectory.clearDirectory}"/>
 		 
 	 <!-- Load policy dropdown -->
 	<f:entry field="loadPolicy" title="${%loadPolicy.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/loadPolicy">
@@ -36,52 +32,37 @@
 			<option selected="${(instance != null &amp;&amp; instance.loadPolicy == 'useDynamicLoadRules') ? 'true' : null}"  value="useDynamicLoadRules">${%loadPolicyUseDynamicLoadRules.title}</option>
 		</select>
 	</f:entry>
-	<tr class="dropdownList-container">
-		<td colspan="2"/>
-		<td colspan="2">
-			<table width="100%">	    
-				<!-- Specify components to load option block-->    	 
-				<tr class="dropdownList-start rowvg-start" />	
-				<!--Create folders for components-->				
-				<tr>
-					<td class="setting-leftspace"><st:nbsp/></td>
-					<td colspan="2">
-						<f:checkbox name="createFoldersForComponents" checked="${instance.createFoldersForComponents}" field="createFoldersForComponents" title="${%load.createFoldersForComponents}" />
-					</td>
-					<f:helpLink url="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/createFoldersForComponents" featureName="${%load.createFoldersForComponents}"/>
-				</tr>
-				<f:helpArea />
-				<!--Components to load -->
-				<f:entry field="componentLoadConfig" title="${%componentLoadConfig.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/componentLoadConfig">
-					<select name="componentLoadConfig" class="setting-input dropdownList">
-						<option selected="${(instance == null || instance.componentLoadConfig == null || instance.componentLoadConfig == 'loadAllComponents') ? 'true' : null}" value="loadAllComponents">${%componentLoadConfigLoadAllComponents.title}</option>
-						<option selected="${(instance != null &amp;&amp; instance.componentLoadConfig == 'excludeSomeComponents') ? 'true' : null}" value="excludeSomeComponents">${%componentLoadConfigExcludeSomeComponents.title}</option>
-					</select>
-				</f:entry>
-				<tr class="dropdownList-container">
-					<td colspan="2"/>
-					<td colspan="2">
-						<table width="100%">
-							<tr class="dropdownList-start rowvg-start" />
-							<tr class="dropdownList-end rowvg-end" />
-							<!-- Components to Exclude -->
-							<tr class="dropdownList-start rowvg-start" />		
-							<f:entry field="componentsToExclude" title="${%componentsToExclude.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/componentsToExclude">
-								<f:expandableTextbox name="componentsToExclude"/>
-							</f:entry>
-							<tr class="dropdownList-end rowvg-end" />
-						</table>
-					</td>
-				</tr>
-				<tr class="dropdownList-end rowvg-end" />
-				<!--Load using a load rule file option block -->
-				<tr class="dropdownList-start rowvg-start" />
-				<!-- Path to the load rule file -->			  
-				<f:entry title="${%pathToLoadRuleFile.title}" field="pathToLoadRuleFile" description="${%pathToLoadRuleFile.description}">
-					<f:textbox name="pathToLoadRuleFile"/>
-				</f:entry>  
-				<tr class="dropdownList-end rowvg-end" />
-			</table>
-		</td>
-	</tr>
+	<tds:dropdownListContainer>    
+		<!-- Specify components to load option block-->    	 
+		<tds:dropdownListStart/>	
+		<!--Create folders for components-->				
+		<tds:checkboxEntry name="createFoldersForComponents" checked="${instance.createFoldersForComponents}" field="createFoldersForComponents" title="${%load.createFoldersForComponents}"
+			helpUrl="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/createFoldersForComponents" featureName="${%load.createFoldersForComponents}"/>
+		<f:helpArea />
+		<!--Components to load -->
+		<f:entry field="componentLoadConfig" title="${%componentLoadConfig.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/componentLoadConfig">
+			<select name="componentLoadConfig" class="setting-input dropdownList">
+				<option selected="${(instance == null || instance.componentLoadConfig == null || instance.componentLoadConfig == 'loadAllComponents') ? 'true' : null}" value="loadAllComponents">${%componentLoadConfigLoadAllComponents.title}</option>
+				<option selected="${(instance != null &amp;&amp; instance.componentLoadConfig == 'excludeSomeComponents') ? 'true' : null}" value="excludeSomeComponents">${%componentLoadConfigExcludeSomeComponents.title}</option>
+			</select>
+		</f:entry>
+		<tds:dropdownListContainer>
+			<tds:dropdownListStart/>
+			<tds:dropdownListEnd/>
+			<!-- Components to Exclude -->
+			<tds:dropdownListStart/>		
+			<f:entry field="componentsToExclude" title="${%componentsToExclude.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/componentsToExclude">
+				<f:expandableTextbox name="componentsToExclude"/>
+			</f:entry>
+			<tds:dropdownListEnd/>
+		</tds:dropdownListContainer>
+		<tds:dropdownListEnd/>
+		<!--Load using a load rule file option block -->
+		<tds:dropdownListStart/>
+		<!-- Path to the load rule file -->			  
+		<f:entry title="${%pathToLoadRuleFile.title}" field="pathToLoadRuleFile" description="${%pathToLoadRuleFile.description}">
+			<f:textbox name="pathToLoadRuleFile"/>
+		</f:entry>  
+		<tds:dropdownListEnd/>
+	</tds:dropdownListContainer>
 </j:jelly>

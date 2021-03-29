@@ -1,7 +1,7 @@
 <?jelly escape-by-default='true'?>
 <!--
 /*******************************************************************************
- * Copyright (c) 2015 IBM Corporation and others.
+ * Copyright (c) 2015, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,10 +13,16 @@
 -->
 
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
-         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials" xmlns:tds="tableDivSelector">
     <?jelly escape-by-default='true'?>
+    
+    <j:include uri="tableDivSelector.jelly"/>
+    
     <f:block>
-        <table width="100%">
+    	<!--
+			See tableDivSelector.jelly for more details on blockWrapper
+		-->
+        <tds:blockWrapper>
             <f:optionalBlock name="overrideConfig" title="${%overrideGlobal.title}">
     
                 <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildTool">
@@ -38,12 +44,14 @@
                 </f:entry>
 
             </f:optionalBlock>
-         </table>
+         </tds:blockWrapper>
     </f:block>
             
     <f:block>
-        <table width="100%">
-
+    	<!--
+			See tableDivSelector.jelly for more details on blockWrapper
+		-->
+        <tds:blockWrapper>
             <f:radioBlock title="${%buildDefinition.type}" name="buildType" field="buildType" value="buildDefinition" default="true" checked="${instance == null}" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinitionType">
                 <f:entry title="${%buildDefinition.title}" field="buildDefinition" help="../../descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/buildDefinition">
                     <f:textbox name="buildDefinition" clazz="required" checkMessage="${%buildDefinition.checkMessage}"/>
@@ -55,7 +63,7 @@
                     <f:textbox name="buildWorkspace" clazz="required" checkMessage="${%buildWorkspace.checkMessage}"/>
                 </f:entry>
            </f:radioBlock>
-        </table>
+        </tds:blockWrapper>
     </f:block>
 
 </j:jelly>
