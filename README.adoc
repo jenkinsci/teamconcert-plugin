@@ -32,7 +32,7 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 [[TeamConcertPlugin-Jenkins]]
 ==== Jenkins
 
-* Team Concert Plugin v 2.1.0 or later requires Jenkins 2.60.1 or later, Java 8 or later.
+* Team Concert Plugin v 2.1.0 or later requires Jenkins 2.60.1 or later, Java 8 or later. Jenkins 2.277.1 LTS has been tested with the latest release.
 * Team Concert Plugin v 1.2.0.5 or later requires Jenkins 1.625.1 or later. Fix for JENKINS-26100 requires Jenkins 2.60 or later, workflow-job 2.12 or later.
 * Team Concert Plugin v 1.1.9.3 till v 1.2.0.4 requires Jenkins 1.580.1 or later. 
 * Team Concert Plugin v 1.1.2 and later depends on the https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Jenkins Credentials plugin version] 1.10 or later. +
@@ -1069,7 +1069,8 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 
 [[TeamConcertPlugin-2.2.1March30-2021]]
 === 2.2.1 March 30, 2021
-* Compatibility update for Jenkins' table to div migration.  https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/524132[524132:Adoption - tables to divs migration for Team Concert Plugin]
+* Compatibility update for Jenkins 2.277.1 LTS.  https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/524132[524132:Adoption - tables to divs migration for Team Concert Plugin]
+Note: Team Concert Plugin continues to support LTS versions starting from 2.60.1
 
 [[TeamConcertPlugin-2.2.0Dec15-2020]]
 === 2.2.0 December 22, 2020
