@@ -1069,7 +1069,7 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 
 [[TeamConcertPlugin-2.2.1March30-2021]]
 === 2.2.1 March 30, 2021
-* table to div migration support. Work item 524132
+* Compatibility update for Jenkins' table to div migration.  https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/524132[524132:Adopt - tables to divs migration for Team Concert Plugin]
 
 [[TeamConcertPlugin-2.2.0Dec15-2020]]
 === 2.2.0 December 22, 2020
