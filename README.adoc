@@ -854,6 +854,8 @@ To generate the pipeline snippet for requesting a build, perform the following t
 . If you wish to insert a link of the build result  associated with the build request to the Jenkins pipeline build, check "Add a link to EWM(RTC) build".
 . Click Generate Pipeline Script.
 
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
+
 The following snippet requests a build and prints the build result UUID after the step completes requesting a build in RTC
 
 [source,syntaxhighlighter-pre]
@@ -939,7 +941,6 @@ In the following snippet, the "Wait for Build" task uses the build result UUID f
   def ret1 = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildDefinitionId: '<build-definition-id>', name: 'requestBuild'], timeout: 480
   echo "${ret.buildResultUUID}"
   
-  // Note that  ${ret1.buildResultUUID} is enclosed in double quotes.
   def ret2 = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildResultUUID: "${ret.buildResultUUID}", name: 'waitForBuild', buildStates: 'COMPLETED,INCOMPLETE,CANCELED', waitBuildTimeout: 120], timeout: 480
   echo "${ret2.buildState}"
   echo "${ret2.buildStatus}"
@@ -947,11 +948,52 @@ In the following snippet, the "Wait for Build" task uses the build result UUID f
 ----
 
 ====List Logs
+Use the "List Logs" task to retrieve the details of the log files from an EWM build result. Log files appear in the "Logs" tab of the EWM build result. 
 
+NOTE: The content of the log file can be present in the EWM repository or in some external store. This task will  retrieve the details of the log files whose content is stored in the EWM repository. Such logs files can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit.  https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher]
 
+To generate the pipeline snippet for list logs from an EWM build result, perform the following tasks
+
+. Open the Jenkins Web UI.
+. Navigate to the pipeline job.
+. In the left pane, click "Pipeline Syntax".
+. Under Steps, select rtcBuild from the sample step dropdown list.
+. Select a Build toolkit. 
+. Enter a value for RTC server URI or accept the default.
+. Select the appropriate credentials or accept the default.
+. In the Task dropdown list, select "List Logs".
+. In the Build Result UUID text box, enter a value. This value is usually a parameter which is obtained from requesting a build. For example, to refer to the build result UUID obtained from a "Request Build" task, enter ${ret.buildResultUUID}.
+NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the pipeline script.
+. In the File name or pattern text box, enter a file name or pattern to restrict the logs for which details will be retrieved. If no value is specified, then details of all the logs whose content is stored in EWM repository will be retrieved.
+. In the Component name text box, enter the name of the component to restrict the logs for which details will be retrieved. If no value is specified, then details of all the logs belongining to any component or no component will be retrieved. To retrieve details of logs that does not belong to any component, leave this field blank.
+. In the Maximum number of results text box, enter the maximum number of logs for which details will b reterieved. The default value is 512, largest value is 2048. If there are more than 2048 logs in the build result, restrict the result set by providing a file name pattern or component name.
+. Click Generate Pipeline Script.
+
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
 
 ====List Artifacts
+Use the "List Artifacts" task to retrieve the details of the log files from an EWM build result. Log files appear in the "Downloads" tab of the EWM build result. 
 
+NOTE: The content of the artifacte can be present in the EWM repository or in some external store. This task will  retrieve the details of the artifacts whose content is stored in the EWM repository. Such artifacts can be uploaded to the build result using the artifactFilePublisher ant task in the EWM build toolkit. https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactfilepublisher[Artifact Publisher]
+
+To generate the pipeline snippet for list logs from an EWM build result, perform the following tasks
+
+. Open the Jenkins Web UI.
+. Navigate to the pipeline job.
+. In the left pane, click "Pipeline Syntax".
+. Under Steps, select rtcBuild from the sample step dropdown list.
+. Select a Build toolkit. 
+. Enter a value for RTC server URI or accept the default.
+. Select the appropriate credentials or accept the default.
+. In the Task dropdown list, select "List artifacts".
+. In the Build Result UUID text box, enter a value. This value is usually a parameter which is obtained from requesting a build. For example, to refer to the build result UUID obtained from a "Request Build" task, enter ${ret.buildResultUUID}.
+NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the pipeline script.
+. In the File name or pattern text box, enter a file name or pattern to restrict the artifacts for which details will be retrieved. If no value is specified, then details of all the artifacts whose content is stored in EWM repository will be retrieved.
+. In the Component name text box, enter the name of the component to restrict the artifacts for which details will be retrieved. If no value is specified, then details of all the artifacts belongining to any component or no component will be retrieved. To retrieve details of artifacts that does not belong to any component, leave this field blank.
+. In the Maximum number of results text box, enter the maximum number of artifacts for which details will b reterieved. The default value is 512, largest value is 2048. If there are more than 2048 artifacts in the build result, restrict the result set by providing a file name pattern or component name.
+. Click Generate Pipeline Script.
+
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
 
 ====Download Log
 
