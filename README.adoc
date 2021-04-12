@@ -827,6 +827,10 @@ rtcBuild is a pipeline step to interact with RTC Build from a pipeline job. The 
 
 * Request Build
 * Wait for Build 
+* List logs
+* List artifacts
+* Download log
+* Download artifact
 
 ===== Request build
 
@@ -941,6 +945,17 @@ In the following snippet, the "Wait for Build" task uses the build result UUID f
   echo "${ret2.buildStatus}"
   echo "${ret2.timedout}"
 ----
+
+====List Logs
+
+
+
+====List Artifacts
+
+
+====Download Log
+
+====Download Artifact
 
 [[TeamConcertPlugin-Knownlimitations]]
 == Known Limitations
