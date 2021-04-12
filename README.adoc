@@ -1185,6 +1185,8 @@ dir('downloads') {
   } // end for
 }  // end dir
 
+----
+
 ====== Known caveats with download log or artifact into the jenkins workspace on an agent
 
 ====== Publishing downloaded log or artifact to the Jenkins build
