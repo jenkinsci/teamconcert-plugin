@@ -1059,10 +1059,7 @@ To download a log from the build result, use the "Download log" task. You can do
 
 If you do not know the full name of the log when creating the script, you can retrieve details of all the logs starting with a specific prefix using the "List logs" task. Then, you can use the content id or the file name to download the contents of the log to the Jenkins workspace or any folder in the agent where this task runs.
 
-NOTE: The content of the log can be present in the EWM repository or in some external store. This task will  download the content of  a log which is stored  in the EWM repository. Such logs can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit. This task is similar to the logRetriever ant task in the EWM build toolkit.
-
- . https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher]
- .  https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logretriever[Log Retriever]
+NOTE: The content of the log can be present in the EWM repository or in some external store. This task will  download the content of  a log which is stored  in the EWM repository. Such logs can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit. This task is similar to the logRetriever ant task in the EWM build toolkit.  Refer to https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher] and https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logretriever[Log Retriever].
  
  To generate the pipeline snippet for download log from an EWM build result, perform the following steps
 
@@ -1126,10 +1123,7 @@ To download an artifact from the build result, use the "Download artifact" task.
 
 If you do not know the full name of the artifact when creating the script, you can retrieve details of all the artifacts starting with a specific prefix using the "List artifact" task. Then, you can use the content id or the file name to download the contents of the artifact to the Jenkins workspace or any folder in the agent where this task runs.
 
-NOTE: The content of the artifact can be present in the EWM repository or in some external store. This task will  download the content of  the artifact which is stored  in the EWM repository. Such artifacts can be uploaded to the build result using the artifactPublisher ant task in the EWM build toolkit. This task is similar to the artifactRetriever ant task in the EWM build toolkit.
-
- . https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactpublisher[Artifact Publisher]
- .  https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactretriever[Artifact Retriever]
+NOTE: The content of the artifact can be present in the EWM repository or in some external store. This task will  download the content of  the artifact which is stored  in the EWM repository. Such artifacts can be uploaded to the build result using the artifactPublisher ant task in the EWM build toolkit. This task is similar to the artifactRetriever ant task in the EWM build toolkit. Refer to https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactpublisher[Artifact Publisher] and https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactretriever[Artifact Retriever].
  
  To generate the pipeline snippet for download artifact task from an EWM build result, perform the following steps
 
