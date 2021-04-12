@@ -948,9 +948,9 @@ In the following snippet, the "Wait for Build" task uses the build result UUID f
 ----
 
 ====List Logs
-Use the "List Logs" task to retrieve the details of the log files from an EWM build result. Log files appear in the "Logs" tab of the EWM build result. 
+Use the "List Logs" task to retrieve the details of the logs from an EWM build result. Logs appear in the "Logs" tab of the EWM build result. 
 
-NOTE: The content of the log file can be present in the EWM repository or in some external store. This task will  retrieve the details of the log files whose content is stored in the EWM repository. Such logs files can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit.  https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher]
+NOTE: The content of the log file can be present in the EWM repository or in some external store. This task will  retrieve the details of the logs whose content is stored in the EWM repository. Such logs files can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit.  https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher]
 
 To generate the pipeline snippet for list logs from an EWM build result, perform the following tasks
 
@@ -971,8 +971,36 @@ NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the
 
 NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
 
+Once the step completes execution, you can access the information about each log through a for loop.
+
+[source,syntaxhighlighter-pre]
+----
+* fileName
+* componentName
+* description
+* type
+* contentId
+* size
+----
+
+The following task retrieves details of all the logs in the build result and outputs them to the console log using a for loop.
+
+[source,syntaxhighlighter-pre]
+----
+  def ret1 = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildResultUUID: "${ret.buildResultUUID}", name: 'listLogs'], timeout: 480
+  
+for(i=0;i< ret1.fileInfos.length;i++) {
+         echo "${ret2.fileInfos[i].fileName}"
+         echo "${ret2.fileInfos[i].componentName}"
+         echo "${ret2.fileInfos[i].description}"
+         echo "${ret2.fileInfos[i].type}"
+         echo "${ret2.fileInfos[i].contentId}"
+         echo "${ret2.fileInfos[i].size}"
+}
+----
+
 ====List Artifacts
-Use the "List Artifacts" task to retrieve the details of the log files from an EWM build result. Log files appear in the "Downloads" tab of the EWM build result. 
+Use the "List Artifacts" task to retrieve the details of the artitfacts from an EWM build result. Artifacts appear in the "Downloads" tab of the EWM build result. 
 
 NOTE: The content of the artifacte can be present in the EWM repository or in some external store. This task will  retrieve the details of the artifacts whose content is stored in the EWM repository. Such artifacts can be uploaded to the build result using the artifactFilePublisher ant task in the EWM build toolkit. https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactfilepublisher[Artifact Publisher]
 
@@ -995,9 +1023,40 @@ NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the
 
 NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
 
+Once the step completes execution, you can access the information about each artifact through a for loop.
+
+[source,syntaxhighlighter-pre]
+----
+* fileName
+* componentName
+* description
+* type
+* contentId
+* size
+----
+
+The following task retrieves details of all the artfiacts in the build result and outputs them to the console log using a for loop.
+
+[source,syntaxhighlighter-pre]
+----
+  def ret1 = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildResultUUID: "${ret.buildResultUUID}", name: 'listArtifacts'], timeout: 480
+  
+for(i=0;i< ret1.fileInfos.length;i++) {
+         echo "${ret2.fileInfos[i].fileName}"
+         echo "${ret2.fileInfos[i].componentName}"
+         echo "${ret2.fileInfos[i].description}"
+         echo "${ret2.fileInfos[i].type}"
+         echo "${ret2.fileInfos[i].contentId}"
+         echo "${ret2.fileInfos[i].size}"
+}
+----
+
 ====Download Log
 
 ====Download Artifact
+
+
+===== Publishing downloaded log or artifact to the Jenkins build
 
 [[TeamConcertPlugin-Knownlimitations]]
 == Known Limitations
