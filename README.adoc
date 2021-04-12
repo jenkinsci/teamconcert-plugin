@@ -843,13 +843,38 @@ To generate the pipeline snippet for requesting a build, perform the following t
 . Select the appropriate credentials or accept the default.
 . Select "Request Build" from the Task dropdown list.
 . Enter a Build Definition ID.
+. To delete properties while requesting a build, check "Delete Properties"
+.. Click "Add Property" and enter the name of the property to delete.
+. To add a new property or override the value of an existing property when requesting a build, check "Add or Override Properties".
+.. Click "Add Property" and add the name and value of the property to add or override to the build request.
+. If you wish to insert a link of the build result  associated with the build request to the Jenkins pipeline build, check "Add a link to EWM(RTC) build".
 . Click Generate Pipeline Script.
 
-The following snippet prints the build result UUID after rtcBuild step completes requesting a build in RTC.
+The following snippet requests a build and prints the build result UUID after the step completes requesting a build in RTC
 
 [source,syntaxhighlighter-pre]
 ----
-  def ret = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildDefinitionId: '<build-definition-id>', name: 'requestBuild'], timeout: 480
+def ret = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildDefinitionId: '<build-definition-id>', name: 'requestBuild'], timeout: 480], timeout: 480
+  echo "${ret.buildResultUUID}"
+----
+
+The following snippet requests a build with one new property and a few deleted properties and prints the build result UUID after rtcBuild step completes requesting a build in RTC.
+
+[source,syntaxhighlighter-pre]
+----
+  def ret = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildDefinitionId: '<build-definition-id>', name: 'requestBuild',
+  addOrOverrideProperties: true, propertiesToAddOrOverride: [[propertyName: 'addProp', propertyValue: 'newValue']], 
+  propertiesToDelete: [[propertyName: 'deleteProp1'], [propertyName:'deleteProp2']]
+ ], timeout: 480], timeout: 480
+  echo "${ret.buildResultUUID}"
+----
+
+The following snippet requests a build, prints the build result UUID after rtcBuild step completes requesting a build in RTC and adds a link of the build result to the Jenkins pipeline build.
+
+[source,syntaxhighlighter-pre]
+----
+  def ret = rtcBuild buildTool: '<builtoolkit-name>', credentialsId: '<credentials>', serverURI: '<rtc-server-uri>', task: [buildDefinitionId: '<build-definition-id>', name: 'requestBuild',  
+linkEWMBuild: true], timeout: 480], timeout: 480
   echo "${ret.buildResultUUID}"
 ----
 
