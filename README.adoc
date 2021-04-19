@@ -1183,9 +1183,54 @@ dir('downloads') {
 
 ===== Accessing Jenkins build parameters and groovy variables in steps
 
+To access a Jenkins build parameter in place of string value in a pipeline script, use the syntax 
+
+----
+"${env.parameter_name}". 
+----
+
+The presence of double quotes in the script will cause the groovy interpreter to perform string interpolation.
+
+To access a groovy variable in place of string value in a pipeline script, use the syntax "{$var}". If the variable is an object and you need to use the value of one of the fields of the object, use the syntax 
+
+----
+"${var.field_name}"
+----
+
 ===== Known caveats with download log or artifact into the jenkins workspace on an agent
 
+In a pipeline build , if the option "Use groovy sandbox" is unchecked, then Jenkins does not allocate the workspace directory when the build starts. If an attempt is made to create a file or a folder under the workspace directory, it fails since the workspace directory does not exist.
+
+If you use the "Download Log" or "Downalod Artifact" task to download a file into the Jenkins workspace, you must create the workspace directory before running the task. The following snippet shows how to create the workspace directory if it doesn't exist and then create a subdirectory under the workspace directory to store the logs and artifacts.
+
+----
+    def workspace = "${env.WORKSPACE}"
+    echo "${workspace}"
+    withEnv(["workspace=${workspace}"]) {
+        sh '''
+        echo "${workspace}"
+        if [ ! -e ${workspace} ]; then
+          mkdir -p "${workspace}"
+        fi
+        '''
+    }
+    dir('') {
+     // Switch to the directory to download the log or artifact
+    }
+
+----
+
+. https://issues.jenkins.io/browse/JENKINS-56867[Jenkins does not allocate workspace]
+
 ===== Publishing downloaded log or artifact to the Jenkins build
+
+To publish the downloaded log or artifact to the Jenkins build, use the "archiveArtifacts" step. The following snippet publishes all files with the .log extension to the Jenkins build.
+
+----
+
+archiveArtifacts artifacts: '*.log', followSymlinks: false
+
+----
 
 [[TeamConcertPlugin-Knownlimitations]]
 == Known Limitations
