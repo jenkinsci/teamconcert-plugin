@@ -871,7 +871,7 @@ To generate the pipeline snippet for requesting a build, perform the following s
 . To insert a link of the build result associated with the build request to the Jenkins pipeline build, select "Insert EWM(RTC) build link to Jenkins pipeline build"".
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".
 
 The following snippet requests a build and prints the build result UUID after the step completes requesting a build in RTC
 
@@ -942,7 +942,7 @@ To generate the pipeline snippet for waiting on a build, perform the following t
 . In Wait timeout (in seconds) text box, enter the wait timeout in seconds. This value should be greater than zero. The default value is -1 which makes the step wait until the build result enters into the specified states. 
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".
 
 In the following snippet, the "Wait for Build" task uses the build result UUID from "Request Build" task to wait for the build result to enter into COMPLETED or INCOMPLETE state for 120 seconds. Once the step completes, it prints the following fields from the return value. 
 
@@ -987,7 +987,7 @@ NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the
 . In the Maximum number of results text box, enter the maximum number of logs for which details will be reterieved. The default value is 512, largest value is 2048. If there are more than 2048 logs in the build result, restrict the result set by providing a file name pattern or component name. 
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".
 
 Once the step completes execution, you can access the information about each log using a for loop.
 
@@ -1040,7 +1040,7 @@ NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the
 . In the Maximum number of results text box, enter the maximum number of artifacts for which details will be retrieved. The default value is 512 and the largest value is 2048. If there are more than 2048 artifacts in the build result, restrict the result set by providing a file name pattern or component name. 
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".
 
 Once the step completes execution, you can access the information about each artifact using a for loop.
 
@@ -1095,7 +1095,7 @@ NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the
 . In the Content Id field, provide a reference to the contentId attribute from the return value of List logs task. Either File Name or Content ID parameters must be provided but not both.
 . In the Destination file name text box, provide a name for the file to which the contents will be downloaded to. If a file with the same name already exists in the destination, then a  file will be created by appending the destination file name with the current timestamp.  This parameter is optional.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".
 
 Once the step completes execution, you can access the following fields about the downloaded log.
 
@@ -1159,7 +1159,7 @@ NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the
 . In the Content Id field, provide a reference to the contentId attribute from the return value of List Artifacts task. Either File Name or Content ID parameters must be provided but not both.
 . In the Destination file name text box, provide a name for the file to which the contents will be downloaded to. If a file with the same name already exists in the destination, then a  file will be created by appending the destination file name with the current timestamp. 
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".
 
 Once the step completes execution, you can access the following fields about the downloaded log.
 
@@ -1218,7 +1218,7 @@ To generate the pipeline snippet for the "Get SCM Snapshot" task, perform the fo
 . In the Task dropdown list, select "Get SCM Snapshot".
 . In the Build Result UUID text box, enter a value. This value is usually a parameter which is obtained from requesting a build. For example, to refer to the build result UUID obtained from a "Request Build" task, enter ${ret.buildResultUUID}. This parameter is mandatory.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".
 
 Once the step completes execution, you can access the following fields about the Jazz SCM snapshot.
 
