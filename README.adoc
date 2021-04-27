@@ -32,7 +32,7 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 [[TeamConcertPlugin-Jenkins]]
 ==== Jenkins
 
-* Team Concert Plugin v 2.1.0 or later requires Jenkins 2.60.1 or later, Java 8 or later.
+* Team Concert Plugin v 2.1.0 or later requires Jenkins 2.60.1 or later, Java 8 or later. Jenkins 2.277.1 LTS has been tested with the latest release.
 * Team Concert Plugin v 1.2.0.5 or later requires Jenkins 1.625.1 or later. Fix for JENKINS-26100 requires Jenkins 2.60 or later, workflow-job 2.12 or later.
 * Team Concert Plugin v 1.1.9.3 till v 1.2.0.4 requires Jenkins 1.580.1 or later. 
 * Team Concert Plugin v 1.1.2 and later depends on the https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Jenkins Credentials plugin version] 1.10 or later. +
@@ -815,11 +815,28 @@ RTC build definitions].
 [[TeamConcertPlugin-AdvancedPipelineCapabilities]]
 === Advanced Pipeline capabilities
 
-==== Perform polling only and skip downloading the sources in the Jenkins build
+==== Perform polling only and generate changelog while skipping downloading the sources in the Jenkins build
 
 You can configure a pipeline job to poll on a RTC build definition or a repository workspace but skip downloading the sources when the pipeline build runs by using the option polling-only. 
+Optionally, you can provide a snapshotUUID to generate a changelog for the Jenkins build. The snapshot should be owned by the repository workspace configured in the build definition.
 
-To enable the polling-only option, add the text "pollingOnly: true" to the checkout step. If you prefer to use the snippet generator to generate a checkout step with the polling-only option, follow the steps below 
+To enable the polling-only option, add the text "pollingOnly: true" to the checkout step. If you prefer to use the snippet generator to generate a checkout step with the polling-only option, follow the steps below:
+
+. Open the Jenkins Web UI.
+. Navigate to the pipeline job.
+. In the left pane, click "Pipeline Syntax".
+. Under Steps, select checkout from the Sample Step dropdown list.
+. Under SCM, Select Rational Team Concert (RTC).
+. Change the Build Configuration to Build Definition or Repository Workspace.
+. For Build Definition configuration, enter the ID of the Build Definition.
+. For Repository workspace configuration, enter the name of the Repository Workspace.
+. Click Advanced.
+. Select "Perform polling but do not accept or load the repository workspace.
+. To generate a changelog, enter the variable that references the snapshot UUID. For example, ${ret.snapshotUUID}.
+.. To retrieve Jazz SCM snapshot details from the build result, use the "Get SCM Snapshot" task.
+. Click Generate Pipeline script.
+
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.snapshotUUID}".
 
 ==== rtcBuild Step
 
@@ -847,14 +864,14 @@ To generate the pipeline snippet for requesting a build, perform the following s
 . Select the appropriate credentials or accept the default.
 . Select "Request Build" from the Task dropdown list.
 . Enter a Build Definition ID.
-. To delete properties while requesting a build, check "Delete Properties"
+. To delete properties while requesting a build, check "Delete Properties".
 .. Click "Add Property" and enter the name of the property to delete.
-. To add a new property or override the value of an existing property when requesting a build, check "Add or Override Properties".
-.. Click "Add Property" and add the name and value of the property to add or override to the build request.
-. If you wish to insert a link of the build result  associated with the build request to the Jenkins pipeline build, check "Add a link to EWM(RTC) build".
+. To add a new property or override the value of an existing property when requesting a build, select "Add or Override Properties".
+.. Click "Add Property" and add the name and value of the property to add to or override in the build request.
+. To insert a link of the build result associated with the build request to the Jenkins pipeline build, select "Insert EWM(RTC) build link to Jenkins pipeline build"".
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
 
 The following snippet requests a build and prints the build result UUID after the step completes requesting a build in RTC
 
@@ -925,7 +942,7 @@ To generate the pipeline snippet for waiting on a build, perform the following t
 . In Wait timeout (in seconds) text box, enter the wait timeout in seconds. This value should be greater than zero. The default value is -1 which makes the step wait until the build result enters into the specified states. 
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
 
 In the following snippet, the "Wait for Build" task uses the build result UUID from "Request Build" task to wait for the build result to enter into COMPLETED or INCOMPLETE state for 120 seconds. Once the step completes, it prints the following fields from the return value. 
 
@@ -951,7 +968,7 @@ In the following snippet, the "Wait for Build" task uses the build result UUID f
 
 Use the "List Logs" task to retrieve the details of the logs from an EWM build result. Logs appear in the "Logs" tab of the EWM build result. 
 
-NOTE: The content of the log can be present in the EWM repository or in some external store. This task will  retrieve the details of the logs whose content is stored in the EWM repository. Such logs can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit.  https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher]
+NOTE: The content of the log can be stored in the EWM repository or in some external storage. This task will retrieve the details of the logs whose content is stored in the EWM repository. Such logs can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit. https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher]
 
 To generate the pipeline snippet for list logs from an EWM build result, perform the following steps
 
@@ -967,12 +984,12 @@ To generate the pipeline snippet for list logs from an EWM build result, perform
 NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the pipeline script.
 . In the File name or pattern text box, enter a file name or pattern to restrict the logs for which details will be retrieved. If no value is specified, then details of all the logs whose content is stored in EWM repository will be retrieved. This parameter is optional.
 . In the Component name text box, enter the name of the component to restrict the logs for which details will be retrieved. If no value is specified, then details of all the logs belongining to any component or no component will be retrieved. To retrieve details of logs that does not belong to any component, leave this field blank. This parameter is optional.
-. In the Maximum number of results text box, enter the maximum number of logs for which details will b reterieved. The default value is 512, largest value is 2048. If there are more than 2048 logs in the build result, restrict the result set by providing a file name pattern or component name. 
+. In the Maximum number of results text box, enter the maximum number of logs for which details will be reterieved. The default value is 512, largest value is 2048. If there are more than 2048 logs in the build result, restrict the result set by providing a file name pattern or component name. 
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
 
-Once the step completes execution, you can access the information about each log through a for loop.
+Once the step completes execution, you can access the information about each log using a for loop.
 
 [source,syntaxhighlighter-pre]
 ----
@@ -1002,9 +1019,9 @@ for(i=0;i< ret1.fileInfos.length;i++) {
 
 ===== List Artifacts
 
-Use the "List Artifacts" task to retrieve the details of the artitfacts from an EWM build result. Artifacts appear in the "Downloads" tab of the EWM build result. 
+Use the "List Artifacts" task to retrieve the details of the artifacts from an EWM build result. Artifacts appear in the "Downloads" tab of the EWM build result. 
 
-NOTE: The content of the artifacte can be present in the EWM repository or in some external store. This task will  retrieve the details of the artifacts whose content is stored in the EWM repository. Such artifacts can be uploaded to the build result using the artifactFilePublisher ant task in the EWM build toolkit. https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactfilepublisher[Artifact Publisher]
+NOTE: The content of the artifact can be stored in the EWM repository or in some external storage. This task will retrieve the details of the artifacts whose content is stored in the EWM repository. Such artifacts can be uploaded to the build result using the artifactFilePublisher ant task in the EWM build toolkit. https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactfilepublisher[Artifact Publisher]
 
 To generate the pipeline snippet for list logs from an EWM build result, perform the following steps
 
@@ -1020,12 +1037,12 @@ To generate the pipeline snippet for list logs from an EWM build result, perform
 NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the pipeline script.
 . In the File name or pattern text box, enter a file name or pattern to restrict the artifacts for which details will be retrieved. If no value is specified, then details of all the artifacts whose content is stored in EWM repository will be retrieved. This parameter is optional.
 . In the Component name text box, enter the name of the component to restrict the artifacts for which details will be retrieved. If no value is specified, then details of all the artifacts belongining to any component or no component will be retrieved. To retrieve details of artifacts that does not belong to any component, leave this field blank. This parameter is optional.
-. In the Maximum number of results text box, enter the maximum number of artifacts for which details will b reterieved. The default value is 512, largest value is 2048. If there are more than 2048 artifacts in the build result, restrict the result set by providing a file name pattern or component name. 
+. In the Maximum number of results text box, enter the maximum number of artifacts for which details will be retrieved. The default value is 512 and the largest value is 2048. If there are more than 2048 artifacts in the build result, restrict the result set by providing a file name pattern or component name. 
 . Click Generate Pipeline Script.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
 
-Once the step completes execution, you can access the information about each artifact through a for loop.
+Once the step completes execution, you can access the information about each artifact using a for loop.
 
 [source,syntaxhighlighter-pre]
 ----
@@ -1059,7 +1076,7 @@ To download a log from the build result, use the "Download log" task. You can do
 
 If you do not know the full name of the log when creating the script, you can retrieve details of all the logs starting with a specific prefix using the "List logs" task. Then, you can use the content id or the file name to download the contents of the log to the Jenkins workspace or any folder in the agent where this task runs.
 
-NOTE: The content of the log can be present in the EWM repository or in some external store. This task will  download the content of  a log which is stored  in the EWM repository. Such logs can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit. This task is similar to the logRetriever ant task in the EWM build toolkit.  Refer to https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher] and https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logretriever[Log Retriever].
+NOTE: The content of the log can be stored in the EWM repository or in some external storage. This task will download the content of a log which is stored in the EWM repository. Such logs can be uploaded to the build result using the logPublisher ant task in the EWM build toolkit. This task is similar to the logRetriever ant task in the EWM build toolkit.  Refer to https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logpublisher[Log Publisher] and https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-logretriever[Log Retriever].
 
 To generate the pipeline snippet for download log from an EWM build result, perform the following steps
 
@@ -1073,12 +1090,12 @@ To generate the pipeline snippet for download log from an EWM build result, perf
 . In the Task dropdown list, select "Download log".
 . In the Build Result UUID text box, enter a value. This value is usually a parameter which is obtained from requesting a build. For example, to refer to the build result UUID obtained from a "Request Build" task, enter ${ret.buildResultUUID}. This parameter is mandatory.
 NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the pipeline script.
-. In the File name text box, enter the full name of the log. If the full name of the log is not known at the time of writing the script (for example, the log's name has a timestamp as a suffix), then use the list logs task to retrieve details of all logs matching a file name pattern and provide the file name attribute as a reference as in ${ret2.fileName}. If more than one log matches the given file name, then the first match is downloaded. If it is possible for logs to have the same name, then use the content ID attribute as a reference as in ${ret2.contentId}. Either File Name  or Content ID parameters must be provided but not both. 
+. In the File name text box, enter the full name of the log. If the full name of the log is not known at the time of writing the script (for example, the log's name has a timestamp as a suffix), then use the list logs task to retrieve details of all logs matching a file name pattern and provide the file name attribute as a reference, for example ${ret2.fileName}. If more than one log matches the given file name, then the first match is downloaded. If it is possible for logs to have the same name, then use the content ID attribute as a reference, for example ${ret2.contentId}. Either File Name or Content ID parameters must be provided but not both. 
 . In the Component name text box, enter the name of the component to which this log belongs to. If there are multiple logs with the same name across different components, then providing the component name will download the log under the specific component. This parameter is optional.
-. In the Content Id, provide a reference to the contentId attribute from the return value of List logs task. Either File Name  or Content ID parameters must be provided but not both.
+. In the Content Id field, provide a reference to the contentId attribute from the return value of List logs task. Either File Name or Content ID parameters must be provided but not both.
 . In the Destination file name text box, provide a name for the file to which the contents will be downloaded to. If a file with the same name already exists in the destination, then a  file will be created by appending the destination file name with the current timestamp.  This parameter is optional.
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
 
 Once the step completes execution, you can access the following fields about the downloaded log.
 
@@ -1123,7 +1140,7 @@ To download an artifact from the build result, use the "Download artifact" task.
 
 If you do not know the full name of the artifact when creating the script, you can retrieve details of all the artifacts starting with a specific prefix using the "List artifact" task. Then, you can use the content id or the file name to download the contents of the artifact to the Jenkins workspace or any folder in the agent where this task runs.
 
-NOTE: The content of the artifact can be present in the EWM repository or in some external store. This task will  download the content of  the artifact which is stored  in the EWM repository. Such artifacts can be uploaded to the build result using the artifactPublisher ant task in the EWM build toolkit. This task is similar to the artifactRetriever ant task in the EWM build toolkit. Refer to https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactpublisher[Artifact Publisher] and https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactretriever[Artifact Retriever].
+NOTE: The content of the artifact can be stored in the EWM repository or in some external storage. This task will download the content of the artifact which is stored in the EWM repository. Such artifacts can be uploaded to the build result using the artifactPublisher ant task in the EWM build toolkit. This task is similar to the artifactRetriever ant task in the EWM build toolkit. Refer to https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactpublisher[Artifact Publisher] and https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactretriever[Artifact Retriever].
  
 To generate the pipeline snippet for download artifact task from an EWM build result, perform the following steps
 
@@ -1137,12 +1154,12 @@ To generate the pipeline snippet for download artifact task from an EWM build re
 . In the Task dropdown list, select "Download log".
 . In the Build Result UUID text box, enter a value. This value is usually a parameter which is obtained from requesting a build. For example, to refer to the build result UUID obtained from a "Request Build" task, enter ${ret.buildResultUUID}. This parameter is mandatory.
 NOTE: Remember to quote ${ret.buildResultUUID} once the snippet is copied to the pipeline script.
-. In the File name text box, enter the full name of the artifact. If the full name of the artifact is not known at the time of writing the script (for example, the log's name has a timestamp as a suffix), then use the list artifacts task to retrieve details of all logs matching a file name pattern and provide the file name attribute as a reference as in ${ret2.fileName}. If more than one log matches the given file name, then the first match is downloaded. If it is possible for artifacts to have the same name, then use the content ID attribute as a reference as in ${ret2.contentId}.  Either File name  or Content ID parameters must be provided but not both.
+. In the File name text box, enter the full name of the artifact. If the full name of the artifact is not known at the time of writing the script (for example, the log's name has a timestamp as a suffix), then use the list artifacts task to retrieve details of all logs matching a file name pattern and provide the file name attribute as a reference, for example ${ret2.fileName}. If more than one log matches the given file name, then the first match is downloaded. If it is possible for artifacts to have the same name, then use the content ID attribute as a reference, for example ${ret2.contentId}.  Either File name or Content ID parameters must be provided but not both.
 . In the Component name text box, enter the name of the component to which this artifact belongs to. If there are multiple artifacts with the same name across different components, then providing the component name will download the log under the specific component. This parameter is optional.
-. In the Content Id, provide a reference to the contentId attribute from the return value of List Artifacts task. Either File Name  or Content ID parameters must be provided but not both.
+. In the Content Id field, provide a reference to the contentId attribute from the return value of List Artifacts task. Either File Name or Content ID parameters must be provided but not both.
 . In the Destination file name text box, provide a name for the file to which the contents will be downloaded to. If a file with the same name already exists in the destination, then a  file will be created by appending the destination file name with the current timestamp. 
 
-NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, as in "${ret.buildResultUUID}".  
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
 
 Once the step completes execution, you can access the following fields about the downloaded log.
 
@@ -1179,6 +1196,36 @@ dir('downloads') {
   } // end for
 }  // end dir
 
+----
+
+===== Get SCM Snapshot
+
+Retrieve the Jazz SCM snapshot details for a given EWM (RTC) build result.
+
+If the build result has a Jazz SCM snapshot contribution, then the task returns the snapshot's name and UUID.
+If the build result does not have such a contribution, then the task returns empty values for snapshot name and UUID. 
+This task does not check the state of the build result to see if it is in progress while the task runs. It is left to the caller to ensure that a snapshot has been added to the build result before the task runs. You can use the Wait for build task to wait for a specific amount of time or change of state and then call this task to retrieve snapshot details.
+
+To generate the pipeline snippet for the "Get SCM Snapshot" task, perform the following steps
+
+. Open the Jenkins Web UI.
+. Navigate to the pipeline job.
+. In the left pane, click "Pipeline Syntax".
+. Under Steps, select rtcBuild from the sample step dropdown list.
+. Select a Build toolkit. 
+. Enter a value for RTC server URI or accept the default.
+. Select the appropriate credentials or accept the default.
+. In the Task dropdown list, select "Get SCM Snapshot".
+. In the Build Result UUID text box, enter a value. This value is usually a parameter which is obtained from requesting a build. For example, to refer to the build result UUID obtained from a "Request Build" task, enter ${ret.buildResultUUID}. This parameter is mandatory.
+
+NOTE: All values in the generated script are enclosed in single quotes. If single quotes are used, then a value like ${ret.buildResultUUID} is interpreted literally by the pipeline build. To expand such values, modify the script to enclose the value within double quotes, for example "${ret.buildResultUUID}".  
+
+Once the step completes execution, you can access the following fields about the Jazz SCM snapshot.
+
+[source,syntaxhighlighter-pre]
+----
+* snapshotName - The name of the Jazz SCM snapshot.
+* snapshotUUID - The UUID for the Jazz SCM UUID. 
 ----
 
 ===== Accessing Jenkins build parameters and groovy variables in steps
@@ -1340,6 +1387,11 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 [[TeamConcertPlugin-Releases]]
 == Releases
 
+[[TeamConcertPlugin-2.2.1March30-2021]]
+=== 2.2.1 March 30, 2021
+* Compatibility update for Jenkins 2.277.1 LTS.  https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/524132[524132:Adoption - tables to divs migration for Team Concert Plugin]
+Note: Team Concert Plugin continues to support LTS versions starting from 2.60.1
+
 [[TeamConcertPlugin-2.2.0Dec22-2020]]
 === 2.2.0 December 22, 2020
 * Support for SAML/OIDC app password.
@@ -1367,9 +1419,7 @@ NOTE: The default behavior of creating "Related artifact" link to a Jenkins buil
 
 * You can collect metronome information for all build configurations.See Collecting Metronome Logs section for more details.
 ** See Work Item 438208: Enhance Team Concert Plugin to collect metronome log like JBE
-* In this release, we have changed the behavior of creating "Related artifact" links to Jenkins builds in all the accepted work items originally introduced by work item 388795. You must choose the option "Add Jenkins build link to accepted work items" in the Jenkins job
-configuration to create "Related artifact" links to Jenkins builds in
-all the accepted work items.
+* In this release, we have changed the behavior of creating "Related artifact" links to Jenkins builds in all the accepted work items originally introduced by work item 388795. You must choose the option "Add Jenkins build link to accepted work items" in the Jenkins job configuration to create "Related artifact" links to Jenkins builds in all the accepted work items.
 ** See Work Item 461859: Make the "creation of Jenkins build links to work items in accepted change sets" an opt - in for the users in Repository Workspace and Stream configuration.
 * We have fixed an incompatibility with Pipeline jobs wherein messages from Team Concert Plugin were not printed in the build log.
 ** See Work Item 478877: Pipeline builds do not output messages from
