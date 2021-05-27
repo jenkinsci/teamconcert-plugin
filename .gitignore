@@ -10,3 +10,4 @@ com.ibm.team.build.hjplugin/.classpath
 com.ibm.team.build.hjplugin/.jazzignore
 com.ibm.team.build.hjplugin/.project
 com.ibm.team.build.hjplugin/build.properties
+*.iml

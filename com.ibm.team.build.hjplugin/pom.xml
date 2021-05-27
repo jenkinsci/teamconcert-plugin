@@ -98,12 +98,16 @@
 			<url>https://repo.jenkins-ci.org/public/</url>
 		</repository>
 	</repositories>
-
 	<dependencies>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>
 			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
 			<version>${rtcJarVersion}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-digester3</artifactId>
+			<version>3.2</version>
 		</dependency>
 		<dependency>
 			<groupId>com.ibm.team.build</groupId>

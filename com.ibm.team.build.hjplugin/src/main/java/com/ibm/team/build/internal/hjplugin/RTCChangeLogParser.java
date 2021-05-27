@@ -16,7 +16,6 @@ import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowser;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
-import hudson.util.Digester2;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,7 +28,10 @@ import java.nio.charset.CodingErrorAction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.digester3.Digester;
 import org.xml.sax.SAXException;
+
+import javax.xml.parsers.ParserConfigurationException;
 
 public class RTCChangeLogParser extends ChangeLogParser {
     private static final Logger LOGGER = Logger.getLogger(RTCChangeLogParser.class.getName());
@@ -59,7 +61,7 @@ public class RTCChangeLogParser extends ChangeLogParser {
 		LOGGER.finest("RTCChangeLogParser.parse with Reader : Begin"); //$NON-NLS$1
 		try {
 			RTCChangeLogSet result = new RTCChangeLogSet(build, browser);
-			Digester2 digester = getDigester();
+			Digester digester = getDigester();
 			digester.push(result);
 
 			digester.addSetProperties("changelog"); //$NON-NLS-1$
@@ -133,12 +135,11 @@ public class RTCChangeLogParser extends ChangeLogParser {
 		}
 	}
 	
-	private Digester2 getDigester() {
+	private Digester getDigester() throws SAXException {
 		LOGGER.finest("RTCChangeLogParser.getDigester : Begin");
-		Digester2 digester;
+		Digester digester;
 		try {
-			digester = new Digester2();
-			return digester;
+			digester = new Digester();
 		} catch (Error e) {
 			LOGGER.log(Level.FINER, "Failed to get Digest2 error: " + e.getMessage(), e);
 			dumpClassLoader("getDigester()");
@@ -147,12 +148,25 @@ public class RTCChangeLogParser extends ChangeLogParser {
 			ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 			try {
 				Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
-				digester = new Digester2();
-				return digester;
+				digester = new Digester();
 			} finally {
 				Thread.currentThread().setContextClassLoader(classLoader);
 			}
 		}
+		digester.setXIncludeAware(false);
+
+		if (!Boolean.getBoolean(RTCChangeLogParser.class.getName() + ".UNSAFE")) {
+			try {
+				digester.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+				digester.setFeature("http://xml.org/sax/features/external-general-entities", false);
+				digester.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+				digester.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+			}
+			catch ( ParserConfigurationException ex) {
+				throw new SAXException("Failed to securely configure RTC changelog parser", ex);
+			}
+		}
+		return digester;
 	}
 
 	private void dumpClassLoader(String string) {
