@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2016, 2018 IBM Corporation and others.
+ * Copyright © 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@
 package com.ibm.team.build.internal.hjplugin.tests;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,6 +27,8 @@ import org.mockito.Mockito;
 import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
+import com.ibm.team.build.internal.hjplugin.util.RTCBuildState;
+import com.ibm.team.build.internal.hjplugin.util.Tuple;
 
 import hudson.EnvVars;
 import hudson.model.BooleanParameterDefinition;
@@ -1049,7 +1052,8 @@ public class HelperTest extends AbstractTestCase {
 		String buildDefinitionParamForValue = "${testBuildDefinition}";
 		String buildDefinitionDefaultValue = "testBuildDefinitionDefaultValue";
 		ParametersDefinitionProperty property = new ParametersDefinitionProperty(
-							Arrays.asList(new ParameterDefinition[] { new StringParameterDefinition(buildDefinitionParam, buildDefinitionDefaultValue) }));
+							Arrays.asList(new ParameterDefinition[] 
+									{ new StringParameterDefinition(buildDefinitionParam, buildDefinitionDefaultValue) }));
 		Mockito.doReturn(property).when(mockJob).getProperty(ParametersDefinitionProperty.class);
 		
 		// Test
@@ -1065,7 +1069,8 @@ public class HelperTest extends AbstractTestCase {
 
 		// Setup
 		property = new ParametersDefinitionProperty(Arrays.asList(
-							new ParameterDefinition[] {new BooleanParameterDefinition(buildDefinitionParam, false, "Testing build definition with boolean value")}));
+							new ParameterDefinition[] {new 
+									BooleanParameterDefinition(buildDefinitionParam, false, "Testing build definition with boolean value")}));
 		Mockito.doReturn(property).when(mockJob).getProperty(ParametersDefinitionProperty.class);
 		
 		// Test
@@ -1255,5 +1260,106 @@ public class HelperTest extends AbstractTestCase {
 		// Verify that the name of the unresolved build parameter is retained
 		String expectedSnapshotName = "1_${Branch1}_1202";
 		assertEquals(expectedSnapshotName, actualSnapshotName);
+	}
+	
+	/**
+	 * Various tests for {@link Helper#extractBuildStates(String)
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testExtractBuildStates() throws Exception {
+		assertTrue("Expected array of zero length", 
+						Helper.extractBuildStates(null).length == 0);
+		
+		// Comma separated with arbitrary spaces between commas
+		assertTrue(Arrays.deepEquals(new String[] {"abcd","efgh","ijkl"}, 
+					Helper.extractBuildStates("abcd,  efgh  , ijkl")));
+		
+		// Comma separated with empty element in between comma
+				assertTrue(Arrays.deepEquals(new String[] {"abcd","","ijkl"}, 
+							Helper.extractBuildStates("abcd,    , ijkl")));
+	}
+	
+	/**
+	 * Various tests for {@link Helper#getInvalidStates(String[])}
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testGetInvalidStates() throws Exception {
+		assertTrue("Expected array of zero length", Helper.getInvalidStates(null).length == 0);
+
+		// Simple one invalid state test
+		assertTrue(Arrays.deepEquals(new String[] {"efgh"}, 
+			Helper.getInvalidStates(new String[] {RTCBuildState.COMPLETED.toString(),
+						"efgh",
+						RTCBuildState.NOT_STARTED.toString()})));
+				
+		// All invalid states
+		assertTrue(Arrays.deepEquals(new String[] {"abcd","efgh","ijkl"}, 
+				Helper.getInvalidStates(new String[] {"abcd","efgh", "ijkl"})));
+		
+		// No invalid states
+		assertTrue("Expected array of zero length",
+				Helper.getInvalidStates(new String[] {
+				    RTCBuildState.COMPLETED.toString(),
+					RTCBuildState.IN_PROGRESS.toString(),
+					RTCBuildState.NOT_STARTED.toString()}).length == 0);
+	}
+	
+	/**
+	 * Test various inputs to {@link Helper#extractBuildStatesWithDuplicates(String)}
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testExtractBuildStatesWithDuplicate() throws Exception {
+		
+		// Provide no repeated states
+		String buildStatesStr = "ABC, DEF, EFG";
+		Tuple<String[], String[]> buildStatesWithDuplicates = 
+					Helper.extractBuildStatesWithDuplicates(buildStatesStr);
+		assertTrue(Arrays.deepEquals(new String [] { "ABC", "DEF", "EFG" },
+						buildStatesWithDuplicates.getFirst()));
+		assertEquals(0, buildStatesWithDuplicates.getSecond().length);
+		
+		// Provide valid states that are repeated in the middle and end 
+		// with some intervening states
+		buildStatesStr = "INCOMPLETE, NOT_STARTED, INCOMPLETE, COMPLETED, "
+				+ "IN_PROGRESS, COMPLETED,";
+		buildStatesWithDuplicates = 
+					Helper.extractBuildStatesWithDuplicates(buildStatesStr);
+		assertTrue(Arrays.deepEquals(new String [] { "INCOMPLETE", "NOT_STARTED", 
+									"COMPLETED", "IN_PROGRESS" },
+						buildStatesWithDuplicates.getFirst()));
+		assertTrue(Arrays.deepEquals(new String [] { "INCOMPLETE", "COMPLETED" },
+				buildStatesWithDuplicates.getSecond()));
+
+		// Provide invalid states that are repeated
+		buildStatesStr = "ABC, IJK, DEF , IJK,  ABC, EFG";
+		buildStatesWithDuplicates = 
+				Helper.extractBuildStatesWithDuplicates(buildStatesStr);
+		assertTrue(Arrays.deepEquals(new String [] { "ABC", "IJK", 
+									"DEF", "EFG" },buildStatesWithDuplicates.getFirst()));
+		assertTrue(Arrays.deepEquals(new String [] { "IJK", "ABC" },
+						buildStatesWithDuplicates.getSecond()));
+		
+		// Provide an empty state that is repeated (between two ,)
+		// Duplicate build states array will be empty
+		buildStatesStr = "ABC, DEF, IJK,,EFG,,";
+		buildStatesWithDuplicates = 
+				Helper.extractBuildStatesWithDuplicates(buildStatesStr);
+		assertTrue(Arrays.deepEquals(new String [] { "ABC", "DEF", 
+									"IJK", "EFG" },buildStatesWithDuplicates.getFirst()));
+		assertEquals(0, buildStatesWithDuplicates.getSecond().length);
+		
+		// State ends with ,
+		buildStatesStr = "ABC, DEF, IJK,EFG,";
+		buildStatesWithDuplicates = 
+				Helper.extractBuildStatesWithDuplicates(buildStatesStr);
+		assertTrue(Arrays.deepEquals(new String [] { "ABC", "DEF", 
+									"IJK", "EFG" },buildStatesWithDuplicates.getFirst()));
+		assertEquals(0, buildStatesWithDuplicates.getSecond().length);
 	}
 }

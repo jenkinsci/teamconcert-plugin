@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -29,6 +29,7 @@ import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
+import com.ibm.team.build.internal.hjplugin.util.Helper;
 
 @Deprecated
 public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
@@ -200,7 +201,7 @@ public class RTCCheckoutTask extends RTCTask<Map<String, String>> {
     			throw (InterruptedException) eToReport;
     		} 
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure(eToReport.getMessage()));
-    		if (RTCScm.unexpectedFailure(eToReport)) {
+    		if (Helper.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
     		}
     		

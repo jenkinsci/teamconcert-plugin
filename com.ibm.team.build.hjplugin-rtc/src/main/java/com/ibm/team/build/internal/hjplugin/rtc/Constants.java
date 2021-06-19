@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2017, 2020 IBM Corporation and others.
+ * Copyright © 2017, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -10,6 +10,9 @@
  *******************************************************************************/
 
 package com.ibm.team.build.internal.hjplugin.rtc;
+
+import com.ibm.team.build.common.model.BuildState;
+import com.ibm.team.build.common.model.BuildStatus;
 
 public class Constants {
 	public static final String TEAM_SCM_ACCEPT_PHASE_OVER = "team.scm.acceptPhaseOver"; //$NON-NLS-1$
@@ -207,4 +210,83 @@ public class Constants {
      * @since 0.12.0 (RTC 7.0)
      */
     public static final String PROPERTY_INCLUDE_LINKS_IN_WORKITEMS = "team.build.createWorkItemIncludeLinks"; //$NON-NLS-1$
+    
+    /**
+     * Property that indicates whether the wait task timed out or not.
+     * Holds a {@link boolean} value as a {@link String}  
+     */
+	public static final String RTCBuildUtils_TIMEDOUT = "timedout"; //$NON-NLS-1$
+	
+	/**
+	 * Property to indicate the status of the build. Should be one 
+	 * of {@link BuildStatus}
+	 */
+	public static final String RTCBuildUtils_BUILD_STATUS = "buildStatus"; //$NON-NLS-1$
+	
+	/**
+	 * Property to indicate the value of the build result UUID
+	 */
+	public static final String RTCBuildUtils_BUILD_RESULT_UUID = "buildResultUUID"; //$NON-NLS-1$
+	
+	/**
+	 * Property to indicate the state of the build. Should be one 
+	 * of {@link BuildState}
+	 */
+	public static final String RTCBuildUtils_BUILD_STATE = "buildState"; //$NON-NLS-1$
+	
+	/**
+	 * Represents a build result contribution of type "artifact". 
+	 * Such contributions will appear in the "Downloads" tab of the 
+	 * build result. 
+	 * 
+	 */
+	public static final String RTCBuildUtils_ARTIFACT_TYPE_KEY = "artifact";
+	
+	/**
+	 * Represents a build result contribution of type "log".
+	 * Such contributions will appear in the "Logs" tab of the 
+	 * build result.
+	 */
+	public static final String RTCBuildUtils_LOG_TYPE_KEY = "log";
+	
+	/**
+	 * Key for identifying an list of lists containing details about logs 
+	 * or artifacts in a map. 
+	 */
+	public static final String RTCBuildUtils_FILEINFOS_KEY = "fileInfos";
+	
+	/**
+	 * Key to identify the name of a file that is downloaded from the 
+	 * repository, in a map.
+	 */
+	public static final String RTCBuildUtils_FILENAME_KEY = "fileName";
+	
+	/**
+	 * Key to identify the full path of the file that stores the content 
+	 * downloaded from the repository, in a map.
+	 */
+	public static final String RTCBuildUtils_FILEPATH_KEY = "filePath";
+	
+	/**
+	 * Key to identify the internal UUID of any helper object from the EWM 
+	 * repository. Used for testing whether the contribution retrieved is same 
+	 * as what is in the repository. 
+	 */
+	public static final String RTCBuildUtils_INTERNAL_UUID_KEY = "internalUUID";
+	
+	/**
+	 * Key to identify snapshot name in a map
+	 */
+	public static final String RTCBuildUtils_SNAPSHOT_NAME_KEY = "snapshotName";
+	
+	/**
+	 * Key to identify snapshot UUID in a map
+	 */
+	public static final String RTCBuildUtils_SNAPSHOT_UUID_KEY = "snapshotUUID";
+	
+	/**
+	 * Key to idenitfy workspace UUID in a map
+	 */
+	public static final String RTCWorkspaceUtils_WORKSPACE_UUID_KEY = "workspaceUUID";
+	
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2015 IBM Corporation and others.
+ * Copyright (c) 2014, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -24,6 +24,7 @@ import java.util.Locale;
 import java.util.logging.Logger;
 
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
+import com.ibm.team.build.internal.hjplugin.util.Helper;
 
 /**
  * Creates the build result or marks build result as started. Returns information
@@ -172,7 +173,7 @@ public class RTCBuildResultSetupTask extends RTCTask<BuildResultInfo> {
 	    			throw (InterruptedException) eToReport;
 	    		} 
 	    		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(eToReport.getMessage()));
-	    		if (RTCScm.unexpectedFailure(eToReport)) {
+	    		if (Helper.unexpectedFailure(eToReport)) {
 	    			eToReport.printStackTrace(writer);
 	    		}
 	    		

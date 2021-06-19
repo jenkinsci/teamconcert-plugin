@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 IBM Corporation and others.
+ * Copyright (c) 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -24,4 +24,10 @@ public class RTCJobProperties {
 	public static final String STATISTICS_REPORT_PROPERTY_NAME = "statisticsReport"; //$NON-NLS-1$
 	public static final String STATISTICS_DATA_PROPERTY_NAME = "statisticsData"; //$NON-NLS-1$
     public static final String TEAM_BUILD_REPORT_STATISTICS_PROPERTY_NAME = "team.build.reportStatistics"; //$NON-NLS-1$
+
+    public static final String BUILD_WORKSPACE_TYPE = "buildWorkspace"; //$NON-NLS-1$
+    public static final String BUILD_DEFINITION_TYPE = "buildDefinition"; //$NON-NLS-1$
+	public static final String WAIT_BUILD_COMMAND = "waitForBuild";
+	public static final String REQUEST_BUILD_COMMAND = "requestBuild";
+
 }

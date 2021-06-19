@@ -249,7 +249,8 @@ public class RTCScmStreamIT extends AbstractTestCase {
 				Utils.assertPollingMessagesWhenNoChanges(pollingResult, pollingFile, streamName);
 			}
 			{ // negative case - when stream name is null
-				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, null);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForStream(getJenkinsRule(), defaultC, 
+														(String) null);
 				
 				// Run a build
 				FreeStyleBuild build = Utils.runBuild(prj, null);

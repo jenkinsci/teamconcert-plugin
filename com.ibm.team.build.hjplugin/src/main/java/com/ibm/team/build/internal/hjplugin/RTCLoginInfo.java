@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2015 IBM Corporation and others.
+ * Copyright (c) 2014, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,8 @@ package com.ibm.team.build.internal.hjplugin;
 
 import hudson.Util;
 import hudson.model.Job;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.security.ACL;
 import hudson.util.FormValidation;
 
@@ -31,6 +33,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
+
 public class RTCLoginInfo {
 	private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
 	
@@ -144,7 +147,42 @@ public class RTCLoginInfo {
 		this.serverUri = serverUri;
 		this.timeout = timeout;
 	}
+	
+	public RTCLoginInfo(Run<?, ?> build, String serverUri, String credentialsId, 
+				int timeout, TaskListener listener, boolean isDebug) throws InvalidCredentialsException {
+		credentialsId = Util.fixEmptyAndTrim(credentialsId);
 
+		if (credentialsId != null) {
+			String message = "Looking up credentials for " +  //$NON-NLS-1$
+					"credentialId=\"" + credentialsId + //$NON-NLS-1$
+					"\" serverURI=\"" + serverUri +  //$NON-NLS-1$
+					"\" run=\"" + build.number +   //$NON-NLS-1$
+					"\" project=" + (build.getParent() == null ? "null" : "\"" + build.getParent().getFullDisplayName() + "\"");
+			// figure out userid & password from the credentials
+			if (LOGGER.isLoggable(Level.FINER)) {
+				LOGGER.finer(message);
+			}
+			if (isDebug) {
+				listener.getLogger().println(message);
+			}
+			
+			StandardUsernamePasswordCredentials credentials = CredentialsProvider.findCredentialById(credentialsId, StandardUsernamePasswordCredentials.class, build, URIRequirementBuilder.fromUri(serverUri).build());
+			
+			if (credentials != null) {
+				this.userId = credentials.getUsername();
+				this.password = credentials.getPassword().getPlainText();
+				CredentialsProvider.track(build, credentials);
+			} else {
+				throw new InvalidCredentialsException(Messages.RTCLoginInfo_creds_unresolvable());
+			}
+			
+		} else {
+			throw new InvalidCredentialsException(Messages.RTCLoginInfo_missing_creds());
+		}
+		this.serverUri = serverUri;
+		this.timeout = timeout;
+	}
+	
 	public String getServerUri() {
 		return serverUri;
 	}

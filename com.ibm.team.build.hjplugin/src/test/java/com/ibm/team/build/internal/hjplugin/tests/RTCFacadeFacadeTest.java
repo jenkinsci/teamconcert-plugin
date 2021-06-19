@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 IBM Corporation and others.
+ * Copyright (c) 2020, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,22 +22,17 @@ import org.apache.http.auth.InvalidCredentialsException;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.junit.Test;
 
-import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
-import com.ibm.team.build.internal.hjplugin.util.Tuple;
 import com.ibm.team.build.internal.hjplugin.tests.utils.AbstractTestCase;
 import com.ibm.team.build.internal.hjplugin.util.HttpUtils.GetResult;
-import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade.CompatibilityResult;
-import com.ibm.team.build.internal.hjplugin.util.JSONHelper;
 import com.ibm.team.build.internal.hjplugin.util.RTCBuildConstants;
+import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
+import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade.CompatibilityResult;
+import com.ibm.team.build.internal.hjplugin.util.Tuple;
 
 import hudson.Util;
 import hudson.model.TaskListener;
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
-import net.sf.json.util.JSONBuilder;
-import net.sf.json.util.JSONStringer;
-import net.sf.json.util.JSONUtils;
 
 public class RTCFacadeFacadeTest extends AbstractTestCase {
 	

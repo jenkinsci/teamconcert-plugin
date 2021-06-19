@@ -46,7 +46,7 @@ public class RelatedArtifactLinkIT extends AbstractTestCase {
 		Utils.deleteTemporaryWorkspaces();
 		createSandboxDirectory();
 	}
-	
+
 	@After
 	public void tearDown() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {

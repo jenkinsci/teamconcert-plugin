@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 IBM Corporation and others.
+ * Copyright (c) 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,6 +11,8 @@
 
 package com.ibm.team.build.internal.hjplugin.rtc;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -147,10 +149,15 @@ public final class RTCSnapshotUtils {
 	 * @param progress
 	 * @param clientLocale
 	 * @return a {@link IBaselineSet} if there is a valid snapshot or <code>null</code>
-	 * @throws Exception
+	 * @throws TeamRepositoryException
+	 * @throws RTCConfigurationException
+	 * @throws URISyntaxException
+	 * @throws UnsupportedEncodingException
 	 */
-	public static IBaselineSet getSnapshotByName(ITeamRepository repository, BuildSnapshotContext buildSnapshotContext, String snapshotName,
-			IProgressMonitor progress, Locale clientLocale) throws Exception {
+	public static IBaselineSet getSnapshotByName(ITeamRepository repository, BuildSnapshotContext buildSnapshotContext, 
+				String snapshotName, IProgressMonitor progress, Locale clientLocale) 
+				throws TeamRepositoryException, RTCConfigurationException, 
+				URISyntaxException, UnsupportedEncodingException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 
 		IBaselineSetSearchCriteria criteria = IBaselineSetSearchCriteria.FACTORY.newInstance().setExactName(snapshotName);
@@ -304,17 +311,19 @@ public final class RTCSnapshotUtils {
 	}
 
 	/**
-	 * Given a snapshotUUID as {@link String} , return a {@link IBaselineSet} if there is a valid snapshot
+	 * Given a snapshotUUID as {@link String}, return a {@link IBaselineSet} if there is a valid snapshot
 	 * 
-	 * @param repository
-	 * @param snapshotUUID
-	 * @param progress
-	 * @param clientLocale
-	 * @return a {@link IBaselineSet} if there is a valid snapshot or <code>null</code>
-	 * @throws Exception
+	 * @param repository                  An instance of {@link ITeamRepository}
+	 * @param snapshotUUID                UUID of the snapshot
+	 * @param listener                    A stream to output messages to. These messages will be output 
+	 *                                    to the user.
+	 * @param clientLocale                Locale in which messages should be formatted
+	 * @return                            a {@link IBaselineSet} if there is a valid snapshot.
+	 * @throws TeamRepositoryException    If the snapshot does not exist or if there is any other issue communicating
+	 *                                    with the EWM server.
 	 */
-	public static IBaselineSet getSnapshotByUUID(ITeamRepository repository, String snapshotUUID, IProgressMonitor progress, Locale clientLocale)
-			throws TeamRepositoryException {
+	public static IBaselineSet getSnapshotByUUID(ITeamRepository repository, String snapshotUUID, 
+									IProgressMonitor progress, Locale clientLocale)	throws TeamRepositoryException {
 		UUID buildSnapshotUUID = UUID.valueOf(snapshotUUID);
 		return getSnapshotByUUID(repository, buildSnapshotUUID, progress, clientLocale);
 	}
@@ -329,10 +338,15 @@ public final class RTCSnapshotUtils {
 	 * @param progress
 	 * @param clientLocale
 	 * @return a {@link IBaselineSet} if there is a valid snapshot <code>null</code>
-	 * @throws Exception
+	 * @throws TeamRepositoryException
+	 * @throws RTCConfigurationException
+	 * @throws URISyntaxException
+	 * @throws UnsupportedEncodingException
 	 */
-	public static IBaselineSet getSnapshot(ITeamRepository repository, BuildSnapshotContext buildSnapshotContext, String snapshotUUIDOrName,
-			IProgressMonitor progress, Locale clientLocale) throws Exception {
+	public static IBaselineSet getSnapshot(ITeamRepository repository, BuildSnapshotContext buildSnapshotContext, 
+			String snapshotUUIDOrName, IProgressMonitor progress, Locale clientLocale) 
+					throws TeamRepositoryException, RTCConfigurationException, 
+					       URISyntaxException, UnsupportedEncodingException {
 		try {
 			UUID buildSnapshotUUID = UUID.valueOf(snapshotUUIDOrName);
 			return getSnapshotByUUID(repository, buildSnapshotUUID, progress, clientLocale);
@@ -349,12 +363,18 @@ public final class RTCSnapshotUtils {
 	* @param progress
 	* @param clientLocale
 	* @return a {@link IBaselineSet} if there is a valid snapshot or <code>null</code>
-	* @throws Exception
+	* @throws TeamRepositoryException
 	*/
-	private static IBaselineSet getSnapshotByUUID(ITeamRepository repository, UUID snapshotUUID, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException {
+	private static IBaselineSet getSnapshotByUUID(ITeamRepository repository, 
+					UUID snapshotUUID, IProgressMonitor progress, Locale clientLocale) throws TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
-		IItemHandle itemHandle = IBaselineSet.ITEM_TYPE.createItemHandle(snapshotUUID, null);
-		IBaselineSet baselineSet = (IBaselineSet) repository.itemManager().fetchCompleteItem(itemHandle, ItemManager.REFRESH, monitor);
-		return baselineSet;
+		try {
+			IItemHandle itemHandle = IBaselineSet.ITEM_TYPE.createItemHandle(snapshotUUID, null);
+			IBaselineSet baselineSet = (IBaselineSet) repository.itemManager().fetchCompleteItem(itemHandle, 
+											ItemManager.REFRESH, monitor);
+			return baselineSet;
+		} finally {
+			monitor.done();
+		}
 	}
 }

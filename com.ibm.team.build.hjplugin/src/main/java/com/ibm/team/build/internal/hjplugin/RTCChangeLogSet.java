@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -99,6 +99,8 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 	
 	private String baselineSetItemId;
 	private String baselineSetName;
+	private String previousBaselineSetItemId;
+	private String previousBaselineSetName;
 	private String workspaceItemId;
 	private String workspaceName;
 	private String buildDefinitionName;
@@ -234,6 +236,27 @@ public class RTCChangeLogSet extends ChangeLogSet<RTCChangeLogSetEntry> {
 		LOGGER.finest("RTCChangeLogset getBaselineSetName: Begin");
 		return baselineSetName;
 	}
+	
+	public void setPreviousBaselineSetItemId(String itemId) {
+		LOGGER.finest("RTCChangeLogset setPreviousBaselineSetItemId: Begin");
+		this.previousBaselineSetItemId = itemId;
+	}
+	
+	public String getPreviousBaselineSetItemId() {
+		LOGGER.finest("RTCChangeLogset getPreviousBaselineSetItemId: Begin");
+		return previousBaselineSetItemId;
+	}
+	
+	public void setPreviousBaselineSetName(String name) {
+		LOGGER.finest("RTCChangeLogset setPreviousBaselineSetName: Begin");
+		this.previousBaselineSetName = name;
+	}
+
+	public String getPreviousBaselineSetName() {
+		LOGGER.finest("RTCChangeLogset getPreviousBaselineSetName: Begin");
+		return previousBaselineSetName;
+	}
+
 
 	public void setWorkspaceItemId(String workspaceItemId) {
 		this.workspaceItemId = workspaceItemId;

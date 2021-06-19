@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright (c) 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,6 +13,9 @@ package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
 import java.net.UnknownHostException;
 import java.security.SecureRandom;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class TestUtils {
     /**
@@ -21,10 +24,11 @@ public class TestUtils {
      * @throws UnknownHostException 
      */
 	public static String getUniqueName(String prefix) {
-		Long suffix1 = System.nanoTime();
+		String suffix1 = (SimpleDateFormat.getDateTimeInstance
+				(DateFormat.LONG, DateFormat.FULL)).format(new Date()).replace(" ","-");
 		SecureRandom random = new SecureRandom();
 		Long suffix2 = random.nextLong();
-		return prefix + "_" + Long.toHexString(suffix1) + "_" + Long.toHexString(suffix2);
+		return prefix + "_" + suffix1 + "_" + Long.toHexString(suffix2);
 	}
 
 	public static String getBuildDefinitionUniqueName() {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2018 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -149,6 +149,10 @@ public class Messages {
 		return getString("RepositoryConnection_load_rules_pre_603_build_toolkit");
 	}
 
+	public String RTCSnapshotUtils_snapshot_UUID_not_found(String arg1) {
+    	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_UUID_not_found"), arg1);
+    }
+	
     public String RTCSnapshotUtils_snapshot_not_found(String arg1) {
     	return MessageFormat.format(getString("RTCSnapshotUtils_snapshot_not_found"), arg1);
     }
@@ -672,6 +676,54 @@ public class Messages {
 		return getString("RepositoryConnection.file_item_id_or_name_required");
 	}
 	
+    public String RepositoryConnection_invalid_param_snapshotUUID() {
+    	return getString("RepositoryConnection_invalid_param_snapshotUUID");
+    }
+    
+    public String RepositoryConnection_invalid_param_snapshotUUID_1(String arg1) {
+    	return MessageFormat.format(getString("RepositoryConnection_invalid_param_snapshotUUID_1"),
+    				arg1);
+    }
+    
+    public String RepositoryConnection_invalid_param_workspaceUUID_1(String arg1) {
+    	return MessageFormat.format(getString("RepositoryConnection_invalid_param_workspaceUUID_1"),
+							arg1);
+    }
+
+    public String RepositoryConnection_invalid_param_workspaceUUID() {
+    	return getString("RepositoryConnection_invalid_param_workspaceUUID");
+    }
+
+    public String RepositoryConnection_generate_changelog_skip_previous_compare(String snapshotUUID, String errorMessage) {
+    	return MessageFormat.format(getString("RepositoryConnection_generate_changelog_skip_previous_compare"), 
+    			snapshotUUID, errorMessage);
+    }
+
+	public String RepositoryConnection_getWorkspaceUUID_invalid_params_1() {
+		return getString("RepositoryConnection_getWorkspaceUUID_invalid_params_1");
+	}
+	
+	public String RepositoryConnection_getWorkspaceUUID_invalid_params_2() {
+		return getString("RepositoryConnection_getWorkspaceUUID_invalid_params_2");
+	}
+	
+	public String RepositoryConnection_build_definition_no_repository_wksp_property(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection_build_definition_no_repository_wksp_property"), arg1);
+	}
+	
+	public String RepositoryConnection_build_definition_repository_wksp_property_empty(String arg1) {
+		return MessageFormat.format(getString("RepositoryConnection_build_definition_repository_wksp_property_empty"), arg1);
+	}
+	
+	public String RepositoryConnection_generate_changelog_for(String snapshotUUID, 
+				String workspaceUUID, String previousSnapshotUUID) {
+		return MessageFormat.format(getString("RepositoryConnection_generate_changelog_for"), 
+				snapshotUUID, workspaceUUID, previousSnapshotUUID);
+	}
+	
+	public String RTCWorkspaceUtils_repository_workspace_UUID_not_found(String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCWorkspaceUtils_repository_workspace_UUID_not_found"), arg1, arg2);
+	}
     /**
      * Unable to find a build definition with name "{0}"
      */
@@ -705,6 +757,11 @@ public class Messages {
      */
     public String BuildConnection_build_definition_missing_jazz_scm_config() {
     	return getString("BuildConnection_build_definition_missing_jazz_scm_config");
+    }
+    
+    public String BuildConnection_build_definition_missing_jazz_scm_config_1(String arg1) {
+    	return MessageFormat.format(getString("BuildConnection_build_definition_missing_jazz_scm_config_1"),
+    			arg1);
     }
 
     /**
@@ -1006,6 +1063,168 @@ public class Messages {
 	 */
 	public String RTCBuildUtils_unexpected_zero_requests() {
 		return getString("RTCBuildUtils_unexpected_zero_requests");
+	}
+	
+	/**
+	 * Build Definition parameter cannot be empty.
+	 */
+	public String RTCBuildUtils_build_definition_id_is_null() {
+		return getString("RTCBuildUtils_build_definition_id_is_null");
+	}
+	
+	/**
+	 * Build Definition ''{0}'' not found.
+	 */
+	public String RTCBuildUtils_build_definition_not_found(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_build_definition_not_found"), arg1);
+	}
+	
+	/**
+	 * Invalid build state ''{0}'' was provided.
+	 */
+	public String RTCBuildUtils_invalid_build_state(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_invalid_build_state"), arg1);
+	}
+	
+	/**
+	 * Build Result with id "{0}" could not be found. It may have been deleted.
+	 */
+	public String RTCBuildUtils_build_result_id_not_found(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_build_result_id_not_found"), arg1);
+	}
+	
+	/**
+	 * Build Result parameter cannot be empty.
+	 */
+	public String RTCBuildUtils_build_result_id_is_null() {
+		return getString("RTCBuildUtils_build_result_id_is_null");
+	}
+
+	/**
+	 * Build State parameter cannot be empty.
+	 */
+	public String RTCBuildUtils_build_states_array_empty() {
+		return getString("RTCBuildUtils_build_states_array_empty");
+	}
+	
+	
+	/**
+	 * Timeout "{0}" for waiting on build is invalid.
+	 */
+	public String RTCBuildUtils_build_wait_timeout_invalid(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_build_wait_timeout_invalid"), arg1);
+	}
+	
+	/**
+	 * Build Result with id "{0}" could not be found.
+	 */
+	public String RTCBuildUtils_invalid_build_result_provided(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_invalid_build_result_provided"), arg1);
+	}
+	
+	/**
+	 * The value "{0}" specified for "contributionType" parameter is invalid.
+	 */
+	public String RTCBuildUtils_invalid_contribution_type_specified(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_invalid_contribution_type_specified"), arg1);
+	}
+	
+	/**
+	 * The value "{0}" specified for "maxResults" parameter is invalid. 
+	 * Provide a positive integer not greater than "{1}".
+	 */
+	public String RTCBuildUtils_maxResults_is_invalid(int arg1, int arg2) {
+		return MessageFormat.format(getString("RTCBuildUtils_maxResults_is_invalid"), 
+								Integer.toString(arg1), Integer.toString(arg2));
+	}
+	/**
+	 * The value "{0}" specified for "extendedContributionTypeId" parameter is invalid.
+	 */
+	public String RTCBuildUtils_invalid_extendedContributionTypeId_specified(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_invalid_extendedContributionTypeId_specified"), arg1);
+	}
+
+	/**
+	 * The value "{0}" specified for "fileNameOrPattern" is an invalid pattern.
+	 */
+	public String RTCBuildUtils_fileNamePattern_is_invalid(String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCBuildUtils_fileNamePattern_is_invalid"), arg1, arg2);
+	}
+	
+	/**
+	 * No log file contribution with value "{0}" for property "{1}" was found.
+	 */
+	public String RTCBuildUtils_no_log_file_download(String arg0, String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_no_log_file_download"), arg0, arg1);
+	}
+	
+	/**
+	 * No log file contribution with value "{0}" for property "{1}" in 
+	 * component "{2}" was found.
+	 */
+	public String RTCBuildUtils_no_log_file_download_component(String arg0, String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCBuildUtils_no_log_file_download_component"), 
+				arg0, arg1, arg2);
+	}
+	
+	/**
+	 * No artifact(download) file contribution with value "{0}" for property "{1}" was found.
+	 */
+	public String RTCBuildUtils_no_artifact_file_download(String arg0, String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_no_artifact_file_download"), arg0, arg1);
+	}
+	
+	/**
+	 * No artifact(download) file contribution with value "{0}" for property "{1}" in 
+	 * component "{2}" was found.
+	 */
+	public String RTCBuildUtils_no_artifact_file_download_component(String arg0, String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCBuildUtils_no_artifact_file_download_component"),
+				arg0, arg1, arg2);
+	}
+	
+	/**
+	 * Destination file name "{0}" is invalid because it is a relative path.
+	 */
+	public String RTCBuildUtils_destinationFileName_is_a_path(String arg0) {
+		return MessageFormat.format(getString("RTCBuildUtils_destinationFileName_is_a_path"), arg0);
+	}
+
+	/**
+	 * A unique file name for "{0}" could not be identified after "{1}" attempts. 
+	 */
+	public String RTCBuildUtils_unique_destinationFileName_not_found(String arg0, int arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_unique_destinationFileName_not_found"), 
+						arg0, Integer.toString(arg1));
+	}
+	
+	/**
+	 * Destination folder parameter cannot be empty.
+	 */
+	public String RTCBuildUtils_destination_folder_null() {
+		return getString("RTCBuildUtils_destination_folder_null");
+	}
+
+	/**
+	 * At least one of file name or content Id parameters must be provided.
+	 */
+	public String RTCBuiltUtils_fileNameContentId_null() { 
+		return getString("RTCBuiltUtils_fileNameContentId_null");
+	}
+	
+	/**
+	 * Only one of file name and content Id parameters must be provided.
+	 */
+	public String RTCBuiltUtils_fileNameContentId_nonnull() {
+		return getString("RTCBuiltUtils_fileNameContentId_nonnull");
+	}
+	
+	/**
+	 * The value "{0}" for build result UUID is invalid.
+	 */
+	public String RTCBuildUtils_build_result_UUID_invalid(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_build_result_UUID_invalid"),
+						arg1);
 	}
 	
 	public String VersionCheckerUtil_missing_expected_content_in_plugin_xml() {

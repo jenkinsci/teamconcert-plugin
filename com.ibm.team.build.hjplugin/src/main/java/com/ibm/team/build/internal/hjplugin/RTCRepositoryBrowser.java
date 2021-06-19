@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -129,7 +129,19 @@ public class RTCRepositoryBrowser extends RepositoryBrowser<RTCChangeLogSetEntry
 		return null;
 	}
 	
-	
+
+	public URL getPreviousBaselineSetLink(RTCChangeLogSet changeLog) throws MalformedURLException {
+        LOGGER.finest("RTCRepositoryBrowser.getPreviousBaselineSetLink : Begin"); //$NON-NLS$1
+		String serverURI = getServerURI();
+		if (serverURI != null && changeLog != null && changeLog.getPreviousBaselineSetItemId() != null 
+				&& changeLog.getPreviousBaselineSetItemId().length() > 0) {
+	        LOGGER.finer("RTCRepositoryBrowser.getPreviousBaselineSetLink : Creating previousBaselineSetLink"); //$NON-NLS$1
+			return getItemIdLink(serverURI, "resource/itemOid/com.ibm.team.scm.BaselineSet/",
+						changeLog.getPreviousBaselineSetItemId());
+		}
+		return null;
+	}
+
 	public URL getBuildDefinitionLink(RTCChangeLogSet changeLog) throws MalformedURLException {
 		LOGGER.finest("RTCRepositoryBrowser.getBuildDefinitionLink : Begin"); //$NON-NLS$1
 		String serverURI = getServerURI();

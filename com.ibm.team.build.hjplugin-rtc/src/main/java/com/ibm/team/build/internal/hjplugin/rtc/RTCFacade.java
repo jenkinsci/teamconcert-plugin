@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2019 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@
 package com.ibm.team.build.internal.hjplugin.rtc;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -19,6 +20,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -30,6 +32,7 @@ import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubMonitor;
 
 import com.ibm.team.build.internal.hjplugin.rtc.RTCSnapshotUtils.BuildSnapshotContext;
+import com.ibm.team.repository.common.ItemNotFoundException;
 import com.ibm.team.repository.common.TeamRepositoryException;
 
 /**
@@ -184,11 +187,15 @@ public class RTCFacade {
 	 * @param password The password to use when logging into the server.
 	 * @param timeout The timeout period for requests made to the server
 	 * @param buildDefinition The name of the RTC build definition
-	 * @param clientLocale The locale of the requesting client
+	 * @param doIgnoreJenkinsConfiguration If <code>true</code>, then ignore the absence 
+	 *                                     of HJ related configuration element in build 
+	 *                                     definition and engine.                                      
+ 	 * @param clientLocale The locale of the requesting client
 	 * @return an error message to display, or null if no problem
 	 * @throws Exception
 	 */
-	public String testBuildDefinition(String serverURI, String userId, String password, int timeout, String buildDefinition, Locale clientLocale) throws Exception {
+	public String testBuildDefinition(String serverURI, String userId, String password, int timeout, 
+			String buildDefinition, boolean doIgnoreJenkinsConfiguration, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor();
 		String errorMessage = null;
 		try {
@@ -196,7 +203,9 @@ public class RTCFacade {
 			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 			RepositoryConnection repoConnection = buildClient.createRepositoryConnection(connectionDetails);
 			repoConnection.testConnection(monitor.newChild(50));
-			repoConnection.testBuildDefinition(buildDefinition, monitor.newChild(50), clientLocale);
+			repoConnection.testBuildDefinition(buildDefinition, 
+								doIgnoreJenkinsConfiguration,
+								monitor.newChild(50), clientLocale);
 		} catch (RTCValidationException e) {
 			errorMessage = e.getMessage();
 		} catch (RTCConfigurationException e) {
@@ -758,6 +767,137 @@ public class RTCFacade {
 		return errorMessage;
 	}
 	
+	/** 
+	 * Returns the build result UUID if a build is successfully requested
+	 * The map contains the UUID of the build result in "buildResultUUID".
+	 * 
+	 * If the build definition does not have any active engines, then buildResultUUID 
+	 * will be empty.
+	 * 
+	 * @param serverURI            The URL of the server
+	 * @param userId               User id 
+	 * @param password             Password
+	 * @param timeout              Timeout in seconds for the connection
+	 * @param buildDefinitionId         The build definition Id for which a build should be requested
+	 * @param propertiesToDelete		The list of properties to ignore when requesting the build
+	 * @param propertiesToAddOrOverride The list of properties to add or override when requesting the build
+ 	 * @param listener             A stream into which messages should be written. The messages  
+	 *                             will be output to the user
+	 * @param clientLocale         Locale in which messages should be formatted
+	 * @return                     A map
+	 * @throws Exception 
+	 *    RTCConfigurationException If buildDefinition is empty.
+	 *    TeamRepositoryException   If build definition is not found.
+	 *                              Any other issue during processing of the server requests.
+	 */
+	public Map<String, String> requestBuild(String serverURI, String userId, String password, int timeout, 
+						String buildDefinitionId, String[] propertiesToDelete, Map<String, String> propertiesToAddOrOverride, 
+						Object listener, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor(); 
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			return repoConnection.requestBuild(buildDefinitionId, propertiesToDelete, propertiesToAddOrOverride, getConsoleOutput(listener),
+					clientLocale, monitor);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+	
+	
+	/**
+	 * Wait for the given <code>buildResultUUID</code> upto <code>waitBuildTimeout</code> 
+	 * seconds or until the build result is in one of the states <code>statesToWaitFor</code>.
+	 * After the method returns, you can inspect the following from the map 
+	 * <ul>
+	 * <li>buildState</li>
+	 * <li>buildStatus</li>
+	 * <li>timeout</li>
+	 * </ul>
+	 * @param serverURI            The URL of the server
+	 * @param userId               User id 
+	 * @param password             Password
+	 * @param timeout              Timeout in seconds for the connection
+	 * @param buildResultUUID      The build result to wait on 
+	 * @param buildStates          The states to wait on. If the build result reaches 
+	 *                             one of the states, then the method will return. 
+	 *                             Build states should be separated by comma and should be 
+	 *                             one of {@link com.ibm.team.build.common.model.BuildState}
+	 * @param waitBuildTimeout     Number of seconds to wait for. Can be <code>-1</code> or 
+	 *                             any value greater than <code>0</code>
+	 * @param listener             A stream into which messages should be written. The messages  
+	 *                             will be output to the user
+	 * @param clientLocale         Locale in which messages should be formatted
+	 * @return                     A map that has the return values mentioned in the beginning
+	 * @throws Exception          
+	 *    RTCConfigurationException If any of the build states in <codE>buildStates</code> is not a valid state.
+	 *                              If buildResultUUID is empty.
+	 *    TeamRepositoryException   If build result is not found.
+	 *                              Any other issue during processing of the server requests.
+	 */
+	public Map<String, String> waitForBuild(String serverURI, String userId, String password, int timeout, 
+						String buildResultUUID, Object buildStates, long waitBuildTimeout, 
+						Object listener, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor(); 
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			return repoConnection.waitForBuild(buildResultUUID, (String []) buildStates, waitBuildTimeout, 
+					getConsoleOutput(listener), clientLocale, monitor);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+	
+	/**
+	 * Retrieve the snapshot details for the given build result.
+	 * If the build contains a snapshot contribution and the snapshot exists 
+	 * in the repository, then two keys "snapshotUUID" and "snapshotName" will 
+	 * be present in the map with the values being the UUID and name of the 
+	 * snapshot respectively.
+	 * If the snapshot contribution is not found or if the snapshot contribution is 
+	 * found but has been deleted from the repository, then the map will still have 
+	 * the two keys but with empty strings as values.
+	 * 
+	 * @param serverURI            The URL of the server
+	 * @param userId               User id 
+	 * @param password             Password
+	 * @param timeout              Timeout in seconds for the connection
+	 * @param buildResultUUID    - The UUID for the build result. 
+	 * 							   Cannot be <code>null>.
+	 * @param listener             A stream to output messages to. These messages will be output 
+	 *                             to the user.
+	 * @param clientLocale         Locale in which messages should be formatted
+	 * @return                     A map that contains two keys "snapshotUUID" and "snapshotName".
+	 *                             If a snapshot contribution is found in the build result and 
+	 *                             the snapshot does exist in the repository, the UUID and the name 
+	 *                             of the snapshot will be the values of the two keys.
+	 *                             If the snapshot contribution is not found or if the snapshot has been 
+	 *                             deleted from the repository, empty strings will put as the values of 
+	 *                             the two keys.
+	 * @throws RTCConfigurationException If the build result is not found
+	 * @throws TeamRepositoryException   If there is a communication issue or some other problem when 
+	 *                                   communicating with the EWM server. 
+	 */
+	public Map<String, String> retrieveSnapshotFromBuild(String serverURI, String userId, String password, int timeout, 
+			            String buildResultUUID, Object listener, Locale clientLocale) throws Exception {
+		LOGGER.entering(this.getClass().getName(), "retrieveSnapshotFromBuild");
+		SubMonitor monitor = getProgressMonitor(); 
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			return repoConnection.retrieveSnapshotFromBuild(buildResultUUID, getConsoleOutput(listener),
+								clientLocale, monitor);
+		} catch (OperationCanceledException exp) {
+			throw Utils.checkForCancellation(exp);
+		} finally {
+	 		LOGGER.exiting(this.getClass().getName(), "retrieveSnapshotFromBuild");
+		}
+	}
+	
 	protected SubMonitor getProgressMonitor() {
 		IProgressMonitor progress = new NullProgressMonitor() {
 
@@ -797,6 +937,7 @@ public class RTCFacade {
 				if (logMethod != null) {
 					try {
 						((PrintStream) logMethod.invoke(listener)).println(message);
+						((PrintStream) logMethod.invoke(listener)).flush();
 					} catch (Exception e) {
 						LOGGER.log(Level.FINER, "Unable to log message to listener", e); //$NON-NLS-1$
 						LOGGER.finer(message);
@@ -1015,13 +1156,13 @@ public class RTCFacade {
 	 */
 	public Map<String, Object> getBuildDefinitionInfoFromBuildResult(String serverURI, String userId, String password, 
 					int timeout, String buildResultUUID, Object listener, Locale clientLocale) throws Exception {
-		
 		IProgressMonitor monitor = getProgressMonitor();
 		AbstractBuildClient buildClient = getBuildClient();
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
-			return repoConnection.getBuildDefinitionInfoFromBuildResult(buildResultUUID, getConsoleOutput(listener), clientLocale, monitor);
+			return repoConnection.getBuildDefinitionInfoFromBuildResult(buildResultUUID, getConsoleOutput(listener), 
+									clientLocale, monitor);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		} catch (TeamRepositoryException e) {
@@ -1045,5 +1186,229 @@ public class RTCFacade {
 			throw Utils.checkForCancellation(e);
 		}
 	}
+	
+	/**
+	 * 
+	 * See {@link RepositoryConnection#listFile} for a description of this method's behavior
+	 *
+	 * @param serverURI The RTC server in which the repository workspace resides
+	 * @param userId The user Id for the repository
+	 * @param password The password for the user ID
+	 * @param timeout The timeout period for requests made to the server
+	 * @param buildResultUUID    The UUID of the build result. Cannot be 
+	 *                           <code>null</code>
+	 * @param fileNameOrPattern  The file name to match, can be a pattern. 
+     *                           Can be <code>null</code>.
+	 * @param componentName      The name of the component that the contribution 
+	 *                           should belong to. Can be <code>null</code>.
+	 * @param fileType           The type of the contribution. Valid values are 
+	 *                           <code>log</code> and <code>artifact</code>.
+	 * @param maxResults         The maximum number of results to be provided in the 
+	 *                           return value. Should be less than 
+	 *                           {@link Constants#LIST_FILES_MAX_RESULTS}
+	 * @param listener           An output stream to send messages into. This will be 
+	 *                           in the build log.
+	 * @param clientLocale       The locale in which user visible messages should be formatted
+	 * @param progress           A progress monitor
+	 * @return                   A map in the following format
+	 *                           key - {@link Constants#RTCBuildUtils_FILEINFOS_KEY}
+	 *                           value - An {@link List} of {@link List<String>} 
+	 *                            Each inner list contains the following fields
+	 *                            1. file name
+	 *                            2. component name
+	 *                            3. description
+	 *                            4. contribution type 
+	 *                            5. content UUID
+	 *                            6. file size in bytes
+	 * @throws TeamRepositoryException   If there is an issue in service calls to the EWM server
+	 * @throws RTCConfigurationException If any of the input fails validation.
+	 */
+	public Map<String, Object> listFiles(String serverURI, String userId, String password, int timeout, 
+			String buildResultUUID, String fileNameOrPattern, String componentName, String contributionType, 
+			int maxResults, Object listener, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor(); 
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, 
+											userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			return repoConnection.listFiles(buildResultUUID, fileNameOrPattern, componentName, 
+								contributionType, maxResults, getConsoleOutput(listener), 
+								clientLocale, monitor);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+	
+	/**
+	 * See {@link RepositoryConnection#downloadFile} for a description of this method's behavior
+	 * 
+	 * @param serverURI                  The RTC server in which the build result resides
+	 * @param userId                     The user Id for the repository
+	 * @param password                   The password for the user ID
+	 * @param timeout                    The timeout period for requests made to the server
+	 * @param buildResultUUID            The build result to wait on
+	 * @param fileName                   The file name to match, can be a pattern. 
+     *                                   Can be <code>null</code> if <code>contentId</code> 
+     *                                   is not <code>null</code> or empty.
+	 * @param componentName              The name of the component that the contribution 
+	 *                                   should belong to. Can be <code>null</code>.
+	 * @param contentId                  UUID of content blob. This value is usually obtained 
+	 *                                   from {@link RepositoryConnection#listFiles}. Can be 
+	 *                                   <code>null</code> only if <code>fileName</code> is 
+	 *                                   not null or empty.
+	 * @param fileType                   The type of the contribution. Valid values are 
+	 *                                   <code>log</code> and <code>artifact</code>.
+	 * @param destinationFolder          The folder in which the file should be downloaded to.
+	 * @param destinationFileName        The name of the file destination file. Can be 
+	 *                                   <code>null</code>. If null, then the file name from the 
+	 *                                   contribution is used as the destination file name.
+	 *                                   If the file with that name exists, then a new file name is 
+	 *                                   used filename-suffix.filetype. The suffix is a timestamp in 
+	 *                                   the following pattern  yyyyMMdd-HHmmss-SSS.
+	 * @param listener                   An output stream for sending messages to the build log
+	 * @param clientLocale               The locale in which the messages should be formatted into
+	 * @param progress                   A progress monitor for updating progress
+	 * @return                           A map in the following format
+	 *                                   key 1 - {@link Constants#RTCBuildUtils_FILENAME_KEY}
+	 *                                   value - The name of the destination file. It may nor may not be the same 
+	 *                                           as the destinationFileName parameter passed into this method.
+	 *                                   key 2 - {@link Constants#RTCBuildUtils_FILEPATH_KEY}
+	 *                                   value - The path of the destination file.                          
+	 * @throws TeamRepositoryException   If there is an issue in service calls to the EWM server
+	 * @throws IOException               If there is an issue with creating/writing to the file. Issues 
+	 *             				         like lack of permissions, disk out of space, invalid characters in the 
+	 *                                   destination file name.
+	 * @throws RTCConfigurationException If any of the input fails validation.
+	 */
+	public Map<String, String> downloadFile(String serverURI, String userId, 
+			String password, int timeout, String buildResultUUID, 
+			String fileName, String componentName, String contentId, String fileType, 
+			String destinationFolder, String destinationFileName, 
+			Object listener, Locale clientLocale) throws Exception {
+		SubMonitor monitor = getProgressMonitor(); 
+		AbstractBuildClient buildClient = getBuildClient();
+		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, 
+											userId, password, timeout);
+		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+		try {
+			return repoConnection.downloadFile(buildResultUUID, fileName, 
+						componentName, contentId, fileType, destinationFolder, 
+						destinationFileName, getConsoleOutput(listener), 
+						clientLocale, monitor);
+		} catch (OperationCanceledException e) {
+			throw Utils.checkForCancellation(e);
+		}
+	}
+	
+	/**
+	 * Generate a changelog by comparing the <code>buildSnapshotUUID</code> with <code>oldSnapshotUUID</code> 
+	 * if <code>oldSnapshotUUID</code> is non null. Add the following details to the changelog in either case
+	 * 
+	 *  Name of <code>buildSnapshotUUID</code>
+	 *  <code>buildSnapshotUUID</code>
+	 *  Name of <code>workspaceUUID</code>
+	 *  <code>workspaceUUID</code>
+	 *  If <code>oldSnapshotUUID</code> is non null
+	 *   Name of <code> oldSnapshotUUID</code>
+	 *   <code>oldSnapshotUUID</code>
+	 *  Changeset information
+	 *  Workitems associated with each change set.
+	 * 
+	 * @param serverURI                      The RTC server in which the snapshot resides.
+	 * @param userId                         The user Id for the repository
+	 * @param password                       The password for the user ID
+	 * @param timeout                        The timeout period for requests made to the server
+	 * @param snapshotUUID                   The UUID of the current snapshot. Never <code>null</code>
+	 * @param workspaceUUID                  The UUID of the workspace which owns this snaapshot. Never <code>null</code>
+	 *                                       Although the code doesn't enforce ownership of the snapshot to the workspace,
+	 *                                       it is expected that the structure of the snapshot is similar to that of the workspace.
+	 *                                       That is, the snapshot is from a workspace or a stream that <code>workspaceUUID</code> 
+	 *                                       is a sibling of or flows to respectively.
+	 * @param previousSnapshotUUID           The UUID of the previous snapshot to compare the current snapshot with.
+	 *                                       May be <code>null</code>.
+	 * @param changeLog                      A stream into which the contents of the changelog will be written into.
+	 * @param listener                       An output stream to send messages into. This will be 
+	 *                                       in the build log.
+	 * @param clientLocale                   The locale in which user visible messages should be output
+	 * @return                               A map which contains the following fields
+	 *
+	 *
+	 * @throws TeamRepositoryException
+	 * @throws RTCConfigurationException
+	 * @throws URISyntaxException
+	 * @throws IOException
+	 */
+	public Map<String, Object> generateChangelog(String serverURI, String userId, 
+			String password, int timeout, String snapshotUUID,
+			String workspaceUUID, String previousSnapshotUUID, OutputStream changelog, 
+			Object listener, Locale clientLocale) throws Exception {
+		LOGGER.entering(this.getClass().getName(), "generateChangelog");
+		SubMonitor monitor = getProgressMonitor();
+		try {
+			AbstractBuildClient buildClient = getBuildClient();
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, 
+												userId, password, timeout);
+			RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+			return repoConnection.generateChangelog(snapshotUUID,  
+						workspaceUUID, previousSnapshotUUID, changelog, getConsoleOutput(listener), clientLocale,
+						monitor.newChild(100));
+		} catch (OperationCanceledException exp) {
+			throw Utils.checkForCancellation(exp);
+		} finally {
+			monitor.done();
+			LOGGER.exiting(this.getClass().getName(), "generateChangelog");
+		}
+	}
+	
+	/**
+	 * Retrieve the workspace UUID from the build definition or the build workspace (given 
+	 * the name). 
+	 * 
+	 * Exception behaviour - see throws clause.
+	 *
+	 * @param serverURI                   The RTC server in which the snapshot resides.
+	 * @param userId                      The user Id for the repository
+	 * @param password                    The password for the user ID
+	 * @param timeout                     The timeout period for requests made to the server
+	 * @param buildDefinitionId           The id of the build definition to retrieve workspace  
+	 * 									  details from. Can be <code>null</code> if <code>buildWorkspaceName</code>
+	 * 									  is not null or empty.
+	 * @param buildWorkspaceName          The name of the build workspace. Can be <codE>null</code> if 
+	 *                                    <code>buildDefinitionId</code> is not null or empty.
+	 * @param listener                    An output stream to send messages into. This will be 
+	 *                                    in the build log.
+	 * @param clientLocale                The locale in which user visible messages should be output
+	 * @return                            A map that contains one key "workspaceUUID", with the value of 
+	 *                                    the workspace UUID.
+	 * @throws TeamRepositoryException    If something goes wrong while communicating with the repository.
+	 * @throws RTCConfigurationException 
+	 *     If buildDefinitionId and buildWorkspaceName are null, then an exception is thrown.
+	 *     If both buildDefinitionId and buildWorkspaceName are non null, then an exception is thrown. 
+	 *     If the build definition does not exist, then an exception is thrown.
+	 *       If the build definition is not configured with a repository workspace UUID, an exception is thrown.
+	 *       If a repository workspace does not exist for the given UUID, an exception is thrown.
+	 *     If a repository workspace with the given name does not exist, then an exception is thrown.
+	 *
+	 */
+	public Map<String, String> getWorkspaceUUID(String serverURI, String userId, 
+			String password, int timeout, String buildDefinitionId, String buildWorkspaceName, 
+			Object listener, Locale clientLocale) throws Exception {
+		LOGGER.entering(this.getClass().getName(), "getWorkspaceUUID");
+		SubMonitor monitor = getProgressMonitor();
+		try {
+			AbstractBuildClient buildClient = getBuildClient();
+			ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, 
+												userId, password, timeout);
+			RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
+			return repoConnection.getWorkspaceUUID(buildDefinitionId, 
+					buildWorkspaceName, getConsoleOutput(listener), 
+					clientLocale, monitor);
+		} catch (OperationCanceledException exp) {
+			throw Utils.checkForCancellation(exp);
+		} finally {
+			LOGGER.exiting(this.getClass().getName(), "getWorkspaceUUID");
+			monitor.done();
+		}
+	}
 }
- 

@@ -157,7 +157,6 @@ public class RTCBuildTaskIT extends AbstractTestCase {
 							componentName, buildDefinitionId);
 			
 			String buildResultUUID = setupArtifacts.get("buildResultItemId");
-			assertNotNull(buildResultUUID); // make sure we are testing what we think we are
 			
 			if (Config.DEFAULT.isSetUpOnly()) {
 				return;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2019 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -21,8 +21,6 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -50,6 +48,8 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.extensions.RtcExtensionProvider;
+import com.ibm.team.build.internal.hjplugin.tasks.GenerateChangelogTask;
+import com.ibm.team.build.internal.hjplugin.tasks.RetrieveWorkspaceDetailsTask;
 import com.ibm.team.build.internal.hjplugin.util.Helper;
 import com.ibm.team.build.internal.hjplugin.util.RTCFacadeFacade;
 import com.ibm.team.build.internal.hjplugin.util.Tuple;
@@ -70,9 +70,7 @@ import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.Queue.Task;
-import hudson.remoting.Channel;
 import hudson.remoting.RemoteOutputStream;
-import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
@@ -93,7 +91,7 @@ public class RTCScm extends SCM {
 	
 	private static final BigInteger BIGINT_ONE = new BigInteger("1");  //$NON-NLS-1$
 	
-	private static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
+	public static final Logger LOGGER = Logger.getLogger(RTCScm.class.getName());
 	
 	private static final String METRONOME_OPTIONS_PROPERTY_NAME = "metronomeOptions"; //$NON-NLS-1$
     
@@ -148,8 +146,8 @@ public class RTCScm extends SCM {
 	private String passwordFile;
 	private String credentialsId;
 
-	public static final String BUILD_WORKSPACE_TYPE = "buildWorkspace"; //$NON-NLS-1$
-	public static final String BUILD_DEFINITION_TYPE = "buildDefinition"; //$NON-NLS-1$
+	public static final String BUILD_WORKSPACE_TYPE = RTCJobProperties.BUILD_WORKSPACE_TYPE;
+	public static final String BUILD_DEFINITION_TYPE = RTCJobProperties.BUILD_DEFINITION_TYPE;
 	public static final String BUILD_SNAPSHOT_TYPE = "buildSnapshot"; //$NON-NLS-1$
 	public static final String BUILD_STREAM_TYPE = "buildStream"; //$NON-NLS-1$
 	
@@ -230,9 +228,59 @@ public class RTCScm extends SCM {
 	// build definition
 	private boolean useDynamicLoadRules;
 	
+	/**
+	 *  When set to true, a <em>Related Artifact</em> link pointing to the Jenkins build
+	 *  will be added to the work item. This option takes effect only when the 
+	 *  job type is "Build Workspace" or "Stream"
+	 */
 	private boolean addLinksToWorkItems;
-
+	
+	/**
+	 * From 2.3.0, a new boolean parameter <code>pollingOnly</code> has been added 
+	 * which controls the core behavior of RTCScm.  
+	 * 
+	 * When <code>pollingOnly</code> is set to <code>true</code>, then RTCScm will perform 
+	 * polling only but will not accept or load the repository workspace.  
+	 *  
+	 * 
+	 *
+	 * In the default mode, RTCScm will perform the following activities
+	 * <ul>
+	 * <li>Poll, if polling is enabled at the job level</li>
+	 * <li>accept</li>
+	 * <li>load</li>
+	 * <li>recording changelog</li>
+	 * <li>Updating jenkins build with EWM specific data</li>
+	 * </ul>
+	 * 
+	 * If <code>pollyOnly</code> is set to <em>true</em>, then RTCScm will perform 
+	 * polling only but will not perform the following actions,
+	 * <ul>
+	 * <li>accept</li>
+	 * <li>load</li>
+	 * <li>recording changelog</li>
+	 * <li>Updating jenkins build with specific data</li>
+	 * </ul>
+	 * 
+	 * Evolution and backward compatibility:
+	 *   For jobs created before 2.3.0, the  parameter's value will be <em>false</em>.
+	 *   For new jobs, the mode parameter's value will be <em>false</em>.
+	 * 
+	 * Constraints:
+	 *   pollingOnly is supported for pipeline jobs
+	 *   pollingOnly is supported build definition and build workspace types.
+	 *   
+	 * Exception behavior:
+	 * During polling, if pollingOnly is set for any job type other than pipeline job, an exception is thrown.
+	 * During build, if pollingOnly is set for any job type other than pipeline job, an exception is thrown
+	 * During polling, if pollingOnly is set for any other build type other than build definition or workspace, an exception is thrown. 
+	 * During build, if pollingOnly is set for any other build type other than build definition or workspace, an exception is thrown.  
+	 */
+	private boolean pollingOnly;
+	
 	private RTCBuildResultAction buildResultAction = null;
+
+	private PollingOnlyData pollingOnlyData;
 
 	/**
 	 * Class defining the snapshot context configuration data.
@@ -279,6 +327,19 @@ public class RTCScm extends SCM {
 		}
 	}
 	
+	public static class PollingOnlyData {
+		private String snapshotUUID;
+		
+		@DataBoundConstructor
+		public PollingOnlyData(String snapshotUUID) {
+			this.snapshotUUID = Util.fixEmptyAndTrim(snapshotUUID);
+		}
+		
+		public String getSnapshotUUID() {
+			return snapshotUUID;
+		}
+	}
+	
 	/**
 	 * Structure that represents the radio button selection for build workspace, stream, snapshot definition
 	 * choice in config.jelly (job configuration) 
@@ -288,7 +349,7 @@ public class RTCScm extends SCM {
 		public String buildDefinition;
 		public String buildWorkspace;
 		public String buildSnapshot;
-		public String buildStream;
+		public String buildStream;	
 		public String loadDirectory;
 		public boolean clearLoadDirectory;
 		public boolean createFoldersForComponents;
@@ -305,6 +366,8 @@ public class RTCScm extends SCM {
 		private String componentsToExclude;
 		private String pathToLoadRuleFile;
 		private boolean useDynamicLoadRules;
+		private boolean pollingOnly = false;
+		private PollingOnlyData pollingOnlyData;
 		
 		@DataBoundConstructor
 		public BuildType(String value, String buildDefinition, String buildWorkspace, String buildSnapshot, String buildStream) {
@@ -457,6 +520,35 @@ public class RTCScm extends SCM {
 
 		public boolean getAddLinksToWorkItems() {
 			return this.addLinksToWorkItems;
+		}
+
+		
+		@DataBoundSetter
+		public void setPollingOnlyData(PollingOnlyData pollingOnlyData) {
+			if (pollingOnlyData == null) {
+				this.setPollingOnly(false);
+			} else {
+				this.setPollingOnly(true);
+				this.pollingOnlyData = pollingOnlyData;
+			}
+		}
+		
+		public PollingOnlyData getPollingOnlyData() {
+			return this.pollingOnlyData;
+		}
+
+		/**
+		 * Retained for ease of use
+		 * 
+		 * @param pollingOnly
+		 */
+		@DataBoundSetter
+		public void setPollingOnly(boolean pollingOnly) {
+			this.pollingOnly = pollingOnly;
+		}
+		
+		public boolean getPollingOnly() {
+			return this.pollingOnly;
 		}
 	}
 	
@@ -1050,20 +1142,20 @@ public class RTCScm extends SCM {
 		 * @param override Whether to override the global connection settings
 		 * @param buildTool The build tool selected to be used in builds (Job setting)
 		 * @param serverURI The RTC server uri (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
 		 * @param password The password to use when logging in to RTC. Must supply this or a password file if the
 		 *            credentials id was not supplied. (Job setting)
 		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or a
 		 *            password if the credentials id was not supplied. (Job setting)
 		 * @param credId Credential id that will identify the user id and password to use (Job setting)
-		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the
 		 *            connection. (Job setting)
 		 * @param buildWorkspace The build workspace to validate
 		 * @param loadPolicy Load policy field
 		 * @param pathToLoadRuleFile Path to the load rule file in the format: <component name>/<remote path to the load
 		 *            rule file>
-		 * 
+		 * @param pollingOnly Whether to perform polling only and skip accept and load.
 		 * @return Whether the build workspace configuration is valid or not. Never <code>null</code>
 		 */
 		@RequirePOST
@@ -1080,7 +1172,8 @@ public class RTCScm extends SCM {
 				@QueryParameter("avoidUsingToolkit") String avoidUsingBuildToolkit,
 				@QueryParameter("buildWorkspace") String buildWorkspace,
 				@QueryParameter("loadPolicy") String loadPolicy,
-				@QueryParameter("pathToLoadRuleFile") String pathToLoadRuleFile) {
+				@QueryParameter("pathToLoadRuleFile") String pathToLoadRuleFile,
+				@QueryParameter("pollingOnly") String pollingOnly) {
 			LOGGER.finest("DescriptorImpl.doValidateBuildWorkspaceConfiguration: Begin"); //$NON-NLS-1$
 			if (project == null) {
 				return FormValidation.ok();
@@ -1091,6 +1184,13 @@ public class RTCScm extends SCM {
 			if (Util.fixEmptyAndTrim(buildWorkspace) == null) {
 				return FormValidation.error(Messages.RTCScm_build_workspace_empty());
 			}
+			// If polling only is selected, make sure that this is a pipeline job
+			if (true == Boolean.parseBoolean(pollingOnly)) {
+				if (!Helper.isPipelineJob(project)) {
+					return FormValidation.error(Messages.Helper_polling_supported_only_for_pipeline());
+				}
+				// This is a pipeline job for pollingOnly and hence allow the rest of the validation to continue.
+			} 
 			boolean overrideGlobalSettings = Boolean.parseBoolean(override);
 			boolean avoidUsingToolkit;
 			if (!overrideGlobalSettings) {
@@ -1157,15 +1257,16 @@ public class RTCScm extends SCM {
 		 * @param override Whether to override the global connection settings
 		 * @param buildTool The build tool selected to be used in builds (Job setting)
 		 * @param serverURI The RTC server uri (Job setting)
+		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param userId The user id to use when logging in to RTC. Must supply this or a credentials id (Job setting)
 		 * @param password The password to use when logging in to RTC. Must supply this or a password file
 		 * 				if the credentials id was not supplied. (Job setting)
 		 * @param passwordFile File containing the password to use when logging in to RTC. Must supply this or 
 		 * 				a password if the credentials id was not supplied. (Job setting)
 		 * @param credId Credential id that will identify the user id and password to use (Job setting)
-		 * @param timeout The timeout period for the connection (Job setting)
 		 * @param avoidUsingBuildToolkit Whether to use REST api instead of the build toolkit when testing the connection. (Job setting)
 		 * @param buildDefinition The build definition to validate
+		 * @param pollingOnly Whether to perform polling only and skip accept and load.
 		 * @return Whether the build definition configuration is valid or not. Never <code>null</code>
 		 */
 		@RequirePOST
@@ -1180,7 +1281,8 @@ public class RTCScm extends SCM {
 				@QueryParameter("passwordFile") String passwordFile,
 				@QueryParameter("credentialsId") String credId,
 				@QueryParameter("avoidUsingToolkit") final String avoidUsingBuildToolkit,
-				@QueryParameter("buildDefinition") final String buildDefinition) {
+				@QueryParameter("buildDefinition") final String buildDefinition,
+				@QueryParameter("pollingOnly") String pollingOnly) {
 			LOGGER.finest("DescriptorImpl.doValidateBuildDefinitionConfiguration: Begin"); //$NON-NLS-1$
 			if (project == null) {
 				return FormValidation.ok();
@@ -1191,6 +1293,13 @@ public class RTCScm extends SCM {
 			// validate if required fields are provided
 			if (Util.fixEmptyAndTrim(buildDefinition) == null) {
 				return FormValidation.error(Messages.RTCScm_build_definition_empty());
+			}
+			// If polling only is selected, make sure that this is a pipeline job
+			if (true == Boolean.parseBoolean(pollingOnly)) {
+				if (!Helper.isPipelineJob(project)) {
+					return FormValidation.error(Messages.Helper_polling_supported_only_for_pipeline());
+				}
+				// This is a pipeline job for pollingOnly and hence allow the rest of the validation to continue.
 			}
 	    	boolean overrideGlobalSettings = Boolean.parseBoolean(override);
 			boolean avoidUsingToolkit;
@@ -1220,8 +1329,16 @@ public class RTCScm extends SCM {
 			if (parameterizedBuildDefinition) {
 				buildDefinitionCheck = FormValidation.warning(Messages.RTCScm_build_definition_not_validated());
 			} else {
-				buildDefinitionCheck = checkBuildDefinition(connectInfoCheck.buildToolkitPath, avoidUsingToolkit, connectInfoCheck.loginInfo,
-						buildDefinition);
+				// See if pollingOnly is set to true. If yes, then we can ignore the requirement 
+				// the build definition and the corresponding engine has to be a Hudson/Jenkins 
+				// engine
+				boolean doIgnoreJenkinsConfiguration = false;
+				if (Boolean.parseBoolean(pollingOnly) == true) {
+					doIgnoreJenkinsConfiguration = true;
+				}
+				buildDefinitionCheck = checkBuildDefinition(connectInfoCheck.buildToolkitPath, 
+						avoidUsingToolkit, connectInfoCheck.loginInfo,
+						buildDefinition, doIgnoreJenkinsConfiguration);
 			}
 			// If the build definition validation completed with OK then recreate the result with a configuration valid
 			// message
@@ -1639,15 +1756,18 @@ public class RTCScm extends SCM {
 		 * @param avoidUsingToolkit Whether to avoid using the build toolkit
 		 * @param loginInfo The login credentials 
 		 * @param buildDefinition The id of the build definition to validate
+		 * @param ignoreJenkinsConfiguration 
 		 * @return The result of the validation. Never <code>null</code>
 		 */
-		private FormValidation checkBuildDefinition(String buildToolkitPath, boolean avoidUsingToolkit, RTCLoginInfo loginInfo, String buildDefinition) {
+		private FormValidation checkBuildDefinition(String buildToolkitPath, 
+				boolean avoidUsingToolkit, RTCLoginInfo loginInfo, String buildDefinition,
+				boolean ignoreJenkinsConfiguration) {
 
 			try {
 				String errorMessage = RTCFacadeFacade.testBuildDefinition(buildToolkitPath, loginInfo.getServerUri(),
 						loginInfo.getUserId(), loginInfo.getPassword(), loginInfo.getTimeout(),
 						avoidUsingToolkit,
-						buildDefinition);
+						buildDefinition, ignoreJenkinsConfiguration);
 				if (errorMessage != null && errorMessage.length() != 0) {
 	    			return FormValidation.error(errorMessage);
 				}
@@ -1871,6 +1991,8 @@ public class RTCScm extends SCM {
 			this.componentsToExclude = buildType.componentsToExclude;
 			this.pathToLoadRuleFile = buildType.pathToLoadRuleFile;
 			this.useDynamicLoadRules = buildType.useDynamicLoadRules;
+			this.pollingOnly = buildType.pollingOnly;
+			this.pollingOnlyData = buildType.pollingOnlyData;
 		}
 		
 		if (LOGGER.isLoggable(Level.FINER)) {
@@ -1893,7 +2015,8 @@ public class RTCScm extends SCM {
 					"\" createFoldersForComponents=\"" + this.createFoldersForComponents + //$NON-NLS-1$  
 					"\" acceptBeforeLoad=\"" + this.acceptBeforeLoad + 
 					"\" generateChangelogWithGoodBuild=\"" + this.generateChangelogWithGoodBuild +  //$NON-NLS-1$ //$NON-NLS-2$
-					"\" addLinksToWorkitems=\"" + this.addLinksToWorkItems); //$NON-NLS-1$ //$NON-NLS-2$
+					"\" addLinksToWorkitems=\"" + this.addLinksToWorkItems + //$NON-NLS-1$ //$NON-NLS-2$
+					"\" pollingOnly=\"" + this.pollingOnly); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 	
@@ -2002,6 +2125,13 @@ public class RTCScm extends SCM {
 					Helper.parseConfigurationValue(build, null, Util.fixEmptyAndTrim(getBuildStream()), listener):
 					Util.fixEmptyAndTrim(getBuildStream()); 
 
+	    if (true == getPollingOnly()) {
+	    	handlePollingOnlyMode(build, workspacePath, listener, changeLogFile, 
+	    			buildDefinition, buildWorkspace);
+	    	// Exit from checkout without performing accept/load
+			return;
+	    }
+
 		String buildResultUUID = getBuildResultUUID(build, listener);
 		
 		validateInput(getBuildTypeStr(), buildSnapshot, buildStream);
@@ -2017,7 +2147,7 @@ public class RTCScm extends SCM {
 
 		RTCLoginInfo loginInfo;
 		try {
-			loginInfo = getLoginInfo(build.getParent(), localBuildToolkit);
+			loginInfo = getLoginInfo2(build, localBuildToolkit, listener, debug);
 		} catch (InvalidCredentialsException e1) {
 			throw new AbortException(e1.getMessage());
 		}
@@ -2030,7 +2160,7 @@ public class RTCScm extends SCM {
 			// (since its on the master). So what we do is send our hjplugin-rtc.jar over to the slave to "prepopulate"
 			// it in the class loader. This way we can create our special class loader referencing it and all the toolkit
 			// jars.
-			sendJarsToSlave(workspacePath);
+			Helper.sendJarsToAgent(workspacePath);
 		}
 		
 		// Before proceeding, log the details of master and node buildtoolkit
@@ -2140,7 +2270,8 @@ public class RTCScm extends SCM {
 			String previousSnapshotUUIDForChangeLog = null;
 			Run<?,?> previousBuild = null;
 			// Get previous snapshot UUID for comparison in stream case
-			Tuple<Run<?,?>, String> previousSnapshotDetails = Helper.getSnapshotUUIDFromPreviousBuild(build, localBuildToolkit, loginInfo, getProcessArea(),
+			Tuple<Run<?,?>, String> previousSnapshotDetails = Helper.getSnapshotUUIDFromPreviousBuild(build, 
+					localBuildToolkit, loginInfo, getProcessArea(),
 					buildStream, getGenerateChangelogWithGoodBuild(), LocaleProvider.getLocale());
 			if (previousSnapshotDetails != null) {
 				previousBuild = previousSnapshotDetails.getFirst();
@@ -2308,7 +2439,7 @@ public class RTCScm extends SCM {
     			throw (InterruptedException) eToReport;
     		}
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checkout_failure3(eToReport.getMessage()));
-    		if (RTCScm.unexpectedFailure(eToReport)) {
+    		if (Helper.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
     		}
     		LOGGER.log(Level.FINER, "Create build result failure " + eToReport.getMessage(), eToReport); //$NON-NLS-1$
@@ -2319,6 +2450,104 @@ public class RTCScm extends SCM {
 		finally {
 			LOGGER.finer("RTCScm.checkout : End");
 		}
+	}
+
+	private void handlePollingOnlyMode(Run<?,?> build, FilePath workspacePath, 
+								TaskListener listener, File changeLogFile,
+								String buildDefinitionId,
+								String buildWorkspaceName) throws IOException, InterruptedException {
+		// We can ignore pollingOnly for non pipeline jobs or other build types
+    	// But asserting and throwing an error helps users avoid misconfiguration
+    	Helper.assertPollingOnlyConditions(build.getParent(), getBuildTypeStr());
+    	
+    	// If both the checks pass, just return and don't perform accept/load
+    	// if no snapshot has been provided for comparison.
+    	LOGGER.info("Polling-only option is selected. Skipping accept and load of the build workspace."); //$NON-NLS-1$
+    	listener.getLogger().println(Messages.RTCScm_pollingonly_selected_skipping_accept_load());
+    	listener.getLogger().flush();
+    	
+    	// Check if pollingData is set. If yes, then perform a compare
+    	PollingOnlyData pollingOnlyData = this.getPollingOnlyData();
+    	// Nothing to do if there is no polling data
+    	// This cannot be the case if we are in this method, but just to  be sure
+    	if (pollingOnlyData == null) {
+    		return;
+    	}
+    	
+    	String snapshotUUIDForCompare = Util.fixEmptyAndTrim(pollingOnlyData.getSnapshotUUID());
+    	// Nothing to do if snapshot UUID is empty
+    	if (snapshotUUIDForCompare == null) {
+    		return;
+    	}
+    	
+    	listener.getLogger().println(Messages.RTCScm_pollingonly_selected_generating_changelog(
+    					snapshotUUIDForCompare));
+    	
+		Node node = workspacePath.toComputer().getNode();
+		// Get the build toolkit on the node where the task will execute
+		String nodeBuildToolkit = getDescriptor().getBuildToolkit(getBuildTool(), node, listener);
+
+		RTCLoginInfo loginInfo;
+		try {
+			// TODO will be converted to use new the credentials tracking entry point
+			// We wouldn't need the nodeBuildToolkit at that point
+			loginInfo = getLoginInfo(build.getParent(), nodeBuildToolkit);
+		} catch (InvalidCredentialsException e1) {
+			throw new AbortException(e1.getMessage());
+		}
+		
+		if (workspacePath.isRemote()) {
+			Helper.sendJarsToAgent(workspacePath);
+		}
+
+		boolean debug = Helper.isDebugEnabled(build, listener);
+		// Before proceeding, log the details of master and node build toolkit
+		{
+			String masterBuildToolkit = getDescriptor().getMasterBuildToolkit(getBuildTool(), listener);
+			logBuildToolkitVersions(workspacePath, listener, masterBuildToolkit, nodeBuildToolkit, debug);
+		}
+
+		// Create the task to retrieve the workspaceUUID
+		RetrieveWorkspaceDetailsTask retrieveWorkspaceDetailsTask = new RetrieveWorkspaceDetailsTask(nodeBuildToolkit,
+				loginInfo.getServerUri(), loginInfo.getUserId(), loginInfo.getPassword(),
+				loginInfo.getTimeout(), buildDefinitionId, buildWorkspaceName, 
+				 LocaleProvider.getLocale(), debug, listener);
+		// Workspace UUID cannot be null unless someone deleted the workspace on the fly 
+		// or modified the build definition to remove jazz source control configuration
+		String workspaceUUID = workspacePath.act(retrieveWorkspaceDetailsTask);
+		
+		// Retrieve the old snapshotUUID to compare with
+		String previousSnapshotUUID = Helper.getSnapshotUUIDFromPreviousBuild(build, workspaceUUID, debug, 
+				listener, Locale.getDefault());
+		
+		// Call the generate changelog task to generate the changelog.
+		if (debug) {
+			listener.getLogger().println(Messages.
+					RTCScm_generating_changelog_writing_to_file(changeLogFile));
+		}
+		RemoteOutputStream changeLog = null;
+		if (changeLogFile != null) {
+			OutputStream changeLogStream = new FileOutputStream(changeLogFile);
+			changeLog = new RemoteOutputStream(changeLogStream);
+		}
+		
+		GenerateChangelogTask generateChangeLogTask = new GenerateChangelogTask(nodeBuildToolkit,
+				loginInfo.getServerUri(), loginInfo.getUserId(),
+				loginInfo.getPassword(), loginInfo.getTimeout(),
+				snapshotUUIDForCompare, workspaceUUID, previousSnapshotUUID, changeLog, 
+				LocaleProvider.getLocale(), debug, listener);
+		Map<String, Object> retData = workspacePath.act(generateChangeLogTask);
+		@SuppressWarnings("unchecked")
+		Map<String, String> buildProperties = (Map<String, String>) retData.get("buildProperties");
+		setBuildResultAction(new RTCBuildResultAction(loginInfo.getServerUri(), 
+											null ,false, this));
+		RTCBuildResultAction action = getBuildResultAction();
+		build.addAction(action);
+		action.addBuildProperties(buildProperties);
+	}
+
+	public PollingOnlyData getPollingOnlyData() {
+		return pollingOnlyData;
 	}
 
 	/**
@@ -2333,7 +2562,7 @@ public class RTCScm extends SCM {
 	 * @param listener Log messages 
 	 * @param localBuildToolkit The build toolkit on master 
 	 * @param nodeBuildToolkit The build toolkit on node 
-	 * @param debug Is debug turned on, this detemines whether this method will log the versions
+	 * @param debug Is debug turned on, this determines whether this method will log the versions
 	 * @throws InterruptedException
 	 * @throws IOException
 	 */
@@ -2342,10 +2571,13 @@ public class RTCScm extends SCM {
 		if (!debug) {
 			return;
 		}
-		String nodeName = workspacePath.getParent().toComputer().getDisplayName();
-		String masterBuildToolkitVersion = BuildToolkitVersionTask.getBuildToolkitVersion(localBuildToolkit, 
-							 "master", debug, LocaleProvider.getLocale(), listener); //$NON-NLS-1$
+		String masterBuildToolkitVersion = null;
 		String nodeBuildToolkitVersion = ""; //$NON-NLS-1$
+		if (localBuildToolkit != null) {
+			masterBuildToolkitVersion = BuildToolkitVersionTask.getBuildToolkitVersion(localBuildToolkit, 
+							 "master", debug, LocaleProvider.getLocale(), listener); //$NON-NLS-1$
+		}
+		String nodeName = workspacePath.getParent().toComputer().getDisplayName();
 		if (workspacePath.isRemote()) {
 			BuildToolkitVersionTask task = new BuildToolkitVersionTask(nodeBuildToolkit,
 						nodeName, 
@@ -2357,33 +2589,20 @@ public class RTCScm extends SCM {
 					localBuildToolkit, masterBuildToolkitVersion));
 		} else {
 			listener.getLogger().println(
-					Messages.RTCScm_buildtoolkit_version_master_failure(localBuildToolkit));
+					Messages.RTCScm_buildtoolkit_version_on_master(localBuildToolkit,
+							"n/a"));
 		}
 		if (workspacePath.isRemote()) {
 			if (nodeBuildToolkitVersion != null) {
 				listener.getLogger().println(
-					Messages.RTCScm_buildtoolkit_version_on_node(nodeBuildToolkit, nodeName, nodeBuildToolkitVersion));		
+					Messages.RTCScm_buildtoolkit_version_on_node(nodeBuildToolkit, 
+							nodeName, nodeBuildToolkitVersion));		
 			} else {
 				listener.getLogger().println(
-					Messages.RTCScm_buildtoolkit_version_on_node_failure(nodeBuildToolkit, nodeName));
+						Messages.RTCScm_buildtoolkit_version_on_node(nodeBuildToolkit, 
+								nodeName, "n/a"));		
 			}
 		}
-	}
-
-	private void sendJarsToSlave(FilePath workspacePath)
-			throws MalformedURLException, IOException, InterruptedException {
-		LOGGER.finest("RTCScm.sendJarsToSlave : Begin");
-		VirtualChannel channel = workspacePath.getChannel();
-		URL facadeJarURL = RTCFacadeFactory.getFacadeJarURL(null);
-		if (channel instanceof Channel && facadeJarURL != null) {
-			// try to find our jar
-			Class<?> originalClass = RTCScm.class;
-			ClassLoader originalClassLoader = (ClassLoader) originalClass.getClassLoader();
-			URL [] jars = new URL[] {facadeJarURL};
-			boolean result = ((Channel) channel).preloadJar(originalClassLoader, jars);
-			LOGGER.finer("Prefetch result for sending jars is " + result);  //$NON-NLS-1$ //$NON-NLS-2$
-		}
-		LOGGER.finest("RTCScm.sendJarsToSlave : End");
 	}
 
 	private String getLabel(Run<?, ?> build) {
@@ -2430,7 +2649,22 @@ public class RTCScm extends SCM {
 		if (BUILD_STREAM_TYPE.equals(buildType) && buildStream == null) {
 			throw new AbortException(Messages.RTCScm_checking_for_changes_failure(Messages.RTCScm_build_stream_empty()));
 		}
+		
+		// Error checking for pollingOnly mode
+		// If pollingOnly is set to true, then buildType should be buildDefinition or build workspace.
+		// The job type should be pipeline.
+		// If any one of the conditions don't match, then abort the operation.
+		if (true == getPollingOnly()) {
+			// Assert the conditions, if both pass, then continue with polling
+			Helper.assertPollingOnlyConditions(project, buildType);
+		}
 
+		// Current polling behavior will not perform another build if the current one is not finished, 
+		// unless the property team_scm_acceptPhaseOver. This is desirable for pipelines where only
+		// one build should be currently active.
+		// If a snapshot is added to the checkout step for change log generation, then "team_scm_acceptPhaseOver" 
+		// will be added to the Jenkins build.
+		
 		// check to see if there are incoming changes
     	try {
     		// If the current configuration does not support polling, return no changes
@@ -2463,7 +2697,17 @@ public class RTCScm extends SCM {
 						buildDefinition,
 						buildWorkspace,
 						listener);
-	
+	    		
+
+	    		// We have to replicate the check for project#isBuilding
+	    		// to make sure even if changes are detected, a build is queued 
+	    		// only if the previous build has completed the accept phase (subject to 
+	    		// identifying the right RTCBuildResultAction.
+	    		
+	    		// Even if we don't get to the right RTCBuildResultAction, 
+	    		// we need to sync up the option in the job "do not allow concurrent builds" 
+	    		// to reduce the chances of queuing a build which may not have any valid changes.
+	    		// If the option is present and a project is building, always return no changes?
 	    		if (changesIncoming.equals(Boolean.TRUE)) {
 	    			listener.getLogger().println(Messages.RTCScm_changes_found());
 	    			// arbitrarily specify non-zero revision hash in current revision state
@@ -2521,22 +2765,35 @@ public class RTCScm extends SCM {
     			} else {
     				if (project.isBuilding()) {
         				LOGGER.finer("Project is building");
+						// This will not work if multiple RTCBuildResultActions are present, we will not be sure which 
+        				// RTCBuildResultAction we should use. The fool proof way to do so is to check if the build result action 
+        				// has the same job properties like build type, repository URL, build definition id and use it for 
+        				/// fetching the property. If no such Build Result action is found, then we should return Change.NONE to 
+        				// avoid triggering a build unnecessarily.
     					RTCBuildResultAction rtcBuildResultAction = project.getLastBuild().getAction(RTCBuildResultAction.class);
     					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null) &&
     							"true".equals(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver"))) {
     						// snapshot has been created, 
     						// hence further changes would not be taken by the running build...
-    						LOGGER.finer("Accept phase is over");
+    						LOGGER.finer("Changes detected and accept phase is over"); 
     						change = (currentRevisionHash.equals(BIGINT_ZERO)) ? Change.NONE : Change.SIGNIFICANT;
     					} else {
     						// build is running, but snapshot has not been created yet,
     						// hence any further changes can still be considered by the running build
-    						// therefore return no changes to avoid queueing another build
+    						// therefore return no changes to avoid queuing another build
     						LOGGER.finer("Cannot determine if accept phase is over. Avoiding queuing a new build.");
     						change = Change.NONE;
     					}
     				} else {
         				LOGGER.finer("Project is not in queue nor it is building");
+        				// This could be a problem if  accept failed or if no accept happened. Polling would repeatedly claim there are 
+        				// new changes when no new changes might have been detected when compared to the previous revision 
+        				// hash. By not comparing with previous revision hash but only comparing with zero, RTCSCM 
+        				// will repeatedly send "changes found". Sometimes, this is not desirable. If new changes were 
+        				// really found, then it should be different from previously computed revision hash. The side effect 
+        				// of such a change is that only new changes will trigger a build and perhaps fail in the  accept phase 
+        				// but if no new changes are detected when compared to previous revision hash, no new builds will be triggered.
+        				// Thus avoiding infinite builds in Jenkins, especially with short polling intervals. 
     					change = (currentRevisionHash.equals(BIGINT_ZERO)) ? Change.NONE : Change.SIGNIFICANT;
     				}
     			}
@@ -2564,7 +2821,7 @@ public class RTCScm extends SCM {
     			throw (InterruptedException) e;
     		}
     		PrintWriter writer = listener.fatalError(Messages.RTCScm_checking_for_changes_failure(eToReport.getMessage()));
-    		if (RTCScm.unexpectedFailure(eToReport)) {
+    		if (Helper.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
     		}
     		
@@ -2598,18 +2855,6 @@ public class RTCScm extends SCM {
 			// returning false, since there is no good way to determine if job is in queue
 			return false;
 		}
-	}
-
-	public static boolean unexpectedFailure(Throwable e) {
-		// This project can not reference types defined in the -rtc project, so we
-		// need to do some clunky testing to see if the exception is notification of
-		// a badly configured build. In that case, we just want to report the error
-		// but not the whole stack trace.
-		String name = e.getClass().getSimpleName();
-		return !("RTCConfigurationException".equals(name)
-				|| "AuthenticationException".equals(name)
-				|| e instanceof InterruptedException 
-				|| e instanceof InvalidCredentialsException ); //$NON-NLS-1$
 	}
 
 	@Override
@@ -2651,6 +2896,15 @@ public class RTCScm extends SCM {
 	
 	public RTCLoginInfo getLoginInfo(Job<?, ?> job, String toolkit) throws InvalidCredentialsException {
 		return new RTCLoginInfo(job, toolkit, getServerURI(), getUserId(), getPassword(), getPasswordFile(), getCredentialsId(), getTimeout());
+	}
+	
+	public RTCLoginInfo getLoginInfo2(Run<?, ?> build, String toolkit, TaskListener listener, 
+						boolean isDebug) throws InvalidCredentialsException {
+		if(getCredentialsId() == null)
+			return getLoginInfo(build.getParent(), toolkit);
+		else
+			return new RTCLoginInfo(build, getServerURI(), getCredentialsId(), getTimeout(),
+						listener, isDebug);
 	}
 	
 	public String getBuildTool() {
@@ -2876,6 +3130,10 @@ public class RTCScm extends SCM {
 	
 	public boolean getAddLinksToWorkItems() {
 		return addLinksToWorkItems;
+	}
+	
+	public boolean getPollingOnly() {
+		return this.pollingOnly;
 	}
 
 	@Override

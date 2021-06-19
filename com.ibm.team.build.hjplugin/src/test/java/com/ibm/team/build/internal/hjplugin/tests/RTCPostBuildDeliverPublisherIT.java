@@ -1096,7 +1096,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		
 		try {
 			// Create a fake build result action 
-			RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), "unknown build definition");
+			RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), "unknown build definition", false);
 			RTCBuildResultAction action1 = new RTCBuildResultAction(loginInfo.getServerUri(), java.util.UUID.randomUUID().toString(), false, scm);
 
 			RTCBuildResultAction action2 = null;
@@ -1150,7 +1150,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		
 		try {
 			// Create a fake build result action 
-			RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), "unknown build definition");
+			RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), "unknown build definition", false);
 			RTCBuildResultAction action1 = new RTCBuildResultAction(loginInfo.getServerUri(), java.util.UUID.randomUUID().toString(), false, scm);
 
 			RTCBuildResultAction action2 = null;
@@ -1349,7 +1349,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 				LoadOptions.getDefault(), getTaskListener(), Locale.getDefault());
 		
 		// Construct RTCScm instance for the above build definition
-		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId);
+		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId, false);
 		// Construct RTCBuildResultAction with the buildProperties, build result UUID and scm instance.
 		RTCBuildResultAction action = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, true, scm);
 		action.addBuildProperties(buildProperties1);
@@ -1398,7 +1398,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		}
 			
 		// Construct RTCScm instance for the above build definition
-		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId);
+		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId, false);
 		// Construct RTCBuildResultAction with the buildProperties, build result UUID and scm instance.
 		RTCBuildResultAction action = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, true, scm);
 		return new Tuple<Map<String, String>, RTCBuildResultAction>(setupArtifacts, action);
@@ -1454,7 +1454,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		}
 		assertNotNull(buildProperties);
 		// Construct RTCScm instance for the above build definition
-		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId);
+		RTCScm scm = Utils.constructRTCScmForBuildDefinition(getJenkinsRule(), buildDefinitionId, false);
 		// Construct RTCBuildResultAction with the buildProperties, build result UUID and scm instance.
 		RTCBuildResultAction action = new RTCBuildResultAction(loginInfo.getServerUri(), buildResultUUID, true, scm);
 		action.addBuildProperties(buildProperties);

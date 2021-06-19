@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2020 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -279,7 +279,9 @@ public class BuildConnectionTests {
 			IWorkspaceConnection personalWorkspace = SCMUtil.createWorkspace(workspaceManager, testName + "2");
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, personalWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
@@ -350,7 +352,9 @@ public class BuildConnectionTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
 			// no build engine for the build definition
-			BuildUtil.createBuildDefinition(repo, testName, false, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName, 
+					BuildConnection.HJ_ELEMENT_ID,
+					false, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
@@ -412,7 +416,9 @@ public class BuildConnectionTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, 
 					buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, 
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(),
@@ -508,7 +514,9 @@ public class BuildConnectionTests {
 			IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, testName + "1");
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
@@ -565,7 +573,9 @@ public class BuildConnectionTests {
 			IWorkspaceConnection buildWorkspace = SCMUtil.createWorkspace(workspaceManager, testName + "1");
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
@@ -784,7 +794,9 @@ public class BuildConnectionTests {
 			IWorkspaceConnection personalWorkspace = SCMUtil.createWorkspace(workspaceManager, testName + "2");
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_WORKSPACE_ITEM_ID, personalWorkspace.getResolvedWorkspace().getItemId().getUuidValue());
 			
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",

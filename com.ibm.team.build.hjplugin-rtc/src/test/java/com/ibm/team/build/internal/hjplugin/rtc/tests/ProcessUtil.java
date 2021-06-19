@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -97,6 +97,10 @@ public class ProcessUtil {
 		return processArea;
 	}
 
+	public static IProcessDefinition getProcessDefinition(ITeamRepository repo, String processId,  
+										boolean useStandaloneProject) throws Exception {
+		return getProcessDefinition(repo, processId, null, useStandaloneProject);
+	}
 	/**
 	 * Retrieves the existing process definition for the specified <code>processId</code>. If such a definition does not
 	 * exist, it is created using the <code>getBasicProcessSpecification()</code>.
@@ -106,7 +110,8 @@ public class ProcessUtil {
 	 * @throws Exception Throw all exceptions back to JUnit.
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static IProcessDefinition getProcessDefinition(ITeamRepository repo, String processId, boolean useStandaloneProject) throws Exception {
+	public static IProcessDefinition getProcessDefinition(ITeamRepository repo, String processId, String processXMLFileName, 
+										boolean useStandaloneProject) throws Exception {
 
 		IProcessItemService processService = (IProcessItemService)repo.getClientLibrary(IProcessItemService.class);
 
@@ -116,10 +121,15 @@ public class ProcessUtil {
 			processDefinition = (IProcessDefinition)IProcessDefinition.ITEM_TYPE.createItem();
 			processDefinition.setName(processId);
 			processDefinition.setProcessId(processId);
-
+			String processXML = null;
+			if (processXMLFileName == null) {
+				processXML = getBasicProcessSpecification(useStandaloneProject);
+			} else {
+				processXML = getBasicProcessSpecification(processXMLFileName);
+			}
 			Map definitionData = processDefinition.getProcessData();
 			definitionData.put(ProcessContentKeys.PROCESS_SPECIFICATION_KEY,
-					stringToContent(repo, getBasicProcessSpecification(useStandaloneProject), null));
+					stringToContent(repo, processXML, null));
 			definitionData.put(ProcessContentKeys.PROCESS_STATE_KEY, stringToContent(repo, getBasicProcessState(useStandaloneProject), null));
 
 			processDefinition = (IProcessDefinition)processService.save(processDefinition, null);
@@ -137,6 +147,16 @@ public class ProcessUtil {
 	private static String getBasicProcessSpecification(boolean useStandaloneProject) throws Exception {
 		String fileName = useStandaloneProject ? "BasicProcessSpecificationNoDevLine.xml" : "BasicProcessSpecification.xml"; //$NON-NLS-1$ //$NON-NLS-2$
 		return getFileContents(fileName);
+	}
+	
+	/**
+	 * Retrieves the basic process specification used by default in JUnit tests that require a process.
+	 * 
+	 * @return The basic process specification used by default in JUnit tests that require a process.
+	 * @throws Exception Throw all exceptions back to JUnit.
+	 */
+	private static String getBasicProcessSpecification(String processXMLFileName) throws Exception {
+		return getFileContents(processXMLFileName);
 	}
 
 	private static String getFileContents(String fileName) throws IOException {

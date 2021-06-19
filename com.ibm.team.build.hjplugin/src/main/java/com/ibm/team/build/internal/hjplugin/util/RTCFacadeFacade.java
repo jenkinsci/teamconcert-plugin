@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2020 IBM Corporation and others.
+ * Copyright (c) 2014, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -525,7 +525,8 @@ public class RTCFacadeFacade {
 	 */
 	public static String testBuildDefinition(String buildToolkitPath,
 			String serverURI, String userId, String password, int timeout,
-			boolean avoidUsingToolkit, String buildDefinitionId)
+			boolean avoidUsingToolkit, String buildDefinitionId, 
+			boolean doIgnoreJenkinsConfiguration)
 			throws Exception {
 		LOGGER.finest("RTCFacadeFacade.testBuildDefinition : Enter");
 		if (avoidUsingToolkit) {
@@ -564,7 +565,7 @@ public class RTCFacadeFacade {
 						// validate the build definition is a hudson/jenkins build definition
 						JSONObject buildDefinition = definitions.getJSONObject(0);
 						boolean found = JSONHelper.searchJSONArray(buildDefinition, JSON_PROP_CONFIGURATION_ELEMENTS, JSON_PROP_ELEMENT_ID, RTCBuildConstants.HJ_ELEMENT_ID);
-						if (!found) {
+						if (!found && !doIgnoreJenkinsConfiguration) {
 							return Messages.RTCFacadeFacade_build_definition_missing_hudson_config();
 						}
 						// validate the build definition as a Jazz Source Control option
@@ -584,7 +585,7 @@ public class RTCFacadeFacade {
 							JSONObject buildEngine = buildEngineStatusRecord.getJSONObject(JSON_PROP_BUILD_ENGINE);
 							// validate the build definition has a hudson/jenkins build engine
 							found = JSONHelper.searchJSONArray(buildEngine, JSON_PROP_CONFIGURATION_ELEMENTS, JSON_PROP_ELEMENT_ID, RTCBuildConstants.HJ_ENGINE_ELEMENT_ID);
-							if (!found) {
+							if (!found && !doIgnoreJenkinsConfiguration) {
 								return Messages.RTCFacadeFacade_build_definition_missing_build_engine_hudson_config();
 							}
 							
@@ -614,9 +615,10 @@ public class RTCFacadeFacade {
 							String.class, // password
 							int.class, // timeout
 							String.class, // buildDefinition
+							boolean.class, // doIgnoreJenkinsConfiguration
 							Locale.class}, // clientLocale
 					serverURI, userId, password, timeout,
-					buildDefinitionId, LocaleProvider.getLocale());
+					buildDefinitionId, doIgnoreJenkinsConfiguration, LocaleProvider.getLocale());
 			return errorMessage;
 		}
 	}

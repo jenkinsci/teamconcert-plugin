@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2020 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -169,7 +169,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 					loginInfo.getPassword(),
 					loginInfo.getTimeout(),
 					false, // using toolkit
-					getUniqueName("MissingBuildDefinition"));
+					getUniqueName("MissingBuildDefinition"), false);
 				assertTrue(errorMessage, errorMessage != null && errorMessage.contains("Unable to find"));
 
 				errorMessage = RTCFacadeFacade.testBuildWorkspace(
@@ -221,7 +221,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 					loginInfo.getPassword(),
 					loginInfo.getTimeout(),
 					false, // using toolkit
-					buildDefinitionName);
+					buildDefinitionName, false);
 				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
 
 				errorMessage = RTCFacadeFacade.testBuildDefinition(
@@ -231,7 +231,7 @@ public class RTCFacadeIT extends AbstractTestCase {
 						loginInfo.getPassword(),
 						loginInfo.getTimeout(),
 						true, // avoiding toolkit
-						buildDefinitionName);
+						buildDefinitionName, false);
 				assertTrue(errorMessage, errorMessage == null || errorMessage.length() == 0);
 
 			} finally {

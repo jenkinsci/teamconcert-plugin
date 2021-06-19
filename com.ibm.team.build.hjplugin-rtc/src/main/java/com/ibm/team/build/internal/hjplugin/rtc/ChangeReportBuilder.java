@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2018 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -229,6 +229,17 @@ public class ChangeReportBuilder {
 		}
 	}
 
+	private void fillPreviousSnapshot(ChangeReport changeReport,
+			final IBaselineSetHandle previousSnapshot, final String previousSnapshotName, 
+			IConsoleOutput listener,
+			IProgressMonitor progress) {
+		if (previousSnapshot != null) {
+			ChangeReport.BaselineSetReport previousBaseLineSet = new BaselineSetReport(previousSnapshot.getItemId().
+											getUuidValue(), previousSnapshotName);
+			changeReport.previousBaselineSetCreated(previousBaseLineSet);
+		}
+	}
+	
 	private void fillChangeSetChanges(ChangeReport changeReport,
 			AcceptReport acceptReport, IWorkspaceHandle workspaceHandle,
 			IConsoleOutput listener, IProgressMonitor progress) throws TeamRepositoryException {
@@ -705,5 +716,51 @@ public class ChangeReportBuilder {
 				throw e;
 			}
         }
+	}
+
+    public void populateChangeReport2(ChangeReport changeReport,
+			IWorkspaceHandle workspaceHandle, String workspaceName,
+    		IBaselineSetHandle baselineSet, String baselineSetName,
+			IConsoleOutput listener, IProgressMonitor progress) {
+    	LOGGER.entering(this.getClass().getName(), "populateChangeReport2 - no previous snapshot");
+    	SubMonitor monitor = SubMonitor.convert(progress, 100);
+    	try {
+			// record build workspace id and name
+			fillWorkspace(changeReport, workspaceHandle, workspaceName, listener, monitor.newChild(10));
+			// record snapshot if one was created
+			fillSnapshot(changeReport, baselineSet, baselineSetName, listener, monitor.newChild(10));
+    	} finally {
+    		monitor.done();
+    	}
+    }
+
+	public void populateChangeReport2(ChangeReport changeReport,
+			IWorkspaceHandle workspaceHandle, String workspaceName, 
+			IBaselineSet baselineSet, String baselineSetName,
+			IBaselineSet previousBaselineSet, String previousBaselineSetName,
+			IChangeHistorySyncReport acceptReport, IConsoleOutput listener,
+			IProgressMonitor progress) throws TeamRepositoryException {
+    	LOGGER.entering(this.getClass().getName(), "populateChangeReport2 - previous snapshot");
+		SubMonitor monitor = SubMonitor.convert(progress, 100);
+		try {
+			listener.log("Enter populateChangeReport2: Begin");
+			// record build workspace id and name
+			fillWorkspace(changeReport, workspaceHandle, workspaceName, listener, monitor.newChild(10));
+			
+			// record snapshot if one was created
+			fillSnapshot(changeReport, baselineSet, baselineSetName, listener, monitor.newChild(10));
+			
+			// record previous snapshot UUID
+			fillPreviousSnapshot(changeReport, previousBaselineSet, previousBaselineSetName, listener, 
+					monitor.newChild(10));
+			
+					// record component additions/removals
+			fillComponentChanges(changeReport, acceptReport, listener, monitor.newChild(30)); 
+	
+			// record change sets accepted/discarded
+			fillChangeSetChanges(changeReport, acceptReport, workspaceHandle, listener, monitor.newChild(40));
+		} finally {
+			monitor.done();
+		}
 	}
 }

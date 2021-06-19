@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2016 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -202,7 +202,6 @@ public class ChangeReport {
 		public BaselineSetReport(String itemId, String name) {
 			super(itemId, name);
 		}
-		
 	}
 	
 	public static class BuildStreamReport extends ItemReport {
@@ -254,6 +253,7 @@ public class ChangeReport {
 	private String previousBuildUrl;
 	private BuildDefinitionReport buildDefinition;
 	private BuildWorkspaceReport buildWorkspace;
+    private BaselineSetReport previousBaselineSet;
 	private BuildStreamReport buildStream;
 
     public ChangeReport(OutputStream changeLogFile) {
@@ -280,6 +280,10 @@ public class ChangeReport {
     
     public void baselineSetCreated(BaselineSetReport baselineSet) {
     	this.baselineSet = baselineSet;
+    }
+
+    public void previousBaselineSetCreated(BaselineSetReport previousBaselineSet) {
+    	this.previousBaselineSet = previousBaselineSet;
     }
 
 	public Collection<ComponentReport> getComponentChanges() {
@@ -420,6 +424,10 @@ public class ChangeReport {
 			   str.append(" previousBuildUrl=\"" + previousBuildUrl + "\""); //$NON-NLS-1$
 			} else {// To differentiate between absence of data vs absence of a previous build url
 				str.append(" previousBuildUrl=\"\""); //$NON-NLS-1$
+			}
+			if (previousBaselineSet != null) {
+				str.append(" previousBaselineSetName=\"" +escapeXml(previousBaselineSet.getName()) + "\"") //$NON-NLS-1$
+				.append(" previousBaselineSetItemId=\"" + previousBaselineSet.getItemId() + "\"");
 			}
 			str.append(">");
 

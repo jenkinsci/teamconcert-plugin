@@ -1,0 +1,81 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Request Build</h3>
+  <p>
+   Request a EWM (RTC) build from the Jenkins pipeline. 
+   When a request is successfully created, the step returns the build result UUID in the property "buildResultUUID".
+  </p>
+  <br/>
+</div>
+
+<div>
+  <h3>Wait for Build</h3>
+  <p>
+   Wait for a EWM (RTC) build result to attain a specific state. 
+   Default states to wait for are COMPLETED and INCOMPLETE.
+   If a timeout period is provided, then the task does not return until the specified state is reached or the time period expires.
+   By default, the task will wait indefinitely till the build result reaches the specified states.
+  </p>
+  <br/>
+</div>
+
+<div>
+   <h3>List Logs</h3>
+   <p>
+     Retrieve the details of the one or more logs from an EWM (RTC) build result. Logs appear in the "Logs" tab of the EWM build result.
+     This task will retrieve the details of the logs whose content is stored in the EWM repository.
+   </p>
+   <br/>
+</div>
+
+<div>
+  <h3>List Artifacts</h3>
+  <p>
+     Retrieve the details of the artifacts from an EWM (RTC) build result. Artifacts appear in the "Downloads" tab of the EWM build result.
+     This task will retrieve the details of the artifacts whose content is stored in the EWM repository. 
+  </p>
+  <br/> 
+</div>
+
+<div>
+  <h3>Download Log</h3>
+  <p>
+    Download a log from an EWM (RTC) build result. You can download a log using the log’s name or content ID.
+    To retrieve the name or contentId of the log, use the "List Logs" task.
+  </p>
+  <br/>
+</div>
+
+<div>
+  <h3>Download Artifact</h3>
+  <p>
+    Download an artifact from an EWM (RTC) build result. You can download an artifact using the artifact's name or content ID.
+    To retrieve the name or contentId of the artifact, use the "List Artifacts" task.
+  </p>
+  <br/>
+</div>
+
+<div>
+  <h3>Get SCM Snapshot from Build</h3>
+  <p>
+     Retrieve the Jazz SCM snapshot details for a given EWM (RTC) build result.
+     If the build result has a Jazz SCM snapshot contribution, then the task returns the snapshot's name and UUID.
+     If the build result does not have such a contribution, then the task returns empty values for snapshot name and UUID.
+   </p>
+</div> 
+ 

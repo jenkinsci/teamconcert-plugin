@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 IBM Corporation and others.
+ * Copyright (c) 2017, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,26 +11,38 @@
 
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
-import org.eclipse.core.runtime.AssertionFailedException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 
 public class ConsoleOutputHelper implements IConsoleOutput {
+	Set<String> infoMessages = new HashSet<String>();
+	Map<String, Exception> exceptionMessages = 
+				new HashMap<String, Exception>();
 	private final Exception[] failure = new Exception[] {null};
 
 	@Override
 	public void log(String message, Exception e) {
 		failure[0] = e;
+		exceptionMessages.put(message, e);
 	}
 	
 	@Override
 	public void log(String message) {
-		// not good
-		throw new AssertionFailedException(message);
+		infoMessages.add(message);
 	}
 	
 	public Exception getFailure() {
 		return failure[0];
+	}
+	
+	public Collection<Exception> getFailures() {
+		return exceptionMessages.values();
 	}
 
 	public boolean hasFailure() {

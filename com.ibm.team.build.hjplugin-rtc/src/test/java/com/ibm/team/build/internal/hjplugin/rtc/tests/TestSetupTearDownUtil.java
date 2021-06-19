@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2020 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -24,12 +24,20 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
+import com.ibm.team.build.client.ITeamBuildRequestClient;
 import com.ibm.team.build.common.builddefinition.IAutoDeliverConfigurationElement;
 import com.ibm.team.build.common.builddefinition.UDeployConfigurationElement.TriggerPolicy;
 import com.ibm.team.build.common.model.BuildState;
+import com.ibm.team.build.common.model.IBuildEngine;
+import com.ibm.team.build.common.model.IBuildEngineHandle;
+import com.ibm.team.build.common.model.IBuildProperty;
+import com.ibm.team.build.common.model.IBuildRequest;
+import com.ibm.team.build.common.model.IBuildRequestHandle;
 import com.ibm.team.build.common.model.IBuildResult;
+import com.ibm.team.build.common.model.IBuildResultHandle;
 import com.ibm.team.build.internal.common.builddefinition.IJazzScmConfigurationElement;
 import com.ibm.team.build.internal.hjplugin.rtc.BuildClient;
+import com.ibm.team.build.internal.hjplugin.rtc.BuildConnection;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.Constants;
 import com.ibm.team.build.internal.hjplugin.rtc.IBuildResultInfo;
@@ -99,6 +107,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 	public static final String ARTIFACT_BASELINE_SET_ITEM_ID = "baselineSetItemId";
 	public static final String ARTIFACT_BUILD_DEFINITION_ITEM_ID = "buildDefinitionItemId";
 	public static final String ARTIFACT_BUILD_DEFINITION_ID = "buildDefinitionId";
+	public static final String ARTIFACT_BUILD_ENGINE_ID = "buildEngineId";
 	public static final String ARTIFACT_BUILD_ENGINE_ITEM_ID = "buildEngineItemId";
 	public static final String ARTIFACT_BUILD_RESULT_ITEM_ID = "buildResultItemId";
 	public static final String ARTIFACT_PROJECT_AREA_ITEM_ID = "projectAreaItemId";
@@ -234,15 +243,17 @@ public class TestSetupTearDownUtil extends BuildClient {
 			if (destinationDirectory == null) {
 				destinationDirectory = ".";
 			}
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
-					buildProperties,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID,
+					artifactIds, buildProperties,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, destinationDirectory,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true");
 			if (createBuildResult) {
-				String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, connection, "my label",
-						artifactIds);
+				String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, 
+						connection, "my label", artifactIds).getItemId().getUuidValue();
 
 				if (isPersonalBuild) {
 					IBuildResult buildResult = (IBuildResult) repo.itemManager()
@@ -487,17 +498,19 @@ public class TestSetupTearDownUtil extends BuildClient {
 		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository();
 
-		// Delete SCM repository workspaces
-		SCMUtil.deleteSCMArtifacts(repo, setupArtifacts);
-
-		// Delete the build defn related artifacts
-		BuildUtil.deleteBuildArtifacts(repo, setupArtifacts);
-
-		// Delete project area and process definition, if any
-		ProcessUtil.deleteProcessArtifacts(repo, setupArtifacts);
-
-		// Delete work item artifacts
-		WorkItemUtil.deleteWorkItems(repo, setupArtifacts);
+		if (setupArtifacts != null) {
+			// Delete SCM repository workspaces
+			SCMUtil.deleteSCMArtifacts(repo, setupArtifacts);
+	
+			// Delete the build defn related artifacts
+			BuildUtil.deleteBuildArtifacts(repo, setupArtifacts);
+	
+			// Delete project area and process definition, if any
+			ProcessUtil.deleteProcessArtifacts(repo, setupArtifacts);
+	
+			// Delete work item artifacts
+			WorkItemUtil.deleteWorkItems(repo, setupArtifacts);
+		}
 	}
 
 	public void tearDownTestBuildStream_complete(ConnectionDetails connectionDetails,
@@ -859,8 +872,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 	}
 
 	public Map<String, String> setupBuildResultContributions(ConnectionDetails connectionDetails, String workspaceName,
-			String componentName, String buildDefinitionId, IProgressMonitor progress) throws Exception {
-
+			String componentName, String buildDefinitionId, boolean createBuildEngine, String buildDefinitionElementId,
+			String buildEngineElementId, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository();
@@ -878,7 +891,7 @@ public class TestSetupTearDownUtil extends BuildClient {
 				workspaceName);
 		IComponent component = (IComponent) pathToHandle.get(componentName);
 
-		// capture interesting uuids to verify against
+		// capture interesting UUID to verify against
 		artifactIds.put(ARTIFACT_WORKSPACE_ITEM_ID, buildWorkspace.getContextHandle().getItemId().getUuidValue());
 		artifactIds.put(ARTIFACT_STREAM_ITEM_ID, buildStream.getContextHandle().getItemId().getUuidValue());
 		artifactIds.put(ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
@@ -890,7 +903,8 @@ public class TestSetupTearDownUtil extends BuildClient {
 		createChangeSet3(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
 		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
 
-		BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+		BuildUtil.createBuildDefinition(repo, buildDefinitionId, buildDefinitionElementId,
+				createBuildEngine, buildEngineElementId, artifactIds,
 				null, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 				buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 				IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, ".",
@@ -898,6 +912,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 
 		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
 		return artifactIds;
+	}
+	
+	
+	public Map<String, String> setupBuildResultContributions(ConnectionDetails connectionDetails, String workspaceName,
+			String componentName, String buildDefinitionId, IProgressMonitor progress) throws Exception {
+		return setupBuildResultContributions(connectionDetails, workspaceName, componentName, 
+				buildDefinitionId, true, BuildConnection.HJ_ELEMENT_ID, BuildConnection.HJ_ENGINE_ELEMENT_ID, progress);
 	}
 
 	public Map<String, String> setupBuildResultContributions_toTestLoadPolicy(ConnectionDetails connectionDetails,
@@ -937,7 +958,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		createChangeSet3(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
 		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
 
-		BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+		BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+				BuildConnection.HJ_ELEMENT_ID,
+				true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 				null,
 				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 				buildWorkspace.getContextHandle().getItemId().getUuidValue(),
@@ -948,6 +971,45 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return artifactIds;
 	}
 
+	/**
+	 * Setup a build definition with Jazz SCM configuration and immediately queue a build
+	 * 
+	 * Note that queueing is possible only if a build engine will be created, controlled by 
+	 * <code>createBuildEngine</code> parameter.
+	 * 
+	 * @param connectionDetails
+	 * @param buildDefinitionId
+	 * @param processArea
+	 * @param createBuildEngine
+	 * @param requestBuild
+	 * @param buildDefinitionElementID
+	 * @param buildEngineElementID
+	 * @param progress
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> setupBuildDefinitionWithoutSCMWithQueuedBuild(ConnectionDetails connectionDetails,
+			String buildDefinitionId, String processArea, boolean createBuildEngine, Map<String, String> buildProperties,
+			boolean requestBuild, String buildDefinitionElementID, 
+			String buildEngineElementID, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repo = connection.getTeamRepository();
+		Map<String, String> artifactIds = new HashMap<String, String>();
+		BuildUtil.createBuildDefinition(repo, buildDefinitionId, 
+				buildDefinitionElementID,
+				// A null array should be passed, otherwise varargs will get an empty array
+				// This leads to jazz scm configuration element getting added to the 
+				// build definition.
+				createBuildEngine, buildEngineElementID, processArea, artifactIds, 
+				buildProperties, (String [])null);
+		artifactIds.put("isPre603BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre603BuildToolkit()));
+		if (requestBuild) {
+			BuildConnectionTests.requestBuild(repo, BuildState.NOT_STARTED, buildDefinitionId, artifactIds);
+		}
+		return artifactIds;
+	}
+	
 	public void verifyBuildResultContributions(ConnectionDetails connectionDetails, Map<String, String> artifacts)
 			throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
@@ -1506,9 +1568,13 @@ public class TestSetupTearDownUtil extends BuildClient {
 		}
 		return artifactIds;
 	}
-
-	public Map<String, String> setupTestBuildDefinition(ConnectionDetails connectionDetails, String uniqueName,
-			IProgressMonitor progress) throws Exception {
+	public Map<String, String> setupTestBuildDefinition(ConnectionDetails connectionDetails, 
+			String uniqueName, IProgressMonitor progress) throws Exception {
+		return setupTestBuildDefinition(connectionDetails, uniqueName, null, progress);
+	}
+	
+	public Map<String, String> setupTestBuildDefinition(ConnectionDetails connectionDetails, 
+			String uniqueName, String  processOwnerName, IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
 		connection.ensureLoggedIn(progress);
 		ITeamRepository repo = connection.getTeamRepository();
@@ -1530,7 +1596,11 @@ public class TestSetupTearDownUtil extends BuildClient {
 				buildStream.getContextHandle().getItemId().getUuidValue());
 		artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 
-		BuildUtil.createBuildDefinition(repo, uniqueName, true, artifactIds,
+		BuildUtil.createBuildDefinition(repo, uniqueName,
+				BuildConnection.HJ_ELEMENT_ID,
+				true, 
+				BuildConnection.HJ_ENGINE_ELEMENT_ID,
+				processOwnerName, artifactIds,
 				null,
 				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 				buildWorkspace.getContextHandle().getItemId().getUuidValue(),
@@ -1836,6 +1906,21 @@ public class TestSetupTearDownUtil extends BuildClient {
 		return listener;
 	}
 
+	public void cancelBuild(ConnectionDetails connectionDetails, String buildResultUUID, 
+							IProgressMonitor progress) throws Exception {
+		finishBuild(connectionDetails, buildResultUUID, null, progress, BuildState.CANCELED);
+	}
+	
+	public void abandonBuild(ConnectionDetails connectionDetails, String buildResultUUID, 
+			IProgressMonitor progress) throws Exception {
+		finishBuild(connectionDetails, buildResultUUID, null, progress, BuildState.INCOMPLETE);
+	}
+	
+	public void completeBuild(ConnectionDetails connectionDetails, String buildResultUUID, String buildEngineUUID,
+			IProgressMonitor progress) throws Exception {
+		finishBuild(connectionDetails, buildResultUUID, buildEngineUUID, progress, BuildState.COMPLETED);
+	}
+
 	public void deleteSnapshot(ConnectionDetails connectionDetails, String streamName, String snapshotUUID,
 			IProgressMonitor progress) throws Exception {
 		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
@@ -1843,11 +1928,16 @@ public class TestSetupTearDownUtil extends BuildClient {
 		ITeamRepository repository = connection.getTeamRepository();
 		IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getStream(null, streamName, repository,
 				progress, Locale.getDefault());
-		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
-		IWorkspaceConnection workspaceConnection = workspaceManager.getWorkspaceConnection(workspaceHandle, progress);
-		IBaselineSetHandle baseline = RTCSnapshotUtils.getSnapshot(repository, null, snapshotUUID, progress,
-				Locale.getDefault());
-		workspaceConnection.removeBaselineSet(baseline, progress);
+		deleteSnapshotFromWorkspace(connectionDetails, workspaceHandle, snapshotUUID, progress);
+	}
+	public void deleteSnapshotFromWorkspace(ConnectionDetails connectionDetails, String workspaceName, String snapshotUUID,
+			IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repository = connection.getTeamRepository();
+		IWorkspaceHandle workspaceHandle = RTCWorkspaceUtils.getInstance().getWorkspace(workspaceName, repository, 
+					progress, Locale.getDefault());
+		deleteSnapshotFromWorkspace(connectionDetails, workspaceHandle, snapshotUUID, progress);
 	}
 
 	public Map<String, String> setupBuildDefinitionWithoutJazzScmWithPBDeliver(ConnectionDetails connectionDetails,
@@ -1968,8 +2058,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		// Create the build result now, so that it includes PB deliver configuration
 		// element
 		if (createBuildResult) {
-			String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, connection, "my label",
-					artifactIds);
+			String buildResultItemId = BuildUtil.createBuildResult(buildDefinitionId, 
+					connection, "my label",
+					artifactIds).getItemId().getUuidValue();
 			if (isPersonalBuild) {
 				IBuildResult buildResult = (IBuildResult) repo.itemManager()
 						.fetchCompleteItem(
@@ -2217,7 +2308,9 @@ public class TestSetupTearDownUtil extends BuildClient {
 		createChangeSet3(repo, buildStream, component, c1, pathToHandle, artifactIds, false);
 		createChangeSet4(repo, buildStream, component, pathToHandle, artifactIds);
 
-		BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+		BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+				BuildConnection.HJ_ELEMENT_ID,
+				true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 				null,
 				IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 				buildWorkspace.getContextHandle().getItemId().getUuidValue(),
@@ -2229,4 +2322,159 @@ public class TestSetupTearDownUtil extends BuildClient {
 		artifactIds.put("isPre701BuildToolkit", Boolean.toString(VersionCheckerUtil.isPre701BuildToolkit()));
 		return artifactIds;
 	}
+
+	/**
+	 * This method appears to be unused elsewhere sand should be removed.
+	 * 
+	 * @param connectionDetails
+	 * @param buildResultUUID
+	 * @param expectedState
+	 * @param expectedStatus
+	 */
+	public void testBuildResult(ConnectionDetails connectionDetails, String buildResultUUID, String expectedState,
+			String expectedStatus) {
+		
+	}
+
+	/**
+	 * Set up process area with the given process XML.
+	 * 
+	 * @param connectionDetails
+	 * @param projectAreaName
+	 * @param processXML
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> setupTestProcessArea_basic(ConnectionDetails connectionDetails, String projectAreaName,
+									String processXML) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		RTCFacadeTests rtcFacadeTests = new RTCFacadeTests(connection);
+		return rtcFacadeTests.setupTestProcessArea_basic(projectAreaName, processXML);
+	}
+
+	/**
+	 * Finish a build as either {@link BuildState#COMPLETED} or {@link BuildState#INCOMPLETE}
+	 *  or {@link BuildState#CANCELED}
+	 *  
+	 * @param connectionDetails
+	 * @param buildResultUUID
+	 * @param buildEngineUUID
+	 * @param progress
+	 * @param expectedState
+	 * @throws Exception
+	 */
+	private void finishBuild(ConnectionDetails connectionDetails, String buildResultUUID, String buildEngineUUID,
+			IProgressMonitor progress, BuildState expectedState) throws Exception {
+
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repository = connection.getTeamRepository();
+		// Get hold of the build request
+		IBuildResult result = (IBuildResult) repository.itemManager().fetchCompleteItem(
+				IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null),
+				IItemManager.REFRESH, progress);
+		IBuildRequestHandle br = (IBuildRequestHandle) result.getBuildRequests().get(0);
+		ITeamBuildRequestClient bcl = (ITeamBuildRequestClient) repository.getClientLibrary(ITeamBuildRequestClient.class);
+	
+		switch (expectedState) {
+			case INCOMPLETE:
+				// if build engine item id is provided then first claim the request so that it is marked as processed,
+				// in case the request is still not processed directly invoking start build would fail.
+				if (buildEngineUUID != null) {
+					IBuildEngineHandle buildEngineHandle = (IBuildEngineHandle)IBuildEngine.ITEM_TYPE.createItemHandle(UUID.valueOf(buildEngineUUID),
+							null);
+					bcl.claimRequest(br, buildEngineHandle, null, progress);
+				}
+				if (result.getState().equals(BuildState.NOT_STARTED)) {
+					// Make it in progress
+					bcl.startBuild(br, IBuildRequestHandle.PROPERTIES_REQUIRED, progress);
+				}
+				bcl.makeBuildIncomplete((IBuildResultHandle) result.getItemHandle(),
+						IBuildResultHandle.PROPERTIES_COMPLETE, progress); 
+				break;
+			case COMPLETED:
+				if (result.getState().equals(BuildState.NOT_STARTED)) {
+				// if build engine item id is provided then first claim the request so that it is marked as processed,
+				// in case the request is still not processed directly invoking start build would fail.
+				if (buildEngineUUID != null) {
+					IBuildEngineHandle buildEngineHandle = (IBuildEngineHandle)IBuildEngine.ITEM_TYPE.createItemHandle(UUID.valueOf(buildEngineUUID),
+							null);
+					bcl.claimRequest(br, buildEngineHandle, null, progress);
+				}					
+					// Make it in progress
+					bcl.startBuild(br, IBuildRequestHandle.PROPERTIES_REQUIRED, progress);
+				}
+				bcl.makeBuildComplete((IBuildResultHandle) result.getItemHandle(), false,
+							IBuildResultHandle.PROPERTIES_COMPLETE, progress);
+				break;
+			case CANCELED:
+				bcl.cancelPendingRequest((IBuildRequestHandle) result.getBuildRequests().get(0), 
+						IBuildRequestHandle.PROPERTIES_REQUIRED, progress);
+				break;
+			default:
+				throw new Exception("expectedState is not an one of INCOMPLETE, COMPLETED,"
+						+ "CANCELED");
+		}
+    }
+
+	/**
+	 * Deactivate the given build engine 
+	 * 
+	 * @param connectionDetails
+	 * @param buildEngineItemId
+	 * @param progress
+	 * @throws Exception
+	 */
+	public void deactivateEngine(ConnectionDetails connectionDetails, String buildEngineItemId,
+										IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repository = connection.getTeamRepository();
+		BuildUtil.deActivateEngine(buildEngineItemId, progress, repository);
+	}
+	
+	/**
+	 * Get the properties from the build definition instance associated with the build result.
+	 * 
+	 * @param serverURL         The server's URL
+	 * @param userId            User Id
+	 * @param passwordToUse     Password
+	 * @param timeout           Timeout for server connection
+	 * @param buildResultUUID   The item id of the build result.
+	 * @param progress			Progress monitor
+	 * @return
+	 * @throws Exception
+	 */
+	@SuppressWarnings("unchecked")
+	public Map<String, String> getBuildProperties(ConnectionDetails connectionDetails, String buildResultUUID, IProgressMonitor progress)
+			throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repository = connection.getTeamRepository();
+		// Get hold of the build request
+		IBuildResult result = (IBuildResult)repository.itemManager().fetchCompleteItem(
+				IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null), IItemManager.REFRESH, progress);
+		IBuildRequest buildRequest = (IBuildRequest)repository.itemManager().fetchCompleteItem((IItemHandle)result.getBuildRequests().get(0),
+				IItemManager.REFRESH, progress);
+		// Get the properties from the build definition associated with the build request.
+		List<IBuildProperty> buildProperties = buildRequest.getBuildDefinitionInstance().getProperties();
+		Map<String, String> propertiesMap = new HashMap<String, String>();
+		for (IBuildProperty buildProperty : buildProperties) {
+			propertiesMap.put(buildProperty.getName(), buildProperty.getValue());
+		}
+		return propertiesMap;
+	}
+
+	private void deleteSnapshotFromWorkspace(ConnectionDetails connectionDetails, IWorkspaceHandle workspaceHandle, 
+							String snapshotUUID, IProgressMonitor progress) throws Exception {
+		RepositoryConnection connection = super.getRepositoryConnection(connectionDetails);
+		connection.ensureLoggedIn(progress);
+		ITeamRepository repository = connection.getTeamRepository();
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repository);
+		IWorkspaceConnection workspaceConnection = workspaceManager.getWorkspaceConnection(workspaceHandle, progress);
+		IBaselineSetHandle baseline = RTCSnapshotUtils.getSnapshot(repository, null, snapshotUUID, progress,
+				Locale.getDefault());
+		workspaceConnection.removeBaselineSet(baseline, progress);
+	}
 }
+

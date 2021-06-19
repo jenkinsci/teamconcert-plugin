@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2019 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -358,6 +358,9 @@ public class BuildConnection {
 	 * Tests that the specified build definition is valid.
 	 * 
 	 * @param buildDefinitionId ID of the RTC build definition
+	 * @param doIgnoreJenkinsConfiguration If <code>true</code>, then ignore the absence 
+	 *                                     of HJ related configuration element in build 
+	 *                                     definition and engine.
 	 * @param progress A progress monitor to check for cancellation with (and mark progress).
 	 * @param clientLocale The locale of the requesting client
 	 * @throw Exception if an error occurs
@@ -366,7 +369,8 @@ public class BuildConnection {
      *             be found.
 	 * @LongOp
 	 */
-	public void testBuildDefinition(String buildDefinitionId, IProgressMonitor progress, Locale clientLocale) throws Exception {
+	public void testBuildDefinition(String buildDefinitionId, boolean doIgnoreJenkinsConfiguration,  
+					IProgressMonitor progress, Locale clientLocale) throws Exception {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
 		
 		// validate the build definition exists
@@ -381,18 +385,20 @@ public class BuildConnection {
             throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_build_engine());
 		}
 		
-		// validate the build definition is a hudson/jenkins build definition
-        IBuildConfigurationElement hudsonDefinitionBuildConfigurationElement = buildDefinition.getConfigurationElement(HJ_ELEMENT_ID);
-        if (hudsonDefinitionBuildConfigurationElement == null) {
+		// validate the build definition is a hudson/jenkins build definition, provided doIgnoreJenkinsConfiguration 
+		// is false
+		IBuildConfigurationElement hudsonDefinitionBuildConfigurationElement = buildDefinition.getConfigurationElement(HJ_ELEMENT_ID);
+        if (hudsonDefinitionBuildConfigurationElement == null && !doIgnoreJenkinsConfiguration) {
             throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_hudson_config());
         }
         
-        // validate the build definition has a hudson/jenkins build engine
+        // validate the build definition has a hudson/jenkins build engine, provided doIgnoreJenkinsConfiguration 
+		// is false
 		IBuildEngine buildEngine = (IBuildEngine) getTeamRepository().itemManager().fetchPartialItem(
                 buildEngineHandle, IItemManager.REFRESH,
                 Arrays.asList(IBuildEngine.PROPERTY_CONFIGURATION_ELEMENTS), monitor.newChild(50));
 		IBuildConfigurationElement hudsonEngineBuildConfigurationElement = buildEngine.getConfigurationElement(HJ_ENGINE_ELEMENT_ID);
-		if (hudsonEngineBuildConfigurationElement == null) {
+		if (hudsonEngineBuildConfigurationElement == null && !doIgnoreJenkinsConfiguration) {
             throw new RTCValidationException(Messages.get(clientLocale).BuildConnection_build_definition_missing_build_engine_hudson_config());
 		}
 		

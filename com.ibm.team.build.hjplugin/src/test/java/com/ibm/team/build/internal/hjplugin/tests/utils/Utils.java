@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2016, 2019 IBM Corporation and others.
+ * Copyright © 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -44,6 +44,7 @@ import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 import com.ibm.team.build.internal.hjplugin.RTCPostBuildDeliverPublisher;
 import com.ibm.team.build.internal.hjplugin.RTCScm;
 import com.ibm.team.build.internal.hjplugin.RTCScm.BuildType;
+import com.ibm.team.build.internal.hjplugin.RTCScm.PollingOnlyData;
 import com.ibm.team.build.internal.hjplugin.rtc.tests.RTCTestingFacade;
 import com.ibm.team.build.internal.hjplugin.tests.Config;
 
@@ -85,6 +86,7 @@ public class Utils {
 	public static final String ARTIFACT_COMPONENT_NAME = "componentName";
 
 	public static final String ARTIFACT_BUILDDEFINITION_ITEM_ID = "buildDefinitionItemId";
+	public static final String ARTIFACT_BUILD_ENGINE_ITEM_ID = "buildEngineItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_ID = "buildResultItemId";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_1_ID = "buildResultItemId1";
 	public static final String ARTIFACT_BUILDRESULT_ITEM_2_ID = "buildResultItemId2";
@@ -749,7 +751,7 @@ public class Utils {
 	 * @throws Exception 
 	 */
 	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, 
-		String streamName, String loadDirectory, boolean addLinksToWorkitems) throws Exception {
+						String streamName, String loadDirectory, boolean addLinksToWorkitems) throws Exception {
 		RTCScm rtcScm = constructRTCScmForStream(r, c, streamName, loadDirectory, addLinksToWorkitems);
 		FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);
 		return prj;
@@ -765,6 +767,21 @@ public class Utils {
 	 */
 	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, String streamName) throws Exception {
 		return setupFreeStyleJobForStream(r, c, streamName, null, true);
+	}
+	
+	/** Sets up a freestyle job with the given stream name. The stream should exist
+	 * 
+	 * @param r - The Jenkins instance
+	 * @param c - The configuration of the current test run 
+	 * @param buildType - The name of the stream
+	 * @return - A FreeStyleProject created with the given RTCScm.
+	 * @throws Exception 
+	 */
+	public static FreeStyleProject setupFreeStyleJobForStream(JenkinsRule r, Config c, BuildType buildType) 
+							throws Exception {
+		RTCScm rtcScm = constructRTCScmForStream(r, c, buildType);
+		FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);
+		return prj;
 	}
 	
 	/**
@@ -981,17 +998,27 @@ public class Utils {
 	}
 
 	/**
-	 * Construct RTCScm for the given build definition. The build definition should exist.
+	 * Construct RTCScm for the given build definition. The build definition will not 
+	 * be created as part of this method. 
 	 * 
 	 * @param r The Jenkins instance.
 	 * @param buildDefinitionId The id of the build definition.
+	 * @param pollingOnly Whether to enable pollingOnly for the build definition
 	 * @return A RTCScm  with the given build definition id.
 	 */
-	public static RTCScm constructRTCScmForBuildDefinition(JenkinsRule r, String buildDefinitionId) {
+	public static RTCScm constructRTCScmForBuildDefinition(JenkinsRule r, String buildDefinitionId, 
+										boolean pollingOnly) {
 		Config defaultC = Config.DEFAULT;
 		setSystemBuildToolkit(r, defaultC);
+		BuildType bt = new RTCScm.BuildType("buildDefinition", buildDefinitionId, null, null, null);
+		if (pollingOnly == false) {
+			bt.setPollingOnlyData(null);
+		} else {
+			bt.setPollingOnlyData(new PollingOnlyData(""));
+		}
+			
 		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()), 
-				defaultC.getPasswordFile(), null, new RTCScm.BuildType("buildDefinition", buildDefinitionId, null, null, null), false);
+				defaultC.getPasswordFile(), null, bt, false);
 		return rtcScm;
 	}
 	
@@ -1004,7 +1031,22 @@ public class Utils {
 	 * @throws Exception
 	 */
 	public static FreeStyleProject setupFreeStyleJobForBuildDefinition(JenkinsRule r, String buildDefinitionId) throws Exception{
-		RTCScm rtcScm = constructRTCScmForBuildDefinition(r, buildDefinitionId);
+		RTCScm rtcScm = constructRTCScmForBuildDefinition(r, buildDefinitionId, false);
+		FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);		
+		return prj;
+	}
+	
+	/**
+	 * Setup freestyle job for the given build definition. The build definition should exist.
+	 * 
+	 * @param r The Jenkins instance.
+	 * @param buildDefinitionId The id of the build definition
+	 * @return A freestyle project that has a RTCScm instance configured with the build definition.
+	 * @throws Exception
+	 */
+	public static FreeStyleProject setupFreeStyleJobForBuildDefinitionForPollingOnly(JenkinsRule r, 
+						String buildDefinitionId) throws Exception{
+		RTCScm rtcScm = constructRTCScmForBuildDefinition(r, buildDefinitionId, true);
 		FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);		
 		return prj;
 	}
@@ -1022,7 +1064,7 @@ public class Utils {
 	 * @throws Exception
 	 */
 	public static FreeStyleProject setupFreeStyleJobWithPBDeliver(JenkinsRule r, String buildDefinitionId, List<? extends Publisher> list) throws Exception {
-		RTCScm rtcScm = constructRTCScmForBuildDefinition(r, buildDefinitionId);
+		RTCScm rtcScm = constructRTCScmForBuildDefinition(r, buildDefinitionId, false);
 	    FreeStyleProject prj = createFreeStyleJobWithRTCScm(r, rtcScm);
 	    if (list != null) {
 	    	prj.getPublishersList().addAll(list);
@@ -1084,13 +1126,26 @@ public class Utils {
 	 * @throws Exception
 	 */
 	public static FreeStyleProject setupFreeStyleJobForSnapshot(JenkinsRule r, String snapshotUUIDOrName, String loadDirectory) throws Exception {
-		Config defaultC = Config.DEFAULT;
-
-		setSystemBuildToolkit(r, defaultC);
 		RTCScm.BuildType buildType = new RTCScm.BuildType("buildSnapshot", null, null, snapshotUUIDOrName, null);
 		if (loadDirectory != null) {
 			buildType.setLoadDirectory(loadDirectory);
 		}
+		return setupFreeStyleJobForSnapshot(r, buildType);
+		
+	}
+	
+	/**
+	 * Setup a freestyle project with snapshot configuration.The snapshot should exist.
+	 * 
+	 * @param r The Jenkins instance
+	 * @param snapshotUUIDOrName The UUID or name of the snapshot 
+	 * @param buildType A buildtype
+	 * @throws Exception
+	 */
+	public static FreeStyleProject setupFreeStyleJobForSnapshot(JenkinsRule r, BuildType buildType) throws Exception {
+		Config defaultC = Config.DEFAULT;
+
+		setSystemBuildToolkit(r, defaultC);
 		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 				defaultC.getPasswordFile(), null, buildType, false);
 	
@@ -1310,7 +1365,7 @@ public class Utils {
 	 * @param filename the name of the temporary file
 	 * @throws IOException if there is an exception reading or writing files.
 	 */
-	public static String dumpLogFile(FreeStyleBuild b, String prefix, String filename, String suffix) throws IOException {
+	public static String dumpLogFile(Run b, String prefix, String filename, String suffix) throws IOException {
 		if (Config.DEFAULT.isDumpLogFiles()) {
 			File tmpFile = getTemporaryFile(prefix, filename, suffix, false);
 			File logFile = b.getLogFile();
@@ -1458,15 +1513,19 @@ public class Utils {
 	 * @return A RTCScm instance
 	 */
 	private static RTCScm constructRTCScmForStream(JenkinsRule r, Config c, String streamName, String loadDirectory, boolean createWorkItemLinks) {
-		Config defaultC = c;
 		// Set the toolkit
-		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
-		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 		RTCScm.BuildType buildType = new RTCScm.BuildType("buildStream", null, null, null, streamName);
 		if (loadDirectory != null) {
 			buildType.setLoadDirectory(loadDirectory);
 		}
 		buildType.setAddLinksToWorkItems(createWorkItemLinks);
+		return constructRTCScmForStream(r, c, buildType);
+	}
+	
+	private static RTCScm constructRTCScmForStream(JenkinsRule r, Config c, BuildType buildType) {
+		Config defaultC = c;
+		RTCBuildToolInstallation install = new RTCBuildToolInstallation(BUILDTOOLKITNAME, defaultC.getToolkit(), null);
+		r.jenkins.getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).setInstallations(install);
 		RTCScm rtcScm = new RTCScm(true, BUILDTOOLKITNAME, defaultC.getServerURI(), defaultC.getTimeout(), defaultC.getUserID(), Secret.fromString(defaultC.getPassword()),
 				defaultC.getPasswordFile(), null, buildType, false);
 		return rtcScm;
@@ -1517,7 +1576,7 @@ public class Utils {
 	public static RTCBuildToolInstallation getSystemBuildToolkit(JenkinsRule r) {
 		RTCBuildToolInstallation [] installs = r.jenkins.
 					getDescriptorByType(RTCBuildToolInstallation.DescriptorImpl.class).getInstallations();
-		if (installs != null && installs.length >0) {
+		if (installs != null && installs.length > 0) {
 			return installs[0];
 		} else {
 			return null;

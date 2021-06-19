@@ -1,0 +1,401 @@
+<project name="TestDataGenerator" default="closeBuild">
+<taskdef name="requestTeamBuild"
+   classname="com.ibm.team.build.ant.task.RequestBuildTask" />
+<taskdef name="startTeamBuild"
+        classname="com.ibm.team.build.ant.task.StartBuildTask" />
+<taskdef name="artifactFilePublisher"
+         classname="com.ibm.team.build.ant.task.ArtifactFilePublisherTask" />
+<taskdef name="logPublisher"
+         classname="com.ibm.team.build.ant.task.LogPublisherTask" />
+<taskdef name="completeTeamBuild"
+         classname="com.ibm.team.build.ant.task.CompleteBuildTask" />
+
+<property name="repositoryAddress" value="${repoURL}"/>
+<property name="userId" value="${user}"/>
+<property name="password" value="${pass}"/>
+<property name="buildDefinitionId" value="${buildDefinition}"/>
+<property name="buildEngineId" value="${buildEngine}"/>
+<property name="buildResultUUID" value=""/>
+<property name="buildRequestUUID" value=""/>
+
+
+<target name="createFiles">
+
+<exec executable="/bin/bash">
+<arg value="-c"/>
+<arg value="for i in `seq 0 9`; do echo blah log hello world - $$i > log-1$$i-9$$i.txt;done"/>
+</exec>
+
+<exec executable="/bin/bash">
+<arg value="-c"/>
+<arg value="for i in `seq 0 4`; do echo blah log hello world - $$i > log-10$$i-90$$i.txt;done"/>
+</exec>
+
+
+<exec executable="/bin/bash">
+<arg value="-c"/>
+<arg value="for i in `seq 0 9`; do echo blah artifact hello world - $$i > artifact-1$$i-9$$i.txt;done"/>
+</exec>
+
+<exec executable="/bin/bash">
+<arg value="-c"/>
+<arg value="for i in `seq 0 4`; do echo blah artifact hello world - $$i > artifact-10$$i-90$$i.txt;done"/>
+</exec>
+
+</target>
+
+<target name="startBuild">
+  <startTeamBuild repositoryAddress="${repositoryAddress}"
+		                userId="${userId}"
+		                password="${password}"
+		                buildDefinitionId="${buildDefinitionId}"
+				engineId="${buildEngineId}"
+		                resultUUIDProperty="buildResultUUID"
+		                label="test build"
+		                autoComplete="false"
+		                verbose="true" />
+
+</target>
+
+<target name="UploadartifactsWithComponentName1">
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+			      filePath="artifact-10-90.txt"
+			      label="artifact-10-90 artifact"
+			      componentName="comp1" />
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+			      filePath="artifact-11-91.txt"
+			      label="artifact-11-91 artifact"
+			      componentName="comp1" />
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-12-92.txt"
+		              label="artifact-12-92 artifact"
+			      componentName="comp1" />
+
+
+</target>
+
+<target name="UploadartifactsWithComponentName2">
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-13-93.txt"
+		              label="artifact-13-3 artifact"
+			      componentName="comp2" />
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-14-94.txt"
+		              label="artifact-14-94 artifact"
+			      componentName="comp2" />
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-15-95.txt"
+		              label="artifact-15-95 artifact"
+			      componentName="comp2" />
+</target>
+
+<target name="UploadartifactsWithComponentName3">
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-16-96.txt"
+		              label="artifact-16-96 artifact"
+			      componentName="comp3" />
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-17-97.txt"
+		              label="artifact-17-97 artifact"
+			      componentName="comp3" />
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-18-98.txt"
+		              label="artifact-18-98 artifact"
+			      componentName="comp3" />
+</target>
+
+<target name="UploadartifactsWithComopnentName4Samefiles">
+
+<echo file="artifact-19-99.txt" message="artifact-19-99 artifact dup"/>
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-19-99.txt"
+		              label="artifact-19-99 artifact dup"
+			      componentName="comp4" />
+<echo file="artifact-19-99.txt" message="artifact-19-99 artifact dup - 1"/>
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-19-99.txt"
+		              label="artifact-19-99 artifact dup - 1" 
+			      componentName="comp4" />
+
+<echo file="artifact-18-98.txt" message="artifact-18-98 artifact dup"/>
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-18-98.txt"
+		              label="dup artifact-18-98 artifact more than 80 charactersartifact-18-98 artifact more than 80 charactersartifact-18-98 artifact more than 80 charactersartifact-18-98 artifact more than 80 charactersartifact-18-98 artifact more than 80 charactersartifact-18-98 artifact more than 80 charactersartifact-18-98 artifact more than 80 characters"
+			      componentName="comp4" />
+
+<echo file="artifact-15-95.txt" message="artifact-15-95 artifact dup"/>
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-15-95.txt"
+		              label="artifact-15-95 artifact dup"
+			      componentName="comp4" />
+
+<echo file="artifact-12-92.txt" message="artifact-12-92 artifact dup"/>
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-12-92.txt"
+		              label="artifact-12-92 artifact dup"
+			      componentName="comp4" />
+
+</target>
+
+<target name="UploadartifactsWithoutComponentName">
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-100-900.txt"
+		              label="artifact-100-900 artifact"/>
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-101-901.txt"
+		              label="artifact-101-901 artifact"/>
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="artifact-102-902.txt"
+		              label="artifact-102-902 artifact"/>
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+                              label="artifact-103-903 artifact"
+		              filePath="artifact-103-903.txt"/>
+
+<artifactFilePublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+                              label="artifact-104-904 artifact"
+		              filePath="artifact-104-904.txt"/>
+</target>
+
+
+<target name="UploadlogsWithComponentName1">
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+			      filePath="log-10-90.txt"
+			      label="log-10-90 log"
+			      componentName="comp1" />
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+			      filePath="log-11-91.txt"
+			      label="log-11-91 log"
+			      componentName="comp1" />
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-12-92.txt"
+		              label="log-12-92 log"
+			      componentName="comp1" />
+
+
+</target>
+
+<target name="UploadlogsWithComponentName2">
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-13-93.txt"
+		              label="log-13-3 log"
+			      componentName="comp2" />
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-14-94.txt"
+		              label="log-14-94 log"
+			      componentName="comp2" />
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-15-95.txt"
+		              label="log-15-95 log"
+			      componentName="comp2" />
+</target>
+
+<target name="UploadlogsWithComponentName3">
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-16-96.txt"
+		              label="log-16-96 log"
+			      componentName="comp3" />
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-17-97.txt"
+		              label="log-17-97 log"
+			      componentName="comp3" />
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-18-98.txt"
+		              label="log-18-98 log"
+			      componentName="comp3" />
+</target>
+
+<target name="UploadlogsWithComopnentName4Samefiles">
+
+<echo file="log-19-99.txt" message="log-19-99 log dup"/>
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-19-99.txt"
+		              label="log-19-99 log dup"
+			      componentName="comp4" />
+
+<echo file="log-19-99.txt" message="log-19-99 log dup - 1"/>
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-19-99.txt"
+		              label="log-19-99 log dup -1"
+			      componentName="comp4" />
+
+<echo file="log-18-98.txt" message="log-18-98 log dup"/>
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-18-98.txt"
+		              label="log-18-98 log dup more than 80 characterslog-18-98 log more than 80 characterslog-18-98 log more than 80 characterslog-18-98 log more than 80 characterslog-18-98 log more than 80 characterslog-18-98 log more than 80 characterslog-18-98 log more than 80 characters"
+			      componentName="comp4" />
+
+<echo file="log-15-95.txt" message="log-15-95 log dup"/>
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-15-95.txt"
+		              label="log-15-95 log dup"
+			      componentName="comp4" />
+
+<echo file="log-12-92.txt" message="log-12-92 log dup"/>
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-12-92.txt"
+		              label="log-12-92 log dup"
+			      componentName="comp4" />
+
+</target>
+
+<target name="UploadlogsWithoutComponentName">
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-100-900.txt"
+		              label="log-100-900 log"/>
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-101-901.txt"
+		              label="log-101-901 log"/>
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+		              filePath="log-102-902.txt"
+		              label="log-102-902 log"/>
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+                              label="log-103-903 log"
+		              filePath="log-103-903.txt"/>
+
+<logPublisher repositoryAddress="${repositoryAddress}"
+		              userId="${userId}"
+		              password="${password}"
+		              buildResultUUID="${buildResultUUID}"
+                              label="log-104-904 log"
+		              filePath="log-104-904.txt"/>
+</target>
+
+<target name="closeBuild" depends="startBuild,UploadartifactsWithComponentName1,UploadartifactsWithComponentName2,UploadartifactsWithComponentName3,UploadartifactsWithComopnentName4Samefiles,UploadartifactsWithoutComponentName,UploadlogsWithComponentName1,UploadlogsWithComponentName2,UploadlogsWithComponentName3,UploadlogsWithComopnentName4Samefiles,UploadlogsWithoutComponentName" >
+<completeTeamBuild repositoryAddress="${repositoryAddress}"
+		                   userId="${userId}"
+		                   password="${password}"
+		                   buildResultUUID="${buildResultUUID}"
+		                   status="OK"
+		                   verbose="true" />
+</target>
+</project>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2020 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,6 +15,8 @@ import java.text.MessageFormat;
 
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
+
+import hudson.model.Job;
 
 @SuppressWarnings("nls")
 public class Config {
@@ -182,7 +184,7 @@ public class Config {
 	}
 
 	public RTCLoginInfo getLoginInfo() throws InvalidCredentialsException {
-		return new RTCLoginInfo(null, getToolkit(), getServerURI(), getUserID(), getPassword(), getPasswordFile(), null, getTimeout());
+		return new RTCLoginInfo((Job<?,?>)null, getToolkit(), getServerURI(), getUserID(), getPassword(), getPasswordFile(), null, getTimeout());
 	}
 	
 	@Override

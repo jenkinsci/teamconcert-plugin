@@ -42,9 +42,9 @@
         </f:entry>
 
         <!--
-            if editting enabled, show all the boxes as before
-            if no editting enabled but they have overridden global userid/password/file show the overridden values
-            if no editting enabled and set credentials only show the credentials.
+            if editing enabled, show all the boxes as before
+            if no editing enabled but they have overridden global userid/password/file show the overridden values
+            if no editing enabled and set credentials only show the credentials.
         -->
 
         <j:set var="editAllowed" value="${descriptor.deprecatedCredentialEditAllowed()}"/>
@@ -135,8 +135,19 @@
 				    <!-- Include the option to specify custom snapshot name -->
 				    <st:include page="config-snapshotoptions.jelly" class="com.ibm.team.build.internal.hjplugin.RTCScm"/>
 				    
+				    <!-- show advanced box with option for mode. This is available for build definition and build workspace only -->
+                    <f:advanced>
+                        <f:section name="AdvancedOptions" title="${%buildDefWorkspace.advancedOptions}"/>
+                        <f:optionalBlock name="pollingOnlyData" title="${%buildDefWorkspace.pollingOnly}" 
+                                field="pollingOnlyData" checked="${instance != null &amp;&amp; instance.pollingOnly}"
+                                help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/pollingOnly">
+                               <f:entry title="${%pollingOnly.snapshotUUID}" field="snapshotUUID">
+                                 <f:textbox name="snapshotUUID" value="${(instance != null &amp;&amp; instance.pollingOnlyData != null) ? instance.pollingOnlyData.snapshotUUID : ''}"/>
+                               </f:entry>
+                        </f:optionalBlock>
+                    </f:advanced> 
 				    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
-				        method="validateBuildDefinitionConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition" />
+				        method="validateBuildDefinitionConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildDefinition,pollingOnly" />
 				</f:dropdownListBlock>
 
 	    		<!-- Build Workspace -->
@@ -160,8 +171,20 @@
 			        <f:optionalBlock name="acceptBeforeLoad" title="${%acceptOptions.acceptBeforeLoad}" field="acceptBeforeLoad" checked="${instance == null || (instance != null &amp;&amp; instance.acceptBeforeLoad)}" inline="true" />
 			        <f:optionalBlock name="addLinksToWorkItems" title="${%acceptOptions.addLinksToWorkItems}" field="addLinksToWorkItems" checked="${instance != null &amp;&amp; instance.addLinksToWorkItems}" inline="true" />
 
+				    <!-- show advanced box with option for mode. This is available for build definition and build workspace only -->
+				    <f:advanced>
+				    	<f:section name="AdvancedOptions" title="${%buildDefWorkspace.advancedOptions}"/>
+			        	<f:optionalBlock name="pollingOnlyData" title="${%buildDefWorkspace.pollingOnly}" 
+			        	field="pollingOnlyData" checked="${instance != null &amp;&amp; instance.pollingOnly}" 
+			        	help="/descriptor/com.ibm.team.build.internal.hjplugin.RTCScm/help/pollingOnly">
+      		        	       <f:entry title="${%pollingOnly.snapshotUUID}" field="snapshotUUID">
+                                 <f:textbox name="snapshotUUID" value="${(instance != null &amp;&amp; instance.pollingOnlyData != null) ? instance.pollingOnlyData.snapshotUUID : ''}"/>
+                               </f:entry>
+                        </f:optionalBlock>
+			        </f:advanced>  
+
 				    <f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
-				        method="validateBuildWorkspaceConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace,loadPolicy,pathToLoadRuleFile" />
+				        method="validateBuildWorkspaceConfiguration" with="overrideGlobal,buildTool,serverURI,userId,password,passwordFile,timeout,credentialsId,avoidUsingToolkit,buildWorkspace,loadPolicy,pathToLoadRuleFile,pollingOnly" />
 		    	                        
 				</f:dropdownListBlock>
 

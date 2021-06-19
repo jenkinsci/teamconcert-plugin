@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2020 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -479,7 +479,6 @@ public class RTCScmIT extends AbstractTestCase {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	@Test public void testDoValidateBuildWorkspaceConfiguration() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;
@@ -494,31 +493,31 @@ public class RTCScmIT extends AbstractTestCase {
 		DescriptorImpl descriptor = (DescriptorImpl)project.getDescriptorByName(RTCScm.class.getName());
 		// buildWorkspace - null
 		FormValidation result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password,
-				null, null, "false", null, null, null);
+				null, null, "false", null, null, null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_workspace_empty(), result.renderHtml());
 
 		// buildWorkspace - empty string
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "", null, null);
+				"false", "", null, null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_workspace_empty(), result.renderHtml());
 
 		// buildWorkspace - blank string
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "   ", null, null);
+				"false", "   ", null, null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_workspace_empty(), result.renderHtml());
 
 		// invalid connect info
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, null, password, null, null,
-				"false", "test", null, null);
+				"false", "test", null, null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCLoginInfo_missing_userid(), result.renderHtml());
 
 		// valid connect info - using build toolkit and invalid workspace
 		result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "test", null, null);
+				"false", "test", null, null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals("Unable to find a workspace with name &quot;test&quot;", result.renderHtml());
 		
@@ -535,35 +534,35 @@ public class RTCScmIT extends AbstractTestCase {
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid workspace - multiple workspace
 			// warning connect info and error workspace - only error should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", "Multiple Occurrence=WS", null, null);
+					"true", "Multiple Occurrence=WS", null, null, null);
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			assertEquals("More than one repository workspace has the name &quot;Multiple Occurrence=WS&quot;", result.renderHtml());
 			
 			// valid connect info - using build toolkit and warning workspace (parameterized values) 
 			// only warning should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "${rtcRepositoryWorkspace}", null, null);
+					"false", "${rtcRepositoryWorkspace}", null, null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_repository_workspace_not_validated(), result.renderHtml());
 
 			// warning connect info - avoidUsingBuildToolkit and warning workspace (parameterized values) 
 			// both the warnings should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
-					"true", "${rtcRepositoryWorkspace}", null, null);
+					"true", "${rtcRepositoryWorkspace}", null, null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job() + "<br/>" + Messages.RTCScm_repository_workspace_not_validated(),
 					result.renderHtml());
 
 			// valid connect info - using build toolkit and valid workspace
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "Singly Occuring=WS", null, null);
+					"false", "Singly Occuring=WS", null, null, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid workspace
 			// warning connect info and valid workspace - only warning should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", "Singly Occuring=WS", null, null);
+					"true", "Singly Occuring=WS", null, null, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job(), result.renderHtml());
 			
@@ -572,7 +571,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// error path to load rule file - invalid path to load rule file 
 			// load policy is not set to useLoadRules
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "Singly Occuring=WS", "useComponentLoadConfig", "/comp1/f/ws.loadrule");
+					"false", "Singly Occuring=WS", "useComponentLoadConfig", "/comp1/f/ws.loadrule", null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			
 			// valid connect info - using build toolkit 
@@ -580,7 +579,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// error path to load rule file - invalid path to load rule file 
 			// error should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "Singly Occuring=WS", "useLoadRules", "/comp1/f/ws.loadrule");
+					"false", "Singly Occuring=WS", "useLoadRules", "/comp1/f/ws.loadrule", null);
 			assertEquals("Path to the load rule file &quot;/comp1/f/ws.loadrule&quot; does not include the component name. "
 					+ "Please specify the path in the following format: &lt;component name&gt;/&lt;remote path to the load rule file&gt;.",
 					result.renderHtml());
@@ -591,7 +590,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// error path to load rule file - build toolkit required for validation 
 			// error should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
-					"true", "Singly Occuring=WS", "useLoadRules", "/comp1/f/ws.loadrule");
+					"true", "Singly Occuring=WS", "useLoadRules", "/comp1/f/ws.loadrule", null);
 			assertEquals("A build toolkit is required to validate the path to the load rule file.", result.renderHtml());
 			assertEquals(FormValidation.Kind.ERROR, result.kind);
 			
@@ -600,7 +599,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// warning path to load rule file (parameterized workspace value)
 			// all the warnings should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", "", serverURI, timeout, userId, password, null, null,
-					"true", "${rtcRepositoryWorkspace}", "useLoadRules", "Singly Occuring=WS-comp1/Singly Occuring=WS-comp1/f/ws.loadrule");
+					"true", "${rtcRepositoryWorkspace}", "useLoadRules", "Singly Occuring=WS-comp1/Singly Occuring=WS-comp1/f/ws.loadrule", null);
 			assertEquals("A build toolkit is required to perform builds.<br/>Cannot validate the parameterized "
 					+ "value for repository workspace.<br/>Cannot validate the path to the load rule file"
 					+ " with the parameterized value for repository workspace.", result.renderHtml());
@@ -611,7 +610,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// warning path to load rule file (parameterized path to load rule file)
 			// all the warnings should be displayed
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null, "true",
-					"Singly Occuring=WS", "useLoadRules", "${pathToLoadRuleFile}");
+					"Singly Occuring=WS", "useLoadRules", "${pathToLoadRuleFile}", null);
 			assertEquals("Cannot validate the parameterized value for the path to the load rule file.", result.renderHtml());
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			
@@ -620,7 +619,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// valid path to load rule file
 			// validation success
 			result = descriptor.doValidateBuildWorkspaceConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "Singly Occuring=WS", "useLoadRules", "Singly Occuring=WS-comp1/Singly Occuring=WS-comp1/f/ws.loadrule");
+					"false", "Singly Occuring=WS", "useLoadRules", "Singly Occuring=WS-comp1/Singly Occuring=WS-comp1/f/ws.loadrule", null);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			assertEquals(FormValidation.Kind.OK, result.kind);
 		} finally {
@@ -642,38 +641,38 @@ public class RTCScmIT extends AbstractTestCase {
 		DescriptorImpl descriptor = (DescriptorImpl)project.getDescriptorByName(RTCScm.class.getName());
 		// buildDefinition - null
 		FormValidation result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password,
-				null, null, "false", null);
+				null, null, "false", null, null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_definition_empty(), result.renderHtml());
 
 		// buildDefinition - empty string
 		result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "");
+				"false", "", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_definition_empty(), result.renderHtml());
 
 		// buildDefinition - blank string
 		result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "   ");
+				"false", "   ", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCScm_build_definition_empty(), result.renderHtml());
 
 		// invalid connect info
 		result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, null, password, null, null,
-				"false", "test");
+				"false", "test", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals(Messages.RTCLoginInfo_missing_userid(), result.renderHtml());
 
 		// valid connect info - using build toolkit and invalid build definition
 		result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-				"false", "test");
+				"false", "test", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals("Unable to find a build definition with ID: &quot;test&quot;", result.renderHtml());
 		
 		// warning connect info - avoidUsingBuildToolkit and buildTool is null, invalid build definition
 		// warning connect info and error build definition - only error should be displayed
 		result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-				"true", "test");
+				"true", "test", null);
 		assertEquals(FormValidation.Kind.ERROR, result.kind);
 		assertEquals("Unable to find a build definition with name &quot;test&quot;", result.renderHtml());
 		
@@ -693,26 +692,26 @@ public class RTCScmIT extends AbstractTestCase {
 			// valid connect info - using build toolkit and warning build definition (parameterized value)
 			// only warning should be displayed
 			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", "${rtcBuildDefinition}");
+					"false", "${rtcBuildDefinition}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_definition_not_validated(), result.renderHtml());
 
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, warning build definition (parameterized value)
 			// both the warning messages should be displayed
 			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", "${rtcBuildSnapshot}");
+					"true", "${rtcBuildSnapshot}", null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job() + "<br/>" + Messages.RTCScm_build_definition_not_validated(), result.renderHtml());
 			// valid connect info - using build toolkit and valid build definition
 			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", buildTool, serverURI, timeout, userId, password, null, null,
-					"false", buildDefinitionName);
+					"false", buildDefinitionName, null);
 			assertEquals(FormValidation.Kind.OK, result.kind);
 			assertEquals(Messages.RTCScm_validation_success(), result.renderHtml());
 			
 			// warning connect info - avoidUsingBuildToolkit and buildTool is null, valid build definition
 			// only warning message should be displayed
 			result = descriptor.doValidateBuildDefinitionConfiguration(project, "true", null, serverURI, timeout, userId, password, null, null,
-					"true", buildDefinitionName);
+					"true", buildDefinitionName, null);
 			assertEquals(FormValidation.Kind.WARNING, result.kind);
 			assertEquals(Messages.RTCScm_build_tool_needed_for_job(), result.renderHtml());
 
@@ -1485,7 +1484,7 @@ public class RTCScmIT extends AbstractTestCase {
 			// positive case when there is a valid build definition Id
 			{
 				FreeStyleProject prj = Utils.setupFreeStyleJobForBuildDefinition(r, buildDefinitionId);
-				// Run a build
+				// Run a build so that polling will be called later
 				FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 				
 				// Verify
@@ -1650,7 +1649,7 @@ public class RTCScmIT extends AbstractTestCase {
 				assertNotNull("Expecting not supported message", Utils.getMatch(pollingFile, "Polling is not supported for this configuration. Polling is supported only for build definition, repository workspace and stream configurations."));
 			}
 			{ // null snapshot UUID  - checkout and polling
-				FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, null);
+				FreeStyleProject prj = Utils.setupFreeStyleJobForSnapshot(r, (String) null);
 				FreeStyleBuild build = Utils.runBuild(prj, null);
 	
 				// Verify the build status

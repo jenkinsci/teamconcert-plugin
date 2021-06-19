@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2017 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -122,7 +122,7 @@ public class RTCRunListener extends RunListener<Run> {
 		    		}
 		    		PrintWriter writer = listener.error(Messages.RTCRunListener_build_termination_failure(eToReport.getMessage()));
 		    		writer.println(Messages.RTCRunListener_manually_abandon_build());
-		    		if (RTCScm.unexpectedFailure(eToReport)) {
+		    		if (Helper.unexpectedFailure(eToReport)) {
 		    			eToReport.printStackTrace(writer);
 		    		}
 		    		LOGGER.log(Level.FINER, "terminateBuild failed " + eToReport.getMessage(),  eToReport); //$NON-NLS-1$
@@ -130,7 +130,7 @@ public class RTCRunListener extends RunListener<Run> {
 		    	} catch (Exception e) {
 		    		PrintWriter writer = listener.fatalError(Messages.RTCRunListener_build_termination_failure2(e.getMessage()));
 		    		writer.println(Messages.RTCRunListener_manually_abandon_build());
-		    		if (RTCScm.unexpectedFailure(e)) {
+		    		if (Helper.unexpectedFailure(e)) {
 		    			e.printStackTrace(writer);
 		    		}
 		    		LOGGER.log(Level.FINER, "terminateBuild failed " + e.getMessage(), e); //$NON-NLS-1$
@@ -230,14 +230,14 @@ public class RTCRunListener extends RunListener<Run> {
 			PrintWriter writer = listener.error(Messages.RTCRunListener_repo_workspace_delete_failure(eToReport.getMessage()));
 			printRepoWorkspaceNotDeleted(writer, workspaceUUID, workspaceName);
 			
-			if (RTCScm.unexpectedFailure(eToReport)) {
+			if (Helper.unexpectedFailure(eToReport)) {
     			eToReport.printStackTrace(writer);
     		}
     		LOGGER.log(Level.FINER, "delete temporary Repository Workspace failed " + eToReport.getMessage(),  eToReport); //$NON-NLS-1$
 		} catch (Exception e) { // Generic exception is logged 
 			PrintWriter writer = listener.fatalError(Messages.RTCRunListener_repo_workspace_delete_failure(e.getMessage()));
 			printRepoWorkspaceNotDeleted(writer, workspaceUUID, workspaceName);
-    		if (RTCScm.unexpectedFailure(e)) {
+    		if (Helper.unexpectedFailure(e)) {
     			e.printStackTrace(writer);
     		}
     		LOGGER.log(Level.FINER, "delete temporary Repository Workspace failed " + e.getMessage(),  e); //$NON-NLS-1$

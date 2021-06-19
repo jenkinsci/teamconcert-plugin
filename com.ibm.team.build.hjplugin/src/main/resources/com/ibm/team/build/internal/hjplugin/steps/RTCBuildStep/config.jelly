@@ -1,0 +1,256 @@
+<?jelly escape-by-default='true'?>
+<!--
+/*******************************************************************************
+ * Copyright © 2021 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials"
+         xmlns:tds="tableDivSelector">
+
+    <?jelly escape-by-default='true'?>
+    <j:include uri="tableDivSelector.jelly"/>
+    
+    <f:block>
+    	<!--
+			See tableDivSelector.jelly for more details on blockWrapper
+		-->
+	    <tds:blockWrapper>
+	   
+	        <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool">
+	            <f:select name="buildTool" />
+	        </f:entry>
+	          
+	        <f:entry title="${%serverURI.title}"  field="serverURI" >
+	            <f:textbox name="serverURI" default="${descriptor.globalServerURI}" clazz="required" checkMessage="${%serverURI.checkMessage}" />
+	        </f:entry>
+	
+	        <f:entry title="${%timeout.title}" field="timeout">
+	            <f:textbox name="timeout" default="${descriptor.globalTimeout}" />
+	        </f:entry>
+	        
+	        <f:entry title="${%credentialsId.title}" field="credentialsId" >
+	            <c:select name="credentialsId" default="${descriptor.globalCredentialsId}" />
+	        </f:entry>
+	   
+	    </tds:blockWrapper>
+    </f:block>
+    
+	<f:block>
+	    <tds:blockWrapper>
+	    	<f:dropdownList name="task" title="${%task.title}" help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/task">
+				<f:dropdownListBlock selected="${instance == null}" title="${%requestBuild.title}">
+					<!-- Request Build -->
+					<f:invisibleEntry field="name">
+						<input type="hidden" name="name" value="requestBuild"/>
+					</f:invisibleEntry>
+				    <f:entry title="${%buildDefinition.title}" field="buildDefinitionId" 
+				    	help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildDefinition">
+				        <!-- We don't bind to values from instance to pre populate because there is no saved configuration we are working from.
+      							This will be shown only in snippet generator where the instance is always null. -->
+				        <f:textbox name="buildDefinitionId" clazz="required"/>
+				    </f:entry>
+    				<f:optionalBlock name="deleteProperties" title="${%deleteProperties.title}" field="deleteProperties" checked="${instance.deleteProperties}" inline="true" 
+    					help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/deleteProperties">
+    					<f:block>						
+							<f:repeatable field="propertiesToDelete" name="propertiesToDelete" header="${%property.header}" add="${%addProperty.label}">
+								<tds:blockWrapper>
+		    						<f:entry title="${%propertyName.label}" field="propertyName" help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/nameOfPropertyToDelete">
+		    							<f:textbox name="propertyName" clazz="required"/>
+		    						</f:entry>
+		    						<f:entry>
+		    							<f:repeatableDeleteButton value="${%deleteProperty.label}"/>
+		    						</f:entry>
+		    					</tds:blockWrapper>
+	    					</f:repeatable>	    					
+	    				</f:block>	    				
+    				</f:optionalBlock>
+    				<f:optionalBlock name="addOrOverrideProperties" title="${%addOrOverrideProperties.title}" field="addOrOverrideProperties" checked="${instance.addOrOverrideProperties}" 
+    					inline="true" help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/addOrOverrideProperties">
+    					<f:block>
+	    					<f:repeatable field="propertiesToAddOrOverride" name="propertiesToAddOrOverride" header="${%property.header}" add="${%addProperty.label}">
+	    						<tds:blockWrapper>
+		    						<f:entry title="${%propertyName.label}" field="propertyName" help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/nameOfPropertyToAddOrOverride">
+		    							<f:textbox name="propertyName" clazz="required"/>
+		    						</f:entry>
+		    						<f:entry title="${%propertyValue.label}" field="propertyValue" help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/valueOfPropertyToAddOrOverride">
+		    							<f:textbox name="propertyValue"/>
+		    						</f:entry>
+		    						<f:entry>
+		    							<f:repeatableDeleteButton value="${%deleteProperty.label}"/>
+		    						</f:entry>
+	    						</tds:blockWrapper>
+	    					</f:repeatable>
+    					</f:block>
+    				</f:optionalBlock>
+    				<f:optionalBlock name="linkEWMBuild" title="${%linkEWMBuild.title}" field="linkEWMBuild" checked="${instance == null || instance.linkEWMBuild}" 
+    					inline="true" help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/linkEWMBuild"/>
+                <!--<f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
+                        method="validateWaitForBuildConfiguration" with="buildTool,serverURI,userId,password,timeout,credentialsId,buildResultUUID,buildStates,waitBuildTimeout" />-->
+				</f:dropdownListBlock>
+				<f:dropdownListBlock title="${%waitForBuild.title}">
+				    <!-- Wait for Build -->
+					<f:invisibleEntry field="name">
+						<input type="hidden" name="name" value="waitForBuild"/>
+					</f:invisibleEntry>
+				    <f:entry title="${%buildResultUUID.title}" field="buildResultUUID" 
+				    			help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildResultUUID">
+				        <f:textbox name="buildResultUUID" clazz="required"/>
+				    </f:entry>
+				    <f:entry title="${%buildStates.title}" field="buildStates" 
+								help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildStates">
+		    	    	<f:textbox name="buildStates" default="${descriptor.defaultBuildStates}" clazz="required"/>
+					</f:entry>
+					<!-- See https://www.jenkins.io/doc/developer/plugin-development/pipeline-integration/#handling-default-values -->
+					<f:entry title="${%waitForBuildTimeout.title}"  field="waitBuildTimeout" 
+							help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/waitBuildTimeout">
+		    	    	<f:textbox name="waitBuildTimeout" default="${descriptor.defaultWaitBuildTimeout}" clazz="required"/>
+					</f:entry>
+   				   <!--<f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
+                        method="validateWaitForBuildConfiguration" with="buildTool,serverURI,userId,password,timeout,credentialsId,buildResultUUID,buildStates,waitBuildTimeout" />-->
+				</f:dropdownListBlock>
+
+                <!-- List logs -->
+                <f:dropdownListBlock title="${%listLogs.title}">
+                    <f:invisibleEntry field="name">
+                        <input type="hidden" name="name" value="listLogs"/>
+				    </f:invisibleEntry>
+                    <f:entry title="${%buildResultUUID.title}" field="buildResultUUID" 
+                                help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildResultUUID-listFile">
+                        <f:textbox name="buildResultUUID" clazz="required"/>
+                    </f:entry>
+                    <f:entry title="${%fileNameOrPattern.title}" field="fileNameOrPattern" 
+                                    help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/fileNameOrPattern">
+                        <f:textbox name="fileNameOrPattern"/>
+                    </f:entry>
+                    <f:entry title="${%componentName.title}" field="componentName" 
+                                    help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/componentName">
+                        <f:textbox name="componentName"/>
+                    </f:entry>
+
+                    <f:entry title="${%maxResults.title}" field="maxResults" 
+                                    help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/maxResults">
+                        <f:textbox name="maxResults" default="${descriptor.defaultMaxResults}" clazz="required"/>
+                    </f:entry>
+                </f:dropdownListBlock>
+                
+                <!-- List artifacts -->
+                <f:dropdownListBlock title="${%listArtifacts.title}">
+                    <f:invisibleEntry field="name">
+                        <input type="hidden" name="name" value="listArtifacts"/>
+                    </f:invisibleEntry>
+                    
+                    <f:entry title="${%buildResultUUID.title}" field="buildResultUUID" 
+                                help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildResultUUID-listFile">
+                        <f:textbox name="buildResultUUID" clazz="required"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%fileNameOrPattern.title}" field="fileNameOrPattern"
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/fileNameOrPattern">
+                        <f:textbox name="fileNameOrPattern"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%componentName.title}" field="componentName" 
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/componentName">
+                        <f:textbox name="componentName"/>
+                    </f:entry>
+
+                    <f:entry title="${%maxResults.title}" field="maxResults" 
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/maxResults">
+                        <f:textbox name="maxResults" default="${descriptor.defaultMaxResults}" clazz="required"/>
+                    </f:entry>
+                 </f:dropdownListBlock>
+			
+				<!-- Download log -->
+				<f:dropdownListBlock title="${%downloadLog.title}">
+                    
+                    <f:invisibleEntry field="name">
+                        <input type="hidden" name="name" value="downloadLog"/>
+                    </f:invisibleEntry>
+                    
+                    <f:entry title="${%buildResultUUID.title}" field="buildResultUUID" 
+                                help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildResultUUID-downloadFile">
+                        <f:textbox name="buildResultUUID" clazz="required"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%fileName.title}" field="fileName"
+                          help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/fileName">
+                        <f:textbox name="fileName"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%componentName.title}" field="componentName"
+                           help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/componentName-downloadFile">
+                        <f:textbox name="componentName"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%contentId.title}" field="contentId" 
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/contentId">
+                        <f:textbox name="contentId"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%destinationFileName.title}" field="destinationFileName" 
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/destinationFileName">
+                        <f:textbox name="destinationFileName"/>
+                    </f:entry>
+                    
+                </f:dropdownListBlock>
+                 
+                <!-- Download artifact -->
+                <f:dropdownListBlock title="${%downloadArtifact.title}">
+                    
+                    <f:invisibleEntry field="name">
+                        <input type="hidden" name="name" value="downloadArtifact"/>
+                    </f:invisibleEntry>
+                    
+                    <f:entry title="${%buildResultUUID.title}" field="buildResultUUID" 
+                                help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildResultUUID-downloadFile">
+                        <f:textbox name="buildResultUUID" clazz="required"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%fileName.title}" field="fileName" 
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/fileName">
+                        <f:textbox name="fileName"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%componentName.title}" field="componentName"
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/componentName-downloadFile">
+                        <f:textbox name="componentName"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%contentId.title}" field="contentId" 
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/contentId">
+                        <f:textbox name="contentId"/>
+                    </f:entry>
+                    
+                    <f:entry title="${%destinationFileName.title}" field="destinationFileName"
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/destinationFileName">
+                        <f:textbox name="destinationFileName"/>
+                    </f:entry>
+
+                 </f:dropdownListBlock>
+                 
+                 <!-- Retrieve Snapshot -->
+                 <f:dropdownListBlock title="${%retrieveSnapshot.title}">
+                
+                    <f:invisibleEntry field="name">
+                        <input type="hidden" name="name" value="retrieveSnapshot"/>
+                    </f:invisibleEntry>
+                    
+                    <f:entry title="${%buildResultUUID.title}" field="buildResultUUID" 
+                                help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/buildResultUUID-retrieveSnapshot">
+                        <f:textbox name="buildResultUUID" clazz="required"/>
+                    </f:entry>
+                    
+                </f:dropdownListBlock>
+                
+			</f:dropdownList>
+	    </tds:blockWrapper>
+	</f:block>
+</j:jelly>

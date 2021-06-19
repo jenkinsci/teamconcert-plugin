@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2020 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -119,8 +119,9 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
-					null,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds, null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -236,7 +237,9 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
@@ -369,8 +372,9 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, componentName, true, artifactIds,
-					null,
+			BuildUtil.createBuildDefinition(repo, componentName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds, null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "false",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "false",
@@ -421,8 +425,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds,
 					configureLoadRules);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
-					null,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds, null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -515,8 +520,9 @@ public class BuildConfigurationTests {
 		try {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, configureLoadRules);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
-					null,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds, null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
@@ -605,7 +611,9 @@ public class BuildConfigurationTests {
 		try {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
@@ -711,7 +719,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, true,
 					false, false, true, false, false, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
@@ -803,7 +813,8 @@ public class BuildConfigurationTests {
 			BuildUtil.createBuildDefinition(
 					repo,
 					buildDefinitionId,
-					true,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, 
 					artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
@@ -929,8 +940,9 @@ public class BuildConfigurationTests {
 			// create the build definition
 			BuildUtil.createBuildDefinition(
 					repo,
-					buildDefinitionId,
-					true,
+					buildDefinitionId, 
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, 
 					artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
@@ -1059,7 +1071,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds,
 					true, true, false, false, false, false, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
@@ -1172,7 +1186,9 @@ public class BuildConfigurationTests {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds,
 					true, false, true, false, false, false, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
@@ -1509,8 +1525,8 @@ public class BuildConfigurationTests {
 			// create the build definition
 			BuildUtil.createBuildDefinition(
 					repo,
-					componentName,
-					true,
+					componentName,BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, 
 					artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
@@ -1651,7 +1667,9 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
@@ -1845,7 +1863,9 @@ public class BuildConfigurationTests {
 			artifactIds.put(TestSetupTearDownUtil.ARTIFACT_COMPONENT1_ITEM_ID, component.getItemId().getUuidValue());
 			
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, testName, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, testName,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID, buildWorkspace.getContextHandle().getItemId().getUuidValue(),
 					IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
@@ -3783,7 +3803,10 @@ public class BuildConfigurationTests {
 		try {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, false);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds, null, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId,
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds, 
+					null, IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,
 					IJazzScmConfigurationElement.PROPERTY_ACCEPT_BEFORE_FETCH, "true",
 					IJazzScmConfigurationElement.PROPERTY_DELETE_DESTINATION_BEFORE_FETCH, "false",
@@ -3976,7 +3999,9 @@ public class BuildConfigurationTests {
 		try {
 			IWorkspaceConnection buildWorkspace = setupWorkspace_toTestLoadPolicy(workspaceName, componentName, repo, artifactIds, configureLoadRules);
 			// create the build definition
-			BuildUtil.createBuildDefinition(repo, buildDefinitionId, true, artifactIds,
+			BuildUtil.createBuildDefinition(repo, buildDefinitionId, 
+					BuildConnection.HJ_ELEMENT_ID,
+					true, BuildConnection.HJ_ENGINE_ELEMENT_ID, artifactIds,
 					null,
 					IJazzScmConfigurationElement.PROPERTY_WORKSPACE_UUID,
 					buildWorkspace.getContextHandle().getItemId().getUuidValue(), IJazzScmConfigurationElement.PROPERTY_FETCH_DESTINATION, buildPath,

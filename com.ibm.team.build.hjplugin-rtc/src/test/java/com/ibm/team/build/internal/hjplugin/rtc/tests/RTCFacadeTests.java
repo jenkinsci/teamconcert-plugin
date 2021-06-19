@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2016, 2018 IBM Corporation and others.
+ * Copyright © 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -75,6 +75,28 @@ public class RTCFacadeTests {
 		setupArtifacts.put(TestSetupTearDownUtil.ARTIFACT_PROJECT_AREA_ITEM_ID, teamArea.getProjectArea().getItemId().getUuidValue());
 		return setupArtifacts;
 	}
+	
+	/**
+	 * Create a project area with a single team area.
+	 * 
+	 * @param projectAreaName
+	 * @return
+	 * @throws Exception
+	 */
+	public Map<String, String> setupTestProcessArea_basic(String projectAreaName, String processXML) throws Exception {
+		Map<String, String> setupArtifacts = new HashMap<String, String>();
+		getConnection().ensureLoggedIn(null);
+		ITeamRepository repo = getConnection().getTeamRepository();
+		String name = projectAreaName;
+		// create and return the itemIds so that the teamconcert plugin test, that eventually invokes this method, knows
+		// the artifacts to be deleted during tear down.
+		IProcessDefinition processDefinition = ProcessUtil.getProcessDefinition(repo, name, processXML,false);
+		setupArtifacts.put(TestSetupTearDownUtil.ARTIFACT_PROCESS_DEFINITION_ITEM_ID, processDefinition.getItemId().getUuidValue());
+		ITeamArea teamArea = (ITeamArea)ProcessUtil.getProcessArea(repo, name, processDefinition, false);
+		setupArtifacts.put(TestSetupTearDownUtil.ARTIFACT_PROJECT_AREA_ITEM_ID, teamArea.getProjectArea().getItemId().getUuidValue());
+		return setupArtifacts;
+	}
+
 
 	/**
 	 * Create a project area with a single team area and archive the project area.

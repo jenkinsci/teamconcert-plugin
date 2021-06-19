@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2014, 2019 IBM Corporation and others.
+ * Copyright © 2014, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,15 +11,23 @@
 package com.ibm.team.build.internal.hjplugin.util;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
 
+import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.Messages;
 import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
@@ -27,6 +35,7 @@ import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 
+import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.Job;
@@ -38,20 +47,48 @@ import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.TaskListener;
+import hudson.remoting.Channel;
+import hudson.remoting.VirtualChannel;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
 
 public class Helper {
+
+	private static final Logger LOGGER = Logger.getLogger(Helper.class.getName());
+
 	private static final String TEAM_SCM_STREAM_CHANGES_DATA = "team_scm_streamChangesData"; //$NON-NLS-1$
 	private static final String PREVIOUS_BUILD_URL_KEY = "previousBuildUrl"; //$NON-NLS-1$
 	private static final String CURRENT_BUILD_URL_KEY = "currentBuildUrl"; //$NON-NLS-1$
 	private static final String CURRENT_BUILD_FULL_URL_KEY = "currentBuildFullUrl"; //$NON-NLS-1$
 	private static final String CURRENT_BUILD_LABEL_KEY = "currentBuildLabel"; //$NON-NLS-1$
-
-	private static final Logger LOGGER = Logger.getLogger(Helper.class.getName());
 	
-	private static final String previousSnapshotOwner = "team_scm_snapshotOwner"; //$NON-NLS-1$
+	private static final String SNAPSHOT_OWNER = "team_scm_snapshotOwner"; //$NON-NLS-1$
+	private static final String TEAM_SCM_SNAPSHOT_UUID_PROPERTY = "team_scm_snapshotUUID";
 
+	
+	private static final String BUILD_STATE_DELIMITER = ",";
+	private static final Set<String> ALL_BUILD_STATES = new HashSet<>();
+	public static final String [] DEFAULT_BUILD_STATES = new String [] {RTCBuildState.COMPLETED.toString(),
+									RTCBuildState.INCOMPLETE.toString()};
+	public static final String DEFAULT_BUILD_STATES_STR = String.join(",", DEFAULT_BUILD_STATES);
+
+	static {
+		ALL_BUILD_STATES.addAll(Arrays.asList(RTCBuildState.NOT_STARTED.toString(), 
+		RTCBuildState.CANCELED.toString(), RTCBuildState.IN_PROGRESS.toString(),
+		RTCBuildState.INCOMPLETE.toString(), RTCBuildState.COMPLETED.toString()));
+	}
+	
+	/**
+	 * Default value to wait for a build result to change to the 
+	 * required state. There is a duplicate variable in Constants class in 
+	 * -rtc jar
+	 */
+	public static final int DEFAULT_WAIT_BUILD_TIMEOUT = -1;
+
+	public static final int DEFAULT_MAX_RESULTS = 512;
+			
+	public static final int MAX_RESULTS_UPPER_LIMIT = 2048;
+	
 	/** 
 	 * merge two results, if both are errors only one stack trace can be included
 	 * @param firstCheck The first validation done
@@ -70,8 +107,8 @@ public class Helper {
 		// OK error - return secondCheck
 		// OK warning - return secondCheck //
 		if (!firstCheck.kind.equals(secondCheck.kind)) {
-			if (firstCheck.kind.equals(FormValidation.Kind.ERROR)
-					|| (firstCheck.kind.equals(FormValidation.Kind.WARNING) && secondCheck.kind.equals(FormValidation.Kind.OK))) {
+			if (firstCheck.kind.equals(FormValidation.Kind.ERROR) || (firstCheck.kind.equals(FormValidation.Kind.WARNING) && 
+							secondCheck.kind.equals(FormValidation.Kind.OK))) {
 				return firstCheck;
 			} else {
 				return secondCheck;
@@ -318,7 +355,7 @@ public class Helper {
 			public Run<?, ?> firstBuild() {
 				return build;
 			}
-		}, toolkit, loginInfo, processArea, buildStream, onlyGoodBuild, "team_scm_snapshotUUID", clientLocale); //$NON-NLS-1$
+		}, toolkit, loginInfo, processArea, buildStream, onlyGoodBuild, TEAM_SCM_SNAPSHOT_UUID_PROPERTY, clientLocale); //$NON-NLS-1$
 		if (LOGGER.isLoggable(Level.FINEST)) {
 			LOGGER.finest("Helper.getSnapshotUUIDFromPreviousBuild : " +  //$NON-NLS-1$
 						((snapshotDetails.getSecond() == null) ? "No snapshotUUID found from a previous build" : snapshotDetails.getSecond())); //$NON-NLS-1$
@@ -485,7 +522,7 @@ public class Helper {
 				RTCBuildResultAction rtcBuildResultAction = rtcBuildResultActions.get(0);
 				if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null)) {
 					Map <String, String> buildProperties = rtcBuildResultAction.getBuildProperties();
-					String owningStreamUUID = Util.fixEmptyAndTrim(buildProperties.get(previousSnapshotOwner));
+					String owningStreamUUID = Util.fixEmptyAndTrim(buildProperties.get(SNAPSHOT_OWNER));
 					if (owningStreamUUID != null && owningStreamUUID.equals(streamUUID)) {
 						value = buildProperties.get(key);
 						previousBuild = build;
@@ -496,12 +533,12 @@ public class Helper {
 				for (RTCBuildResultAction rtcBuildResultAction : rtcBuildResultActions) {
 					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null)) {
 						Map<String,String> buildProperties = rtcBuildResultAction.getBuildProperties();
-						String owningStreamUUID = Util.fixEmptyAndTrim(buildProperties.get(previousSnapshotOwner));
+						String owningStreamUUID = Util.fixEmptyAndTrim(buildProperties.get(SNAPSHOT_OWNER));
 						if (owningStreamUUID != null && owningStreamUUID.equals(streamUUID)) {
 							value = buildProperties.get(key);
 							previousBuild = build;
 							// We don't we break here to maintain the following behavior for pipeline jobs
-							// if we load the same stream multiple times, we get the the value from the last
+							// If we load the same stream multiple times, we get the the value from the last
 							// RTCBuildResultAction
 						}
 					}
@@ -558,4 +595,233 @@ public class Helper {
 		Run<?,?> firstBuild();
 		Run<?,?> nextBuild(Run<?,?> build);
 	}
+	
+	/**
+	 * Assert the conditions required when pollingOnly option is enabled.
+	 * 
+	 * @param job The job
+	 * @param buildTypeStr The type of the build 
+	 */
+	public static void assertPollingOnlyConditions(Job<?,?> job, String buildTypeStr) {
+		String [] supportedBuildTypes = new String[] { RTCJobProperties.BUILD_DEFINITION_TYPE, 
+								RTCJobProperties.BUILD_WORKSPACE_TYPE};
+		assertPipelineJob(job, 
+					Messages.Helper_polling_supported_only_for_pipeline());
+    	assertBuildType(buildTypeStr, supportedBuildTypes,
+    			    Messages.Helper_polling_supported_only_for_buildTypes());
+	}
+
+	/**
+	 * Returns true if the given job is a pipeline job.
+	 * 
+	 * @param job
+	 * @return <code>true</code> if the job is a pipeline job, <code>false</code> otherwise.
+	 *  
+	 */
+	public static boolean isPipelineJob(Job <?,?> job) {
+		return (job.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob"));
+	}
+	
+	private static void assertPipelineJob(Job<?,?> job, String message) {
+		if (!isPipelineJob(job)) {
+			throw new UnsupportedOperationException(message);
+		}
+	}
+	
+	private static void assertBuildType(String buildTypeStr, 
+						String [] supportedBuildTypes, String message) {
+		boolean found = false;
+		for (String buildType : supportedBuildTypes) {
+			if (buildType.equals(buildTypeStr)) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			throw new UnsupportedOperationException(message);
+		}
+	}
+
+	/**
+	 * Checks if the given <code>Throwable</code> is one of the failures 
+	 * from -rtc project.
+	 * 
+	 * @param e    a <code>Throwable</code>
+	 * @return     <code>true</code> if the <code>Throwable</code> is one of the expected 
+	 *             failures. 
+	 */
+	public static boolean unexpectedFailure(Throwable e) {
+		// This project can not reference types defined in the -rtc project, so we
+		// need to do some clunky testing to see if the exception is notification of
+		// a badly configured build. In that case, we just want to report the error
+		// but not the whole stack trace.
+		String name = e.getClass().getSimpleName();
+		return !("RTCConfigurationException".equals(name)
+				|| "AuthenticationException".equals(name)
+				|| e instanceof InterruptedException 
+				|| e instanceof InvalidCredentialsException ); //$NON-NLS-1$
+	}
+
+	/**
+	 * Send -rtc jar to the agent from the control server, Since Jenkins does not 
+	 * send them to the agent automatically.
+	 *  
+	 * @param workspacePath            The Jenkins workspace path in the agent.
+	 * @throws MalformedURLException
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public static void sendJarsToAgent(FilePath workspacePath)
+			throws MalformedURLException, IOException, InterruptedException {
+		Helper.LOGGER.finest("Helper.sendJarsToAgent : Begin");
+		VirtualChannel channel = workspacePath.getChannel();
+		URL facadeJarURL = RTCFacadeFactory.getFacadeJarURL(null);
+		if (channel instanceof Channel && facadeJarURL != null) {
+			// try to find our jar
+			Class<?> originalClass = Helper.class;
+			ClassLoader originalClassLoader = (ClassLoader) originalClass.getClassLoader();
+			URL [] jars = new URL[] {facadeJarURL};
+			boolean result = ((Channel) channel).preloadJar(originalClassLoader, jars);
+			Helper.LOGGER.finer("Prefetch result for sending jars is " + result);  //$NON-NLS-1$ //$NON-NLS-2$
+		}
+		Helper.LOGGER.finest("Helper.sendJarsToAgent : End");
+	}
+
+	/**
+	 * Extracts build states out of the given string.
+	 * The extractor does not know if the extract state is a valid 
+	 * {@link RTCBuildState}. To validate build states, use 
+	 * {@link #getInvalidStates(String[])
+
+	 * @param buildStatesStr     A string that contains build states separated by comma
+	 * @return                   An array of <code>String</code> that contains extracted
+	 *                           build states.
+	 */
+	public static String[] extractBuildStates(String buildStatesStr) {
+		LOGGER.entering(Helper.class.getName(), "extractBuildStates");
+		Tuple<String[], String[]> buildStatesWithDuplicates = 
+				extractBuildStatesWithDuplicates(buildStatesStr);
+		return buildStatesWithDuplicates.getFirst();
+	}
+	
+	/**
+	 * Extracts build states out of the given string with duplicates 
+	 * sent back in a separate list.
+	 *  
+	 * The extractor does not know if the extract state is a valid 
+	 * {@link RTCBuildState}. To validate build states, use 
+	 * {@link #getInvalidStates(String[])
+
+	 * @param buildStatesStr     A string that contains build states separated by comma
+	 * @return                   An array of <code>String</code> that contains extracted
+	 *                           build states.
+	 */
+	public static Tuple<String[], String[]> extractBuildStatesWithDuplicates(String buildStatesStr) {
+		LOGGER.entering(Helper.class.getName(), "extractBuildStates");
+		if (buildStatesStr == null) {
+			return new Tuple<>(new String[0], new String[0]);
+		}
+		StringTokenizer tokenizer = new StringTokenizer(buildStatesStr, 
+								BUILD_STATE_DELIMITER);
+        Set<String> buildStates = new LinkedHashSet<String>();
+        Set<String> duplicateBuildStates = new LinkedHashSet<String>();
+        while (tokenizer.hasMoreElements()) {
+        	String state = tokenizer.nextToken().trim();
+        	if (buildStates.contains(state)) {
+        		duplicateBuildStates.add(state);
+        	} else { 
+        		buildStates.add(state);
+        	}
+        }
+        return new Tuple<>(buildStates.toArray(new String[0]), 
+        			duplicateBuildStates.toArray(new String[0]));
+	}
+	
+	/**
+	 * Given an array of build states, filter out the list of states that are invalid
+	 * 
+	 * @param buildStates   An array of build states, some of which can be invalid.
+	 * 					    If any of the entry is <code>null</code>, then it is ignored
+	 *  
+	 * @return              An array of <code>String</code> that contains invalid states. 
+	 *                      Never <code>null</code> but can be empty.
+	 */
+	public static String[] getInvalidStates(String [] buildStates) {
+		LOGGER.entering(Helper.class.getName(), "getInvalidStates");
+		Set<String> invalidBuildStates = new LinkedHashSet<String>();
+		if (buildStates == null) {
+			return invalidBuildStates.toArray(new String[0]);
+		}
+		for (String buildState : buildStates) {
+			if (buildState == null) {
+				continue;
+			}
+			if (Helper.getAllBuildStates().contains(buildState)) {
+				continue;
+			} else {
+				invalidBuildStates.add(buildState);
+			}
+		}
+		return invalidBuildStates.toArray(new String[invalidBuildStates.size()]);
+	}
+	
+	public static Set<String> getAllBuildStates() {
+		return ALL_BUILD_STATES;
+	}
+
+	/**
+	 * Retrieve snapshot UUID from a build that has such a snapshotUUID that is "owned" by 
+	 * the given <param>workspaceUUID</param>
+	 * 
+	 * It is possible that the immediate previous build does not have a snapshot uuid 
+	 * that we are looking for because 
+	 * 1. No snapshot UUID  was found (because the build failed before reaching the checkout step)  
+	 * 2  Snapshot UUID was found but it is owned by a different workspace. (This happens when the 
+	 * the previous build uses a different workspace as part of checkout).
+	 * 
+	 */
+	public static String getSnapshotUUIDFromPreviousBuild(final Run<?, ?> buildParm, 
+			String workspaceUUID, boolean debug, 
+			TaskListener listener, Locale locale) {
+		// If build definition or workspace is not null, then retrieve the workspace UUID
+		// Use it to match the pollingOnlyCompareData 
+
+		// First retrieve the pollingOnlyCompareData from the build, if available.
+		// If found, then that data's workspace UUID should match the one that we are looking for.
+		// Otherwise previous snapshot UUID is not found.
+		String snapshotUUID = null;
+		Run <?, ?> build = buildParm.getPreviousBuild();
+		while (build != null && snapshotUUID == null) {
+			List<RTCBuildResultAction> rtcBuildResultActions = build.getActions(RTCBuildResultAction.class);
+			if (rtcBuildResultActions.size() == 1) { 
+				// the usual case for freestyle builds (without multiple SCM) and 
+				// pipeline build with only one invocation of RTCScm
+				RTCBuildResultAction rtcBuildResultAction = rtcBuildResultActions.get(0);
+				if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null)) {
+					Map <String, String> buildProperties = rtcBuildResultAction.getBuildProperties();
+					String owningWorkspaceUUID = Util.fixEmptyAndTrim(buildProperties.get(SNAPSHOT_OWNER));
+					if (owningWorkspaceUUID != null && owningWorkspaceUUID.equals(workspaceUUID)) {
+						snapshotUUID = buildProperties.get(TEAM_SCM_SNAPSHOT_UUID_PROPERTY);
+					}
+				}
+			}
+			else if (rtcBuildResultActions.size() > 1) {				
+				for (RTCBuildResultAction rtcBuildResultAction : rtcBuildResultActions) {
+					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null)) {
+						Map<String,String> buildProperties = rtcBuildResultAction.getBuildProperties();
+						String owningWorkspaceUUID = Util.fixEmptyAndTrim(buildProperties.get(SNAPSHOT_OWNER));
+						if (owningWorkspaceUUID != null && owningWorkspaceUUID.equals(workspaceUUID)) {
+							snapshotUUID = buildProperties.get(TEAM_SCM_SNAPSHOT_UUID_PROPERTY);
+							// We don't we break here to maintain the following behavior for pipeline jobs
+							// If we load the same stream multiple times, we get the the value from the last
+							// RTCBuildResultAction
+						}
+					}
+				}
+			}
+			build = build.getPreviousBuild();
+		}
+		return snapshotUUID;
+	}
 }
+ 

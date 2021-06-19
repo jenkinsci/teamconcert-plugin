@@ -1,0 +1,42 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p> When this option set to <code>true</code>, the plugin will perform polling only but will not accept or load the repository workspace.</p>
+	<p> Note:If you select this option, then you must ensure that changes are accepted to the workspace as part of the build, within the next polling interval.</p>
+	<p>If this option is is set to <em>true</em>, then RTCScm will poll the repository workspace only and not perform the following actions,</p>
+	 <p>
+	 <ul>
+	 <li>accept</li>
+	 <li>load</li>
+	 <li>recording change log in the build</li>
+	 <li>updating Jenkins build with plugin specific data</li>
+	 </ul>
+	 </p>
+	 <p>Evolution and backward compatibility</p>
+	 <p>
+	 <ul>
+	 <li>For jobs created before 2.3.0, the option's value will be <em>false</em>.</li>
+	 <li>For new jobs, the option's value will be <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Constraints</p>
+	 <p>
+	 <ul>
+	 <li> Supported for pipeline jobs.</li>
+	 <li> Supported for build definition and build workspace types.</li>
+	 </ul>
+	 </p>
+</div>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
+ * Copyright (c) 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -75,6 +75,8 @@ public class RTCChangeLogParser extends ChangeLogParser {
 			digester.addBeanPropertySetter("*/streamItemId"); //$NON-NLS-1$
 			digester.addBeanPropertySetter("*/isPersonalBuild"); //$NON-NLS-1$
 			digester.addBeanPropertySetter("*/previousBuildUrl"); //$NON-NLS-1$
+			digester.addBeanPropertySetter("*/previousBaselineSetItemId");
+			digester.addBeanPropertySetter("*/previousBaselineSetName");
 			
 			// When digester reads a {{<changeset>}} node it will create a {{RTCChangeLogChangeSetEntry}} object
 			digester.addObjectCreate("*/changeset", RTCChangeLogChangeSetEntry.class); //$NON-NLS-1$

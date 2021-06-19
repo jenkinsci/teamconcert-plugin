@@ -40,7 +40,6 @@ import hudson.model.FreeStyleProject;
  * Integration tests around change log 
  *
  */
-@SuppressWarnings({"nls", "boxing"})
 public class RTCChangeLogIT extends AbstractTestCase {
 	
 	/**
@@ -50,7 +49,7 @@ public class RTCChangeLogIT extends AbstractTestCase {
 
 	/**
 	 * Test whether change log has work item summary without control characters 
-	 *  even if the actual work item summary has.
+	 *  even if the actual work item summary has some.
 	 * 
 	 * @throws Exception - throw all exceptions to JUnit
 	 */

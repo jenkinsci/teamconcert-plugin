@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2020 IBM Corporation and others.
+ * Copyright (c) 2014, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -305,4 +305,47 @@ public interface RTCBuildConstants {
 	 * Build Result label
 	 */
 	public static final Object BUILD_RESULT_LABEL = "buildLabel";
+	
+	
+	/**
+	 * Key to identify build result state in a map
+	 */
+	public static final String BUILD_STATE_KEY = "buildState";
+	
+	/**
+	 * Key to identify build result status in a map
+	 */
+	public static final String BUILD_STATUS_KEY = "buildStatus";
+	
+	
+	/**
+	 * Key to identify snapshot name in a map
+	 */
+	public static final String SNAPSHOT_NAME_KEY = "snapshotName";
+	
+	/**
+	 * Key to identify snapshot UUID in a map
+	 */
+	public static final String SNAPSHOT_UUID_KEY = "snapshotUUID";
+	
+	
+	/**
+	 * Contribution types
+	 * 
+	 */
+	
+	/**
+	 * Represents a build result contribution of type "artifact". 
+	 * Such contributions will appear in the "Downloads" tab of the 
+	 * build result. 
+	 * 
+	 */
+	public static final String ARTIFACT_TYPE = "artifact";
+	
+	/**
+	 * Represents a build result contribution of type "log".
+	 * Such contributions will appear in the "Logs" tab of the 
+	 * build result.
+	 */
+	public static final String LOG_TYPE = "log";
 }
