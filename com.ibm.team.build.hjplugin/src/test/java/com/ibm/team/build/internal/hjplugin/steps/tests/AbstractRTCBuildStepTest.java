@@ -60,7 +60,7 @@ public abstract class AbstractRTCBuildStepTest extends AbstractTestCase {
 	
 	protected void setupValidCredentials(String credId) {
 		Credentials c = (Credentials) new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, credId,
-				"test", CONFIG.getUserId(), CONFIG.getPassword());
+				"test", Config.DEFAULT.getUserId(), Config.DEFAULT.getPassword());
 		SystemCredentialsProvider.getInstance().getCredentials().add(c);
 	}
 	
