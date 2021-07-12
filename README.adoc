@@ -7,6 +7,8 @@ Team Concert Plugin
 // Reference - See the following page for adding new images
 // https://www.jenkins.io/doc/developer/publishing/wiki-page/
 
+NOTE: View this help page on GitHub link:https://github.com/jenkinsci/teamconcert-plugin/blob/master/README.adoc[README.adoc] if you encounter issues with link navigation.
+
 [.conf-macro .output-inline]#Integrates Jenkins with link:https://jazz.net/products/rational-team-concert/[Rational Team Concert] link:https://jazz.net/products/rational-team-concert/features/scm[source control] and link:https://jazz.net/products/rational-team-concert/features/build[build] using the richer features of the build toolkit instead of the command line.#
 
 With the build toolkit this plugin adds traceability links from a Jenkins build to an RTC build result, workspace and snapshot.  It also publishes links to work items, change sets and file contents captured in the snapshot.  It leverages the current RTC features and workflows that users are already familiar with such as,mails, toaster popups, reporting, dashboards, etc.
@@ -1380,9 +1382,9 @@ https://jazz.net/wiki/bin/view/Main/JenkinsBestPractices[here].
 == References
 
 . Using the Team Concert plugin in Pipeline jobs -
-https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[https://jazz.net/wiki/bin/view/Main/JenkinsWorkflowPluginSupport]
+https://jazz.net/wiki/bin/view/Main/JenkinsWorkflowPluginSupport[Pipeline Support in Team Concert Plugin]
 . Using dynamic load rules in Team Concert plugin -
-https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
+https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[Using Dynamic Load Rules with Team Concert Plugin]
 
 [[TeamConcertPlugin-Releases]]
 == Releases
