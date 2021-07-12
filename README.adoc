@@ -1388,6 +1388,7 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 == Releases
 
 [[TeamConcertPlugin-2.4.0June22-2021]]
+=== 2.4.0 June 22 2021
 * Pipeline job related enhancements to Team Concert plugins
 ** New pipeline step rtcBuild to interact with EWM Builds introduced.
 * Compatibility changes to remove common-digester2 and use common-digester3
