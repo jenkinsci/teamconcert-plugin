@@ -1387,10 +1387,22 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin
 [[TeamConcertPlugin-Releases]]
 == Releases
 
+[[TeamConcertPlugin-2.4.0June22-2021]]
+* Pipeline job related enhancements to Team Concert plugins
+** New pipeline step rtcBuild to interact with EWM Builds introduced.
+* Compatibility changes to remove common-digester2 and use common-digester3
+** https://github.com/jenkinsci/teamconcert-plugin/pull/20[Pull request 20]. Merged and released as part of 2.4.0.
+
+Note: Team Concert Plugin continues to support LTS versions starting from 2.60.1
+
+https://github.com/jenkinsci/teamconcert-plugin/commit/73cf16eea7a6c78efc2195ed0cd336d72cc9f445[GitHub commit - 73cf16eea7]
+
 [[TeamConcertPlugin-2.2.1March30-2021]]
 === 2.2.1 March 30, 2021
 * Compatibility update for Jenkins 2.277.1 LTS.  https://jazz.net/jazz/resource/itemName/com.ibm.team.workitem.WorkItem/524132[524132:Adoption - tables to divs migration for Team Concert Plugin]
 Note: Team Concert Plugin continues to support LTS versions starting from 2.60.1
+
+https://github.com/jenkinsci/teamconcert-plugin/commit/1dcbf3308f3a6c31b560593cbb9816bb10d559c2[GitHub commit - 1dcbf3308f3]
 
 [[TeamConcertPlugin-2.2.0Dec22-2020]]
 === 2.2.0 December 22, 2020
