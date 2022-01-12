@@ -52,6 +52,7 @@ public class WaitForBuildTask extends RTCTask<RTCBuildStepResponse> {
 	private String buildResultUUID;
 	private String [] buildStatesToWait;
 	private long waitBuildTimeout;
+	private long waitBuildInterval;
 	
 	public WaitForBuildTask(
 			String buildToolkitPath,
@@ -61,7 +62,7 @@ public class WaitForBuildTask extends RTCTask<RTCBuildStepResponse> {
 			int timeout,
 			String buildResultUUID,
 			String[] buildStatesToWait,
-			long waitBuildTimeout,
+			long waitBuildTimeout, long waitBuildInterval,
 			boolean isDebug, TaskListener listener) {
 		super(isDebug, listener);
 		this.buildToolkitPath = buildToolkitPath;
@@ -72,6 +73,7 @@ public class WaitForBuildTask extends RTCTask<RTCBuildStepResponse> {
 		this.buildResultUUID = buildResultUUID;
 		this.buildStatesToWait = buildStatesToWait;
 		this.waitBuildTimeout = waitBuildTimeout;
+		this.waitBuildInterval = waitBuildInterval;
 
 		if (getIsDebug()) {
 			listener.getLogger().println(String.format(
@@ -80,13 +82,14 @@ public class WaitForBuildTask extends RTCTask<RTCBuildStepResponse> {
 					+ "userId : %s\n"
 					+ "buildResultUUID: %s\n"
 					+ "buildStates : %s\n"
-					+ "waitBuildTimeout : %d",
+					+ "waitBuildTimeout : %d\n"
+					+ "waitBuildInterval : %d",
 					buildToolkitPath, 
 					serverURI,
 					userId,
 					buildResultUUID, 
 					Arrays.deepToString(buildStatesToWait),
-					waitBuildTimeout));
+					waitBuildTimeout, waitBuildInterval));
 		}
 	}
 
@@ -122,10 +125,11 @@ public class WaitForBuildTask extends RTCTask<RTCBuildStepResponse> {
 									String.class, // buildResulUUID,
 									Object.class, // buildStates
 									long.class,// waitBuildTimeout
+									long.class, // waitBuildInterval
 									Object.class, // listener
 									Locale.class }, // clientLocale
 							serverURI, getUserId(), getPassword(), 
-							timeout, buildResultUUID, buildStatesToWait, waitBuildTimeout,
+							timeout, buildResultUUID, buildStatesToWait, waitBuildTimeout, waitBuildInterval,
 							new TaskListenerWrapper(getListener()), Locale.getDefault());
 			
 			// Once the method completes, get back the build state,  

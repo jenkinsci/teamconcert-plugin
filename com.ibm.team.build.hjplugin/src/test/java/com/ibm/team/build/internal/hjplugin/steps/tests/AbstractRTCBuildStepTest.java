@@ -129,6 +129,7 @@ public abstract class AbstractRTCBuildStepTest extends AbstractTestCase {
 	protected void helperMissingCreds(JenkinsRule rule, String prefix, String taskFragment)
 			throws Exception, InterruptedException, ExecutionException, IOException {
 		WorkflowJob j = setupWorkflowJob(rule);
+		// No creds provided
 		String rtcBuildStep = String.format("rtcBuild buildTool: '%s', credentialsId: '%s', serverURI:"
 				+ " '%s'," + taskFragment + ","
 				+ " timeout: 480", CONFIG_TOOLKIT_NAME, "", Config.DEFAULT.getServerURI());
@@ -137,20 +138,20 @@ public abstract class AbstractRTCBuildStepTest extends AbstractTestCase {
 		WorkflowRun run = requestJenkinsBuild(j);
 		
 		String log = getLog(run);
-		Assert.assertTrue(log, log.contains(Messages.RTCBuildStep_missing_credentials()));
+		Assert.assertTrue(log, log.contains(Messages.RTCBuildStep_missing_credentials_id()));
 		Utils.dumpLogFile(run, prefix, "emptyCreds", ".log");
 		
 		// Non existent creds
 		j = setupWorkflowJob(rule);
 		rtcBuildStep = String.format("rtcBuild buildTool: '%s', credentialsId: '%s', serverURI:"
 				+ " '%s'," + taskFragment + ","
-				+ " timeout: 480", CONFIG_TOOLKIT_NAME, "", Config.DEFAULT.getServerURI());
+				+ " timeout: 480", CONFIG_TOOLKIT_NAME, "abcd", Config.DEFAULT.getServerURI());
 		setupFlowDefinition(j, rtcBuildStep);
 		
 		run = requestJenkinsBuild(j);
 		
 		log = getLog(run);
-		Assert.assertTrue(log, log.contains(Messages.RTCBuildStep_missing_credentials()));
+		Assert.assertTrue(log, log.contains(Messages.RTCBuildStep_missing_credentials("abcd")));
 		Utils.dumpLogFile(run, prefix, "invalidCreds", ".log");
 	}
 	
@@ -166,7 +167,9 @@ public abstract class AbstractRTCBuildStepTest extends AbstractTestCase {
 		setupFlowDefinition(j, rtcBuildStep);
 		WorkflowRun run = requestJenkinsBuild(j);
 		String log = getLog(run);
-		Assert.assertTrue(log, log.contains(Messages.RTCBuildStep_missing_serverURI()));
+		// The default server URI is https://localhost:9443/ccm
+		Assert.assertTrue(log, log.contains("CRJAZ1371E The following URL cannot be reached:"));
+		Assert.assertTrue(log, log.contains("localhost:9443"));
 		Utils.dumpLogFile(run, prefix, "noServerURI", ".log");
 	}
 

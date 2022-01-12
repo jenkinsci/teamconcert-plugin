@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright (c) 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,7 +22,7 @@ public class RtcExtensionProviderUtil {
 	
 	private static final Logger LOGGER = Logger.getLogger(RtcExtensionProviderUtil.class.getName());
 	
-	public static void preUpdateFileCopyArea(final Object lrProvider, final PrintStream logger, final File workspace, final String workspaceUUID,
+	public static void preUpdateFileCopyArea(final Object lrProvider, final PrintStream logger, final File loadDirectory, final String workspaceUUID,
 			final String workspaceName, final String buildResultUUID, final String repoURL, String userId, String password) throws Exception {
 		if (lrProvider != null) {
 			if (LOGGER.isLoggable(Level.FINEST)) {
@@ -33,7 +33,7 @@ public class RtcExtensionProviderUtil {
 					.getMethod(
 							"preUpdateFileCopyArea", String.class, String.class, String.class, String.class, String.class, String.class, File.class, PrintStream.class);//$NON-NLS-1$
 			if (preUpdateFileCopyArea != null) {
-				preUpdateFileCopyArea.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, workspace, logger);
+				preUpdateFileCopyArea.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, loadDirectory, logger);
 			}
 			if (LOGGER.isLoggable(Level.FINEST)) {
 				LOGGER.finest("RtcExtensionProviderUtil.preUpdateFileCopyArea: invoking preUpdateFileCopyArea on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
@@ -42,7 +42,7 @@ public class RtcExtensionProviderUtil {
 
 	}
 
-	public static void postUpdateFileCopyArea(final Object lrProvider, final PrintStream logger, final File workspace, final String workspaceUUID,
+	public static void postUpdateFileCopyArea(final Object lrProvider, final PrintStream logger, final File loadDirectory, final String workspaceUUID,
 			final String workspaceName, final String buildResultUUID, final String repoURL, String userId, String password) throws Exception {
 		if (lrProvider != null) {
 			if (LOGGER.isLoggable(Level.FINEST)) {
@@ -54,7 +54,7 @@ public class RtcExtensionProviderUtil {
 							"postUpdateFileCopyArea", String.class, String.class, String.class, String.class, String.class, String.class, File.class, PrintStream.class);//$NON-NLS-1$
 			if (postUpdateFileCopyArea != null) {
 				postUpdateFileCopyArea
-						.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, workspace, logger);
+						.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, repoURL, userId, password, loadDirectory, logger);
 			}
 			if (LOGGER.isLoggable(Level.FINEST)) {
 				LOGGER.finest("RtcExtensionProviderUtil.postUpdateFileCopyArea: invoking postUpdateFileCopyArea on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
@@ -121,23 +121,50 @@ public class RtcExtensionProviderUtil {
 	
 	public static String getPathToLoadRuleFile(final Object lrProvider, final PrintStream logger, final String workspaceUUID,
 			final String workspaceName, final String snapshotUUID, final String buildResultUUID, Map<String, String> componentInfo,
-			final String repoURL, String userId, String password) throws Exception {
+			final String repoURL, String userId, String password, final File loadDirectory) throws Exception {
+		String newLoadRulePath = null;
+		String oldLoadRulePath = null;
 		if (lrProvider != null) {
 			if (LOGGER.isLoggable(Level.FINEST)) {
 				LOGGER.finest("RtcExtensionProviderUtil.getPathToLoadRuleFile: invoking getPathToLoadRuleFile on '" + lrProvider.getClass().getName() + "' - Begin"); //$NON-NLS-1$//$NON-NLS-2$
 			}
+		 	
 			Method getPathToLoadRuleFile = lrProvider
 					.getClass()
 					.getMethod(
 							"getPathToLoadRuleFile", String.class, String.class, String.class, Map.class, String.class, String.class, String.class, PrintStream.class);//$NON-NLS-1$
+			
+			Method getPathToLoadRuleFile_1 = lrProvider
+					.getClass()
+					.getMethod(
+							"getPathToLoadRuleFile", String.class, String.class, String.class, Map.class, String.class, String.class, String.class, File.class, PrintStream.class);//$NON-NLS-1$
+			
+			
 			if (getPathToLoadRuleFile != null) {
-				return (String)getPathToLoadRuleFile.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, componentInfo, repoURL,
+				oldLoadRulePath = (String)getPathToLoadRuleFile.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, componentInfo, repoURL,
 						userId, password, logger);
 			}
+			
+			if(getPathToLoadRuleFile_1 != null) {
+				newLoadRulePath = (String)getPathToLoadRuleFile_1.invoke(lrProvider, workspaceUUID, workspaceName, buildResultUUID, componentInfo, repoURL,
+						userId, password, loadDirectory, logger);
+			}
+			
+			if(oldLoadRulePath != null)
+			{
+				return oldLoadRulePath;
+			}
+			
+			if(newLoadRulePath != null)
+			{
+				return newLoadRulePath;
+			}
+			
 			if (LOGGER.isLoggable(Level.FINEST)) {
 				LOGGER.finest("RtcExtensionProviderUtil.getPathToLoadRuleFile: invoking getPathToLoadRuleFile on '" + lrProvider.getClass().getName() + "' - End"); //$NON-NLS-1$//$NON-NLS-2$
 			}
 		}
+		
 		return null;
 	}
 }

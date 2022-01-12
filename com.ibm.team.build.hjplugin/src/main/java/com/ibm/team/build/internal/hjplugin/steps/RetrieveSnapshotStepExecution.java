@@ -67,8 +67,8 @@ public class RetrieveSnapshotStepExecution extends RTCBuildStepExecution<RTCBuil
 		// Task specific variables
 		String buildResultUUID = Util.fixEmptyAndTrim(getStep().getTask().getBuildResultUUID());
 		
-		validateArguments(serverURI, timeout, buildTool, buildToolkitPath,  
-						credentials, buildResultUUID);
+		validateArguments(serverURI, timeout, buildTool, buildToolkitPath, 
+						getStep().getCredentialsId(), credentials, buildResultUUID);
 		
 		if (LOGGER.isLoggable(Level.FINE)) {
 			LOGGER.fine(this.getClass().getName() + ":run() - creating RetrieveSnapshotTask");
@@ -81,12 +81,13 @@ public class RetrieveSnapshotStepExecution extends RTCBuildStepExecution<RTCBuil
 	}
 	
 	private void validateArguments(String serverURI, int timeout, String buildTool,
-					String buildToolkitPath, StandardUsernamePasswordCredentials credentials,
+					String buildToolkitPath, String credentialsId, 
+					StandardUsernamePasswordCredentials credentials,
 					String buildResultUUID) throws IllegalArgumentException {
 		LOGGER.entering(this.getClass().getName(), "validateArguments");
 	
 		validateGenericArguments(serverURI, timeout, 
-				buildTool, buildToolkitPath, credentials);
+				buildTool, buildToolkitPath, credentialsId, credentials);
 		
 		if (buildResultUUID == null) {
 			throw new IllegalArgumentException(Messages.RTCBuildStep_missing_buildResultUUID());

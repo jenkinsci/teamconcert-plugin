@@ -25,7 +25,7 @@
 	    <tds:blockWrapper>
 	   
 	        <f:entry name="buildTool" title="${%buildTool.title}" field="buildTool">
-	            <f:select name="buildTool" />
+	            <f:select name="buildTool" default="${descriptor.globalBuildTool}" />
 	        </f:entry>
 	          
 	        <f:entry title="${%serverURI.title}"  field="serverURI" >
@@ -95,6 +95,8 @@
                 <!--<f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
                         method="validateWaitForBuildConfiguration" with="buildTool,serverURI,userId,password,timeout,credentialsId,buildResultUUID,buildStates,waitBuildTimeout" />-->
 				</f:dropdownListBlock>
+				
+				<!-- wait for build -->
 				<f:dropdownListBlock title="${%waitForBuild.title}">
 				    <!-- Wait for Build -->
 					<f:invisibleEntry field="name">
@@ -113,6 +115,12 @@
 							help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/waitBuildTimeout">
 		    	    	<f:textbox name="waitBuildTimeout" default="${descriptor.defaultWaitBuildTimeout}" clazz="required"/>
 					</f:entry>
+					
+					<f:entry title="${%waitBuildInterval.title}"  field="waitBuildInterval" 
+                            help="/descriptor/com.ibm.team.build.internal.hjplugin.steps.RTCBuildStep/help/waitBuildInterval">
+                        <f:textbox name="waitBuildInterval" default="${descriptor.defaultWaitBuildInterval}" clazz="required"/>
+                    </f:entry>
+                    
    				   <!--<f:validateButton title="${%validateConfiguration.title}" progress="${%validateConfiguration.progress}" 
                         method="validateWaitForBuildConfiguration" with="buildTool,serverURI,userId,password,timeout,credentialsId,buildResultUUID,buildStates,waitBuildTimeout" />-->
 				</f:dropdownListBlock>

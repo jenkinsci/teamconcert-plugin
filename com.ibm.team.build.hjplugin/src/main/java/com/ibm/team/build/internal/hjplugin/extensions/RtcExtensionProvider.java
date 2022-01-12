@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright (c) 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -86,12 +86,12 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 	 * @param repoURL {@link String} representing the url of the RTC repository 
 	 * @param userId User id for the RTC repository
 	 * @param password Password for the userId to login into the RTC repository
-	 * @param workspace Object of type {@link File} holding the Jenkins build location 
+	 * @param loadDirectory Object of type {@link File} holding the Load directory location 
 	 * @param logger Object of type {@link PrintStream}, can be used for logging
 	 * @throws Exception
 	 */
 	public void preUpdateFileCopyArea(String workspaceUUID, String workspaceName, String buildResultUUID, String repoURL, String userId,
-			String password, File workspace, PrintStream logger) throws Exception {
+			String password, File loadDirectory, PrintStream logger) throws Exception {
 		LOGGER.finest("RtcExtensionProvider.preUpdateFileCopyArea : no op"); //$NON-NLS-1$
 		
 	}
@@ -105,13 +105,13 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 	 * @param repoURL {@link String} representing the url of the RTC repository 
 	 * @param userId User id for the RTC repository
 	 * @param password Password for the userId to login into the RTC repository
-	 * @param workspace Object of type {@link File} holding the Jenkins build location 
+	 * @param loadDirectory Object of type {@link File} holding the Load directory location 
 	 * @param logger Object of type {@link PrintStream}, can be used for logging
 	 * @throws Exception
 	 *   
 	 */
 	public void postUpdateFileCopyArea(String workspaceUUID, String workspaceName, String buildResultUUID, String repoURL, String userId,
-			String password, File workspace, PrintStream logger) throws Exception {
+			String password, File loadDirectory, PrintStream logger) throws Exception {
 		LOGGER.finest("RtcExtensionProvider.postUpdateFileCopyArea : no op");		 //$NON-NLS-1$
 	}
 	
@@ -179,6 +179,10 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 	 * Note that this method will not be invoked until the deprecated getComponentLoadRules() method returns non-null
 	 * load rules.
 	 * 
+	 * Note that if both the getPathToLoadRuleFile methods are implemented and both the methods are returning non-null
+	 * value then this deprecated getPathToLoadRuleFile method will be called, otherwise the new getPathToLoadRuleFile
+	 * method will be called.
+	 * 
 	 * @param workspaceUUID UUID of the build workspace could be <code>null</code>
 	 * @param workspaceName name of the build workspace could be <code>null</code>
 	 * @param buildResultUUID UUID of the build result could be <code>null</code>
@@ -188,15 +192,44 @@ public class RtcExtensionProvider implements ExtensionPoint, Serializable {
 	 * @param userId userId User id for the RTC repository
 	 * @param password Password for the userId to login into the RTC repository
 	 * @param logger Object of type {@link PrintStream}, can be used for logging
-	 * @return path to the load rule file, in the local filesystem.
+	 * @return path to the load rule file, in the local file system.
 	 * 
 	 */
+	@Deprecated
 	public String getPathToLoadRuleFile(String workspaceUUID, String workspaceName, String buildResultUUID,
 			Map<String, String> componentInfo, String repoURL, String userId, String password, PrintStream logger) throws Exception {
-		LOGGER.finest("RtcExtensionProvider.getPathToLoadRuleFile : returning null"); //$NON-NLS-1$
+		LOGGER.finest("RtcExtensionProvider.getPathToLoadRuleFile(Deprecated) : returning null"); //$NON-NLS-1$
 		return null;
 	}
 
+	
+	/**
+	 * This method is called after the accept and before the load. When dynamic load rules are provided, only those
+	 * components determined by the load rules are loaded, according to those rules. Note that only XML format is
+	 * supported for load rules.
+	 * 
+	 * Note that this method will not be invoked until the deprecated getComponentLoadRules() method returns non-null
+	 * load rules.
+	 * 
+	 * @param workspaceUUID UUID of the build workspace could be <code>null</code>
+	 * @param workspaceName name of the build workspace could be <code>null</code>
+	 * @param buildResultUUID UUID of the build result could be <code>null</code>
+	 * @param componentInfo {@link Map<String, String>} of component UUID's as keys and component names as values. This
+	 *            {@link Map} will contain all the components in the build workspace
+	 * @param repoURL {@link String} representing the url of the RTC repository
+	 * @param userId userId User id for the RTC repository
+	 * @param password Password for the userId to login into the RTC repository
+	 * @param loadDirectory Object of type {@link File} holding the Load directory location 
+	 * @param logger Object of type {@link PrintStream}, can be used for logging
+	 * @return path to the load rule file, in the local file system.
+	 * 
+	 */
+	public String getPathToLoadRuleFile(String workspaceUUID, String workspaceName, String buildResultUUID,
+			Map<String, String> componentInfo, String repoURL, String userId, String password, File loadDirectory , PrintStream logger) throws Exception {
+		LOGGER.finest("RtcExtensionProvider.getPathToLoadRuleFile : returning null"); //$NON-NLS-1$
+		return null;
+	}
+	
 	/**
 	 * 
 	 * @param build

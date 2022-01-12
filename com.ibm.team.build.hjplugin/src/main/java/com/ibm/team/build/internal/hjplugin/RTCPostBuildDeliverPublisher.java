@@ -1,5 +1,5 @@
 /*******************************************************************************
- * © Copyright 2017, 2020 IBM Corporation and others.
+ * © Copyright 2017, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -183,7 +183,8 @@ public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuil
 			Node node = workspace.toComputer().getNode();
 			String localBuildToolkit = scm.getDescriptor().getBuildToolkit(scm.getBuildTool(), node, listener);
 			String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
-			RTCLoginInfo loginInfo = scm.getLoginInfo(build.getParent(), masterBuildToolkit);
+			RTCLoginInfo loginInfo = scm.getLoginInfo2(build, masterBuildToolkit, listener, 
+													Helper.isDebugEnabled(build, listener));
 
 			// Handle version compatibility at this point. If we know that the version is less than 6.0.4,
 			// return a reasonable message and skip to the next SCM action

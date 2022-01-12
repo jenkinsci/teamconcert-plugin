@@ -922,7 +922,7 @@ public class RepositoryConnection {
 						pathToDynamicLoadRuleFile = RtcExtensionProviderUtil.getPathToLoadRuleFile(extProvider, logger, workspace
 								.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, buildResultUUID,
 								componentInfo, fConnectionDetails.getRepositoryAddress(), fConnectionDetails.getUserId(),
-								fConnectionDetails.getPassword());
+								fConnectionDetails.getPassword(), fetchDestinationFile);
 					}
 		            
 					Collection<ILoadRule2> loadRulesInstance = buildConfiguration.getComponentLoadRules(workspaceConnection, pathToDynamicLoadRuleFile, logger,
@@ -1359,7 +1359,7 @@ public class RepositoryConnection {
 				pathToDynamicLoadRuleFile = RtcExtensionProviderUtil.getPathToLoadRuleFile(
 						extProvider, logger, workspace.getWorkspaceHandle().getItemId().getUuidValue(), workspaceConnection.getName(), snapshotUUID, 
 						buildResultUUID, componentInfo, fConnectionDetails.getRepositoryAddress(), 
-						fConnectionDetails.getUserId(), fConnectionDetails.getPassword());
+						fConnectionDetails.getUserId(), fConnectionDetails.getPassword(), fetchDestinationFile);
 			}
             
 			SourceControlUtility.updateFileCopyArea(workspaceConnection, fetchDestinationFile.getCanonicalPath(), includedComponents, components,
@@ -2012,6 +2012,10 @@ public class RepositoryConnection {
 	 *                             Each entry of the array should be one of {@link BuildState}.
 	 * @param waitBuildTimeout     Number of seconds to wait for. Can be <code>-1</code> or 
 	 *                             any value greater than <code>0</code>
+	 * @param waitBuildInterval	   Number of seconds between each check made by this method to EWM 
+	 *                             server. The value should be greater than 1 and less than waitBuildTimeout,
+	 *                             if waitBuildTimeout is not -1. If waitBuildTimeout is -1, this number 
+	 *                             can be any positive integer greater than 1.
 	 * @param consoleOutput        A stream into which messages should be written. The messages  
 	 *                             will be output to the user
 	 * @param clientLocale         Locale in which messages should be formatted
@@ -2021,7 +2025,7 @@ public class RepositoryConnection {
 	 *         RTCConfigurationException            
 	 */
 	public Map<String, String> waitForBuild(String buildResultUUID, String [] statesToWaitFor, 
-					long waitBuildTimeout, IConsoleOutput consoleOutput, Locale clientLocale,
+					long waitBuildTimeout, long waitBuildInterval, IConsoleOutput consoleOutput, Locale clientLocale,
 					SubMonitor progress) throws TeamRepositoryException, RTCConfigurationException {
 		if (LOGGER.isLoggable(Level.FINE)) {
 			LOGGER.fine(String.format("Waiting for build result %s....", buildResultUUID));
@@ -2030,7 +2034,7 @@ public class RepositoryConnection {
 		try {
 			ensureLoggedIn(monitor.newChild(1));
 			return RTCBuildUtils.getInstance().waitForBuild(buildResultUUID, statesToWaitFor,
-					waitBuildTimeout, getTeamRepository(), consoleOutput, 
+					waitBuildTimeout, waitBuildInterval, getTeamRepository(), consoleOutput, 
 					clientLocale, monitor.newChild(9));
 		} finally {
 			monitor.done();

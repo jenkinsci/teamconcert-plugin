@@ -65,9 +65,11 @@ public class WaitForBuildStepExecution extends RTCBuildStepExecution<RTCBuildSte
 		String buildResultUUID = Util.fixEmptyAndTrim(getStep().getTask().getBuildResultUUID());
 		String [] buildStates = parseBuildStates(Util.fixEmptyAndTrim(getStep().getTask().getBuildStates()));
 		long waitBuildTimeout = getStep().getTask().getWaitBuildTimeout();
+		long waitBuildInterval = getStep().getTask().getWaitBuildInterval();
 		
-		validateArguments(serverURI, timeout, buildTool, buildToolkitPath, credentials, 
-						buildResultUUID, buildStates, waitBuildTimeout);
+		validateArguments(serverURI, timeout, buildTool, buildToolkitPath, 
+						getStep().getCredentialsId(), credentials, 
+						buildResultUUID, buildStates, waitBuildTimeout, waitBuildInterval);
 		if (LOGGER.isLoggable(Level.FINE)) {
 			LOGGER.fine(this.getClass().getName() + ":run() - creating WaitBuildTask");
 		}
@@ -76,6 +78,7 @@ public class WaitForBuildStepExecution extends RTCBuildStepExecution<RTCBuildSte
 				credentials.getPassword().getPlainText(), timeout, 
 				buildResultUUID, buildStates, 
 				waitBuildTimeout,
+				waitBuildInterval,
 				isDebug(run, listener), listener);
 		return workspace.act(task);
 	}
@@ -88,13 +91,14 @@ public class WaitForBuildStepExecution extends RTCBuildStepExecution<RTCBuildSte
 	}
 	
 	private void validateArguments(String serverURI, int timeout, String buildTool,
-					String buildToolkitPath, StandardUsernamePasswordCredentials credentials,
+					String buildToolkitPath, String credentialsId, 
+					StandardUsernamePasswordCredentials credentials,
 					String buildResultUUID, String [] buildStates, 
-					long waitBuildTimeout) throws IllegalArgumentException {
+					long waitBuildTimeout, long waitBuildInterval) throws IllegalArgumentException {
 		LOGGER.entering(this.getClass().getName(), "validateArguments");
 	
 		validateGenericArguments(serverURI, timeout, 
-				buildTool, buildToolkitPath, credentials);
+				buildTool, buildToolkitPath, credentialsId, credentials);
 		
 		if (buildResultUUID == null) {
 			throw new IllegalArgumentException(Messages.RTCBuildStep_missing_buildResultUUID());
@@ -102,10 +106,24 @@ public class WaitForBuildStepExecution extends RTCBuildStepExecution<RTCBuildSte
 		
 		validateBuildStates(buildStates);
 
-		if (waitBuildTimeout == 0 || waitBuildTimeout < -1) {
+		if (waitBuildTimeout == 0 || waitBuildTimeout < Helper.DEFAULT_WAIT_BUILD_TIMEOUT) {
 			throw new IllegalArgumentException(
 					Messages.RTCBuildStep_invalid_waitBuildTimeout(Long.toString(waitBuildTimeout)));
 		}
+		
+		// Validate waitBuildInterval
+		// Add a method in {@link ValidationHelper} and reuse it here. Check for waitBuildTimeout and waitBuildInterval
+		if (waitBuildInterval <= 0) {
+			throw new IllegalArgumentException(
+					Messages.RTCBuildStep_invalid_waitBuildInterval(Long.toString(waitBuildInterval)));
+		}
+		
+		if ((waitBuildTimeout != Helper.DEFAULT_WAIT_BUILD_TIMEOUT) && waitBuildInterval > waitBuildTimeout) {
+			throw new IllegalArgumentException(
+					Messages.RTCBuildStep_invalid_waitBuildIntervalGreater(
+							Long.toString(waitBuildInterval), Long.toString(waitBuildTimeout)));
+		}
+	
 	}
 
 	private void validateBuildStates(String[] buildStates) {

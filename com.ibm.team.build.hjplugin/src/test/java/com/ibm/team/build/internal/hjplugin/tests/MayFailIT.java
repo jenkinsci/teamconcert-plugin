@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2019 IBM Corporation and others.
+ * Copyright © 2013, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -56,7 +56,7 @@ public class MayFailIT extends AbstractTestCase {
 	private static final String USER_ID = "userId";
 	private static final String PASSWORD = "password";
 	private static final String PASSWORD_FILE = "passwordFile";
-	private static final String CREDENTIALS_ID = "_.credentialsId";
+	private static final String CREDENTIALS_ID = "credentialsId";
 	private static final String TIMEOUT = "timeout";
 
 	private static final String TEST_SERVER_URI = "https://localhost:9443/jazz";
@@ -71,7 +71,7 @@ public class MayFailIT extends AbstractTestCase {
 	private static final String TEST_BUILD_STREAM = "compile-and-test-stream";
 	
 	@Rule
-	public JenkinsRule j = new  JenkinsRule();
+	public JenkinsRule r = new  JenkinsRule();
 	
 	@Test public void testJobConfigRoundtripOverrideGlobal() throws Exception {
 		if (Config.DEFAULT.isConfigured()) {
@@ -102,7 +102,7 @@ public class MayFailIT extends AbstractTestCase {
 			Mockito.when(mockedReq.getParameter(TIMEOUT)).thenReturn(TEST_GLOBAL_TIMEOUT);
 			Mockito.when(mockedReq.getParameter(PASSWORD)).thenReturn(TEST_GLOBAL_PASSWORD);
 			Mockito.when(mockedReq.getParameter(PASSWORD_FILE)).thenReturn(TEST_GLOBAL_PASSWORD_FILE);
-			Mockito.when(mockedReq.getParameter(CREDENTIALS_ID)).thenReturn(null);
+			Mockito.when(mockedReq.getParameter(CREDENTIALS_ID)).thenReturn("");
 			JSONObject mockJSON = new JSONObject();
 			mockJSON.element(AVOID_USING_TOOLKIT, new JSONObject());
 			mockJSON.element(SERVER_URI, TEST_GLOBAL_SERVER_URI);
@@ -139,6 +139,54 @@ public class MayFailIT extends AbstractTestCase {
 		}
 	}
 	
+	@Test 
+	public void testJobConfigRoundtripWithCredentials() throws Exception {
+		if (Config.DEFAULT.isConfigured()) {
+			org.jvnet.hudson.test.JenkinsRule.WebClient webClient = r.createWebClient();
+
+			FreeStyleProject project = r.createFreeStyleProject();
+			RTCScm rtcScm = createEmptyRTCScm();
+			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
+			project.setScm(rtcScm);
+	
+			StaplerRequest mockedReq = Mockito.mock(StaplerRequest.class);
+			JSONObject mockJSON = new JSONObject();
+			mockJSON.element(AVOID_USING_TOOLKIT, new JSONObject());
+			mockJSON.element(CREDENTIALS_ID, TEST_GLOBAL_CRED_ID);
+			mockJSON.element(SERVER_URI, TEST_GLOBAL_SERVER_URI);
+			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
+			descriptor.configure(mockedReq, mockJSON);
+	
+	
+			// Get the page to configure the project
+			HtmlPage page = webClient.getPage(project, CONFIGURE);
+	
+			// Get the config form
+			HtmlForm form = page.getFormByName(CONFIG);
+	
+			// Get the inputs
+			HtmlCheckBoxInput overrideGlobalInput = form.getInputByName(OVERRIDE_GLOBAL);
+	
+			// Set the input values
+			overrideGlobalInput.setChecked(false);
+	
+			// Submit the config form
+			r.submit(form);
+	
+			// check submitted SCM result
+			RTCScm newRtcScm = (RTCScm) project.getScm();
+			assertEquals(false, newRtcScm.getOverrideGlobal());
+			assertEquals(TEST_GLOBAL_SERVER_URI, newRtcScm.getServerURI());
+			assertEquals(TEST_GLOBAL_TIMEOUT, String.valueOf(newRtcScm.getTimeout()));
+			assertEquals(null, newRtcScm.getUserId());
+			assertEquals(null, newRtcScm.getPassword());
+			assertEquals(null, newRtcScm.getPasswordFile());
+			assertEquals(TEST_GLOBAL_CRED_ID, newRtcScm.getCredentialsId());
+			assertTrue(newRtcScm.getAvoidUsingToolkit());
+		}
+	}
+
+	
 	private RTCScm createTestOverrideGlobalRTCScm(boolean useCreds) {
 		BuildType buildSource = new BuildType(RTCScm.BUILD_DEFINITION_TYPE, TEST_BUILD_DEFINITION, TEST_BUILD_WORKSPACE, TEST_BUILD_SNAPSHOT, TEST_BUILD_STREAM);
 		return new RTCScm(true, "", TEST_SERVER_URI, Integer.parseInt(TEST_TIMEOUT), TEST_USER_ID, Secret.fromString(TEST_PASSWORD), TEST_PASSWORD_FILE,
@@ -151,11 +199,11 @@ public class MayFailIT extends AbstractTestCase {
 	}
 
 	public JenkinsRule getJenkinsRule() {
-		return this.j;
+		return this.r;
 	}
 
 	public void setJenkinsRule(JenkinsRule j) {
-		this.j = j;
+		this.r = j;
 	}
 
 }

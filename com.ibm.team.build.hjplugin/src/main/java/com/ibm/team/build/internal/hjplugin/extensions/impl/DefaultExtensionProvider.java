@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 IBM Corporation and others.
+ * Copyright (c) 2016, 2021 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -33,7 +33,7 @@ public class DefaultExtensionProvider extends RtcExtensionProvider {
 	}
 	
 	@Override
-	public void preUpdateFileCopyArea(String workspaceUUID, String workspaceName, String buildResultUUID, String repoURL, String userId, String password, File workspace, PrintStream logger) {
+	public void preUpdateFileCopyArea(String workspaceUUID, String workspaceName, String buildResultUUID, String repoURL, String userId, String password, File loadDirectory, PrintStream logger) {
 		if(logger != null) {
 			logger.println("In preUpdateFileCopyArea method");
 			logger.println("workspaceUUID= "+workspaceUUID);
@@ -42,12 +42,12 @@ public class DefaultExtensionProvider extends RtcExtensionProvider {
 			logger.println("repoURL= "+repoURL);
 			logger.println("UserId= "+userId);
 			logger.println("Password= "+password);
-			logger.println("Workspace Path: "+workspace.getAbsolutePath());
+			logger.println("Workspace Path: "+loadDirectory.getAbsolutePath());
 		}
 	}
 	
 	@Override
-    public void postUpdateFileCopyArea(String workspaceUUID, String workspaceName, String buildResultUUID, String repoURL, String userId, String password, File workspace, PrintStream logger) {
+    public void postUpdateFileCopyArea(String workspaceUUID, String workspaceName, String buildResultUUID, String repoURL, String userId, String password, File loadDirectory, PrintStream logger) {
 		if(logger != null) {
 			logger.println("In postUpdateFileCopyArea method");
 			logger.println("workspaceUUID= "+workspaceUUID);
@@ -56,22 +56,23 @@ public class DefaultExtensionProvider extends RtcExtensionProvider {
 			logger.println("repoURL= "+repoURL);
 			logger.println("UserId= "+userId);
 			logger.println("Password= "+password);
-			logger.println("Workspace Path: "+workspace.getAbsolutePath());
+			logger.println("Workspace Path: "+loadDirectory.getAbsolutePath());
 		}
 	} 
 
 	@Override
-	public String getPathToLoadRuleFile(String workspaceUUID, String workspaceName, String buildResultUUID, Map<String, String> componentInfo, String repoURL, String userId, String password, PrintStream logger) {
+	public String getPathToLoadRuleFile(String workspaceUUID, String workspaceName, String buildResultUUID, Map<String, String> componentInfo, String repoURL, String userId, String password, File loadDirectory, PrintStream logger) {
 		
 		if(logger != null) {
-			logger.println("In getPathToLoadRuleFile method");
+			logger.println("In new getPathToLoadRuleFile method");
 			logger.println("workspaceUUID= "+workspaceUUID);
 			logger.println("workspace name= "+workspaceName);
 			logger.println("buildResultUUID= "+buildResultUUID);
 			logger.println("repoURL= "+repoURL);
 			logger.println("UserId= "+userId);
 			logger.println("Password= "+password);
+			logger.println("Workspace Path: "+loadDirectory.getAbsolutePath());
 		}
-		return "/Users/kk/jenkins_ws/lr1.loadrule";
+		return loadDirectory.getAbsolutePath()+"/demo.loadrule";
 	}
 }

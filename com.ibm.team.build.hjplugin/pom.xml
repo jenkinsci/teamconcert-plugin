@@ -46,17 +46,13 @@
 
 	<developers>
 		<developer>
-		    <id>ssangaiah</id>
-		    <name>Sridevi Sangaiah</name>
+    		<id>davidjwriter</id>
+	       	<name>David Meyers</name>
 		</developer>
 		<developer>
-		    <id>lvaikunt</id>
-		    <name>Lakshmi Narasimhan T V</name>
-		</developer>
-		<developer>
-			<id>susandip</id>
-			<name>Sandip Subuddhi</name>
-		</developer>
+            <id>sbabno</id>
+            <name>Sean Babineau</name>
+        </developer>
 	</developers>
 
 	<scm>
@@ -77,12 +73,12 @@
         <timeout>${env.timeout}</timeout>
         <configured>false</configured>
         <buildtoolkit>${env.buildtoolkit}</buildtoolkit>
-        <excludeTests>**/UnknownIT.java</excludeTests>
+        <excludeTests>**/MayFailIT.java</excludeTests>
         <includeTests>**/*IT.java</includeTests>
-        <excludeTestsSureFire>**/UnknownTests.java</excludeTestsSureFire>
-        <includeTestsSureFire>**/*Tests.java</includeTestsSureFire>
+        <excludeTestsSureFire>**/UnknownTest.java</excludeTestsSureFire>
+        <includeTestsSureFire>**/*Test.java</includeTestsSureFire>
         <dumpLogFiles>false</dumpLogFiles>
-        <rtcJarVersion>2.4.0</rtcJarVersion>
+        <rtcJarVersion>2.4.1</rtcJarVersion>
         <!--  minimum Jenkins LTS version with Java 8 compatibility -->
         <jenkins.version>2.60.1</jenkins.version>
         <maven.javadoc.skip>true</maven.javadoc.skip>

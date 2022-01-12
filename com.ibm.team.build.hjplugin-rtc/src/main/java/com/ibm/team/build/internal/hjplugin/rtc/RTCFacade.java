@@ -826,6 +826,11 @@ public class RTCFacade {
 	 *                             one of {@link com.ibm.team.build.common.model.BuildState}
 	 * @param waitBuildTimeout     Number of seconds to wait for. Can be <code>-1</code> or 
 	 *                             any value greater than <code>0</code>
+  	 * @param waitBuildInterval	   Number of seconds between each check made by this method to EWM 
+	 *                             server. The value should be greater than 1 and less than waitBuildTimeout,
+	 *                             if waitBuildTimeout is not -1. If waitBuildTimeout is -1, this number 
+	 *                             can be any positive integer greater than 1.
+
 	 * @param listener             A stream into which messages should be written. The messages  
 	 *                             will be output to the user
 	 * @param clientLocale         Locale in which messages should be formatted
@@ -837,14 +842,14 @@ public class RTCFacade {
 	 *                              Any other issue during processing of the server requests.
 	 */
 	public Map<String, String> waitForBuild(String serverURI, String userId, String password, int timeout, 
-						String buildResultUUID, Object buildStates, long waitBuildTimeout, 
+						String buildResultUUID, Object buildStates, long waitBuildTimeout, long waitBuildInterval,
 						Object listener, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor(); 
 		AbstractBuildClient buildClient = getBuildClient();
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
-			return repoConnection.waitForBuild(buildResultUUID, (String []) buildStates, waitBuildTimeout, 
+			return repoConnection.waitForBuild(buildResultUUID, (String []) buildStates, waitBuildTimeout, waitBuildInterval,
 					getConsoleOutput(listener), clientLocale, monitor);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);

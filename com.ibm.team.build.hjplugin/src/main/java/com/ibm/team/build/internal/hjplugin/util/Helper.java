@@ -84,6 +84,13 @@ public class Helper {
 	 * -rtc jar
 	 */
 	public static final int DEFAULT_WAIT_BUILD_TIMEOUT = -1;
+	
+	/**
+	 * The number of seconds between two successive queries to the 
+	 * EWM server for fetching the latest build state.
+	 * Keep this to 30 seconds for now.
+	 */
+	public static final int DEFAULT_WAIT_BUILD_INTERVAL= 30;
 
 	public static final int DEFAULT_MAX_RESULTS = 512;
 			

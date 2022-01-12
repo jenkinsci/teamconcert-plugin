@@ -82,11 +82,6 @@ public class RTCBuildUtils {
 	private static long BUILD_WAIT_TIMEOUT_MAX = Long.MAX_VALUE;
 	
 	/**
-	 * The interval increment for waiting on a build.
-	 */
-	private static int WAIT_FOR_BUILD_INTERVAL_INCREMENT = 30;
-	
-	/**
 	 * The maximum number of results to be listed for {@link #listFiles}
 	 */
 	public static int LIST_FILES_MAX_RESULTS = 2048;
@@ -336,6 +331,10 @@ public class RTCBuildUtils {
 	 *                                 Each entry of the array should be one of {@link BuildState}.
 	 * @param waitBuildTimeoutSeconds  Number of seconds to wait for. Can be <code>-1</code> or 
 	 *                                 any value greater than <code>0</code>
+  	 * @param waitBuildIntervalSeconds Number of seconds between each check made by this method to EWM 
+	 *                                 server. The value should be greater than 1 and less than waitBuildTimeout,
+	 *                                 if waitBuildTimeout is not -1. If waitBuildTimeout is -1, this number 
+	 *                                 can be any positive integer greater than 1.
 	 * @param teamRepository           An instance of {@link ITeamRepository}
 	 * @param listener                 A stream to output messages to. These messages will be output 
 	 *                                 to the user.
@@ -346,7 +345,7 @@ public class RTCBuildUtils {
 	 * @throws RTCConfigurationException
 	 */
 	public Map<String, String> waitForBuild(String buildResultUUID , String [] buildStatesToWaitFor,
-			long waitBuildTimeoutSeconds,	ITeamRepository teamRepository,
+			long waitBuildTimeoutSeconds, long waitBuildIntervalSeconds, ITeamRepository teamRepository,
 			IConsoleOutput listener, Locale clientLocale, 
 			IProgressMonitor progress) throws TeamRepositoryException, RTCConfigurationException {
 		LOGGER.entering(this.getClass().getName(), "waitForBuild");
@@ -370,13 +369,30 @@ public class RTCBuildUtils {
 				// set waitBuildTimeoutSeconds to be max value
 				waitBuildTimeoutSeconds = BUILD_WAIT_TIMEOUT_MAX;
 			} 
+			
+			// Validate whether waitBuildInterval is less than waitBuildTimeoutSeconds
+			if (waitBuildIntervalSeconds <= 0) {
+				throw new RTCConfigurationException(
+						Messages.getDefault().RTCBuildUtils_build_wait_interval_invalid(
+								Long.toString(waitBuildIntervalSeconds)));
+			}
+			
+			// If waitBuildInterval is greater than waitBuildTimeoutSeconds, then 
+			// it is an error
+			if (waitBuildIntervalSeconds > waitBuildTimeoutSeconds) {
+				throw new RTCConfigurationException(
+						Messages.getDefault().RTCBuildUtils_build_wait_interval_cannot_be_greater(
+								Long.toString(waitBuildIntervalSeconds), 
+								Long.toString(waitBuildTimeoutSeconds)));
+			}
+			
 			// Convert build states and validate them
 			BuildState[] buildStates = convertBuildStates(buildStatesToWaitFor); 
 			IBuildResultHandle buildResultHandle = (IBuildResultHandle) 
 						IBuildResult.ITEM_TYPE.createItemHandle(UUID.valueOf(buildResultUUID), null);
 			
 			// Get build result
-			IBuildResult result = waitBuildHelper(buildResultHandle, buildStates, waitBuildTimeoutSeconds, 
+			IBuildResult result = waitBuildHelper(buildResultHandle, buildStates, waitBuildTimeoutSeconds, waitBuildIntervalSeconds, 
 					teamRepository, listener, monitor.newChild(100));			
 			return composeReturnPropertiesForWaitBuild(result, buildStates);
 		} finally {
@@ -467,18 +483,21 @@ public class RTCBuildUtils {
 	
 	/**
 	 * Given <code>totalwbTimeoutSeconds</code> in seconds , try to wait till that time 
-	 * limit in intervals of 30 seconds. If totalwbTimeoutSeconds is less than 30 seconds 
-	 * or if the remaining time (totalwbTimeoutSeconds - (n*30)), where n is the number of 
-	 * iterations spent waiting, is seconds is less than 30 seconds, then wait till 
-	 * those many seconds. 
+	 * limit in intervals of <code>waitBuildIntervalSeconds</code> seconds. 
+	 * If totalwbTimeoutSeconds is less than <code>waitBuildIntervalSeconds</code> seconds 
+	 * or if the remaining time (totalwbTimeoutSeconds - (n*<code>waitBuildIntervalSeconds</code>)), 
+	 * where n is the number of  iterations spent waiting, is less than 30 seconds, 
+	 * then wait till those many seconds. 
 	 * 
 	 * In between this waiting, if the build result state is in one of the desired states, 
-	 * then the loop will broken and the method will return.
+	 * then the loop will break and the method will return the latest build result state.
 	 * 
 	 * @param buildResultHandle               The build result to wait on
 	 * @param desiredBuildStates              The desired build states to reach 
 	 * @param totalwbTimeoutSeconds           Total number of seconds to wait.
-	 * @param teamRepository                  The EWM repository
+	 * @param waitBuildIntervalSeconds               The number of seconds to wait in between checks 
+	 *                                        to the server 
+	 * @param teamRepository                  Connection to the EWM server.
 	 * @param listener                        Listener for accepting messages
 	 * @param progress                        A progress monitor
 	 * @return                                The last obtained version of the build result at the time 
@@ -489,7 +508,7 @@ public class RTCBuildUtils {
 	 *                                        side. 
 	 */
 	private IBuildResult waitBuildHelper(IBuildResultHandle buildResultHandle, BuildState[] desiredBuildStates, 
-			long totalwbTimeoutSeconds, ITeamRepository teamRepository, 
+			long totalwbTimeoutSeconds, long waitBuildIntervalSeconds, ITeamRepository teamRepository, 
 			IConsoleOutput listener, IProgressMonitor progress) throws
 			RTCConfigurationException, TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
@@ -499,8 +518,8 @@ public class RTCBuildUtils {
 	
 			// Variables for time management
 			long timeRemaining = totalwbTimeoutSeconds;
-			long currentDecrement = (totalwbTimeoutSeconds < WAIT_FOR_BUILD_INTERVAL_INCREMENT)? 
-							totalwbTimeoutSeconds : WAIT_FOR_BUILD_INTERVAL_INCREMENT;
+			long currentDecrement = (totalwbTimeoutSeconds < waitBuildIntervalSeconds)? 
+							totalwbTimeoutSeconds : waitBuildIntervalSeconds;
 	
 			while(!isInState(result, desiredBuildStates) && !(timeRemaining <= 0)) {
 				listener.log(String.format("waitForBuild: Sleeping for %d seconds", currentDecrement));
@@ -524,8 +543,8 @@ public class RTCBuildUtils {
 					// timeRemaining beyond 0 
 					currentDecrement = 0;  
 				} else {
-					currentDecrement = (timeRemaining < WAIT_FOR_BUILD_INTERVAL_INCREMENT)? 
-						timeRemaining : WAIT_FOR_BUILD_INTERVAL_INCREMENT;
+					currentDecrement = (timeRemaining < waitBuildIntervalSeconds)? 
+						timeRemaining : waitBuildIntervalSeconds;
 				}
 			}
 			return result;
@@ -712,7 +731,7 @@ public class RTCBuildUtils {
 				file.add(Long.toString(contribution.getExtendedContributionData().getRawLength()));
 				
 				// Add the internal id for future use
-				file.add(((BuildResultContribution) contribution).getInternalId().getUuidValue());
+				file.add(getInternalIdFromBuildResultContribution(contribution));
 				filteredFiles.add(file);
 			}
 			monitor.worked(40);
@@ -888,7 +907,7 @@ public class RTCBuildUtils {
 			buildProperties.put(Constants.RTCBuildUtils_FILENAME_KEY, destinationFile.getName());
 			buildProperties.put(Constants.RTCBuildUtils_FILEPATH_KEY, destinationFile.getCanonicalPath());
 			buildProperties.put(Constants.RTCBuildUtils_INTERNAL_UUID_KEY, 
-					(((BuildResultContribution) filteredContribution).getInternalId().getUuidValue()));
+					getInternalIdFromBuildResultContribution(filteredContribution));
 			return buildProperties;
 		} finally {
 			monitor.done();
@@ -906,6 +925,7 @@ public class RTCBuildUtils {
 	 * @return                         A {@link File} object to the destination file path
 	 * @throws TeamRepositoryException If something goes wrong when contacting the repository.
 	 */
+	@SuppressWarnings("restriction")
 	private static File downloadContent(ITeamRepository repository, IContent content,  
 				String destinationPath,	IProgressMonitor progress) throws TeamRepositoryException {
 		SubMonitor monitor = SubMonitor.convert(progress, 100);
@@ -1120,7 +1140,7 @@ public class RTCBuildUtils {
 		// for now and set the timed out value to true.
 		// Also, if the build result is in one of the states, we consider timed out 
 		// as false, even if it might have been a race condition and both could have 
-		// been true.
+		// both timed out and reached the build state at the same time.
 		if (isInState(result, buildStates)) {
 			buildProperties.put(Constants.RTCBuildUtils_TIMEDOUT, Boolean.FALSE.toString());
 		} else {
@@ -1393,5 +1413,10 @@ public class RTCBuildUtils {
 			}
 		}
 		return message;
+	}
+
+	@SuppressWarnings("restriction")
+	private String getInternalIdFromBuildResultContribution(IBuildResultContribution contribution) {
+		return ((BuildResultContribution) contribution).getInternalId().getUuidValue();
 	}
 }

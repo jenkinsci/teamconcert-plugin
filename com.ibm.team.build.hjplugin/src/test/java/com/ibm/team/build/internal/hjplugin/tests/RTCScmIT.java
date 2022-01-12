@@ -36,12 +36,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.WithTimeout;
-import org.kohsuke.stapler.StaplerRequest;
-import org.mockito.Mockito;
 
-import com.gargoylesoftware.htmlunit.html.HtmlCheckBoxInput;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.io.Files;
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.Messages;
@@ -74,9 +69,7 @@ import hudson.tools.ToolProperty;
 import hudson.util.FormValidation;
 import hudson.util.IOUtils;
 import hudson.util.Secret;
-import net.sf.json.JSONObject;
 
-@SuppressWarnings({"nls", "static-method"})
 public class RTCScmIT extends AbstractTestCase {
 	private static final String CONFIGURE = "configure";
 	private static final String CONFIG = "config";
@@ -88,7 +81,6 @@ public class RTCScmIT extends AbstractTestCase {
 	private static final String PASSWORD = "password";
 	private static final String PASSWORD_FILE = "passwordFile";
 	private static final String CREDENTIALS_ID = "_.credentialsId";
-	private static final String CREDENTIALS_ID_NON_FORM = "credentialsId";
 	private static final String TIMEOUT = "timeout";
 	private static final String AVOID_USING_TOOLKIT = "avoidUsingToolkit";
 
@@ -431,54 +423,7 @@ public class RTCScmIT extends AbstractTestCase {
 		FormValidation validation = descriptor.doCheckTimeout(timeout);
 		assertEquals("Expected timeout validation " + kind + ": " + TIMEOUT + "=\"" + timeout + "\"", kind, validation.kind);
 	}
-
-	@Test 
-	public void testJobConfigRoundtripWithCredentials() throws Exception {
-		if (Config.DEFAULT.isConfigured()) {
-			org.jvnet.hudson.test.JenkinsRule.WebClient webClient = r.createWebClient();
-
-			FreeStyleProject project = r.createFreeStyleProject();
-			RTCScm rtcScm = createEmptyRTCScm();
-			DescriptorImpl descriptor = (DescriptorImpl) rtcScm.getDescriptor();
-			project.setScm(rtcScm);
 	
-			StaplerRequest mockedReq = Mockito.mock(StaplerRequest.class);
-			JSONObject mockJSON = new JSONObject();
-			mockJSON.element(AVOID_USING_TOOLKIT, new JSONObject());
-			mockJSON.element(CREDENTIALS_ID_NON_FORM, TEST_GLOBAL_CRED_ID);
-			mockJSON.element(SERVER_URI, TEST_GLOBAL_SERVER_URI);
-			mockJSON.element(TIMEOUT, TEST_GLOBAL_TIMEOUT);
-			descriptor.configure(mockedReq, mockJSON);
-	
-	
-			// Get the page to configure the project
-			HtmlPage page = webClient.getPage(project, CONFIGURE);
-	
-			// Get the config form
-			HtmlForm form = page.getFormByName(CONFIG);
-	
-			// Get the inputs
-			HtmlCheckBoxInput overrideGlobalInput = form.getInputByName(OVERRIDE_GLOBAL);
-	
-			// Set the input values
-			overrideGlobalInput.setChecked(false);
-	
-			// Submit the config form
-			r.submit(form);
-	
-			// check submitted SCM result
-			RTCScm newRtcScm = (RTCScm) project.getScm();
-			assertEquals(false, newRtcScm.getOverrideGlobal());
-			assertEquals(TEST_GLOBAL_SERVER_URI, newRtcScm.getServerURI());
-			assertEquals(TEST_GLOBAL_TIMEOUT, String.valueOf(newRtcScm.getTimeout()));
-			assertEquals(null, newRtcScm.getUserId());
-			assertEquals(null, newRtcScm.getPassword());
-			assertEquals(null, newRtcScm.getPasswordFile());
-			assertEquals(TEST_GLOBAL_CRED_ID, newRtcScm.getCredentialsId());
-			assertTrue(newRtcScm.getAvoidUsingToolkit());
-		}
-	}
-
 	@Test public void testDoValidateBuildWorkspaceConfiguration() throws Exception {
 		if (!Config.DEFAULT.isConfigured()) {
 			return;

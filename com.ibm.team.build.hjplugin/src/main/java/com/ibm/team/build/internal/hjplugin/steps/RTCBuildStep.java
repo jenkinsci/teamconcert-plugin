@@ -43,7 +43,9 @@ import com.ibm.team.build.internal.hjplugin.util.ValidationHelper;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
+import hudson.model.AbstractDescribableImpl;
 import hudson.model.Computer;
+import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -66,6 +68,7 @@ public class RTCBuildStep extends Step {
 	private static final String RETRIEVE_SNAPSHOT = "retrieveSnapshot";
 	
 	private static final int WAIT_BUILD_TIMEOUT = DescriptorImpl.defaultWaitBuildTimeout; // Wait forever
+	private static final int WAIT_BUILD_INTERVAL = DescriptorImpl.defaultWaitBuildInterval; // Wait forever
 	private static final String DEFAULT_BUILD_STATES = DescriptorImpl.defaultBuildStates;
 	private static final int DEFAULT_MAX_RESULTS = DescriptorImpl.defaultMaxResults;
 
@@ -75,11 +78,11 @@ public class RTCBuildStep extends Step {
 	
 	private String serverURI;
 	private String credentialsId;
-	private int timeout = 120; // The default repository connection timeout
+	private int timeout = 0;
 	private String buildTool;
 	private RTCTask task;
 	
-    public static class RTCTask {
+    public static class RTCTask extends AbstractDescribableImpl<RTCTask> {
 		private String name;
 		private String buildDefinitionId;
 		private boolean deleteProperties;
@@ -92,6 +95,7 @@ public class RTCBuildStep extends Step {
 		// Fields related to waitForBuild 
 		private String buildStates= DEFAULT_BUILD_STATES;
 		private long waitBuildTimeout = WAIT_BUILD_TIMEOUT;
+		private long waitBuildInterval = WAIT_BUILD_INTERVAL;
 
 		// Fields specific to listLogs/listArtifacts
 		private String fileNameOrPattern;
@@ -109,6 +113,10 @@ public class RTCBuildStep extends Step {
 		@DataBoundConstructor
 		public RTCTask(String name) {
 			this.name =name;
+		}
+		
+		public String getTaskName() {
+			return this.name;
 		}
 		
 		@DataBoundSetter
@@ -249,6 +257,20 @@ public class RTCBuildStep extends Step {
 		public void setContentId(String contentId) {
 			this.contentId = contentId;
 		}
+		
+		@Extension
+		public static class DescriptorImpl extends Descriptor<RTCTask> {
+			
+		}
+		
+		@DataBoundSetter
+		public void setWaitBuildInterval(long waitBuildInterval) {
+			this.waitBuildInterval = waitBuildInterval;
+		}
+		
+		public long getWaitBuildInterval () {
+			return this.waitBuildInterval;
+		}
 	}
     
     public static class BuildProperty {
@@ -280,12 +302,35 @@ public class RTCBuildStep extends Step {
 	}
 
 	@DataBoundConstructor
-	public RTCBuildStep(String serverURI, String credentialsId, 
-								String buildTool, RTCTask task) {
-		this.serverURI = serverURI;
-		this.credentialsId = credentialsId;
-		this.buildTool = buildTool;
+	public RTCBuildStep(RTCTask task, String taskName) {
 		this.task = task;
+		// if RTCTask had data bound setters, the generated snippet does not 
+		// have ( ) surrounding it, which leads to an NPE.
+		// The only option is to add a dummy parameter here which 
+		// can be null but its value is derived from the task. 
+	}
+	
+	public String getTaskName() {
+		return this.getTask().getName();
+	}
+	
+	@DataBoundSetter
+	public void setBuildTool(String buildTool) {
+		this.buildTool = Util.fixEmptyAndTrim(buildTool);
+	}
+	
+    public DescriptorImpl getDescriptor() {
+        return (DescriptorImpl) super.getDescriptor();
+    }
+	
+	@DataBoundSetter
+	public void setCredentialsId(String credentialsId) {
+		this.credentialsId = Util.fixEmptyAndTrim(credentialsId);
+	}
+	
+	@DataBoundSetter
+	public void setServerURI(String serverURI) {
+		this.serverURI = Util.fixEmptyAndTrim(serverURI);
 	}
 	
 	@DataBoundSetter
@@ -294,17 +339,35 @@ public class RTCBuildStep extends Step {
 	}
 	
 	public int getTimeout() {
+		// timeout should never be 0 or negative.
+		// if the user explicitly sets a 0 or a negative value,  
+		// we will pick the global one. There is no real way 
+		// to say if timeout was set or not since it gets 
+		// the default value 0, if not explicitly.
+		if (timeout == 0) {
+			return getDescriptor().getGlobalTimeout();
+		}
 		return this.timeout;
 	}
 	public String getServerURI() {
+		if (serverURI == null || serverURI.isEmpty()) {
+			return getDescriptor().getGlobalServerURI();
+		}
 		return this.serverURI;
 	}
 	
 	public String getCredentialsId() {
+		if (credentialsId == null || credentialsId.isEmpty()) {
+			return getDescriptor().getGlobalCredentialsId();
+		}
 		return this.credentialsId;
 	}
 	
 	public String getBuildTool() {
+		if (buildTool == null || buildTool.isEmpty()) {
+			// Return the global one 
+			return getDescriptor().getGlobalBuildTool();
+		}
 		return this.buildTool;
 	}
 	
@@ -321,6 +384,8 @@ public class RTCBuildStep extends Step {
 		if (taskName == null) {
 			throw new IllegalArgumentException(Messages.RTCBuildStep_no_task());
 		}
+		// Since serverURI, credentialsId and buildTool are optional, it is  
+		// possible that even the global values are empty (not configured globally).
 		switch(taskName) {
 			case REQUEST_BUILD:
 				return new RequestBuildStepExecution(this, context);
@@ -351,7 +416,8 @@ public class RTCBuildStep extends Step {
 		public static int defaultMaxResults = Helper.DEFAULT_MAX_RESULTS;
 		public static final int defaultWaitBuildTimeout = Helper.DEFAULT_WAIT_BUILD_TIMEOUT;
 		public static final String defaultBuildStates = Helper.DEFAULT_BUILD_STATES_STR;
-		
+		public static final int defaultWaitBuildInterval = Helper.DEFAULT_WAIT_BUILD_INTERVAL;
+
 		@Override
 		public String getFunctionName() {
 			return RTC_BUILD_STEP_NAME;
@@ -390,6 +456,7 @@ public class RTCBuildStep extends Step {
 		
 		public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?, ?> project, 
 									@QueryParameter String serverURI) {
+			// Need to adopt changes for user credentials enhancement.
 			return new StandardListBoxModel()
 			.withEmptySelection()
 			.withMatching(CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class),
@@ -413,7 +480,12 @@ public class RTCBuildStep extends Step {
 			RTCScm.DescriptorImpl descriptor = (com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl)
 					Jenkins.getInstance().getDescriptor(RTCScm.class);
 			return descriptor.getGlobalTimeout();
+		}
 		
+		public String getGlobalBuildTool() {
+			RTCScm.DescriptorImpl descriptor = (com.ibm.team.build.internal.hjplugin.RTCScm.DescriptorImpl)
+					Jenkins.getInstance().getDescriptor(RTCScm.class);
+			return descriptor.getGlobalBuildTool();
 		}
 
 		// validation for build states, and build wait timeout (cannot be negative)
@@ -464,9 +536,37 @@ public class RTCBuildStep extends Step {
 			}
 		}
 		
+		public FormValidation doCheckWaitBuildInterval(@QueryParameter String waitBuildInterval) {
+			LOGGER.entering(this.getClass().getName(), "doCheckWaitBuildInterval");
+			waitBuildInterval = Util.fixEmptyAndTrim(waitBuildInterval);
+			if (StringUtils.isEmpty(waitBuildInterval)) {
+				LOGGER.finer("Wait build timeout value missing"); //$NON-NLS-1$
+				return FormValidation.error(Messages.RTCBuildStep_waitBuildInterval_required());
+			}
+			
+			if (Helper.isAParameter(waitBuildInterval)) {
+				return FormValidation.ok();
+			}
+
+			try {
+				int waitBuildIntervalInt = Integer.parseInt(waitBuildInterval);
+				FormValidation result = FormValidation.ok();
+				if (waitBuildIntervalInt < 0) {
+					result = FormValidation.validatePositiveInteger(waitBuildInterval);
+					if (FormValidation.Kind.ERROR == result.kind) { 
+						return FormValidation.error(
+								Messages.RTCBuildStep_invalid_waitBuildInterval(waitBuildInterval));
+					}
+				} 
+				return result;
+			} catch (NumberFormatException exp) {
+				return FormValidation.error(
+						Messages.RTCBuildStep_invalid_waitBuildInterval(waitBuildInterval));
+			}
+		}
 		/**
 		 * Called from the forms to validate the build wait timeout value.
-		 * @param waitBuildTimeoutStr The wait build timeout value.
+		 * @param waitBuildTimeout The wait build timeout value.
 		 * @return Whether the timeout is valid or not. Never <code>null</code>
 		 */
 		public FormValidation doCheckWaitBuildTimeout(@QueryParameter String waitBuildTimeout) {
@@ -543,11 +643,12 @@ public class RTCBuildStep extends Step {
 		/**
 		 * Validate destinationFIleName parameter is not empty
 		 * 
-		 * @param destinationFileName    The value of the destinationFileName param
+		 * @param destinationFileName     The value of the destinationFileName param
 		 * @return {@link FormValidation}
 		 */
 		public FormValidation doCheckDestinationFileName(@QueryParameter String destinationFileName) {
 			LOGGER.entering(this.getClass().getName(), "doCheckDestinationFileName");
+			
 			destinationFileName = Util.fixEmptyAndTrim(destinationFileName);
 			if (destinationFileName == null) {
 				return FormValidation.ok();

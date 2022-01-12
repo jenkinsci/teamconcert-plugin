@@ -11,17 +11,16 @@
 
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 
 import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 
 public class ConsoleOutputHelper implements IConsoleOutput {
-	Set<String> infoMessages = new HashSet<String>();
+	List<String> infoMessages = new ArrayList<String>();
 	Map<String, Exception> exceptionMessages = 
 				new HashMap<String, Exception>();
 	private final Exception[] failure = new Exception[] {null};

@@ -1,0 +1,17 @@
+<project name="Hello">
+<target name="list">
+
+<fileset id="dist.contents" dir="/home/sandbox/Projects/rtcp2repo/plugins" includes="*.jar" casesensitive="true"/> 
+<property name="prop.dist.contents" refid="dist.contents"/>
+<echo>${prop.dist.contents}</echo>
+<loadresource property="propB">
+<propertyresource name="prop.dist.contents"/>
+<filterchain>
+	<tokenfilter>
+		<replacestring from=";" to=","/>
+	</tokenfilter>
+</filterchain>
+</loadresource>
+<echo>${propB}</echo>
+</target>
+</project>

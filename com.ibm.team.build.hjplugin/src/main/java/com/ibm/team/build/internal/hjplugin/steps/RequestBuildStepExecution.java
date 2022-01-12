@@ -71,8 +71,8 @@ public class RequestBuildStepExecution extends RTCBuildStepExecution<RTCBuildSte
 		List<BuildProperty> propertiesToAddOrOverride = getStep().getTask().getPropertiesToAddOrOverride();
 		boolean linkEWMBuild = getStep().getTask().getLinkEWMBuild();
 
-		validateArguments(serverURI, timeout, buildTool, buildToolkitPath, credentials, 
-				buildDefinitionId);
+		validateArguments(serverURI, timeout, buildTool, buildToolkitPath, credentialsId, 
+				credentials, buildDefinitionId);
 
 		String[] buildPropertiesToDelete = new String[] {};
 		if (shouldDeleteProperties && propertiesToDelete != null && !propertiesToDelete.isEmpty()) {
@@ -118,13 +118,13 @@ public class RequestBuildStepExecution extends RTCBuildStepExecution<RTCBuildSte
 	}
 	
 	private void validateArguments(String serverURI, int timeout, 
-			String buildTool, String buildToolkitPath, 
+			String buildTool, String buildToolkitPath, String credentialsId, 
 			StandardUsernamePasswordCredentials credentials, String buildDefinitionId) 
 			throws IllegalArgumentException {
 		LOGGER.entering(this.getClass().getName(), "validateArguments");
 
 		validateGenericArguments(serverURI, timeout, buildTool, 
-				buildToolkitPath, credentials);
+				buildToolkitPath, credentialsId, credentials);
 		
 		if (buildDefinitionId == null) {
 			throw new IllegalArgumentException(

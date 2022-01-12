@@ -201,4 +201,24 @@ public class RTCBuildStepTest extends AbstractTestCase {
 				fv.getMessage());
 	}
 	
+	/**
+	 * If no values are provided for serverURI, credentialsId, build tool and timeout,
+	 * then the global values should be picked up.
+	 * 
+	 */
+	public void testGlobalValuesPickedpIfSepecificValuesAreNotProvided() {
+		// TODO not implemented
+		
+		// TODO test serverURI
+		
+		// TODO test credentialsId
+		
+		// TODO test timeout
+		
+		// TODO test build tool
+		
+		// TODO test if all the string values are empty or null, then global values are picked
+		
+		// TODO test if timeout is 0 or negative, global value is picked.
+	}
 }

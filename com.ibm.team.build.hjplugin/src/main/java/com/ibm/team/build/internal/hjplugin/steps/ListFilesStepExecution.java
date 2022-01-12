@@ -68,7 +68,8 @@ public class ListFilesStepExecution extends RTCBuildStepExecution<RTCBuildStepRe
 		StandardUsernamePasswordCredentials credentials = getCredentials(run, serverURI, credentialsId);
 		
 		validateGenericArguments(serverURI, timeout, buildTool, 
-										buildToolkitPath, credentials);
+										buildToolkitPath,
+										credentialsId, credentials);
 
 		// Task specific variables
 		String buildResultUUID = Util.fixEmptyAndTrim(getStep().getTask().getBuildResultUUID());

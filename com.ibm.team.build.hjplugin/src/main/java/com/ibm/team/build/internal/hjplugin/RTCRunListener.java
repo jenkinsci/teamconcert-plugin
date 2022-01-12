@@ -89,7 +89,8 @@ public class RTCRunListener extends RunListener<Run> {
 									" Build result=\"" + build.getResult() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 		
 							String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
-							RTCLoginInfo loginInfo = scm.getLoginInfo(build.getParent(), masterBuildToolkit);
+							RTCLoginInfo loginInfo = scm.getLoginInfo2(build, masterBuildToolkit, listener, 
+																		Helper.isDebugEnabled(build, listener));
 				    		RTCFacadeFacade.terminateBuild(masterBuildToolkit,
 									loginInfo.getServerUri(),
 									loginInfo.getUserId(), loginInfo.getPassword(),

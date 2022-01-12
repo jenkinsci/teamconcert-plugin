@@ -1115,6 +1115,21 @@ public class Messages {
 		return MessageFormat.format(getString("RTCBuildUtils_build_wait_timeout_invalid"), arg1);
 	}
 	
+	
+	/**
+	 * Interval "{0}" for waiting on build is invalid.
+	 */
+	public String RTCBuildUtils_build_wait_interval_invalid(String arg1) {
+		return MessageFormat.format(getString("RTCBuildUtils_build_wait_interval_invalid"), arg1);
+	}
+	
+	/**
+	 * Interval "{0}" for waiting on build cannot be greater than the timeout value.
+	 */
+	public String RTCBuildUtils_build_wait_interval_cannot_be_greater(String arg1, String arg2) {
+		return MessageFormat.format(getString("RTCBuildUtils_build_wait_interval_cannot_be_greater"), arg1, arg2);
+	}
+
 	/**
 	 * Build Result with id "{0}" could not be found.
 	 */

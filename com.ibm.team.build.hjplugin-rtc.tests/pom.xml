@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2016, 2021 IBM Corporation and others.
+    All rights reserved. This program and the accompanying materials
+    are made available under the terms of the Eclipse Public License v1.0
+    which accompanies this distribution, and is available at
+    http://www.eclipse.org/legal/epl-v10.html
+ 
+    Contributors:
+        IBM Corporation - initial API and implementation
+ -->
+ 
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.ibm.team.build</groupId>
+  <artifactId>com.ibm.team.build.hjplugin-rtc.tests</artifactId>
+  <version>2.4.1</version>
+  <packaging>eclipse-plugin</packaging>
+  
+  
+	<properties>
+        <tycho-version>0.25.0</tycho-version>
+		<rtc-client-p2repo-url>${env.RTC_Client_p2Repo}</rtc-client-p2repo-url>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<project.build.outputEncoding>UTF-8</project.build.outputEncoding>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<dependencyFolder>${basedir}/target/dependency</dependencyFolder>
+		<serverURI>${env.serverURI}</serverURI>
+        <userId>${env.userId}</userId>
+        <password>${env.password}</password>
+        <invalidUserId>${env.invalidUserid}</invalidUserId>
+        <buildtoolkit>${env.buildtoolkit}</buildtoolkit>
+        <configured>false</configured>
+        <rtcJarVersion>2.4.1</rtcJarVersion>
+        <java.level>8</java.level>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <excludeTests>**/UnknownIT.java</excludeTests>
+        <includeTests>**/*IT.java</includeTests>
+        <excludeTestsSureFire>**/UnknownTests.java</excludeTestsSureFire>
+        <includeTestsSureFire>**/*Tests.java</includeTestsSureFire>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.ibm.team.build</groupId>
+			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
+			<version>${rtcJarVersion}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.ibm.team.build</groupId>
+			<artifactId>com.ibm.team.build.hjplugin-rtc</artifactId>
+			<version>${rtcJarVersion}</version>
+			<type>test-jar</type>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.8.5</version>
+		</dependency>
+	</dependencies>
+
+	<repositories>
+		<!-- configure p2 repository to resolve against -->
+		<repository>
+			<id>rtc-401</id>
+			<layout>p2</layout>
+			<url>${rtc-client-p2repo-url}</url>
+		</repository>
+		<repository>
+			<id>hjplugin-rtc-repo</id>
+			<url>file://${basedir}/repo</url>
+		</repository>
+		<repository>
+			<id>repo.jenkins-ci.org</id>
+			<url>https://repo.jenkins-ci.org/public/</url>
+		</repository>
+	</repositories>
+	
+	<pluginRepositories>
+		<pluginRepository>
+			<id>repo.jenkins-ci.org</id>
+			<url>https://repo.jenkins-ci.org/public/</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+	<build>
+	   <plugins>
+	   	<plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-dependency-plugin</artifactId>
+	        <version>2.10</version>
+	        <executions>
+	          <execution>
+	            <id>copy-dependencies</id>
+	            <phase>package</phase>
+	            <goals>
+	              <goal>copy-dependencies</goal>
+	            </goals>
+	           
+		   	</execution>
+		   	</executions>
+		   	 <configuration>
+	              <outputDirectory>${dependencyFolder}</outputDirectory>
+	              <excludeGroupIds>p2.eclipse-plugin</excludeGroupIds>
+		   	</configuration>
+	   	</plugin>
+	   <plugin>
+		    <groupId>org.apache.maven.plugins</groupId>
+		    <artifactId>maven-antrun-plugin</artifactId>
+		    <version>1.8</version>
+		    <executions>
+	        <execution>
+	        	<id>default-cli</id>
+	            <phase>install</phase>
+	            <goals>
+	                <goal>run</goal>
+	            </goals>
+	            <configuration>
+	            	<exportAntProperties>true</exportAntProperties>
+	                <tasks>
+	                		<!--  Enumerate all build toolkit jars and create a string with full paths -->
+							<fileset id="buildtoolkitFileSet" dir="${buildtoolkit}" includes="*.jar" casesensitive="true"/>
+							<property name="rawBuildtoolkitContents" refid="buildtoolkitFileSet"/>
+							
+							<loadresource property="buildtoolkitContents">
+							<propertyresource name="rawBuildtoolkitContents"/>
+								<filterchain>
+										<striplinebreaks linebreaks="${line.separator}"></striplinebreaks>
+								 	    <tokenfilter> <!--  defaults to line separator as the token delimiters, so the whole string is the token -->
+								 	    	<replacestring from=";" to="${line.separator}"/>
+								        </tokenfilter>
+								        <prefixlines prefix="${buildtoolkit}/"/>
+								        <suffixlines suffix=","/>
+								        <deletecharacters chars="${line.separator}"/>
+								</filterchain>
+							</loadresource>
+							
+							<echo>${buildtoolkitContents}</echo>
+							
+							<!--  Enumerate all non p2 maven dependencies in dependency folder and create a string with full paths -->
+							<fileset id="dependencyFileSet" dir="${dependencyFolder}" includes="*" casesensitive="true"/>
+							<property name="rawDependencyContents" refid="dependencyFileSet"/>
+
+							<loadresource property="dependencyContents">
+							<propertyresource name="rawDependencyContents"/>
+							<filterchain>
+									<striplinebreaks linebreaks="${line.separator}"></striplinebreaks>
+							 	    <tokenfilter> <!--  defaults to line separator as the token delim, so the whole string is the token -->
+							 	    	<replacestring from=";" to="${line.separator}"/>
+							        </tokenfilter>
+							        <prefixlines prefix="${dependencyFolder}/"/>
+							        <suffixlines suffix=","/>
+							        <deletecharacters chars="${line.separator}"/>
+							</filterchain>
+							</loadresource>
+							<echo>${dependencyContents}</echo>
+					</tasks>
+				</configuration>
+			</execution>
+			</executions>		                
+		</plugin>
+	   		<plugin>
+				<!-- enable tycho build extension -->
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-maven-plugin</artifactId>
+				<version>${tycho-version}</version>
+				<extensions>true</extensions>
+			</plugin>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>target-platform-configuration</artifactId>
+				<version>${tycho-version}</version>
+				<configuration>
+					<pomDependencies>consider</pomDependencies>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-compiler-plugin</artifactId>
+				<version>${tycho-version}</version>
+			</plugin>
+			<!--  For unit tests -->
+			<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-surefire-plugin</artifactId>
+			    <version>2.19.1</version>
+			    <configuration>
+			    	<forkCount>1</forkCount>
+			    	<!--  This removes all p2 repo dependencies created by tycho 
+			    	   We need this to ensure that our tests run only with jars from build toolkit
+			    	   Reason, if we run with p2 repo deps, then we cannot catch references to classes from p2repo in 
+			    	   -rtc jar -->
+			   	 	<classpathDependencyScopeExclude>
+			   	 		compile
+			   	 	</classpathDependencyScopeExclude>
+			    	 <additionalClasspathElements>
+				  	 <additionalClasspathElement>
+							${buildtoolkitContents}
+				    	</additionalClasspathElement>
+				    	<additionalClasspathElement>
+							${dependencyContents}
+				    	</additionalClasspathElement>
+					</additionalClasspathElements>
+					<classpathDependencyExcludes>
+				    	<classpathDependencyExclude>
+				    		p2.eclipse-plugin
+				    	</classpathDependencyExclude>
+			    	</classpathDependencyExcludes>
+			    	<!--  since our tests are not in src/main/tests, we need to add add source and destination directory  -->
+				    <testSourceDirectory>src/main/java</testSourceDirectory>
+				    <testClassesDirectory>target/classes</testClassesDirectory>
+				   	<systemPropertyVariables>
+						<com.ibm.team.build.configured>${configured}</com.ibm.team.build.configured>
+						<com.ibm.team.build.toolkit>${buildtoolkit}</com.ibm.team.build.toolkit>
+						<com.ibm.team.build.serverURI>${serverURI}</com.ibm.team.build.serverURI>
+						<com.ibm.team.build.userId>${userId}</com.ibm.team.build.userId>
+						<com.ibm.team.build.password>${password}</com.ibm.team.build.password>
+						<com.ibm.team.build.userIdForAuthenticationFailures>${invalidUserId}</com.ibm.team.build.userIdForAuthenticationFailures>
+					</systemPropertyVariables>
+                    <excludes>
+                      <exclude>${excludeTestsSureFire}</exclude>
+                    </excludes>
+                    <includes>
+                      <include>${includeTestsSureFire}</include>
+                    </includes> 
+			    </configuration>
+			    <executions>
+		          <execution>
+		            <goals>
+		              <goal>test</goal>
+		            </goals>
+		          </execution>
+      		  </executions>
+			</plugin>
+			
+			<!--  For integration tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.19.1</version>
+				<configuration>
+					<forkCount>1</forkCount>
+					<classpathDependencyScopeExclude>
+					   compile
+					</classpathDependencyScopeExclude>
+					<additionalClasspathElements>
+			  			<additionalClasspathElement>
+							${buildtoolkitContents}
+			    		</additionalClasspathElement>
+			    		<additionalClasspathElement>
+							${dependencyContents}
+			    		</additionalClasspathElement>
+					</additionalClasspathElements>
+					<classpathDependencyExcludes>
+			    		<classpathDependencyExclude>
+			    			p2.eclipse-plugin
+			    		</classpathDependencyExclude>
+				    </classpathDependencyExcludes>
+					<testSourceDirectory>src/main/java</testSourceDirectory>
+			    	<testClassesDirectory>target/classes</testClassesDirectory>
+			    	<systemPropertyVariables>
+						<com.ibm.team.build.configured>${configured}</com.ibm.team.build.configured>
+						<com.ibm.team.build.toolkit>${buildtoolkit}</com.ibm.team.build.toolkit>
+						<com.ibm.team.build.serverURI>${serverURI}</com.ibm.team.build.serverURI>
+						<com.ibm.team.build.userId>${userId}</com.ibm.team.build.userId>
+						<com.ibm.team.build.password>${password}</com.ibm.team.build.password>
+						<com.ibm.team.build.userIdForAuthenticationFailures>${invalidUserId}</com.ibm.team.build.userIdForAuthenticationFailures>
+					</systemPropertyVariables>
+                    <excludes>
+                      <exclude>${excludeTests}</exclude>
+                    </excludes>
+                   <includes>
+                      <include>${includeTests}</include>
+                    </includes>
+			    </configuration>
+				<executions>
+				<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

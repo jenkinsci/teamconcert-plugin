@@ -144,7 +144,7 @@ public abstract class RTCBuildStepExecution<T extends RTCBuildStepResponse>
 		LOGGER.entering(RTCBuildStepExecution.class.getName(), "getCredentials");
 		if (credentialsId == null || 
 				(credentialsId != null && credentialsId.isEmpty())) {
-			throw new IllegalArgumentException(Messages.RTCBuildStep_missing_credentials());
+			throw new IllegalArgumentException(Messages.RTCBuildStep_missing_credentials_id());
 		}
 		// Get username, password from credentialsId
 		// Will be uncommented once we do credentials tracking adoption 
@@ -167,7 +167,7 @@ public abstract class RTCBuildStepExecution<T extends RTCBuildStepResponse>
 	}
 	
 	protected void validateGenericArguments(String serverURI, int timeout, 
-			String buildTool, String buildToolkitPath, 
+			String buildTool, String buildToolkitPath, String crdentialsId,
 			StandardUsernamePasswordCredentials credentials) throws IllegalArgumentException {
 		LOGGER.entering(this.getClass().getName(), "validateGenericArguments");
 
@@ -189,7 +189,7 @@ public abstract class RTCBuildStepExecution<T extends RTCBuildStepResponse>
 		}
 		
 		if (credentials == null) { // happens if the credentials is deleted
-			throw new IllegalArgumentException(Messages.RTCBuildStep_missing_credentials());
+			throw new IllegalArgumentException(Messages.RTCBuildStep_missing_credentials(crdentialsId));
 		}
 	}
 

@@ -200,8 +200,8 @@ public class WaitForBuildIT extends AbstractRTCBuildStepTest {
 			Utils.dumpLogFile(run, "waitForBuild", "invalidWaitBuildTimeout"+ invalidWaitBuildTimeout, ".log");
 		}
 		
+		// timeout of -99
 		{
-			// timeout of -99
 			String invalidWaitBuildTimeout2 = "-99";
 			String rtcBuildStep = String.format("rtcBuild buildTool: '%s', credentialsId: '%s',"
 					+ " serverURI: '%s', task: [buildResultUUID: '%s',  name: 'waitForBuild', waitBuildTimeout : %s"
@@ -216,6 +216,60 @@ public class WaitForBuildIT extends AbstractRTCBuildStepTest {
 			Utils.dumpLogFile(run, "waitForBuild", "invalidWaitBuildTimeout" + invalidWaitBuildTimeout2, ".log");
 		}
 	}
+	
+	@Test
+	public void testWaitForBuildIntervalValidation() throws Exception {
+		if (!Config.DEFAULT.isConfigured()) {
+			return;
+		}
+		String credId = "myCreds" + System.currentTimeMillis();
+		setupValidCredentials(credId);
+		WorkflowJob j = setupWorkflowJob(rule);
+
+		String buildResultUUID = UUID.randomUUID().toString();
+
+		// interval of 0, -23
+		{
+			int [] intervals = { 0 , -23};
+			for (int i = 0 ; i < intervals.length; i++ ) {
+			
+				String invalidWaitBuildInterval = Integer.toString(intervals[i]);
+				String rtcBuildStep = String.format("rtcBuild buildTool: '%s', credentialsId: '%s',"
+						+ " serverURI: '%s', task: [buildResultUUID: '%s',  name: 'waitForBuild', waitBuildInterval : %s"
+						+ "], timeout: 480", CONFIG_TOOLKIT_NAME, credId, Config.DEFAULT.getServerURI(),
+						buildResultUUID, invalidWaitBuildInterval);
+				setupFlowDefinition(j, rtcBuildStep);
+				
+				WorkflowRun run = requestJenkinsBuild(j);
+				String log = getLog(run);
+				Assert.assertTrue(log, log.contains(
+						Messages.RTCBuildStep_invalid_waitBuildInterval(invalidWaitBuildInterval)));
+				Utils.dumpLogFile(run, "waitForBuild", "invalidWaitBuildInterval" + invalidWaitBuildInterval
+								+ i, ".log");
+			}
+		}
+	
+		// Interval greater than timeout
+		{
+			String invalidWaitBuildInterval = "50";
+			String waitBuildTimeout = "30";
+			String rtcBuildStep = String.format("rtcBuild buildTool: '%s', credentialsId: '%s',"
+					+ " serverURI: '%s', task: [buildResultUUID: '%s',  name: 'waitForBuild', "
+					+ "waitBuildTimeout : %s, waitBuildInterval : %s"
+					+ "], timeout: 480", CONFIG_TOOLKIT_NAME, credId, Config.DEFAULT.getServerURI(),
+					buildResultUUID, waitBuildTimeout, invalidWaitBuildInterval);
+			setupFlowDefinition(j, rtcBuildStep);
+			
+			WorkflowRun run = requestJenkinsBuild(j);
+			String log = getLog(run);
+			Assert.assertTrue(log, log.contains(
+					Messages.RTCBuildStep_invalid_waitBuildIntervalGreater(invalidWaitBuildInterval, waitBuildTimeout)));
+			Utils.dumpLogFile(run, "waitForBuild", "invalidWaitBuildIntervalGreater", ".log");
+		}
+		
+	}
+
+	
 	/**
 	 * Test if waitForBuild succeeds based on timeout of 2 minutes
 	 * 
@@ -394,7 +448,7 @@ public class WaitForBuildIT extends AbstractRTCBuildStepTest {
 	
 	/**
 	 * Let the build wait for ever (3 minutes) and cancel the build after that in a 
-	 * separate thread. 
+	 * separate thread. Timedout value should be <code>false</code>. 
 	 * 
 	 * @throws Exception
 	 */
@@ -461,12 +515,14 @@ public class WaitForBuildIT extends AbstractRTCBuildStepTest {
 								int.class, // timeout
 								String.class, // buildResultUUID
 								Object.class, // build states string array
-								long.class, // build wait timeout
+								long.class, // wait build timeout
+								long.class, // wait build interval 
 								Object.class, // listener
 								Locale.class }, // clientLocale
 						defaultC.getServerURI(), loginInfo.getUserId(), 
 						loginInfo.getPassword(), defaultC.getTimeout(), 
-						buildResultUUID, buildStates, waitBuildTimeout, 
+						buildResultUUID, buildStates, waitBuildTimeout,
+						Helper.DEFAULT_WAIT_BUILD_INTERVAL,
 						new TaskListenerWrapper(getTaskListener()),
 						Locale.getDefault());
 	}
