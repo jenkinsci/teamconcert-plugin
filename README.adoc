@@ -935,6 +935,8 @@ The following arguments are optional.
 * Wait Timeout
 ** The time in seconds up to which this step will wait. By default, the step waits forever to reach the specified build states. 
    For longer builds, it is recommended to wait for a shorter timeout and use looping constructs available in pipeline script to retry.
+* Wait Interval
+** The time in seconds up to which the rtcBuild step waits before polling to check the specified build states. The polling is done at regular intervals until it reaches the value mentioned in the Wait Timeout property. The Wait Interval property value should be less than the Wait Timeout property value.
 
 The step returns the following values.
 
@@ -1401,6 +1403,19 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[Using Dynamic 
 
 [[TeamConcertPlugin-Releases]]
 == Releases
+
+=== 2.4.1 January 20, 2022
+
+The following defects are fixed:
+
+* Two parallel running pipeline jobs no longer occupy the workspace directory of each other. Previously, the jobs occupy the workspace directory of each other intermittently.
+* When credential parameters are used in the pipeline job against the credentialsId parameter, post build delivery steps no longer fail with a message that it cannot resolve the credentials.
+* In the waitForBuild task of the rtcBuild step, the waitBuildTimeout property specifies how long the task should keep checking for the build result status change. The task checks the status every 30 seconds until the time that is specified in the waitBuildTimeout property expires. The polling interval for the waitBuildTimeout property is now configurable by using the waitBuildInterval property where you can add the wait interval time, which was default to 30 seconds earlier.
+* Previously, if the global settings were modified, it is required to change the serverURI, credentialsId, and buildTool parameter values manually in the pipeline script. From now on, these parameters are added to the pipeline script only when it is required to override them and  give specific values other than the global settings. Otherwise, serverURI, credentialsId, and buildTool parameters are not added if the global settings were used.
+
+Note: Team Concert Plugin continues to support LTS versions starting from 2.60.1
+
+https://github.com/jenkinsci/teamconcert-plugin/commit/e676523368507b561c239d03e6172900169ab18d[GitHub commit - e676523368]
 
 [[TeamConcertPlugin-2.4.0June22-2021]]
 === 2.4.0 June 22 2021
