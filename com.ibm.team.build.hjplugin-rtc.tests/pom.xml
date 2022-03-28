@@ -14,7 +14,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ibm.team.build</groupId>
   <artifactId>com.ibm.team.build.hjplugin-rtc.tests</artifactId>
-  <version>2.4.1</version>
+  <version>2.4.2</version>
   <packaging>eclipse-plugin</packaging>
   
   
@@ -31,7 +31,7 @@
         <invalidUserId>${env.invalidUserid}</invalidUserId>
         <buildtoolkit>${env.buildtoolkit}</buildtoolkit>
         <configured>false</configured>
-        <rtcJarVersion>2.4.1</rtcJarVersion>
+        <rtcJarVersion>2.4.2</rtcJarVersion>
         <java.level>8</java.level>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>

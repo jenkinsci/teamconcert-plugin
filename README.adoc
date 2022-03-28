@@ -57,25 +57,19 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 
 ==== Add a new Build Toolkit
 . Navigate to the Jenkins Global Tool configure page (Jenkins > Manage Jenkins >  Global Tool Configuration) and find the "RTC Build toolkit" section.  This section is used to define one or more build toolkits available to the plugin. If you are using Jenkins 1.x, this will be under (Jenkins -> Manage Jenkins -> Configure System)
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_1.png?version=2&modificationDate=1461323530000&api=v2[image,width=794,height=59]#::
 . Click the "RTC Build toolkit installations..." button and add a new build toolkit. 
 .. See the link:https://jazz.net/help-dev/clm/topic/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
 .. There can be multiple RTC build toolkits associated with one jenkins instance.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_2.png?version=2&modificationDate=1461325443000&api=v2[image,width=794,height=182]#::
 . Click the "Apply" button to apply the changes.
 
 ==== Update RTC Global Configuration
 . Navigate to the Jenkins Global Configuration page (Manage Jenkins -> Configure System).
 . Find the "Rational Team Concert (RTC)" section. This section is used to define global connection settings that will be the defaults for any jobs created with the plugin. If connection settings will be set on each job, then skip this section. 
 . Select a build toolkit
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_3.png?version=3&modificationDate=1461325407000&api=v2[image,width=789,height=246]#::
 . Credentials are managed by the link:https://wiki.jenkins-ci.org/display/JENKINS/Credentials+Plugin[Credentials plugin]. The Team Concert plugin supports username and password type credentials. Credentials can be defined within a domain or a folder (if you are using the folder's plugin). You can use an application password in place of a regular password.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_4.png?version=1&modificationDate=1461325230000&api=v2[image,width=794,height=329]#::
 . Choose the credentials to use when logging into RTC for polling and accepting/loading the source code.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_5.png?version=1&modificationDate=1461325883000&api=v2[image,width=794,height=235]#::
 * If you are using the 1.0.12 (or earlier) version of the Team Concert plugin, instead of credentials, you will need to supply a userId and password or password file.
 . Click the "Test connection" button to verify the repository connection details.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_6.png?version=1&modificationDate=1461326078000&api=v2[image,width=796,height=42]#::
 . Click the *Save* button to save the settings and return to the Jenkins main page.
 
 [[TeamConcertPlugin-JobConfiguration]]
@@ -87,9 +81,7 @@ NOTE: This section shows how to configure Team Concert Plugin in a freestyle job
 . Select "Rational Team Concert (RTC)".
 . If global connection settings were not configured above or do not apply to this job, then check the *Override global RTC repository
 connection* check box and enter the connection settings here.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_1.png?version=2&modificationDate=1461327544000&api=v2[image,width=794,height=364]#::
 . Click the "Test connection" button to verify the repository connection details.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_build_tookit_1200_6.png?version=1&modificationDate=1461326078000&api=v2[image,width=796,height=41]#::
 . Prior to 1.2.0.0 a job can be configured with RTC SCM only using either a build definition or a repository workspace. From 1.2.0.0 there is support to
 configure RTC SCM with a SCM stream or SCM snapshot.
 
@@ -104,43 +96,34 @@ with no build definition. Leave the _Build Definition_ text box blank.
 .. In RTC, create a Jenkins build engine that connects to the Jenkins
 server. See https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/t_hudson_build_eng.html[Creating a build engine]. In RTC, create a build definition that uses the build engine created in step b and select the job created in step a. See link:https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/t_hudson_build_def.html[Creating a build definition]
 .. Lastly, in Jenkins, open the Jenkins job and set the _Build Definition_ field with the id of the build definition created in step c.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_2.png?version=1&modificationDate=1461328211000&api=v2[image,width=794,height=119]#::
 .. Notice the "Build Configuration" dropdown. This replaces the radio buttons for build definition and build workspace prior to version 1.2.0.0 of the Team Concert Plugin.
 .. Click the "Validate" button to verify the RTC build definition exists.
 
 ==== Configuring for Repository workspace
 . To load a RTC repository workspace into the Jenkins workspace, select "Build Workspace" from the Build Configuration dropdown. See link:https://jazz.net/help-dev/clm/index.jsp?re=1&topic=/com.ibm.team.build.doc/topics/tcreateworkspace.html&scope=null[Dedicated build workspaces] help topic to learn how to create a build workspace.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_4.png?version=1&modificationDate=1461329162000&api=v2[image,width=794,height=125]#::
 . Click the "Validate" button to verify the RTC build workspace exists.
 . To add a "Related Artifact" link to a Jenkins build in all the included work items, select the option *Add Jenkins build link to accepted work items* option.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/JenkinsWorkspaceAddLink.png?version=1&modificationDate=1556704491000&api=v2[image,height=237]#::
 [%hardbreaks]
 
 ==== Configuring for Snapshot
-. To load the jenkins build workspace using a snapshot, select "Build Snapshot" from the Build Configuration dropdown. This configuration is mainly intended to be used in builds that capture the current state of the RTC SCM workspace/stream in a snapshot and start downstream builds that would populate the jenkins build workspace from the snapshot created and passed from the upstream builds.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_5.png?version=1&modificationDate=1461329608000&api=v2[image,width=794,height=173]#::
+. To load the jenkins build workspace using a snapshot, select "Build Snapshot" from the Build Configuration dropdown. This configuration is mainly intended to be used in builds that capture the current state of the RTC SCM workspace/stream in a snapshot and start downstream builds that would populate the jenkins build workspace from the snapshot created and passed from the upstream builds. +
 NOTE:To start a downstream snapshot build Parameterized Trigger plugin is required.
 .  The following steps show how to configure a parent Jenkins job to trigger a downstream Jenkins job. The parent job is configured to use Build Definition, Repository Workspace or SCM stream. The downstream job is configured to use SCM snapshot. The parent job triggers the downstream job, passing a  snapshot UUID that will be used to load the sources.
 .. Consider a parent job that is configured to load from a RTC repository workspace. When the build runs, Team Concert Jenkins plugin creates a snapshot on the build workspace. The snapshot uuid is available as the build environment property team_scm_snapshotUUID.
 ... Add a post build action to trigger parametrized build on other projects.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_6.png?version=2&modificationDate=1461330328000&api=v2[image,width=794,height=293]#::
 .. Configure a downstream snapshot build
 ... Create a new job and with a string parameter named *rtcBuildSnapshot*. You can use any parameter name for this purpose.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_7.png?version=1&modificationDate=1461330685000&api=v2[image,width=793,height=458]#::
 ... Configure Rational Team Concert under Source Control options to build from a snapshot.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_8.png?version=1&modificationDate=1461330886000&api=v2[image,width=794,height=236]#::
 .. Now when an upstream build is started and once it is done it will trigger the downstream build with the UUID of the snapshot created on the workspace. +
 [%hardbreaks]
 NOTE: Generation of change log and polling is not supported for Snapshot configuration.
 
 ==== Configuring for Stream
 . To load the jenkins build workspace using a stream, select "Build Stream" from the Build Configuration dropdown.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_9.png?version=1&modificationDate=1461331347000&api=v2[image,width=794,height=141]#::
 . Click the "Validate" button to verify the build stream exists.
 . This configuration supports building from the current state of the specified stream.
 . Subsequent builds capture the changes made to the stream since the previous build.
-. In this configuration change log can be chosen to be generated by comparing the current build with the previous successful build. By default this option is unchecked.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_10.png?version=1&modificationDate=1461331478000&api=v2[image,width=794,height=316]#::
+. In this configuration change log can be chosen to be generated by comparing the current build with the previous successful build. By default this option is unchecked. +
 NOTE: For this configuration the RTC user configured globally or for this job needs to have permission to attach snapshots to a stream.
 
 ==== Load Options
@@ -152,20 +135,16 @@ From 1.2.0.0 some of the load and accept options that were previously configurab
 .. Specify which components to load +
 .. When specifying components to load you can choose to create folders for components, in which case the load directory would have folders for components at the top level and each of these folders will have the files/folders for that component.
 .. You can also choose to exclude some components.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/Specify-Components-To-Load.png?version=1&modificationDate=1512377776000&api=v2[image,height=250]#::
 .. Load components by using a load rule file
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/Load-Using-Load-Rule-File.png?version=1&modificationDate=1512376770000&api=v2[image,height=250]#::
-.. Load using dynamic load rules
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/Load-Using-Dynamic-Load-Rules.png?version=1&modificationDate=1512377991000&api=v2[image,height=250]#:: 
-[%hardbreaks]
+.. Load using dynamic load rules +
++
 NOTE: For more details on load rules support and how to configure dynamic load rules, see the xref:TeamConcertPlugin-LoadRulesSupport[Load Rules Support] section. 
 
 ==== Accept Options
 
 NOTE: Applicable only to Repository workspace configuration
 
-. When loading the jenkins build workspace from a RTC repository workspace, there is an option to configure whether to accept latest changes before loading. By default, this option is selected.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_job_1200_11.png?version=1&modificationDate=1461332037000&api=v2[image,width=794,height=315]#:: 
+. When loading the jenkins build workspace from a RTC repository workspace, there is an option to configure whether to accept latest changes before loading. By default, this option is selected. 
 [%hardbreaks]
 
 ==== Traceability Options
@@ -173,7 +152,6 @@ NOTE: Applicable only to Repository workspace configuration
 NOTE: Applicable only to Repository workspace and Stream configuration
 
 . To add a *Related Artifact* link to a Jenkins build in all the included work items, select the option "Add Jenkins build link to accepted work items" option. This applies to Repository Workspace and Stream configurations.
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/JenkinsBuildStreamAddLinkOption.png?version=1&modificationDate=1556704560000&api=v2[image,height=145]#::
 [%hardbreaks]
 
 [[TeamConcertPlugin-BuildTriggers]]
@@ -289,13 +267,11 @@ Master and agent configurations are supported by this plugin.  See the Jenkins d
 . Enter a name and create a new node.
 . In the node configuration page, find the *Node Properties* section and check the *Tool Locations* check box.
 . From the list of tool locations, select the build toolkit you want to define for the node, and set the value in the *Home* field.
-[.confluence-embedded-file-wrapper]#image:https://wiki.jenkins.io/download/attachments/66847632/node_configure_build_toolkit.png?version=2&modificationDate=1363368239000&api=v2[image]#::
 
 NOTE: If you do not wish to override the tool location, then Team Concert Plugin will try to locate the toolkit at the same location specified in Global Tool configuration
 
 Build toolkits can also be installed automatically on agents. And labels can be used to match build toolkits to agents.  However, a valid toolkit is required in the master node to perform connection tests to build artifacts and perform polling. +
 
-[.confluence-embedded-file-wrapper]#image:https://wiki.jenkins.io/download/attachments/66847632/toolkit_installations.png?version=6&modificationDate=1401898566000&api=v2[image]#
 
 [%hardbreaks]
 
@@ -312,7 +288,6 @@ Log) and click the *Add new log recorder* button.
 . Provide a name, for example *RTC Log* and click the *Add* button to add a logger.
 . Enter a logger for `com.ibm.team.build` and set the log level to
 *FINER*.
-[.confluence-embedded-file-wrapper]#image:https://wiki.jenkins.io/download/attachments/66847632/jenkins_configure_rtc_log.png?version=3&modificationDate=1391180511000&api=v2[image]#::
 . Click the *Save* button.
 . Return to this log if a problem is ever experienced using this
 plugin.  The log will help to identify the problem.
@@ -520,7 +495,6 @@ not.
 . First create a Job parameter "personalBuild" type is String in the
 Jenkins pipeline job and  set the default value to false.
 
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/2-CreateNewStringParameterForPersonalBuild.png?version=1&modificationDate=1559037996000&api=v2[image,height=250]#
 
 {empty}2. Request a personal build in the RTC build definition associated with the Jenkins job.
 
@@ -780,7 +754,6 @@ definition.
 . When a jenkins build is configured with an RTC repository workspace,
 stream, or snapshot load rules can be specified by setting the load
 policy field to "Load components by using a load rule file".
- [.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/66847632/Load-Using-Load-Rule-File.png?version=1&modificationDate=1512376770000&api=v2[image,height=250]#
 . To configure load policy in a pipeline build, set the "loadPolicy"
 field to one of - "useComponentLoadConfig", "useLoadRules", or
 "useDynamicLoadRules".
