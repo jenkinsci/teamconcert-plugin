@@ -1,12 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2015 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2008,2023. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
  *******************************************************************************/
 
 package com.ibm.team.build.internal.hjplugin;
@@ -24,6 +22,7 @@ import hudson.tools.ToolDescriptor;
 import hudson.tools.ToolProperty;
 import hudson.tools.ToolInstallation;
 import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -117,6 +116,7 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
 	 */
 	public static FormValidation validateBuildToolkit(boolean warnOnly, File toolkitFile) {
 		String message = null;
+		Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
 		if (!toolkitFile.exists()) {
 			LOGGER.finer("BuildToolKit folder not found : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
 			message = Messages.RTCBuildToolInstallation_toolkit_not_found();

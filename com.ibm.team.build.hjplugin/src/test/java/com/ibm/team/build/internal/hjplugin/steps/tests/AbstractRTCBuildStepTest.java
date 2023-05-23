@@ -1,12 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2021 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2008. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.steps.tests;
 
@@ -168,7 +166,13 @@ public abstract class AbstractRTCBuildStepTest extends AbstractTestCase {
 		WorkflowRun run = requestJenkinsBuild(j);
 		String log = getLog(run);
 		// The default server URI is https://localhost:9443/ccm
-		Assert.assertTrue(log, log.contains("CRJAZ1371E The following URL cannot be reached:"));
+		if (log.contains("CRJAZ1371E")) {
+			Assert.assertTrue(log, log.contains("CRJAZ1371E The following URL cannot be reached:"));
+		} else if (log.contains("CRJAZ1687E")) {
+			Assert.assertTrue(log, log.contains("CRJAZ1687E Unable to connect to the server with URI"));
+		} else {
+			Assert.fail(String.format("log doesn't contains either of CRJAZ1371E or CRJAZ1687E in %s log",log));
+		}
 		Assert.assertTrue(log, log.contains("localhost:9443"));
 		Utils.dumpLogFile(run, prefix, "noServerURI", ".log");
 	}
