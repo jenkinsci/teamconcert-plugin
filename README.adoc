@@ -1376,6 +1376,12 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[Using Dynamic 
 
 [[TeamConcertPlugin-Releases]]
 == Releases
+=== 2.4.2 June 06, 2023
+
+The following defects are fixed:
+
+* Pipeline jobs configured with Post Build deliver step, when executed in parallel on different nodes/agents could potentially cause it to fail with       ConcurrentModificationException. The issue has now been fixed.
+* Fixed a minor security vulnerability related to permission checks. 
 
 === 2.4.1 January 20, 2022
 
