@@ -1380,7 +1380,7 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[Using Dynamic 
 
 The following defects are fixed:
 
-* Pipeline jobs configured with Post Build deliver step, when executed in parallel on different nodes/agents could potentially cause it to fail with       ConcurrentModificationException. The issue has now been fixed.
+* The pipeline jobs that are configured with the Post Build  deliver step, when executed in parallel on different nodes or agents, will no longer fail with ConcurrentModificationException. Earlier, they were failing intermittently with ConcurrentModificationException.
 * Fixed a minor security vulnerability related to permission checks. 
 
 === 2.4.1 January 20, 2022
