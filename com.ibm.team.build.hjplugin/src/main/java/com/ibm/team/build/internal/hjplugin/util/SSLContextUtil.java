@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -25,12 +25,10 @@ import javax.net.ssl.TrustManager;
 public class SSLContextUtil {
 
 	private final static Logger LOGGER = Logger.getLogger(SSLContextUtil.class.getName());
-	
-    public static final String SSL_TLS = "SSL_TLS"; //$NON-NLS-1$
-
-    public static final String TLS = "TLS"; //$NON-NLS-1$
-
-    public static final String SSL = "SSL"; //$NON-NLS-1$
+    
+    public static final String TLSV_1_2 = "TLSv1.2"; //$NON-NLS-1$
+    
+    public static final String TLSV_1_3 = "TLSv1.3"; //$NON-NLS-1$
 	
 	/**
 	 * Creates an SSL context factory.
@@ -59,22 +57,16 @@ public class SSLContextUtil {
 	        LOGGER.finer("Attempting to create protocol context using system property: " + overrideProtocol);  //$NON-NLS-1$
 	        context = createSSLContext(overrideProtocol, keyManagers, trustManager);
 	    }
-
+	    
 	    if (context == null) {
-	        LOGGER.finer("Attempting to create SSL_TLS context");  //$NON-NLS-1$
-	        context = createSSLContext(SSL_TLS, keyManagers, trustManager);
+	        LOGGER.finer("Attempting to create TLSv1.3 context");  //$NON-NLS-1$
+	        context = createSSLContext(TLSV_1_3, keyManagers, trustManager);
 	    }
-
-        if (context == null) {
-            LOGGER.finer("Unable to create SSL_TLS context, trying TLS");  //$NON-NLS-1$
-              // When SSL_TLS doesn't work (e.g. under FIPS), try TLS
-              context = createSSLContext(TLS, keyManagers, trustManager);
-          }
-
-        if (context == null) {
-          LOGGER.finer("Unable to create TLS context, trying SSL"); //$NON-NLS-1$
-        	// Fall back to just SSL when the above two are not available
-        	context = createSSLContext(SSL, keyManagers, trustManager);
+	    
+	    if (context == null) {
+            LOGGER.finer("Unable to create TLSv1.3 context, trying TLSv1.2");  //$NON-NLS-1$
+            // When TLSv1.3 doesn't work, try TLSv1.2
+            context = createSSLContext(TLSV_1_2, keyManagers, trustManager);
         }
 
         if (context == null) {
