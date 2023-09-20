@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Żądaj budowania</h3>
+  <p>Zażądaj zbudowania EWM (RTC) z potoku Jenkins. Gdy żądanie zostanie pomyślnie utworzone, krok zwraca identyfikator UUID wyniku budowania we właściwości &quot;buildResultUUID&quot;.</p><br/></div>
+
+<div>
+  <h3>Poczekaj na zbudowanie</h3>
+  <p>Poczekaj, aż wynik budowania EWM (RTC) osiągnie określony stan. Domyślne stany, na które należy czekać, COMPLETED (ZAKOŃCZONO) i INCOMPLETE (NIEKOMPLETNE). Jeśli zostanie podany limit czasu, zadanie nie zostanie zakończone do momentu osiągnięcia określonego stanu lub upłynięcia limitu czasu. Domyślnie zadanie będzie czekać bezterminowo do momentu osiągnięcia przez wynik budowania określonych stanów.</p><br/></div>
+
+<div>
+   <h3>Lista dzienników</h3>
+   <p>Pobieranie szczegółów jednego lub większej liczby dzienników z wyniku budowania EWM (RTC). Dzienniki są wyświetlane na karcie &quot;Dzienniki&quot; wyniku budowania EWM. To zadanie pobierze szczegóły dzienników, których zawartość jest przechowywana w repozytorium EWM.</p><br/></div>
+
+<div>
+  <h3>Lista artefaktów</h3>
+  <p>Pobieranie szczegółowych informacji o artefaktach z wyniku budowania EWM (RTC). Artefakty są wyświetlane na karcie &quot;Do pobrania&quot; w wyniku budowania EWM. To zadanie pobierze szczegóły artefaktów, których zawartość jest przechowywana w repozytorium EWM.</p><br/></div>
+
+<div>
+  <h3>Dziennik pobierania</h3>
+  <p>Pobierz dziennik z wyniku budowania EWM (RTC). Dziennik można pobrać, używając nazwy dziennika lub identyfikatora treści. Aby pobrać nazwę lub identyfikator contentId dziennika, użyj zadania &quot;Lista dzienników&quot;.</p><br/></div>
+
+<div>
+  <h3>Pobierz artefakt</h3>
+  <p>Pobierz artefakt z wyniku budowania EWM (RTC). Artefakt można pobrać, używając nazwy artefaktu lub identyfikatora treści. Aby pobrać nazwę lub identyfikator contentId artefaktu, użyj zadania &quot;Lista artefaktów&quot;.</p><br/></div>
+
+<div>
+  <h3>Pobierz obraz stanu SCM z budowania</h3>
+  <p>Pobierz szczegóły obrazu stanu Jazz SCM dla danego wyniku budowania EWM (RTC). Jeśli wynik budowania ma element wnoszony obrazu stanu Jazz SCM, to zadanie zwraca nazwę obrazu stanu i identyfikator UUID. Jeśli wynik budowania nie ma takiego elementu wnoszonego, to zadanie zwraca puste wartości dla nazwy obrazu stanu i identyfikatora UUID.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164401-5_en_pl -->

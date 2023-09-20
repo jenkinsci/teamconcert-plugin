@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Solicitar compilación</h3>
+  <p>Solicite una compilación de EWM (RTC) desde la interconexión Jenkins. Cuando se crea correctamente una solicitud, el paso devuelve el UUID de resultado de compilación en la propiedad &quot;buildResultUUID&quot;.</p><br/></div>
+
+<div>
+  <h3>Esperar a la compilación</h3>
+  <p>Espere a que un resultado de compilación EWM (RTC) alcance un estado específico. Los estados predeterminados a esperar son COMPLETED e COMPLETED. Si se proporciona un periodo de tiempo de espera, la tarea no vuelve hasta que se alcanza el estado especificado o hasta que caduca el periodo de tiempo. De forma predeterminada, la tarea esperará indefinidamente hasta que el resultado de la compilación alcance los estados especificados.</p><br/></div>
+
+<div>
+   <h3>Listar archivos de registro</h3>
+   <p>Recuperar los detalles de uno o más registros de un resultado de compilación de EWM (RTC). Los registros aparecen en el separador &quot;Registros&quot; del resultado de compilación de EWM. Esta tarea recuperará los detalles de los registros cuyo contenido se almacena en el repositorio de EWM.</p><br/></div>
+
+<div>
+  <h3>Listar artefactos</h3>
+  <p>Recuperar los detalles de los artefactos de un resultado de compilación de EWM (RTC). Los artefactos aparecen en el separador &quot;Descargas&quot; del resultado de compilación EWM. Esta tarea recuperará los detalles de los artefactos cuyo contenido se almacena en el repositorio de EWM.</p><br/></div>
+
+<div>
+  <h3>Registro de descarga</h3>
+  <p>Descargar un registro de un resultado de compilación de EWM (RTC). Puede descargar un registro utilizando el nombre del registro o el ID de contenido. Para recuperar el nombre o contentId del registro, utilice la tarea &quot;Listar registros&quot;.</p><br/></div>
+
+<div>
+  <h3>Descargar artefacto</h3>
+  <p>Descargar un artefacto de un resultado de compilación EWM (RTC). Puede descargar un artefacto utilizando el nombre del artefacto o el ID de contenido. Para recuperar el nombre o contentId del artefacto, utilice la tarea &quot;Listar artefactos&quot;.</p><br/></div>
+
+<div>
+  <h3>Obtener instantánea SCM de la compilación</h3>
+  <p>Recuperar los detalles de instantánea de Jazz SCM para un resultado de compilación de EWM (RTC) determinado. Si el resultado de la compilación tiene una contribución de instantánea de Jazz SCM, la tarea devuelve el nombre y el UUID de la instantánea. Si el resultado de la compilación no tiene dicha contribución, la tarea devuelve valores vacíos para el nombre de instantánea y el UUID.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164352-2_en_es -->

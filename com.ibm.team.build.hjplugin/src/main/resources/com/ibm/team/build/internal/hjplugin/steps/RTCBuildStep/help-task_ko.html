@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>빌드 요청</h3>
+  <p>Jenkins 파이프라인에서 EWM(RTC) 빌드를 요청하십시오. 요청이 성공적으로 작성되면 단계는 &quot;buildResultUUID&quot; 특성에 빌드 결과 UUID를 리턴합니다.</p><br/></div>
+
+<div>
+  <h3>빌드 대기</h3>
+  <p>EWM(RTC) 빌드 결과가 특정 상태에 도달할 때까지 대기하십시오. 대기할 기본 상태는 COMPLETED 및 INCOMPLETE입니다. 제한시간 기간이 제공되면 지정된 상태에 도달하거나 기간이 만료될 때까지 태스크가 리턴되지 않습니다. 기본적으로 태스크는 빌드 결과가 지정된 상태에 도달할 때까지 무기한 대기합니다.</p><br/></div>
+
+<div>
+   <h3>로그 나열</h3>
+   <p>EWM(RTC) 빌드 결과에서 하나 이상의 로그 세부사항을 검색합니다. 로그가 EWM 빌드 결과의 &quot;로그&quot; 탭에 표시됩니다. 이 태스크는 컨텐츠가 EWM 저장소에 저장된 로그의 세부사항을 검색합니다.</p><br/></div>
+
+<div>
+  <h3>아티팩트 나열</h3>
+  <p>EWM(RTC) 빌드 결과에서 아티팩트의 세부사항을 검색합니다. 아티팩트는 EWM 빌드 결과의 &quot;다운로드&quot; 탭에 표시됩니다. 이 태스크는 컨텐츠가 EWM 저장소에 저장된 아티팩트의 세부사항을 검색합니다.</p><br/></div>
+
+<div>
+  <h3>로그 다운로드</h3>
+  <p>EWM(RTC) 빌드 결과에서 로그를 다운로드하십시오. 로그의 이름 또는 컨텐츠 ID를 사용하여 로그를 다운로드할 수 있습니다. 로그의 이름 또는 contentId를 검색하려면 &quot;로그 나열&quot; 태스크를 사용하십시오.</p><br/></div>
+
+<div>
+  <h3>아티팩트 다운로드</h3>
+  <p>EWM(RTC) 빌드 결과에서 아티팩트를 다운로드하십시오. 아티팩트의 이름 또는 컨텐츠 ID를 사용하여 아티팩트를 다운로드할 수 있습니다. 아티팩트의 이름 또는 contentId를 검색하려면 &quot;아티팩트 나열&quot; 태스크를 사용하십시오.</p><br/></div>
+
+<div>
+  <h3>빌드에서 SCM 스냅샷 가져오기</h3>
+  <p>지정된 EWM(RTC) 빌드 결과에 대한 Jazz SCM 스냅샷 세부사항을 검색합니다. 빌드 결과에 Jazz SCM 스냅샷 컨트리뷰션이 있는 경우 태스크는 스냅샷의 이름과 UUID를 리턴합니다. 빌드 결과에 이러한 컨트리뷰션이 없는 경우, 태스크는 스냅샷 이름 및 UUID에 대해 빈 값을 리턴합니다.</p>
+</div> 
+ 
+<!-- v2.0.58 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164441-2_en_ko -->

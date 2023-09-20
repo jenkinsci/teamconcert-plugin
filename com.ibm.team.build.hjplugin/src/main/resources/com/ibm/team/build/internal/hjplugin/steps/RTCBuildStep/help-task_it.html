@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Richiedi build</h3>
+  <p>Richiedere una build EWM (RTC) dalla pipeline Jenkins . Quando una richiesta viene creata correttamente, il passo restituisce il risultato della build UUID nella proprietà &quot;UUIDbuildResult&quot;.</p><br/></div>
+
+<div>
+  <h3>Attendere la build</h3>
+  <p>Attendere un risultato della build EWM (RTC) per ottenere uno stato specifico. Gli stati predefiniti da attendere sono COMPLETATO e INCOMPLETO. Se viene fornito un periodo di timeout, l&#39;attività non viene restituita fino al raggiungimento dello stato specificato o fino alla scadenza del periodo di tempo. Per impostazione predefinita, l&#39;attività attenderà indefinitamente fino a quando il risultato della build non raggiungerà gli stati specificati.</p><br/></div>
+
+<div>
+   <h3>Elenca log</h3>
+   <p>Richiamare i dettagli di uno o più log da un risultato di build RTC (EWM). I log vengono visualizzati nella scheda &quot;Log&quot; del risultato di build EWM. Questa attività richiamerà i dettagli dei log il cui contenuto è memorizzato nel repository EWM.</p><br/></div>
+
+<div>
+  <h3>Elenca risorse utente</h3>
+  <p>Richiamare i dettagli delle risorse utente da un risultato di build RTC (EWM). Le risorse utente vengono visualizzate nella scheda &quot;Scaricamento&quot; del risultato build EWM. Questa attività richiamerà i dettagli delle risorse utente il cui contenuto è memorizzato nel repository EWM.</p><br/></div>
+
+<div>
+  <h3>Scarica log</h3>
+  <p>Scaricare un log da un risultato di build RTC (EWM). È possibile scaricare un log utilizzando il nome del log o l&#39;ID contenuto. Per richiamare il nome o contentId del log, utilizzare l&#39;attività &quot;Elenca log&quot;.</p><br/></div>
+
+<div>
+  <h3>Scarica risorsa utente</h3>
+  <p>Scaricare una risorsa utente da un risultato della build RTC (EWM). È possibile scaricare una risorsa utente utilizzando il nome della risorsa utente o l&#39;ID contenuto. Per richiamare il nome o contentId della risorsa utente, utilizzare l&#39;attività &quot;Elenca risorse utente&quot;.</p><br/></div>
+
+<div>
+  <h3>Acquisisci istantanea SCM da build</h3>
+  <p>Richiamare i dettagli dell&#39;istantanea Jazz SCM per un determinato risultato di build RTC (EWM). Se il risultato della build ha un contributo dell&#39;istantanea Jazz SCM, l&#39;attività restituisce il nome dell&#39;istantanea e l&#39;UUID. Se il risultato della build non dispone di tale contributo, l&#39;attività restituisce valori vuoti per il nome istantanea e l&#39;UUID.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164511-1_en_it -->

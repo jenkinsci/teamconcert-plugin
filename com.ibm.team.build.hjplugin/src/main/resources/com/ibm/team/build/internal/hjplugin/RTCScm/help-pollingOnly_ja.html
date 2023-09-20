@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>このオプションが<code>true</code>に設定されている場合、プラグインはポーリングのみを実行しますが、リポジトリー・ワークスペースを受け入れることもロードすることもしません。</p>
+	<p>注: このオプションを選択する場合は、次のポーリング間隔内に、ビルドの一部としてワークスペースへの変更が受け入れられるようにする必要があります。</p>
+	<p>このオプションが <em>true</em> に設定されている場合、RTCScm はリポジトリー・ワークスペースのみをポーリングし、以下のアクションは実行しません。</p>
+	 <p><ul>
+	 <li>受諾</li>
+	 <li>ロード</li>
+	 <li>ビルドでの変更ログの記録</li>
+	 <li>プラグイン固有のデータによる Jenkins ビルドの更新</li>
+	 </ul>
+	 </p>
+	 <p>進化と後方互換性</p>
+	 <p><ul>
+	 <li>2.3.0より前に作成されたジョブの場合、オプションの値は <em>false</em> になります。</li>
+	 <li>新規ジョブの場合、オプションの値は <em>false</em> になります。</li>
+	 </ul>
+	 </p>
+	 <p>制約</p>
+	 <p><ul>
+	 <li>パイプライン・ジョブでサポートされます。</li>
+	 <li>ビルド定義およびビルド・ワークスペース・タイプでサポートされます。</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173859-5_en_ja -->

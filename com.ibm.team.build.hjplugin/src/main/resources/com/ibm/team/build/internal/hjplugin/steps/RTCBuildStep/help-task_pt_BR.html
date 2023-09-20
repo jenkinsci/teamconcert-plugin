@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Solicitar Compilação</h3>
+  <p>Solicite uma construção do EWM (RTC) do pipeline Jenkins . Quando uma solicitação é criada com sucesso, a etapa retorna o UUID do resultado de construção na propriedade &quot;buildResultUUID&quot;.</p><br/></div>
+
+<div>
+  <h3>Aguardar construção</h3>
+  <p>Aguarde um resultado de construção do EWM (RTC) para atingir um estado específico. Os estados padrão a aguardar são COMPLETED e INCOMPLETO. Se um período de tempo limite for fornecido, a tarefa não retornará até que o estado especificado seja atingido ou o período expire. Por padrão, a tarefa aguardará indefinidamente até o resultado de construção atingir os estados especificados.</p><br/></div>
+
+<div>
+   <h3>Registros de Lista</h3>
+   <p>Recupere os detalhes de um ou mais logs de um resultado de construção do EWM (RTC). Os logs aparecem na guia &quot;Logs&quot; do resultado de construção EWM . Esta tarefa recuperará os detalhes dos logs cujo conteúdo está armazenado no repositório do EWM</p><br/></div>
+
+<div>
+  <h3>Listar artefatos</h3>
+  <p>Recupere os detalhes dos artefatos de um resultado de construção EWM (RTC). Os artefatos aparecem na guia &quot;Downloads&quot; do resultado de construção EWM . Esta tarefa recuperará os detalhes dos artefatos cujo conteúdo está armazenado no repositório do EWM</p><br/></div>
+
+<div>
+  <h3>Fazer Download do Log</h3>
+  <p>Faça download de um log a partir de um resultado de compilação do EWM (RTC). É possível fazer o download de um log usando o nome do log ou o ID do conteúdo. Para recuperar o nome ou contentId do log, use a tarefa &quot;Listar Logs&quot;.</p><br/></div>
+
+<div>
+  <h3>Fazer download do artefato</h3>
+  <p>Faça download de um artefato a partir de um resultado de construção do EWM (RTC) É possível fazer o download de um artefato usando o nome do artefato ou o ID do conteúdo. Para recuperar o nome ou contentId do artefato, use a tarefa &quot;Listar artefatos&quot;.</p><br/></div>
+
+<div>
+  <h3>Obter Captura Instantânea do SCM da Construção</h3>
+  <p>Recuperar os detalhes da captura instantânea do Jazz SCM para um determinado resultado de compilação do EWM (RTC). Se o resultado de compilação tiver uma contribuição de captura instantânea do Jazz SCM, a tarefa retornará o nome da captura instantânea e UUID. Se o resultado de construção não tiver tal contribuição, a tarefa retornará valores vazios para o nome da captura instantânea e o UUID.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164229-9_en_pt -->

@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 202, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Bu seçenek <code>true</code> olarak ayarlandığında, eklenti yalnızca yoklama gerçekleştirecek, ancak havuz çalışma alanını kabul etmeyecek ya da yüklemeyecektir.</p>
+	<p>Not: Bu seçeneği belirlerseniz, değişikliklerin sonraki yoklama aralığı içinde, oluşturmanın parçası olarak çalışma alanına kabul edildiğinden emin olun.</p>
+	<p>Bu seçenek <em>true</em> olarak ayarlanırsa, RTCScm yalnızca havuz çalışma alanını yoklayacak ve aşağıdaki işlemleri gerçekleştirmeyecektir.</p>
+	 <p><ul>
+	 <li>kabul</li>
+	 <li>yükleme</li>
+	 <li>oluşturmada değişiklik günlüğünü kaydetme</li>
+	 <li>Jenkins oluşturmasını eklentiye özel verilerle güncelleme</li>
+	 </ul>
+	 </p>
+	 <p>Gelişim ve geriye doğru uyumluluk</p>
+	 <p><ul>
+	 <li>2.3.0 öncesinde oluşturulan işler için, seçeneğin değeri <em>false</em> olur.</li>
+	 <li>Yeni işler için, seçeneğin değeri <em>false</em> olur.</li>
+	 </ul>
+	 </p>
+	 <p>Kısıtlamalar</p>
+	 <p><ul>
+	 <li>Ardışık işlem işleri için desteklenir.</li>
+	 <li>Oluşturma tanımlama ve oluşturma çalışma alanı tipleri için desteklenir.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173858-4_en_tr -->

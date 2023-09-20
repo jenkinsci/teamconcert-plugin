@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,20 +14,9 @@
 <!-- NLS_CHARSET=UTF-8 -->
 
 <div>
-  <p>
-   Az Összeépítési eszközkészlet útvonala. Ez telepített RTC összeépítési eszközökön belül egy könyvtár lesz.
-   Például: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
-  </p>
-  <p>
-   Az Összeépítési eszközkészlet útvonala az Elsődleges kiszolgálón. Ha osztott összeépítési beállítást használ (alárendelt kiszolgálókkal), akkor
-   meg kell adnia azt is, hogy az Összeépítési eszközkészlet hol található az alárendelt kiszolgálón (feltéve, hogy az egy másik útvonalon van).
-   A mentés után navigáljon az alárendelt kiszolgáló konfigurációjához. A Csomópont tulajdonságai szakaszban adja hozzá az Alárendelt kiszolgálón
-   használandó Összeépítési eszközkészletek eszközhelyeit.
-   Részletekért lásd: <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration"> Elsődleges/Alárendelt konfiguráció</a>.
-  </p>
-  <p>
-   Ha szimbolikus hivatkozásokat szeretne betölteni, néhány további beállítási lépés is szükséges. Szimbolikus
-   hivatkozások létrehozásához hozzá kell férnie a natív függvénytárakhoz. A beállítással kapcsolatos további
-   részletekért tekintse meg a <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Team Concert bedolgozó</a>
-   leírását.  
-</div>
+  <p>Az Összeépítési eszközkészlet útvonala. Ez egy könyvtár lesz a telepített RTC összeépítési eszközökön belül. Például: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit</p>
+  <p>Az Összeépítési eszközkészlet útvonala az elsődleges rendszeren. Ha osztott összeépítési beállításokkal rendelkezik (ügynökök), akkor azt is meg kell adnia, hogy az összeépítési eszközkészlet hol van az ügynökön (feltételezve, hogy egy másik útvonalon van). A mentés után lépjen az ügynök konfigurációjába. A Csomópont tulajdonságai részben adjon hozzá Szerszámhelyeket az ügynökhöz használni kívánt összeépítési eszközkészletekhez. Részletekért tekintse meg az <a href="https://github.com/jenkinsci/teamconcert-plugin/#TeamConcertPlugin-MasterAgentConfiguration"> Elsődleges/ügynök konfiguráció</a> című részt.</p>
+  <p>Ha szimbolikus hivatkozásokat szándékozik betölteni, akkor néhány további beállítás szükséges. Szimbolikus
+   hivatkozások létrehozásához hozzáférés szükséges a natív függvénytárakhoz. A beállítással kapcsolatos további
+   részletekért tekintse meg a <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert bedolgozó</a> oldalt.</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173909-3_en_hu -->

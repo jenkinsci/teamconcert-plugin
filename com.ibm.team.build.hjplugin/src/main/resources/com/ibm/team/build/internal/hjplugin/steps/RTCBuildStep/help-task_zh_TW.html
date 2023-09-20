@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>要求建置</h3>
+  <p>從 Jenkins 管線要求 EWM (RTC) 建置。 順利建立要求之後，步驟會在內容 &quot;buildResultUUID&quot; 中傳回建置結果 UUID。</p><br/></div>
+
+<div>
+  <h3>等待建置</h3>
+  <p>等待 EWM (RTC) 建置結果達到特定狀態。 要等待的預設狀態為 COMPLETED 和 INCOMPLETE。 如果提供逾時期間，則在達到指定的狀態或時段到期之前，作業不會進行傳回。 依預設，作業會無限期等待，直到建置結果達到指定的狀態為止。</p><br/></div>
+
+<div>
+   <h3>列出日誌</h3>
+   <p>從 EWM (RTC) 建置結果擷取一或多個日誌的詳細資料。 日誌會出現在 EWM 建置結果的「日誌」標籤中。 此作業將擷取其內容儲存在 EWM 儲存庫中之日誌的詳細資料。</p><br/></div>
+
+<div>
+  <h3>列出構件</h3>
+  <p>從 EWM (RTC) 建置結果擷取構件的詳細資料。 構件會出現在 EWM 建置結果的「下載」標籤中。 此作業將擷取其內容儲存在 EWM 儲存庫中之構件的詳細資料。</p><br/></div>
+
+<div>
+  <h3>下載日誌</h3>
+  <p>從 EWM (RTC) 建置結果下載日誌。 您可以使用日誌的名稱或內容 ID 來下載日誌。 若要擷取日誌的名稱或 contentId ，請使用「列出日誌」作業。</p><br/></div>
+
+<div>
+  <h3>下載構件</h3>
+  <p>從 EWM (RTC) 建置結果下載構件。 您可以使用構件的名稱或內容 ID 來下載構件。 若要擷取構件的名稱或 contentId，請使用「列出構件」作業。</p><br/></div>
+
+<div>
+  <h3>從建置取得 SCM Snapshot</h3>
+  <p>擷取給定 EWM (RTC) 建置結果的 Jazz SCM Snapshot 詳細資料。 如果建置結果具有 Jazz SCM Snapshot 要素項，則作業會傳回 Snapshot 的名稱和 UUID。 如果建置結果不具有該要素項，則作業會針對 Snapshot 名稱和 UUID 傳回空白值。</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164415-2_en_zh-Hant -->

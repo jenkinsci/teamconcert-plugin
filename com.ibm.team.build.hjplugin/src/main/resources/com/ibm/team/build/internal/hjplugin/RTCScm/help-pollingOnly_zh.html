@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>当此选项设置为 <code>true</code> 时，该插件将仅执行轮询，但不会接受或装入存储库工作空间。</p>
+	<p>注：如果选择此选项，那么必须确保在下一个轮询时间间隔内，在构建过程中接受对工作空间的更改。</p>
+	<p>如果此选项设置为 <em>true</em>，那么 RTCScm 将仅轮询存储库工作空间，而不会执行以下操作：</p>
+	 <p><ul>
+	 <li>accept</li>
+	 <li>装入</li>
+	 <li>在构建中记录更改日志</li>
+	 <li>使用特定于插件的数据更新 Jenkins 构建</li>
+	 </ul>
+	 </p>
+	 <p>演进和向后兼容性</p>
+	 <p><ul>
+	 <li>对于在 2.3.0 之前创建的作业，该选项的值将为 <em>false</em>。</li>
+	 <li>对于新作业，该选项的值将为 <em>false</em>。</li>
+	 </ul>
+	 </p>
+	 <p>约束</p>
+	 <p><ul>
+	 <li>支持管道作业。</li>
+	 <li>支持构建定义和构建工作空间类型。</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173923-1_en_zh-Hans -->

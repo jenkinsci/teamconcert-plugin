@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Demander une génération</h3>
+  <p>Demandez une génération EWM (RTC) à partir du pipeline Jenkins. Lorsqu&#39;une demande est créée, l&#39;étape renvoie l&#39;UUID du résultat de génération dans la propriété « buildResultUUID ».</p><br/></div>
+
+<div>
+  <h3>Attendre la génération</h3>
+  <p>Attendez qu&#39;un résultat de génération EWM (RTC) atteigne un état spécifique. Les états par défaut à attendre sont COMPLETED et INCOMPLETE. Si un délai d&#39;attente est indiqué, la tâche n&#39;est pas renvoyée tant que l&#39;état spécifié n&#39;est pas atteint ou que le délai n&#39;est pas expiré. Par défaut, la tâche attend indéfiniment jusqu&#39;à ce que le résultat de génération atteigne les états spécifiés.</p><br/></div>
+
+<div>
+   <h3>Répertorier les journaux</h3>
+   <p>Extrayez les détails d&#39;un ou de plusieurs journaux d&#39;un résultat de génération EWM (RTC). Les journaux apparaissent dans l&#39;onglet « Journaux » du résultat de génération EWM. Cette tâche extrait les détails des journaux dont le contenu est stocké dans le référentiel EWM.</p><br/></div>
+
+<div>
+  <h3>Répertorier les artefacts</h3>
+  <p>Extrayez les détails des artefacts d&#39;un résultat de génération EWM (RTC). Les artefacts apparaissent dans l&#39;onglet « Téléchargements » du résultat de génération EWM. Cette tâche extrait les détails des artefacts dont le contenu est stocké dans le référentiel EWM.</p><br/></div>
+
+<div>
+  <h3>Journal de téléchargement</h3>
+  <p>Téléchargez un journal à partir d&#39;un résultat de génération EWM (RTC). Vous pouvez télécharger un journal à l&#39;aide du nom du journal ou de l&#39;ID de contenu. Pour extraire le nom ou contentId du journal, utilisez la tâche « Répertorier les journaux ».</p><br/></div>
+
+<div>
+  <h3>Télécharger l&#39;artefact</h3>
+  <p>Téléchargez un artefact à partir d&#39;un résultat de génération EWM (RTC). Vous pouvez télécharger un artefact à l&#39;aide du nom de l&#39;artefact ou de l&#39;ID de contenu. Pour extraire le nom ou contentId de l&#39;artefact, utilisez la tâche « Répertorier les artefacts ».</p><br/></div>
+
+<div>
+  <h3>Obtenir l&#39;image instantanée SCM à partir de la génération</h3>
+  <p>Extrayez les détails de l&#39;instantané Jazz SCM pour un résultat de génération EWM (RTC) donné. Si le résultat de la génération comporte une contribution d&#39;image instantanée Jazz SCM, la tâche renvoie le nom et l&#39;UUID de l&#39;image instantanée. Si le résultat de génération n&#39;a pas de contribution de ce type, la tâche renvoie des valeurs vides pour le nom de l&#39;image instantanée et l&#39;identificateur unique universel.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164509-1_en_fr -->

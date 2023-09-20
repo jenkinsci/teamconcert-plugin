@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Žádat o sestavení</h3>
+  <p>Vyžádejte sestavení EWM (RTC) z propojení procesů Jenkins. Když je požadavek úspěšně vytvořen, krok vrátí UUID výsledku sestavení ve vlastnosti &quot;buildResultUUID&quot;.</p><br/></div>
+
+<div>
+  <h3>Čekat na sestavení</h3>
+  <p>Počkejte, až výsledek sestavení EWM (RTC) dosáhne specifického stavu. Výchozí stavy, na které se má čekat, jsou COMPLETED a INCOMPLETE. Je-li zadán časový limit, úloha se nevrátí, dokud nebude dosaženo určeného stavu, nebo dokud nevyprší časový interval. Ve výchozím nastavení bude úloha čekat nekonečně dlouho, dokud výsledek sestavení nedosáhne určených stavů.</p><br/></div>
+
+<div>
+   <h3>Vypsat protokoly</h3>
+   <p>Načtěte podrobnosti jednoho nebo více protokolů z výsledku sestavení EWM (RTC). Protokoly se zobrazí na kartě &quot;Protokoly&quot; výsledku sestavení EWM. Tato úloha načte podrobnosti o protokolech, jejichž obsah je uložen v úložišti EWM.</p><br/></div>
+
+<div>
+  <h3>Vypsat artefakty</h3>
+  <p>Načtěte podrobností o artefaktech z výsledku sestavení EWM (RTC). Artefakty se zobrazí na kartě &quot;Stažení&quot; výsledku sestavení EWM. Tato úloha načte podrobnosti o artefaktech, jejichž obsah je uložen v úložišti EWM.</p><br/></div>
+
+<div>
+  <h3>Stáhnout protokol</h3>
+  <p>Stáhněte protokol z výsledku sestavení EWM (RTC). Protokol můžete stáhnout pomocí názvu protokolu nebo ID obsahu. Chcete-li načíst název nebo contentId protokolu, použijte úlohu &quot;Vypsat protokoly&quot;.</p><br/></div>
+
+<div>
+  <h3>Stáhnout artefakt</h3>
+  <p>Stáhněte artefakt z výsledku sestavení EWM (RTC). Artefakt můžete stáhnout pomocí názvu artefaktu nebo ID obsahu. Chcete-li načíst název nebo contentId artefaktu, použijte úlohu &quot;Vypsat artefakty&quot;.</p><br/></div>
+
+<div>
+  <h3>Získat snímek SCM ze sestavení</h3>
+  <p>Načtěte podrobností snímku Jazz SCM pro daný výsledek sestavení EWM (RTC). Má-li výsledek sestavení příspěvek snímku Jazz SCM, úloha vrátí název a UUID snímku. Nemá-li výsledek sestavení takový příspěvek, úloha vrátí prázdné hodnoty pro název a UUID snímku.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164507-2_en_cs -->

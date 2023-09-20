@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Összeépítés kérése</h3>
+  <p>Egy EWM (RTC) összeépítést kér a Jenkins futószalagról. Egy kérés sikeres létrehozása esetén a lépés visszaadja az összeépítési eredmény UUID azonosítóját a &quot;buildResultUUID&quot; tulajdonságban.</p><br/></div>
+
+<div>
+  <h3>Várakozás összeépítésre</h3>
+  <p>Várjon, amíg egy EWM (RTC) összeépítési eredmény fel nem vesz egy adott állapotot. Az alapértelmezett állapotok, amelyekre várni kell: COMPLETED és INCOMPLETE. Ha meg van adva időkorlát, akkor a feladat nem tér vissza a megadott állapot eléréséig vagy az időkorlát lejártáig. Alapértelmezés szerint a feladat korlátlan ideig várakozik, amíg az összeépítési eredmény el nem éri a megadott állapotokat.</p><br/></div>
+
+<div>
+   <h3>Naplók listázása</h3>
+   <p>Egy vagy több napló részleteinek lekérése egy EWM (RTC) összeépítési eredményből. A naplók az EWM összeépítési eredmény &quot;Naplók&quot; lapján jelennek meg. Ez a feladat azon naplók részleteit kéri le, amelyek tartalma az EWM lerakatban van tárolva.</p><br/></div>
+
+<div>
+  <h3>Műtermékek listázása</h3>
+  <p>A műtermékek részleteinek lekérése egy EWM (RTC) összeépítési eredményből. A műtermékek az EWM összeépítési eredmény &quot;Letöltések&quot; lapján jelennek meg. Ez a feladat azon műtermékek részleteit kéri le, amelyek tartalma az EWM lerakatban van tárolva.</p><br/></div>
+
+<div>
+  <h3>Napló letöltése</h3>
+  <p>Egy napló letöltése egy EWM (RTC) összeépítési eredményből. A napló nevének vagy tartalomazonosítójának használatával tölthet le egy naplót. A napló nevének vagy contentId értékének lekéréséhez használja a &quot;Naplók listázása&quot; feladatot.</p><br/></div>
+
+<div>
+  <h3>Műtermék letöltése</h3>
+  <p>Egy műtermék letöltése egy EWM (RTC) összeépítési eredményből. Egy műterméket a műtermék neve vagy tartalomazonosítója segítségével tölthet le. A műtermék nevének vagy contentId értékének lekéréséhez használja a &quot;Műtermékek listázása&quot; feladatot.</p><br/></div>
+
+<div>
+  <h3>SCM pillanatkép lekérése az összeépítésből</h3>
+  <p>Lekéri egy adott EWM (RTC) összeépítési eredmény Jazz SCM pillanatkép részleteit. Ha az összeépítési eredmény tartalmaz Jazz SCM pillanatkép hozzájárulást, akkor a feladat visszaadja a pillanatkép nevét és UUID azonosítóját. Ha az összeépítési eredmény nem tartalmaz ilyen hozzájárulást, akkor a feladat üres értékeket ad vissza a pillanatkép neveként és UUID azonosítójaként.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164439-3_en_hu -->

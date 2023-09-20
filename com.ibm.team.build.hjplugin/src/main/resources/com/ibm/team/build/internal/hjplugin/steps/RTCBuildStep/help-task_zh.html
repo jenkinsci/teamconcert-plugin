@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>请求构建</h3>
+  <p>请求来自 Jenkins 管道的 EWM (RTC) 构建。 成功创建请求后，该步骤将返回属性“buildResultUUID”中的构建结果 UUID。</p><br/></div>
+
+<div>
+  <h3>等待构建</h3>
+  <p>等待 EWM (RTC) 构建结果达到特定状态。 要等待的缺省状态为 COMPLETED 和 INCOMPLETE。 如果提供了超时时间长度，那么在达到指定状态或超时时间长度到期之前，任务不会返回。 缺省情况下，该任务将无限期等待下去，直到构建结果达到指定的状态为止。</p><br/></div>
+
+<div>
+   <h3>列出日志</h3>
+   <p>从 EWM (RTC) 构建结果中检索一个或多个日志的详细信息。 日志显示在 EWM 构建结果的“日志”选项卡中。 此任务将检索其内容存储在 EWM 存储库中的日志的详细信息。</p><br/></div>
+
+<div>
+  <h3>列出工件</h3>
+  <p>从 EWM (RTC) 构建结果中检索工件的详细信息。 工件显示在 EWM 构建结果的“下载”选项卡中。 此任务将检索其内容存储在 EWM 存储库中的工件的详细信息。</p><br/></div>
+
+<div>
+  <h3>下载日志</h3>
+  <p>从 EWM (RTC) 构建结果下载日志。 您可以使用日志的名称或内容标识来下载日志。 要检索日志的名称或 contentId，请使用“列出日志”任务。</p><br/></div>
+
+<div>
+  <h3>下载工件</h3>
+  <p>从 EWM (RTC) 构建结果下载工件。 您可以使用工件的名称或内容标识下载工件。 要检索工件的名称或 contentId，请使用“列出工件”任务。</p><br/></div>
+
+<div>
+  <h3>从构建获取 SCM 快照</h3>
+  <p>检索指定 EWM (RTC) 构建结果的 Jazz SCM 快照详细信息。 如果构建结果具有 Jazz SCM 快照添加项，那么该任务将返回快照的名称和 UUID。 如果构建结果没有此类添加项，那么该任务将返回快照名称和 UUID 的空值。</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164350-2_en_zh-Hans -->

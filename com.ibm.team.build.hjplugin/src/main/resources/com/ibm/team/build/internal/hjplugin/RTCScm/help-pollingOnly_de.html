@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Wenn diese Option auf <code>true</code> gesetzt ist, führt das Plug-in nur Abfragen durch, akzeptiert oder lädt jedoch nicht den Repository-Arbeitsbereich.</p>
+	<p>Anmerkung: Wenn Sie diese Option auswählen, müssen Sie sicherstellen, dass Änderungen innerhalb des nächsten Abfrageintervalls im Arbeitsbereich als Teil des Builds akzeptiert werden.</p>
+	<p>Wenn diese Option auf <em>true</em> gesetzt ist, fragt RTCScm nur den Repository-Arbeitsbereich ab und führt die folgenden Aktionen nicht aus:</p>
+	 <p><ul>
+	 <li>Akzeptieren</li>
+	 <li>load</li>
+	 <li>Änderungsprotokoll im Build aufzeichnen</li>
+	 <li>Jenkins-Build mit für Plug-in spezifischen Daten aktualisieren</li>
+	 </ul>
+	 </p>
+	 <p>Weiterentwicklung und Abwärtskompatibilität</p>
+	 <p><ul>
+	 <li>Für Jobs, die vor 2.3.0 erstellt wurden, hat die Option den Wert <em>false</em>.</li>
+	 <li>Bei neuen Jobs hat die Option den Wert <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Vorgaben</p>
+	 <p><ul>
+	 <li>Wird für Pipelinejobs unterstützt.</li>
+	 <li>Wird für Builddefinitionen und Buildarbeitsbereichstypen unterstützt.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173858-3_en_de -->

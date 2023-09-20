@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Je-li tato volba nastavena na hodnotu <code>true</code>, bude modul plug-in provádět pouze systém výzev, ale nepřijme nebo nenačte pracovní prostor úložiště.</p>
+	<p>Poznámka: Vyberete-li tuto volbu, musíte zajistit, aby byly změny v pracovním prostoru přijaty jako součást sestavení, v rámci dalšího intervalu výzev.</p>
+	<p>Je-li tato volba nastavena na hodnotu <em>true</em>, bude RTCScm provádět výzvy pouze pro pracovní prostor úložiště a nebude provádět následující akce,</p>
+	 <p><ul>
+	 <li>přijmout</li>
+	 <li>load</li>
+	 <li>záznam protokolu změn v sestavení</li>
+	 <li>aktualizace sestavení Jenkins s daty specifickými pro modul plug-in</li>
+	 </ul>
+	 </p>
+	 <p>Vývoj a zpětná kompatibilita</p>
+	 <p><ul>
+	 <li>Pro úlohy vytvořené před verzí 2.3.0 bude hodnota volby <em>false</em>.</li>
+	 <li>U nových úloh bude použita hodnota volby <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Omezení</p>
+	 <p><ul>
+	 <li>Podporováno pro úlohy propojení procesů.</li>
+	 <li>Podporováno pro definici sestavení a typy pracovního prostoru sestavení.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173917-2_en_cs -->

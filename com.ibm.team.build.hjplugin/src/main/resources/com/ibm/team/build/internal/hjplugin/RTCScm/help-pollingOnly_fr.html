@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Lorsque cette option est définie sur <code>true</code>, le plug-in effectue uniquement une interrogation mais n&#39;accepte pas ou ne charge pas l&#39;espace de travail de référentiel.</p>
+	<p>Remarque : si vous sélectionnez cette option, vous devez vous assurer que les modifications sont acceptées dans l&#39;espace de travail dans le cadre de la génération, au cours de l&#39;intervalle d&#39;interrogation suivant.</p>
+	<p>Si cette option est définie sur <em>true</em>, RTCScm interroge uniquement l&#39;espace de travail de référentiel et n&#39;effectue pas les actions suivantes :</p>
+	 <p><ul>
+	 <li>accepter</li>
+	 <li>load</li>
+	 <li>enregistrement du journal des modifications dans la génération</li>
+	 <li>mise à jour de la génération Jenkins avec des données spécifiques au plug-in</li>
+	 </ul>
+	 </p>
+	 <p>Evolution et compatibilité avec les versions antérieures</p>
+	 <p><ul>
+	 <li>Pour les travaux créés avant la version 2.3.0, la valeur de l&#39;option sera <em>false</em>.</li>
+	 <li>Pour les nouveaux travaux, la valeur de l&#39;option sera <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Contraintes</p>
+	 <p><ul>
+	 <li>Pris en charge pour les travaux de pipeline.</li>
+	 <li>Pris en charge pour les types de définition de génération et d&#39;espace de travail de génération.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T174000-1_en_fr -->

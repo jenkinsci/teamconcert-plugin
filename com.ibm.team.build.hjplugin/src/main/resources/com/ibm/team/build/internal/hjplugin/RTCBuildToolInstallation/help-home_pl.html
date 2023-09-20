@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,16 +14,8 @@
 <!-- NLS_CHARSET=UTF-8 -->
 
 <div>
-  <p>
-   Ścieżka do pakietu budowania. Będzie to katalog, w którym będą instalowane narzędzia budowania produktu RTC.
-   Przykład: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
-  </p>
-  <p>
-   Ścieżka do pakietu budowania w węźle głównym. Jeśli używana jest konfiguracja budowania rozproszonego (węzły podrzędne), konieczne będzie także określenie położenia pakietu budowania w węźle podrzędnym (zakładając, że jest to inna ścieżka).
-   Po zapisaniu przejdź do konfiguracji węzła podrzędnego. W sekcji Właściwości węzła dodaj położenia narzędzi dla każdego pakietu budowania używanego w węźle podrzędnym.
-   Szczegółowe informacje można znaleźć w sekcji <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Konfiguracja węzła głównego/podrzędnego</a>.
-  </p>
-  <p>
-   Jeśli planowane jest załadowanie dowiązań symbolicznych, konieczne będzie wykonanie dodatkowych czynności konfiguracyjnych. Do utworzenia dowiązań symbolicznych wymagany jest dostęp do bibliotek własnych. Więcej informacji na temat konfiguracji
-   zawiera strona <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Wtyczka produktu Team Concert</a>.  
-</div>
+  <p>Ścieżka do pakietu budowania. Będzie to katalog, w którym będą instalowane narzędzia budowania produktu RTC. Przykład: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit</p>
+  <p>Ścieżka do pakietu budowania w węźle głównym. Jeśli istnieje rozproszona konfiguracja budowania (agenty), należy również określić miejsce, w którym znajduje się pakiet budowania na agencie (przy założeniu, że jest to inna ścieżka). Po zapisaniu przejdź do konfiguracji agenta. W sekcji Właściwości węzła dodaj położenia narzędzi dla każdego zestawu narzędzi budowania, które mają być używane na agencie. Szczegółowe informacje na ten temat zawiera sekcja <a href="https://github.com/jenkinsci/teamconcert-plugin/#TeamConcertPlugin-MasterAgentConfiguration">Konfigurowanie wzorca/agenta</a>.</p>
+  <p>Jeśli planowane jest załadowanie dowiązań symbolicznych, konieczne będzie wykonanie dodatkowych czynności konfiguracyjnych. Do utworzenia dowiązań symbolicznych wymagany jest dostęp do bibliotek własnych. Więcej informacji na temat konfiguracji
+   zawiera strona <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Wtyczka produktu Team Concert</a>.</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173957-2_en_pl -->

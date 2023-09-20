@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Quando questa opzione è impostata su <code>true</code>, il plugin eseguirà solo il polling ma non accetterà o caricherà lo spazio di lavoro del repository.</p>
+	<p>Nota: Se si seleziona questa opzione, è necessario assicurarsi che le modifiche vengano accettate nello spazio di lavoro come parte della build, entro il successivo intervallo di polling.</p>
+	<p>Se questa opzione è impostata su <em>true</em>, RTCScm eseguirà il polling solo dello spazio di lavoro repository e non eseguirà le azioni riportate di seguito.</p>
+	 <p><ul>
+	 <li>accetta</li>
+	 <li>carica</li>
+	 <li>registrazione del log delle modifiche nella build</li>
+	 <li>aggiornamento della build Jenkins con dati specifici del plug-in</li>
+	 </ul>
+	 </p>
+	 <p>Evoluzione e compatibilità precedente</p>
+	 <p><ul>
+	 <li>Per lavori creati prima di 2.3.0, il valore dell&#39;opzione sarà <em>false</em>.</li>
+	 <li>Per i nuovi lavori, il valore dell&#39;opzione sarà <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Vincoli</p>
+	 <p><ul>
+	 <li>Supportato per i lavori pipeline.</li>
+	 <li>Supportato per la definizione di build e i tipi di spazio di lavoro di build.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173936-1_en_it -->

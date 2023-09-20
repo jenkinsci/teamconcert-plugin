@@ -1,13 +1,12 @@
 /*******************************************************************************
- * Copyright © 2021 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Licensed Materials - Property of IBM
+ * © Copyright IBM Corporation 2008, 2023. All Rights Reserved.
  *
- * Contributors:
- *     IBM Corporation - initial API and implementation
- */
+ * Note to U.S. Government Users Restricted Rights:
+ * Use, duplication or disclosure restricted by GSA ADP Schedule
+ * Contract with IBM Corp.
+ *******************************************************************************/
+
 package com.ibm.team.build.internal.hjplugin.tests;
 
 import static org.junit.Assert.assertTrue;
@@ -90,11 +89,11 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 			WorkflowJob j = setupWorkflowJob(r);
 			WorkflowRun run1= helperSetupBuildForBuildDefinitionWithValidation(testingFacade, j, 
 						buildDefinitionId, workspaceName, workspaceItemId, "testPollingOnlyChangeLogGenerationBuildDefinition",
-						"1", null);
+						"1", null, setupArtifacts);
 			assertTrue(run1.getResult().equals(Result.SUCCESS));
 			WorkflowRun run2 = helperSetupBuildForBuildDefinitionWithValidation(testingFacade, j, 
 						buildDefinitionId, workspaceName, workspaceItemId, "testPollingOnlyChangeLogGenerationBuildDefinition",
-						"2", run1);
+						"2", run1, setupArtifacts);
 			assertTrue(run2.getResult().equals(Result.SUCCESS));
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
@@ -135,12 +134,12 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 			
 			WorkflowRun run1= helperSetupBuildForBuildWorkspaceWithValidation(testingFacade, j, 
 							workspaceName, workspaceItemId, "testPollingOnlyChangeLogGenerationBuildWorkspace", 
-							"1", null);
+							"1", null, setupArtifacts);
 			assertTrue(run1.getResult().equals(Result.SUCCESS));
 
 			WorkflowRun run2 = helperSetupBuildForBuildWorkspaceWithValidation(testingFacade, j, 
 							workspaceName, workspaceItemId, "testPollingOnlyChangeLogGenerationBuildWorkspace",
-							"2", run1);
+							"2", run1, setupArtifacts);
 			assertTrue(run2.getResult().equals(Result.SUCCESS));
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
@@ -190,7 +189,7 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 			WorkflowJob j = setupWorkflowJob(r);
 			WorkflowRun run1= helperSetupBuildForBuildDefinitionWithValidation(testingFacade, j, 
 						buildDefinitionId, workspaceName, workspaceItemId,
-						"testPollingOnlyChangeLogGenerationBuildDefinitionPreviousSnapshotNotFound", "1", null);
+						"testPollingOnlyChangeLogGenerationBuildDefinitionPreviousSnapshotNotFound", "1", null, setupArtifacts);
 			assertTrue(run1.getResult().equals(Result.SUCCESS));
 			
 			// Get the snapshot from run1 and delete the snapshot
@@ -214,7 +213,7 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 			// previous snapshot UUID
 			WorkflowRun run2 = helperSetupBuildForBuildDefinitionWithValidation(testingFacade, j, 
 						buildDefinitionId, workspaceName, workspaceItemId, 
-						"testPollingOnlyChangeLogGenerationBuildDefinitionPreviousSnapshotNotFound", "2", null);
+						"testPollingOnlyChangeLogGenerationBuildDefinitionPreviousSnapshotNotFound", "2", null, setupArtifacts);
 			assertTrue(run2.getResult().equals(Result.SUCCESS));
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
@@ -254,7 +253,7 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 			WorkflowJob j = setupWorkflowJob(r);
 			WorkflowRun run1= helperSetupBuildForBuildWorkspaceWithValidation(testingFacade, j, 
 						workspaceName, workspaceItemId,
-						"testPollingOnlyChangeLogGenerationBuildWorkspacePreviousSnapshotNotFound", "1", null);
+						"testPollingOnlyChangeLogGenerationBuildWorkspacePreviousSnapshotNotFound", "1", null, setupArtifacts);
 			assertTrue(run1.getResult().equals(Result.SUCCESS));
 			
 			// Get the snapshot from run1 and delete the snapshot
@@ -278,7 +277,7 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 			// previous snapshot UUID
 			WorkflowRun run2 = helperSetupBuildForBuildWorkspaceWithValidation(testingFacade, j, 
 						workspaceName, workspaceItemId, 
-						"testPollingOnlyChangeLogGenerationBuildWorkspacePreviousSnapshotNotFound", "2", null);
+						"testPollingOnlyChangeLogGenerationBuildWorkspacePreviousSnapshotNotFound", "2", null, setupArtifacts);
 			assertTrue(run2.getResult().equals(Result.SUCCESS));
 		} finally {
 			Utils.tearDown(testingFacade, Config.DEFAULT, setupArtifacts);
@@ -523,7 +522,7 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 				// and there is no pervious baselineSet details
 				WorkflowRun run1= helperSetupBuildForBuildWorkspaceWithValidation(testingFacade, 
 							j, workspaceName1, workspaceItemId1, 
-							"testPollingOnlyChangelogGenerationTwoWorkspacesUsedInSubsequentBuilds", "1", null); 
+							"testPollingOnlyChangelogGenerationTwoWorkspacesUsedInSubsequentBuilds", "1", null, setupArtifacts1); 
 		
 				assertTrue(run1.getResult().equals(Result.SUCCESS));
 			}
@@ -560,7 +559,7 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 				WorkflowRun run2= helperSetupBuildForBuildWorkspaceWithValidation(testingFacade, 
 							j, workspaceName2, workspaceItemId2, 
 							"testPollingOnlyChangelogGenerationTwoWorkspacesUsedInSubsequentBuilds", 
-							"2", null); 
+							"2", null, setupArtifacts2); 
 		
 				assertTrue(run2.getResult().equals(Result.SUCCESS));
 			}
@@ -594,21 +593,21 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 	
 	private WorkflowRun helperSetupBuildForBuildDefinitionWithValidation(RTCFacadeWrapper testingFacade, WorkflowJob job, 
 			String buildDefinitionId, String workspaceName, String workspaceItemId, String prefix, String suffix, 
-			WorkflowRun previousRun) throws Exception {
+			WorkflowRun previousRun, Map<String,String> setupArtifacts) throws Exception {
 		return helperSetupBuildWithValidation(testingFacade, job, buildDefinitionId, workspaceName, 
-				workspaceItemId, prefix,"helperSetupBuildForBuildDefinitionWithValidation" + suffix, previousRun);
+				workspaceItemId, prefix,"helperSetupBuildForBuildDefinitionWithValidation" + suffix, previousRun, setupArtifacts);
 	}
 	
 	private WorkflowRun helperSetupBuildForBuildWorkspaceWithValidation(RTCFacadeWrapper testingFacade, WorkflowJob job, 
 			String workspaceName, String workspaceItemId, String prefix, String suffix, 
-			WorkflowRun previousRun) throws Exception {
+			WorkflowRun previousRun, Map<String,String> setupArtifacts) throws Exception {
 		return helperSetupBuildWithValidation(testingFacade, job, null, workspaceName, workspaceItemId,
-				prefix , "helperSetupBuildForBuildWorkspaceWithValidation" + suffix, previousRun);
+				prefix , "helperSetupBuildForBuildWorkspaceWithValidation" + suffix, previousRun, setupArtifacts);
 	}
 	
 	private WorkflowRun helperSetupBuildWithValidation(RTCFacadeWrapper testingFacade, WorkflowJob job, 
 			String buildDefinitionId, String workspaceName, String workspaceItemId,
-			String  prefix,	String suffix, WorkflowRun previousRun) throws Exception {
+			String  prefix,	String suffix, WorkflowRun previousRun, Map<String,String> setupArtifacts) throws Exception {
 		
 		File changeLogFile = new File(getSandboxDir(), "RTCChangeLogFile");
 		FileOutputStream changeLog = new FileOutputStream(changeLogFile);
@@ -634,6 +633,11 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 		Map<String, String> properties = (Map<String, String>) result.get("buildProperties");
 		String snapshotUUIDFromAccept = properties.get("team_scm_snapshotUUID");
 		Assert.assertNotNull(snapshotUUIDFromAccept);
+		
+		//Add a component to the stream, so we have changes in the changelog
+		String componentToAddName = getComponentUniqueName();
+		String streamUUID = setupArtifacts.get(Utils.ARTIFACT_STREAM_ITEM_ID);
+		Utils.addComponentToBuildStream(testingFacade, Config.DEFAULT, streamUUID, componentToAddName);
 		
 		String checkoutStep = null; 
 		if (buildDefinitionId != null) {
@@ -677,35 +681,45 @@ public class PollingOnlyChangeLogGenerationIT extends  AbstractRTCBuildStepTest 
 		assertTrue("Expected accept/load skipped message",
 				run.getLog().contains("Polling-only is selected. "
 						+ "Accept and load of the build workspace will be skipped."));
-
-		// Assert
-		RTCChangeLogSet rtcChangeLogSet = getRTCChangeLogSetFromBuild(run);
-		Assert.assertNotNull(rtcChangeLogSet);
-
-		// Validate that the snapshot UUID is same as what we passed in
-		Assert.assertEquals(snapshotUUIDFromAccept, rtcChangeLogSet.getBaselineSetItemId());
-		// Validate the baseline set name
-		Assert.assertEquals(snapshotName, rtcChangeLogSet.getBaselineSetName());
 		
 		// Validate previous baseline set ID and name are null
+		// This is the scenario where baselineSetID and baselineSetName will be null
+		// because either previous snapshot from the build is deleted or owning
+		// workspace is changed so it will not belong to the same workspace.
+		// Here, since there is no other component modified compared to earlier build.
+		// Hence, it will return rtcChangeLogSet as NULL
 		if (previousRun == null) {
-			Assert.assertNull(rtcChangeLogSet.getPreviousBaselineSetItemId());
-			Assert.assertNull(rtcChangeLogSet.getPreviousBaselineSetName());
+			// Assert
+			RTCChangeLogSet rtcChangeLogSet = getRTCChangeLogSetFromBuild(run);
+			Assert.assertNull(rtcChangeLogSet);
 		} else {
+			
+			// Assert
+			RTCChangeLogSet rtcChangeLogSet = getRTCChangeLogSetFromBuild(run);
+			Assert.assertNotNull(rtcChangeLogSet);
+
+			// Validate that the snapshot UUID is same as what we passed in
+			Assert.assertEquals(snapshotUUIDFromAccept, rtcChangeLogSet.getBaselineSetItemId());
+			// Validate the baseline set name
+			Assert.assertEquals(snapshotName, rtcChangeLogSet.getBaselineSetName());
+			
+			// Validate that the workspace owner item id is set correctly
+			Assert.assertEquals(workspaceItemId, rtcChangeLogSet.getWorkspaceItemId());
+			Assert.assertEquals(workspaceName, rtcChangeLogSet.getWorkspaceName());
+			
 			// Get the changeLogSet from previous build 
 			RTCChangeLogSet rtcChangeLogSetPrev = getRTCChangeLogSetFromBuild(run.getPreviousBuild());
 			
 			// Validate previous baseline set ID and name are null/empty
-			Assert.assertEquals(rtcChangeLogSetPrev.getBaselineSetItemId(),
-					 rtcChangeLogSet.getPreviousBaselineSetItemId());
-			Assert.assertEquals(
-					rtcChangeLogSetPrev.getBaselineSetName(),
-					rtcChangeLogSet.getPreviousBaselineSetName());
+			if (rtcChangeLogSetPrev != null) {
+				Assert.assertEquals(rtcChangeLogSetPrev.getBaselineSetItemId(),
+						rtcChangeLogSet.getPreviousBaselineSetItemId());
+				Assert.assertEquals(rtcChangeLogSetPrev.getBaselineSetName(),
+						rtcChangeLogSet.getPreviousBaselineSetName());
+			}
 		}
 		
-		// Validate that the workspace owner item id is set correctly
-		Assert.assertEquals(workspaceItemId, rtcChangeLogSet.getWorkspaceItemId());
-		Assert.assertEquals(workspaceName, rtcChangeLogSet.getWorkspaceName());
+
 		
 		// Validate that the build result action has the right properties
 		RTCBuildResultAction action = getBuildResultAction(run);

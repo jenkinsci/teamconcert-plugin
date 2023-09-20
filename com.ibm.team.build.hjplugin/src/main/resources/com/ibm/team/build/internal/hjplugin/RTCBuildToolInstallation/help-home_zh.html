@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,18 +14,8 @@
 <!-- NLS_CHARSET=UTF-8 -->
 
 <div>
-  <p>
-构建工具箱的路径。此目录将在所安装 RTC 构建工具内。
-示例：C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
-  </p>
-  <p>
-   这是构建工具箱在主控机上的路径。如果您具有分布式构建设置 (Slaves)，那么您也将需要指定构建工具箱在 Slave 上的路径（假定是在不同的路径）。
-   保存后，转至 Slave 的配置。在“节点属性”部分中，添加要在
-   Slave 上使用的每个构建工具箱的“工具”位置。
-   请参阅 <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration"> 主/Slave 配置</a>
-   以获取详细信息。
-  </p>
-  <p>
-   如果您打算装入符号链接，那么需要执行一些附加设置。需要对本机库的访问权才能创建符号链接。有关设置的更多详细信息，请访问
-<a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert 插件</a>
-</div>
+  <p>构建工具箱的路径。 此目录将在所安装 RTC 构建工具内。 示例：C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit</p>
+  <p>这是构建工具箱在主控机上的路径。 如果您具有分布式构建设置（代理程序），那么还需要指定构建工具箱在代理程序上的位置（假定它位于其他路径）。 保存后，转至代理程序的配置。 在“节点属性”部分中，为要在代理程序上使用的每个构建工具箱添加工具位置。 请参阅<a href="https://github.com/jenkinsci/teamconcert-plugin/#TeamConcertPlugin-MasterAgentConfiguration"> 主/代理程序配置</a>以获取详细信息。</p>
+  <p>如果您打算装入符号链接，那么需要执行一些附加设置。 需要对本机库的访问权才能创建符号链接。 有关设置的更多详细信息，请访问
+<a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert 插件</a></div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173913-2_en_zh-Hans -->

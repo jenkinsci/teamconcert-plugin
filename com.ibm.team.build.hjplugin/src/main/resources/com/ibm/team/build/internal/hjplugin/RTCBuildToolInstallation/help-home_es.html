@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,15 +14,7 @@
 <!-- NLS_CHARSET=UTF-8 -->
 
 <div>
-  <p>
-   La vía de acceso al kit de herramientas de compilación. Será un directorio de las herramientas de compilación de RTC instaladas.
-   Ejemplo: C:\Archivos de programa (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
-  </p>
-  <p>
-   La vía de acceso es al kit de herramientas de compilación en el maestro. Si tiene una configuración de configuración distribuida (esclavos), también deberá especificar dónde se encuentra el kit de herramientas de compilación en el esclavo (suponiendo que se encuentre en una vía de acceso distinta).
-   Después de guardar, vaya a la configuración del esclavo. En la sección Propiedades de nodo, añada la ubicación de la herramienta para cada uno de los kits de herramientas de compilación que se utilizarán en el esclavo.
-   Consulte <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Configuración de maestro/esclavo</a> para obtener más información.
-  </p>
-  <p>
-   Si piensa cargar enlaces simbólicos, deberá realizar una configuración adicional. Para crear enlaces simbólicos es necesario tener acceso a las bibliotecas nativas. Puede obtener detalles adicionales sobre la configuración visitando <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Plugin de Team Concert</a>  
-</div>
+  <p>La vía de acceso al kit de herramientas de compilación. Será un directorio de las herramientas de compilación de RTC instaladas. Ejemplo: C:\Archivos de programa (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit</p>
+  <p>La vía de acceso es al kit de herramientas de compilación en el maestro. Si tiene una configuración de compilación distribuida (agentes), también tendrá que especificar dónde se encuentra el kit de herramientas de compilación en el agente (suponiendo que se encuentre en una vía de acceso diferente). Después de guardar, vaya a la configuración del agente. En la sección Propiedades de nodo, añada ubicaciones de herramienta para cada uno de los kits de herramientas de compilación que se van a utilizar en el agente. Consulte <a href="https://github.com/jenkinsci/teamconcert-plugin/#TeamConcertPlugin-MasterAgentConfiguration">Configuración de maestro/agente</a> para obtener más detalles.</p>
+  <p>Si piensa cargar enlaces simbólicos, deberá realizar una configuración adicional. Para crear enlaces simbólicos es necesario tener acceso a las bibliotecas nativas. Puede obtener detalles adicionales sobre la configuración visitando <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Plugin de Team Concert</a></div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173901-1_en_es -->

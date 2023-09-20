@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Jeśli ta opcja jest ustawiona na wartość <code>true</code>, wtyczka będzie przeprowadzać tylko odpytywanie, ale nie będzie akceptować ani ładować obszaru roboczego repozytorium.</p>
+	<p>Uwaga: Jeśli wybierzesz tę opcję, upewnij się, że zmiany zostały zaakceptowane w obszarze roboczym jako część procesu budowania w następnym przedziale czasu odpytywania.</p>
+	<p>Jeśli ta opcja jest ustawiona na wartość <em>true</em>, RTCScm będzie odpytywać tylko obszar roboczy repozytorium i nie będzie wykonywać następujących działań,</p>
+	 <p><ul>
+	 <li>akceptuj</li>
+	 <li>load</li>
+	 <li>rejestrowanie zmian dziennika podczas budowania</li>
+	 <li>aktualizowanie kompilacji Jenkins za pomocą danych specyficznych dla wtyczki</li>
+	 </ul>
+	 </p>
+	 <p>Ewolucja i zgodność wsteczna</p>
+	 <p><ul>
+	 <li>Dla zadań utworzonych przed wersją 2.3.0, wartością opcji będzie <em>false</em>.</li>
+	 <li>W przypadku nowych zadań wartością opcji będzie <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Ograniczenia</p>
+	 <p><ul>
+	 <li>Obsługiwane dla zadań potoków.</li>
+	 <li>Obsługiwane dla definicji budowania i typów obszarów roboczych budowania.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173857-4_en_pl -->

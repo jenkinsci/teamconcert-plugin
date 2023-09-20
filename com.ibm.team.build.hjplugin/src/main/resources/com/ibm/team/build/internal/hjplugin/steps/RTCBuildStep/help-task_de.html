@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>Build anfordern</h3>
+  <p>Fordern Sie einen EWM-Build (RTC) aus der Jenkins-Pipeline an. Wenn eine Anforderung erfolgreich erstellt wurde, gibt der Schritt die UUID des Buildergebnisses in der Eigenschaft &quot;buildResultUUID&quot; zurück.</p><br/></div>
+
+<div>
+  <h3>Auf Build warten</h3>
+  <p>Warten Sie, bis das Ergebnis für ein EWM-Build (RTC) einen bestimmten Status erreicht. Die Standardstatus, auf die gewartet werden soll, sind COMPLETED und INCOMPLETE. Wenn ein Zeitlimitintervall angegeben ist, kehrt die Task erst zurück, wenn der angegebene Status erreicht oder der Zeitraum abgelaufen ist. Standardmäßig wartet die Task unbegrenzt, bis das Buildergebnis die angegebenen Status erreicht.</p><br/></div>
+
+<div>
+   <h3>Protokolle auflisten</h3>
+   <p>Rufen Sie die Details eines oder mehrerer Protokolle aus dem Ergebnis für einen EWM-Build (RTC) ab. Protokolle werden auf der Registerkarte &quot;Protokolle&quot; des EWM-Buildergebnisses angezeigt. Diese Task ruft die Details der Protokolle ab, deren Inhalt im EWM-Repository gespeichert ist.</p><br/></div>
+
+<div>
+  <h3>Artefakte auflisten</h3>
+  <p>Rufen Sie die Details der Artefakte dem Ergebnis für einen EWM-Build (RTC) ab. Artefakte werden auf der Registerkarte &quot;Downloads&quot; des EWM-Buildergebnisses angezeigt. Diese Task ruft die Details der Artefakte ab, deren Inhalt im EWM-Repository gespeichert ist.</p><br/></div>
+
+<div>
+  <h3>Protokoll herunterladen</h3>
+  <p>Laden Sie ein Protokoll aus dem Ergebnis für einen EWM-Build (RTC) herunter. Sie können ein Protokoll unter Verwendung des Protokollnamens oder der Inhalts-ID herunterladen. Verwenden Sie die Task &quot;Protokolle auflisten&quot;, um den Namen oder die contentId des Protokolls abzurufen.</p><br/></div>
+
+<div>
+  <h3>Artefakt herunterladen</h3>
+  <p>Laden Sie ein Artefakt aus dem Ergebnis eines EWM-Builds (RTC) herunter. Sie können ein Artefakt mit dem Namen oder der Inhalts-ID des Artefakts herunterladen. Verwenden Sie zum Abrufen des Namens oder der contentId des Artefakts die Task &quot;Artefakte auflisten&quot;.</p><br/></div>
+
+<div>
+  <h3>SCM-Momentaufnahme aus Build abrufen</h3>
+  <p>Rufen Sie die Details der Jazz-SCM-Momentaufnahme für ein bestimmtes Ergebnis des EWM-Builds (RTC) ab. Wenn das Buildergebnis eine Ergänzung zur Jazz-SCM-Momentaufnahme enthält, gibt die Task den Namen und die UUID der Momentaufnahme zurück. Wenn das Buildergebnis keine solche Ergänzung enthält, gibt die Task leere Werte für den Namen der Momentaufnahme und die UUID zurück.</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164406-1_en_de -->

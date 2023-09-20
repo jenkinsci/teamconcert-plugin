@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,17 +14,7 @@
 <!-- NLS_CHARSET=UTF-8 -->
 
 <div>
-  <p>
-   Pfad zum Build Toolkit. Dies ist ein Verzeichnis in der Installation der RTC Build Tools.
-   Beispiel: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
-  </p>
-  <p>
-   Der Pfad zum Build-Toolkit auf dem Master. Bei einer verteilten Buildkonfiguration (Slaves) müssen Sie
-   außerdem angeben, wo sich das Build-Toolkit auf dem Slave befindet (falls es an anderer Pfad ist).
-   Wechseln Sie nach dem Speichern zur Konfiguration des Slave. Im Abschnitt mit den Knoteneigenschaften fügen Sie die
-   Tool-Positionen für alle Build-Toolkits hinzu, die auf dem Slave verwendet werden sollen.
-   Details dazu finden Sie unter <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Master-/Slave-Konfiguration</a>.
-  </p>
-  <p>
-   Wenn Sie beabsichtigen, symbolische Links zu laden, müssen zusätzliche Konfigurationsschritte ausgeführt werden. Um symbolische Links zu erstellen, ist ein Zugriff auf native Bibliotheken erforderlich. Weitere Informationen zur Konfiguration finden Sie unter <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Team Concert Plugin</a>.
-</div>
+  <p>Pfad zum Build Toolkit. Dies ist ein Verzeichnis in der Installation der RTC Build Tools. Beispiel: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit</p>
+  <p>Der Pfad zum Build-Toolkit auf dem Master. Bei einer verteilten Buildkonfiguration (Agenten) müssen Sie auch angeben, wo sich das Build Toolkit auf dem Agenten befindet (vorausgesetzt, es befindet sich in einem anderen Pfad). Wechseln Sie nach dem Speichern zur Konfiguration des Agenten. Fügen Sie im Abschnitt &quot;Knoteneigenschaften&quot; Toolpositionen für jedes der Build-Toolkits hinzu, die auf dem Agenten verwendet werden sollen. Weitere Informationen finden Sie unter <a href="https://github.com/jenkinsci/teamconcert-plugin/#TeamConcertPlugin-MasterAgentConfiguration"> Master-/Agentenkonfiguration</a>.</p>
+  <p>Wenn Sie beabsichtigen, symbolische Links zu laden, müssen zusätzliche Konfigurationsschritte ausgeführt werden. Um symbolische Links zu erstellen, ist ein Zugriff auf native Bibliotheken erforderlich. Weitere Informationen zur Konfiguration finden Sie unter <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin">Team Concert Plugin</a>.</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173855-7_en_de -->

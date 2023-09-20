@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Ha ez az opció <code>true</code> értékre van beállítva, akkor a bedolgozó csak lekérdezi a lekérdezést, de nem fogadja el vagy nem tölti be a tár munkaterületet.</p>
+	<p>Megjegyzés: Ha ezt az opciót választja, győződjön meg arról, hogy a módosítások a munkaterületen az összeépítés részeként, a következő lekérdezési időtartamban kerülnek elfogadásra.</p>
+	<p>Ha a beállítás értéke <em>true</em>, az RTCScm csak a tár munkaterületet fogja lekérdezni, és nem hajtja végre a következő műveleteket,</p>
+	 <p><ul>
+	 <li>elfogadás</li>
+	 <li>load</li>
+	 <li>módosítási napló rögzítése az összeépítésben</li>
+	 <li>Jenkins összeépítés frissítése bedolgozó specifikus adatokkal</li>
+	 </ul>
+	 </p>
+	 <p>Evolúció és visszamenőleges kompatibilitás</p>
+	 <p><ul>
+	 <li>A 2.3.0 előtt létrehozott feladatok esetében az opció értéke <em>false</em>.</li>
+	 <li>Új feladatok esetén az opció értéke <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Megszorítások</p>
+	 <p><ul>
+	 <li>Az adatcsatorna feladatokhoz támogatott.</li>
+	 <li>Támogatott összeépítési meghatározás és összeépítési munkaterület típusok esetén.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T174000-2_en_hu -->

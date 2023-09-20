@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>當這個選項設為 <code>true</code> 時，外掛程式只會執行輪詢，但不會接受或載入儲存庫工作區。</p>
+	<p>附註：如果您選取此選項，則必須確保在建置過程中，在下一個輪詢間隔內接受工作區的變更。</p>
+	<p>如果此選項設為 <em>true</em>，則 RTCScm 只會輪詢儲存庫工作區，而不會執行下列動作：</p>
+	 <p><ul>
+	 <li>接受</li>
+	 <li>載入</li>
+	 <li>在建置中記錄變更日誌</li>
+	 <li>使用外掛程式特定資料更新 Jenkins 建置</li>
+	 </ul>
+	 </p>
+	 <p>演進與舊版相容性</p>
+	 <p><ul>
+	 <li>對於在 2.3.0 之前建立的工作，選項的值將為 <em>false</em>。</li>
+	 <li>對於新工作，選項的值將為 <em>false</em>。</li>
+	 </ul>
+	 </p>
+	 <p>限制項</p>
+	 <p><ul>
+	 <li>支援管線工作。</li>
+	 <li>支援建置定義和建置工作區類型。</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T174001-1_en_zh-Hant -->

@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,15 +14,7 @@
 <!-- NLS_CHARSET=UTF-8 -->
 
 <div>
-  <p>
-   Chemin d'accès aux outils de génération. Il s'agit du répertoire dans lequel sont installés les outils de génération RTC.
-   Exemple : C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
-  </p>
-  <p>
-   Le chemin d'accès mène aux outils de génération sur le noeud maître. Si vous disposez d'une configuration de génération répartie (noeuds agents), vous devez aussi spécifier l'emplacement des outils de génération sur le noeud esclave (si le chemin d'accès est différent).
-   Après la sauvegarde, accédez à la configuration du noeud esclave. Dans la section des propriétés de noeud, ajoutez les emplacements de tous les outils de génération à utiliser sur le noeud esclave.
-   Voir <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Master/Slave Configuration</a> pour des détails.
-  </p>
-  <p>
-   Si vous prévoyez de charger des liens symboliques, des étapes de configuration supplémentaires sont nécessaires. L'accès aux bibliothèques natives est requis pour la création de liens symboliques. Pour plus de détails sur la configuration, voir <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert Plugin</a>  
-</div>
+  <p>Chemin d&#39;accès aux outils de génération. Il s&#39;agit du répertoire dans lequel sont installés les outils de génération RTC. Exemple : C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit</p>
+  <p>Le chemin d&#39;accès mène aux outils de génération sur le noeud maître. Si vous disposez d&#39;une configuration de génération distribuée (agents), vous devez également spécifier l&#39;emplacement des outils de génération sur l&#39;agent (en supposant qu&#39;ils se trouvent dans un autre chemin). Après la sauvegarde, accédez à la configuration de l&#39;agent. Dans la section des propriétés de noeud, ajoutez des emplacements d&#39;outils pour chacun des outils de génération à utiliser sur l&#39;agent. Pour plus de détails, voir <a href="https://github.com/jenkinsci/teamconcert-plugin/#TeamConcertPlugin-MasterAgentConfiguration"> Configuration de noeud maître/agent</a>.</p>
+  <p>Si vous prévoyez de charger des liens symboliques, des étapes de configuration supplémentaires sont nécessaires. L&#39;accès aux bibliothèques natives est requis pour la création de liens symboliques. Pour plus de détails sur la configuration, voir <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert Plugin</a></div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173957-1_en_fr -->

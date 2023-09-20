@@ -1,0 +1,40 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+<div>
+	<p>Cuando esta opción se establece en <code>true</code>, el plugin solo realizará el sondeo, pero no aceptará ni cargará el espacio de trabajo de repositorio.</p>
+	<p>Nota: Si selecciona esta opción, debe asegurarse de que se acepten los cambios en el espacio de trabajo como parte de la compilación, dentro del siguiente intervalo de sondeo.</p>
+	<p>Si esta opción se establece en <em>true</em>, RTCScm sondeará solo el espacio de trabajo de repositorio y no realizará las acciones siguientes,</p>
+	 <p><ul>
+	 <li>aceptar</li>
+	 <li>load</li>
+	 <li>registro de cambios de grabación en la compilación</li>
+	 <li>actualización de la compilación de Jenkins con datos específicos de plugin</li>
+	 </ul>
+	 </p>
+	 <p>Evolución y compatibilidad con versiones anteriores</p>
+	 <p><ul>
+	 <li>Para los trabajos creados antes de 2.3.0, el valor de la opción será <em>false</em>.</li>
+	 <li>Para los trabajos nuevos, el valor de la opción será <em>false</em>.</li>
+	 </ul>
+	 </p>
+	 <p>Restricciones</p>
+	 <p><ul>
+	 <li>Admitido para trabajos de interconexión.</li>
+	 <li>Admitido para la definición de compilación y los tipos de espacio de trabajo de compilación.</li>
+	 </ul>
+	 </p>
+</div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T173920-1_en_es -->

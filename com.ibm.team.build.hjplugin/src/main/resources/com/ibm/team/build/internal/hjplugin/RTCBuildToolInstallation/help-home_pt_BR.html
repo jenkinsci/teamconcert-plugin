@@ -1,6 +1,6 @@
 <!--
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
+ * Copyright (c) 2013, 2023 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -14,19 +14,9 @@
 <!-- NLS_CHARSET=UTF-8 -->
 
 <div>
-  <p>
-   O caminho para o Kit de Ferramentas de Compilação. Este será um diretório dentro das ferramentas de compilação do RTC instalado.
-   Exemplo: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit
-  </p>
-  <p>
-   O caminho é para o Kit de Ferramentas de Compilação no Principal. Se você tiver uma configuração de compilação distribuída (Escravos),
-   também precisará especificar onde o Kit de Ferramentas de Compilação está no Escravo (assumindo que está em um caminho diferente).
-   Após o salvamento, acesse a configuração do Escravo. Na seção Propriedades do Nó, inclua os locais
-   da Ferramenta para cada um dos Kits de Ferramenta de Compilação a serem usados no Escravo.
-   Consulte <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin#TeamConcertPlugin-Master%2FSlaveConfiguration">Configuração Principal/Escrava</a> para obter detalhes.
-  </p>
-  <p>
-   Se você pretende carregar links simbólicos, é necessário fazer uma configuração adicional. O acesso às bibliotecas nativas
+  <p>O caminho para o Kit de Ferramentas de Compilação. Este será um diretório dentro das ferramentas de compilação do RTC instalado. Exemplo: C:\Program Files (x86)\IBM\TeamConcertBuild\buildsystem\buildtoolkit</p>
+  <p>O caminho é para o Kit de Ferramentas de Compilação no Principal. Se você tiver uma configuração de construção distribuída (agentes), também será necessário especificar onde o Build Toolkit está no agente (assumindo que ele está em um caminho diferente). Após salvar, acesse a configuração do agente. Na seção Propriedades do Nó, inclua os locais da Ferramenta para cada um dos kits de Ferramentas de Construção a serem usados no agente Consulte <a href="https://github.com/jenkinsci/teamconcert-plugin/#TeamConcertPlugin-MasterAgentConfiguration"> Configuração do Principal / Agente</a> para obter detalhes.</p>
+  <p>Se você pretende carregar links simbólicos, é necessário fazer uma configuração adicional. O acesso às bibliotecas nativas
    é necessário para a criação de links simbólicos. Para obter mais detalhes sobre a configuração, visite
-   <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert Plugin</a>  
-</div>
+   <a href="https://wiki.jenkins-ci.org/display/JENKINS/Team+Concert+Plugin"> Team Concert Plugin</a></div>
+<!-- v2.0.53 : caits-prod-app-gp_ELM-IBMELM-prod_20230620T172130-7_en_pt -->

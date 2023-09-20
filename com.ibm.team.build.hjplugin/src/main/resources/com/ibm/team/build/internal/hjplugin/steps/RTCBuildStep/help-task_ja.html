@@ -1,0 +1,46 @@
+<!--
+/*******************************************************************************
+ * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+-->
+
+<!-- NLS_CHARSET=UTF-8 -->
+
+
+<div>
+  <h3>ビルドの依頼</h3>
+  <p>Jenkins パイプラインから EWM (RTC) ビルドを依頼します。 要求が正常に作成されると、ステップはビルド結果 UUID をプロパティー &quot;buildResultUUID&quot; で返します。</p><br/></div>
+
+<div>
+  <h3>ビルドの待機</h3>
+  <p>EWM (RTC) ビルド結果が特定の状態になるのを待ちます。 待機するデフォルトの状態は、COMPLETED と INCOMPLETE です。 タイムアウト期間が指定されている場合、指定された状態に達するか期間が満了するまで、タスクは戻りません。 デフォルトでは、タスクはビルド結果が指定された状態に達するまで無期限に待機します。</p><br/></div>
+
+<div>
+   <h3>ログのリスト</h3>
+   <p>EWM (RTC) ビルド結果から 1 つ以上のログの詳細を取得します。 ログは、EWM ビルド結果の「ログ」タブに表示されます。 このタスクは、コンテンツが EWM リポジトリーに保管されているログの詳細を取得します。</p><br/></div>
+
+<div>
+  <h3>成果物のリスト</h3>
+  <p>EWM (RTC) ビルド結果から成果物の詳細を取得します。 成果物は、EWM ビルド結果の「ダウンロード」タブに表示されます。 このタスクは、コンテンツが EWM リポジトリーに保管されている成果物の詳細を取得します。</p><br/></div>
+
+<div>
+  <h3>ログのダウンロード</h3>
+  <p>EWM (RTC) ビルド結果からログをダウンロードします。 ログの名前またはコンテンツ ID を使用してログをダウンロードできます。 ログの名前または contentId を取得するには、「ログのリスト」タスクを使用します。</p><br/></div>
+
+<div>
+  <h3>成果物のダウンロード</h3>
+  <p>EWM (RTC) ビルド結果から成果物をダウンロードします。 成果物の名前またはコンテンツ ID を使用して、成果物をダウンロードできます。 成果物の名前または contentId を取得するには、「成果物のリスト」タスクを使用します。</p><br/></div>
+
+<div>
+  <h3>ビルドから SCM スナップショットを取得する</h3>
+  <p>特定の EWM (RTC) ビルド結果の Jazz SCM スナップショットの詳細を取得します。 ビルド結果に Jazz SCM スナップショット・コントリビューションがある場合、タスクはスナップショットの名前と UUID を返します。 ビルド結果にそのようなコントリビューションがない場合、タスクはスナップショット名と UUID に対して空の値を返します。</p>
+</div> 
+ 
+<!-- v2.0.57 : caits-prod-app-gp_ELM-IBMELM-prod_20230818T164352-5_en_ja -->
