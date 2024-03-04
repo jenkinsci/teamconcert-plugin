@@ -78,7 +78,7 @@
         <excludeTestsSureFire>**/UnknownTest.java</excludeTestsSureFire>
         <includeTestsSureFire>**/*Test.java</includeTestsSureFire>
         <dumpLogFiles>false</dumpLogFiles>
-        <rtcJarVersion>2.4.3</rtcJarVersion>
+        <rtcJarVersion>2.4.4</rtcJarVersion>
         <!--  minimum Jenkins LTS version with Java 11 compatibility -->
         <jenkins.version>2.361.1</jenkins.version>
         <maven.javadoc.skip>true</maven.javadoc.skip>

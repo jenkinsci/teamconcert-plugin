@@ -1,12 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2017, 2021 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2017, 2024. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
  *******************************************************************************/
 
 package com.ibm.team.build.internal.hjplugin.rtc.tests;
@@ -18,7 +16,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -44,7 +41,6 @@ import com.ibm.team.build.common.model.IBuildProperty;
 import com.ibm.team.build.internal.hjplugin.rtc.ChangeReport;
 import com.ibm.team.build.internal.hjplugin.rtc.ConnectionDetails;
 import com.ibm.team.build.internal.hjplugin.rtc.Constants;
-import com.ibm.team.build.internal.hjplugin.rtc.IConsoleOutput;
 import com.ibm.team.build.internal.hjplugin.rtc.Messages;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCBuildUtils;
 import com.ibm.team.build.internal.hjplugin.rtc.RTCConfigurationException;
@@ -959,7 +955,6 @@ public class RTCBuildUtilsIT {
 	 		ConsoleOutputHelper listener, Locale clientLocale,
 	 		IProgressMonitor progress) 
 	 		throws RTCConfigurationException, TeamRepositoryException {
-		long startTime = System.currentTimeMillis();
 		Map<String, String> ret = RTCBuildUtils.getInstance().waitForBuild(buildResultUUID, 
 				buildStatesToWaitFor, 
 				waitBuildTimeoutSeconds,
@@ -977,7 +972,7 @@ public class RTCBuildUtilsIT {
 
 	private int getSleepingForMessages(ConsoleOutputHelper listener) {
 		int actualNumberOfSleepingMessages = 0;
-		for (String infoMessage : listener.infoMessages) {
+		for (String infoMessage : listener.getDebugMessages()) {
 			if (infoMessage.contains("waitForBuild: Sleeping for")) {
 				actualNumberOfSleepingMessages++;
 			}
@@ -993,14 +988,12 @@ public class RTCBuildUtilsIT {
 	 		ConsoleOutputHelper listener, Locale clientLocale,
 	 		IProgressMonitor progress) 
 	 		throws RTCConfigurationException, TeamRepositoryException {
-			long startTime = System.currentTimeMillis();
 			Map<String, String> ret = RTCBuildUtils.getInstance().waitForBuild(buildResultUUID, 
 					buildStatesToWaitFor, 
 					waitBuildTimeoutSeconds,
 					waitBuildInterval,
 					teamRepository, listener, 
 					clientLocale, progress);
-			long endTime = System.currentTimeMillis();
 			// Validate that resulting build state is part of buildStatesToWaitFor
 			boolean matched = false;
 			for (int i = 0; i < buildStatesToWaitFor.length; i++) {

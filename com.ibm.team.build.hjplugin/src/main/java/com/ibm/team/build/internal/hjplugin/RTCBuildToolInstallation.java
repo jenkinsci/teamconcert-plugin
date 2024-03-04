@@ -116,7 +116,6 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
 	 */
 	public static FormValidation validateBuildToolkit(boolean warnOnly, File toolkitFile) {
 		String message = null;
-		Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
 		if (!toolkitFile.exists()) {
 			LOGGER.finer("BuildToolKit folder not found : " + toolkitFile.getAbsolutePath()); //$NON-NLS-1$
 			message = Messages.RTCBuildToolInstallation_toolkit_not_found();
@@ -187,6 +186,7 @@ public class RTCBuildToolInstallation extends ToolInstallation implements NodeSp
          */
         @Override
         public FormValidation doCheckHome(@QueryParameter File value) {
+        	Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
             return validateBuildToolkit(false, value);
         }
         

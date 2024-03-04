@@ -1,13 +1,11 @@
 /*******************************************************************************
- * Copyright (c) 2021 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
-********************************************************************************/
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2008, 2024. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
+ *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.steps;
 
 import java.util.Collections;
@@ -68,7 +66,7 @@ public class RTCBuildStep extends Step {
 	private static final String RETRIEVE_SNAPSHOT = "retrieveSnapshot";
 	
 	private static final int WAIT_BUILD_TIMEOUT = DescriptorImpl.defaultWaitBuildTimeout; // Wait forever
-	private static final int WAIT_BUILD_INTERVAL = DescriptorImpl.defaultWaitBuildInterval; // Wait forever
+	private static final int WAIT_BUILD_INTERVAL = DescriptorImpl.defaultWaitBuildInterval; // 30 seconds
 	private static final String DEFAULT_BUILD_STATES = DescriptorImpl.defaultBuildStates;
 	private static final int DEFAULT_MAX_RESULTS = DescriptorImpl.defaultMaxResults;
 
@@ -343,7 +341,7 @@ public class RTCBuildStep extends Step {
 		// if the user explicitly sets a 0 or a negative value,  
 		// we will pick the global one. There is no real way 
 		// to say if timeout was set or not since it gets 
-		// the default value 0, if not explicitly.
+		// the default value 0, if not set explicitly.
 		if (timeout == 0) {
 			return getDescriptor().getGlobalTimeout();
 		}

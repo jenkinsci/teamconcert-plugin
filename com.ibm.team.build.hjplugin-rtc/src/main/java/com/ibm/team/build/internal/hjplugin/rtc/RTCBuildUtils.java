@@ -1,12 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2017, 2021 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2017, 2024. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
  *******************************************************************************/
 
 package com.ibm.team.build.internal.hjplugin.rtc;
@@ -522,7 +520,7 @@ public class RTCBuildUtils {
 							totalwbTimeoutSeconds : waitBuildIntervalSeconds;
 	
 			while(!isInState(result, desiredBuildStates) && !(timeRemaining <= 0)) {
-				listener.log(String.format("waitForBuild: Sleeping for %d seconds", currentDecrement));
+				listener.debug(String.format("waitForBuild: Sleeping for %d seconds", currentDecrement));
 				boolean sleepBroken = sleep(1000 * currentDecrement);
 
 				// Get the latest result after sleeping.
@@ -1001,9 +999,20 @@ public class RTCBuildUtils {
 
 		// Continue attempting creating files with unique time stamp
 		for (int i = 0; i < DESTINATION_FILE_NAME_CHOOSER_MAX_ATTEMPTS; i++) {
-			destinationFileName = destinationFileName + 
-						(new SimpleDateFormat("yyyyMMdd-HHmmss-SSS")).
-						format(new java.util.Date(System.currentTimeMillis()));
+			
+			String name = destinationFileName;
+			String extension = "";
+			String dot = ".";
+			
+			if (name.contains(dot)) {
+				int indexWithLastDot = destinationFileName.lastIndexOf(dot);
+				name = destinationFileName.substring(0, indexWithLastDot);
+				extension = destinationFileName.substring(indexWithLastDot);
+			}
+			
+			destinationFileName = name + (new SimpleDateFormat("yyyyMMdd-HHmmss-SSS"))
+					.format(new java.util.Date(System.currentTimeMillis())) + extension;
+			
 			destinationFile = new File(destinationFolder, destinationFileName);
 			if (destinationFile.createNewFile()) {
 				return destinationFileName;

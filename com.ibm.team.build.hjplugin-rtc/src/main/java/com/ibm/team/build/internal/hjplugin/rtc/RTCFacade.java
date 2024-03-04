@@ -1,12 +1,10 @@
 /*******************************************************************************
- * Copyright © 2013, 2021 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2013, 2024. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
  *******************************************************************************/
 
 package com.ibm.team.build.internal.hjplugin.rtc;
@@ -842,15 +840,15 @@ public class RTCFacade {
 	 *                              Any other issue during processing of the server requests.
 	 */
 	public Map<String, String> waitForBuild(String serverURI, String userId, String password, int timeout, 
-						String buildResultUUID, Object buildStates, long waitBuildTimeout, long waitBuildInterval,
-						Object listener, Locale clientLocale) throws Exception {
+						String buildResultUUID, Object buildStates, long waitBuildTimeout, 
+						long waitBuildInterval, boolean isDebug, Object listener, Locale clientLocale) throws Exception {
 		SubMonitor monitor = getProgressMonitor(); 
 		AbstractBuildClient buildClient = getBuildClient();
 		ConnectionDetails connectionDetails = buildClient.getConnectionDetails(serverURI, userId, password, timeout);
 		RepositoryConnection repoConnection = buildClient.getRepositoryConnection(connectionDetails);
 		try {
 			return repoConnection.waitForBuild(buildResultUUID, (String []) buildStates, waitBuildTimeout, waitBuildInterval,
-					getConsoleOutput(listener), clientLocale, monitor);
+					getConsoleOutput(listener, isDebug), clientLocale, monitor);
 		} catch (OperationCanceledException e) {
 			throw Utils.checkForCancellation(e);
 		}
@@ -925,9 +923,14 @@ public class RTCFacade {
 	 * @return Listener logging wrapper.
 	 */
 	protected IConsoleOutput getConsoleOutput(final Object listener) {
+		return getConsoleOutput(listener, false);
+	}
+	
+    protected IConsoleOutput getConsoleOutput(final Object listener, final boolean isDebugParam) {
 
 		IConsoleOutput logHandler = new IConsoleOutput() {
 
+			private boolean isDebug = isDebugParam;
 			private Method logMethod;
 			private Method errorMethod;
 
@@ -971,6 +974,13 @@ public class RTCFacade {
 				} else {
 					LOGGER.log(Level.FINER, message, e);
 				}
+			}
+
+			@Override
+			public void debug(String message) {
+				if (isDebug) {
+					this.log(message);
+				}				
 			}
 		};
 		return logHandler;

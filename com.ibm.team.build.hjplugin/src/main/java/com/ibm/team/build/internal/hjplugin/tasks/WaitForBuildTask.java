@@ -1,12 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2021 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2021, 2024. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
  *******************************************************************************/
 package com.ibm.team.build.internal.hjplugin.tasks;
 
@@ -83,13 +81,15 @@ public class WaitForBuildTask extends RTCTask<RTCBuildStepResponse> {
 					+ "buildResultUUID: %s\n"
 					+ "buildStates : %s\n"
 					+ "waitBuildTimeout : %d\n"
-					+ "waitBuildInterval : %d",
+					+ "waitBuildInterval : %d\n"
+					+ "isDebug : %s",
 					buildToolkitPath, 
 					serverURI,
 					userId,
 					buildResultUUID, 
 					Arrays.deepToString(buildStatesToWait),
-					waitBuildTimeout, waitBuildInterval));
+					waitBuildTimeout, waitBuildInterval,
+					Boolean.toString(getIsDebug())));
 		}
 	}
 
@@ -126,11 +126,12 @@ public class WaitForBuildTask extends RTCTask<RTCBuildStepResponse> {
 									Object.class, // buildStates
 									long.class,// waitBuildTimeout
 									long.class, // waitBuildInterval
+									boolean.class, // isDebug
 									Object.class, // listener
 									Locale.class }, // clientLocale
 							serverURI, getUserId(), getPassword(), 
 							timeout, buildResultUUID, buildStatesToWait, waitBuildTimeout, waitBuildInterval,
-							new TaskListenerWrapper(getListener()), Locale.getDefault());
+							getIsDebug(), new TaskListenerWrapper(getListener()), Locale.getDefault());
 			
 			// Once the method completes, get back the build state,  
 			// build status and whether the step returned from a timeout.

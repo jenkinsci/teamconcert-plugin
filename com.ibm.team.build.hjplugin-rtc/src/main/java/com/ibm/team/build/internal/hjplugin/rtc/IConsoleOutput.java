@@ -1,12 +1,10 @@
 /*******************************************************************************
- * Copyright (c) 2013 IBM Corporation and others.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- *
- * Contributors:
- *     IBM Corporation - initial API and implementation
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2013, 2024. All Rights Reserved.
+ * 
+ * Note to U.S. Government Users Restricted Rights:  Use,
+ * duplication or disclosure restricted by GSA ADP Schedule 
+ * Contract with IBM Corp.
  *******************************************************************************/
 
 package com.ibm.team.build.internal.hjplugin.rtc;
@@ -29,4 +27,10 @@ public interface IConsoleOutput {
 	 * @param e The error exception to log
 	 */
 	public void log(String message, Exception e);
+	
+	/**
+	 * Print out a message if debug messages can be 
+	 * printed out. Otherwise ignored.
+	 */
+	public void debug(String message); 
 }
