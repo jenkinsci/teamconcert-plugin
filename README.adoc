@@ -1377,6 +1377,16 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[Using Dynamic 
 [[TeamConcertPlugin-Releases]]
 == Releases
 
+=== 2.4.4 March 07, 2024
+
+The following defects are fixed:
+
+* User with Job/Configure role will now able to configure the toolkit path at Job level.
+* "Download log" and "Download artifact" steps in rtcBuild pipeline step will now create new file with proper name and format if file exist with same name at destination directory.
+* waitForBuild step will now log the sleeping logs on each "Wait Time interval" in the build log file only if com.ibm.team.build.debug = true property has been added to the environment or passed as a job parameter. Earlier this could end up flooding the logs for a long running operation.
+
+Note: Team Concert Plugin continues to support LTS versions starting from 2.361.1
+
 === 2.4.3 October 03, 2023 
 
 * Upgraded to Jenkins version 2.361.1 and Java 11.
