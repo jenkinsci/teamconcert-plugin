@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright © 2013, 2024 IBM Corporation and others.
+    Copyright © 2013, 2025 IBM Corporation and others.
     All rights reserved. This program and the accompanying materials
     are made available under the terms of the Eclipse Public License v1.0
     which accompanies this distribution, and is available at
@@ -14,7 +14,7 @@
 	<parent>
 		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>plugin</artifactId>
-		<version>4.52</version>
+		<version>5.0</version>
 	</parent>
 
 	<groupId>org.jenkins-ci.plugins</groupId>
@@ -80,13 +80,14 @@
         <dumpLogFiles>false</dumpLogFiles>
         <rtcJarVersion>2.4.5</rtcJarVersion>
         <!--  minimum Jenkins LTS version with Java 11 compatibility -->
-        <jenkins.version>2.361.1</jenkins.version>
+        <jenkins.version>2.479.1</jenkins.version>
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <findbugs.skip>true</findbugs.skip>
-		<java.version>11</java.version>
-		<maven.compiler.source>11</maven.compiler.source>      
-		<maven.compiler.target>11</maven.compiler.target>
-		<maven.compiler.release>11</maven.compiler.release>    
+		<java.version>17</java.version>
+		<maven.compiler.source>17</maven.compiler.source>      
+		<maven.compiler.target>17</maven.compiler.target>
+		<maven.compiler.release>17</maven.compiler.release>    
+		<test.forkCount>1</test.forkCount>
     </properties>
 
 	<!-- get every artifact through repo.jenkins-ci.org, which proxies all the 
@@ -140,7 +141,7 @@
 		<dependency>
 			<groupId>org.jenkins-ci.plugins</groupId>
 			<artifactId>script-security</artifactId>
-			<version>1189.vb_a_b_7c8fd5fde</version>
+			<version>1373.vb_b_4a_a_c26fa_00</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
@@ -191,7 +192,7 @@
         <dependency>
     		<groupId>io.jenkins.plugins</groupId>
     		<artifactId>caffeine-api</artifactId>
-    		<version>2.9.3-65.v6a_47d0f4d1fe</version>
+    		<version>3.1.8-133.v17b_1ff2e0599</version>
     		<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -203,7 +204,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<shutdown>kill</shutdown>
-					<forkCount>0</forkCount>
+					<forkCount>${test.forkCount}</forkCount>
 					<reuseForks>true</reuseForks>
 					<excludes>
 						<exclude>${excludeTestsSureFire}</exclude>
@@ -224,9 +225,9 @@
 							<goal>integration-test</goal>
 						</goals>
 						<configuration>
-							<argLine>-XX:-UseStringDeduplication -XX:+UseG1GC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError</argLine>
+							<argLine>-XX:-UseStringDeduplication -XX:+UseG1GC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
 							<shutdown>kill</shutdown>
-							<forkCount>0</forkCount>
+							<forkCount>${test.forkCount}</forkCount>
 							<reuseForks>true</reuseForks>
 							<systemPropertyVariables>
 								<com.ibm.team.build.configured>${configured}</com.ibm.team.build.configured>

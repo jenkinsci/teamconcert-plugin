@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2017, 2018 IBM Corporation and others.
+ * Copyright © 2017, 2025 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -50,7 +50,6 @@ import com.ibm.team.build.internal.hjplugin.util.Tuple;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.model.ParameterDefinition;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
@@ -128,7 +127,8 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			
 			// Verify that post build deliver is skipped
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
+			
 			File logFile = build.getLogFile();
 			assertNotNull(Utils.getMatch(logFile, rtcNotConfiguredForBDMsg));
 			assertNotNull(Utils.getMatch(logFile, pbDeliverSkippedMsg));
@@ -151,7 +151,8 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			
 			// Verify that post build deliver is skipped
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
+			
 			File logFile = build.getLogFile();
 			assertNotNull(Utils.getMatch(logFile, rtcNotConfiguredForBDMsg));
 			assertNotNull(Utils.getMatch(logFile, pbDeliverSkippedMsg));
@@ -175,7 +176,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			FreeStyleBuild build = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			
 			// Verify that post build deliver is skipped
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
 			File logFile = build.getLogFile();
 			assertNotNull(Utils.getMatch(logFile, rtcNotConfiguredForBDMsg));
 			assertNotNull(Utils.getMatch(logFile, pbDeliverSkippedMsg));
@@ -216,10 +217,11 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// Run a build and verify that it succeeded
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
-			assertEquals(Result.SUCCESS, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.SUCCESS, b.getResult());
 			
 			// Ensure that the post build deliver succeeded message appears only once
 			File f = b.getLogFile();
+			
 			Utils.dumpPBLogFile(b, "testPBDeliverMultipleStepsAvoidHandlingSameBuildResult");
 			assertEquals(1, Utils.getMatchCount(f, "Starting post build deliver for build result"));
 			assertEquals(1, Utils.getMatchCount(f, ".*Post-build deliver complete"));
@@ -266,7 +268,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 
 			// Since Jazz SCM is not configured, a build result gets created but nothing happens
-			assertEquals(Result.FAILURE, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.FAILURE, b.getResult());
 			
 			// Ensure that the post build deliver succeeded message appears only once
 			File f = b.getLogFile();
@@ -326,7 +328,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 
 			// Build fails since the destination directory is not a directory
-			assertEquals(Result.FAILURE, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.FAILURE, b.getResult());
 			
 			// Assert that post build deliver was skipped because of trigger policy check
 			// Ensure that the post build deliver succeeded message appears only once
@@ -383,7 +385,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 
 			// Build fails since the destination directory is not a directory
-			assertEquals(Result.FAILURE, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.FAILURE, b.getResult());
 			
 			// Assert that post build deliver was skipped because of trigger policy check
 			// Ensure that the post build deliver succeeded message appears only once
@@ -434,10 +436,11 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 			
 			// Build fails since the destination directory is not a directory
-			assertEquals(Result.FAILURE, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.FAILURE, b.getResult());
 			
 			// Assert that post build deliver was skipped because of trigger policy check
 			// Ensure that the post build deliver succeeded message appears only once
@@ -494,7 +497,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// Although accept would have failed, a build result would have been created
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 			
-			assertEquals(Result.FAILURE, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.FAILURE, b.getResult());
 			
 			// Verify that post build deliver was skipped
 			// Ensure that the post build deliver succeeded message appears only once
@@ -542,15 +545,16 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			
 			// Run a build and verify that it failed
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
+			File f = b.getLogFile();
+			Utils.dumpPBLogFile(b, "testPBDeliverSkippedIfRTCScmFailedToAcceptWithTriggerPolicyAlways");
+			assertEquals(Utils.getBuildLog(b), 
+					Result.FAILURE, b.getResult());
 			
 			// Although accept would have failed, a build result would have been created
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 			
-			assertEquals(Result.FAILURE, b.getResult());
 			
 			// Verify that post build deliver was skipped
-			File f = b.getLogFile();
-			Utils.dumpPBLogFile(b, "testPBDeliverSkippedIfRTCScmFailedToAcceptWithTriggerPolicyAlways");
 			assertEquals(1, Utils.getMatchCount(f, "Aborting post-build deliver. A snapshot was not created by the Jazz SCM pre-build participant."));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
@@ -591,15 +595,16 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 					
 			// Run a build and verify that it succeeded
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithBuildResultUUID(buildResultUUID));
-			assertEquals(Result.SUCCESS, b.getResult());
+			File f = b.getLogFile();
+			Utils.dumpPBLogFile(b, "testPBDeliverSuccessOnBuildResultInitiatedFromRTC");
+			assertEquals(Utils.getBuildLog(b), 
+							Result.SUCCESS, b.getResult());
 			
 			// Verify that the build result action has the build result UUID that 
 			// we passed in
 			assertEquals(buildResultUUID, Utils.getBuildResultUUID(b));
 			
 			// Verify that post build deliver succeeded
-			File f = b.getLogFile();
-			Utils.dumpPBLogFile(b, "testPBDeliverSuccessOnBuildResultInitiatedFromRTC");
 			
 			assertEquals(1, Utils.getMatchCount(f, "Starting post build deliver for build result"));
 			assertEquals(1, Utils.getMatchCount(f, ".*Post-build deliver complete"));
@@ -641,7 +646,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			
 			// Run a build and verify that it succeeded
 			FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithBuildResultUUID(buildResultUUID));
-			assertEquals(Result.SUCCESS, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.SUCCESS, b.getResult());
 			
 			// Verify that the build result action has the build result UUID that 
 			// we passed in
@@ -695,7 +700,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// However since accept failed, there is no jazz scm snapshot
 			// and post build deliver is skipped
 			Utils.dumpPBLogFile(build, "testPBDeliverSkippedForPipelineThatIgnoresAcceptFailure");
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
 			assertEquals(1, Utils.getMatchCount(f, "Aborting post-build deliver. A snapshot was not created by the Jazz SCM pre-build participant."));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
@@ -745,7 +750,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// However since load failed, there will be incomplete activities and 
 			// PB deliver will be skipped
 			Utils.dumpPBLogFile(build, "testPBDeliverSkippedDueToIncompleteActivitiesForPipelineThatIgnoresLoadFailure");
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
 			assertEquals(1, Utils.getMatchCount(f, "Aborting post-build deliver due to 1 incomplete activities."));
 			assertEquals(1, Utils.getMatchCount(f, "Post build deliver skipped"));
 		} finally {
@@ -797,7 +802,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// However since load failed, there will be incomplete activities and 
 			// PB deliver will be skipped
 			Utils.dumpPBLogFile(build, "testPBDeliverSuccessForPipelineThatIgnoresLoadFailureAndIncompleteActivities");
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
 			
 			assertNotNull(Utils.getMatch(f, "Starting post build deliver for build result"));
 			assertNotNull(Utils.getMatch(f, ".*Post-build deliver complete"));
@@ -838,7 +843,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 			
 			// Verify that the build completed successfully
-			assertEquals(Result.SUCCESS, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.SUCCESS, b.getResult());
 
 			// Verify that messages are printed on the console log
 			File f = b.getLogFile();
@@ -896,7 +901,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// cleaned up
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 			// Verify that the build completed successfully
-			assertEquals(Result.SUCCESS, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.SUCCESS, b.getResult());
 
 			// Verify that messages are printed on the console log
 			File f = b.getLogFile();
@@ -936,7 +941,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// cleaned up
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 			// Verify that the build completed successfully
-			assertEquals(Result.SUCCESS, b.getResult());
+			assertEquals(Utils.getBuildLog(b), Result.SUCCESS, b.getResult());
 
 			// Verify that messages are printed on the console log
 			File f = b.getLogFile();
@@ -1054,7 +1059,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			
 			// Verify that there are two successful post build deliver messages.
 			Utils.dumpPBLogFile(build, "testPBDeliverSuccessForMultipleRTCBuildResultActions");
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
 			assertEquals(2, Utils.getMatchCount(f, "Starting post build deliver for build result"));
 			assertEquals(2, Utils.getMatchCount(f, ".*Post-build deliver complete"));
 			assertEquals(2, Utils.getMatchCount(f, "Summary of Post-build Deliver"));
@@ -1120,7 +1125,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			// First for post build deliver that failed.
 			// The second says that post build deliver is skipped.
 			Utils.dumpPBLogFile(build, "testFailureInFirstPBSkipsNextPBDueToTriggerPolicyNoErrors");
-			assertEquals(Result.FAILURE, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.FAILURE, build.getResult());
 			// Post build deliver fails for first build result 
 			assertNotNull(Utils.getMatch(f, "Setting the build status to FAILURE"));
 			assertNotNull(Utils.getMatch(f, "Post build deliver failed for build result .*("+ action1.getBuildResultUUID() + ")"));
@@ -1176,7 +1181,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			Utils.dumpPBLogFile(build, "testFailureInFirstPBDoesNotPreventNextPBDueToNoFailOnErrorAndTriggerPolicyNoErrors");
 			
 			// For the first build result, post build deliver failed.
-			assertEquals(Result.SUCCESS, build.getResult());
+			assertEquals(Utils.getBuildLog(build), Result.SUCCESS, build.getResult());
 			assertNotNull(Utils.getMatch(f, "Post build deliver failed for build result .*("+ action1.getBuildResultUUID() + ")"));
 			
 			// For the second build result, post build deliver succeeded
@@ -1223,7 +1228,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 			Utils.putBuildResultUUIDIntoArtifactIds(b, setupArtifacts);
 			
 			// Verify that the build completed successfully
-			assertEquals(expectedResult, b.getResult());
+			assertEquals(Utils.getBuildLog(b), expectedResult, b.getResult());
 			
 			String triggerPolicyString = "Trigger policy prevented post build deliver for build result \"" + Utils.getBuildResultUUID(b) + "\". Current build status is \"" +
 					expectedResult.toString() + "\" and trigger policy is \""+ triggerPolicy + "\"";
@@ -1304,7 +1309,7 @@ public class RTCPostBuildDeliverPublisherIT  extends AbstractTestCase{
 		FreeStyleBuild b = Utils.runBuild(prj, Utils.getPactionsWithEmptyBuildResultUUID());
 		
 		// Verify that the build successfully completed
-		assertEquals(Result.SUCCESS, b.getResult());
+		assertEquals(Utils.getBuildLog(b), Result.SUCCESS, b.getResult());
 		assertEquals(count, prj.getPublishersList().size());
 		
 		// Verify that the log does not contain any text

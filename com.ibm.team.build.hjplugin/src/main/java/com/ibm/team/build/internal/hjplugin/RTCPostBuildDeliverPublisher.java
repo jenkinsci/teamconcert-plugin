@@ -58,8 +58,7 @@ import net.sf.json.JSONObject;
  *      <li>Post Build Deliver could not be performed due to configuration error</li>
  *      <li>Post Build Deliver failed due to StaleDataExceptions</li>
  *    </ul>
- *  then the Jenkins build will marked as failed.   
- *    
+ *  then the Jenkins build will be marked as failed.   
  *
  */
 public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuildStep {
@@ -125,10 +124,10 @@ public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuil
 						listener.getLogger().println(Messages.RTCPostBuildDeliverPublisher_postbuild_deliver_skipped2(buildResultLabel, buildResultItemId));
 					}
 				}
-			} catch (Exception exp) {
+			} catch (Throwable t) {
 				LOGGER.log(Level.WARNING, 
 						String.format("Post build deliver failed for %s with build label %s. Exception is : ", 
-								buildResultItemId, buildResultLabel), exp); 
+								buildResultItemId, buildResultLabel), t); 
 				/*
 				 * Log the exception and mark the build as failed, if the user wishes to do so
 				 */ 
@@ -205,15 +204,16 @@ public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuil
 								RTCBuildConstants.URI_COMPATIBILITY_CHECK_604, 
 								RTCBuildConstants.MINIMUM_SERVER_VERSION_FOR_PBDELIVER, true);
 			if (errorMessage != null && errorMessage.length() > 0) {
-					listener.getLogger().println(
-							Messages.RTCPostBuildDeliverPublisher_incompatible_server_version(loginInfo.getServerUri(), EXPECTED_SERVER_VERSION, errorMessage));
-					return false;
+				listener.getLogger().println(
+						Messages.RTCPostBuildDeliverPublisher_incompatible_server_version(loginInfo.getServerUri(), EXPECTED_SERVER_VERSION, errorMessage));
+				throw new IOException(
+						Messages.RTCPostBuildDeliverPublisher_incompatible_server_version(loginInfo.getServerUri(), EXPECTED_SERVER_VERSION, errorMessage));
 			}
 			
-			// Deliberately pass the toolkit resolved in the slave or may be master, 
+			// Deliberately pass the toolkit resolved in the agent  or may be master, 
 			// if that is where we are performing this build step
-			// It is possible that the user runs checkout in one slave and post build deliver in another
-			// In that case, we expect the build toolkit to be present in the other slave.
+			// It is possible that the user runs checkout in one slave and post build deliver in another 
+			// In that case, we expect the build toolkit to be present in the other agent.
 			// If not, we will get an exception.
 			RTCBuildDefinitionDetailsTask task = new RTCBuildDefinitionDetailsTask(localBuildToolkit,
 								loginInfo.getServerUri(), loginInfo.getUserId(),  
@@ -222,7 +222,6 @@ public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuil
 								Helper.isDebugEnabled(build, listener), 
 								listener);
 			BuildDefinitionInfo buildDefinitionInfo = workspace.act(task);
-			
 			log(buildDefinitionInfo);
 			
 			// First check whether post build deliver is configured.
@@ -238,7 +237,6 @@ public class RTCPostBuildDeliverPublisher extends Recorder implements SimpleBuil
 				}
 				
 				if (buildDefinitionInfo.isPBTriggerPolicyUnknown()) {
-
 					listener.getLogger().println(
 							Messages.RTCPostBuildDeliverPublisher_postbuild_deliver_incorrect_trigger_policy(scm.getBuildDefinition()));
 					throw new IOException(Messages.RTCPostBuildDeliverPublisher_postbuild_deliver_incorrect_trigger_policy(scm.getBuildDefinition()), null);

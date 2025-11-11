@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013, 2021 IBM Corporation and others.
+ * Copyright (c) 2013, 2025 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -50,7 +50,7 @@ public class RTCRunListener extends RunListener<Run> {
 	@Override
 	public void onCompleted(Run build, TaskListener listener) {
 		LOGGER.finest("onCompleted : Start");
-		// if launched by Hudson/Jenkins terminate the build created in RTC
+		// if launched by Jenkins terminate the build created in EWM
 		try {
 			List<RTCBuildResultAction> actions = build.getActions(RTCBuildResultAction.class);
 			for (RTCBuildResultAction action : actions) {
@@ -89,8 +89,8 @@ public class RTCRunListener extends RunListener<Run> {
 									" Build result=\"" + build.getResult() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 		
 							String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
-							RTCLoginInfo loginInfo = scm.getLoginInfo2(build, masterBuildToolkit, listener, 
-																		Helper.isDebugEnabled(build, listener));
+							RTCLoginInfo loginInfo = scm.getLoginInfo2(build, masterBuildToolkit, listener,
+									                                    Helper.isDebugEnabled(build, listener));
 				    		RTCFacadeFacade.terminateBuild(masterBuildToolkit,
 									loginInfo.getServerUri(),
 									loginInfo.getUserId(), loginInfo.getPassword(),
@@ -137,7 +137,7 @@ public class RTCRunListener extends RunListener<Run> {
 		    		LOGGER.log(Level.FINER, "terminateBuild failed " + e.getMessage(), e); //$NON-NLS-1$
 				}
 				// Handle deletion of temporary workspace created during snapshot or stream build
-				handleDeleteOfTempRepositoryWorkspace(build, action, listener);				
+				performDeletionOfTempRepositoryWorkspace(build, action, listener);				
 			}
 			if (actions.isEmpty()) {
 				LOGGER.finer("Completed Build: " + build.getDisplayName() + " No RTC build result associated."); //$NON-NLS-1$ //$NON-NLS-2$
@@ -163,7 +163,7 @@ public class RTCRunListener extends RunListener<Run> {
 	 * @param action
 	 * @param listener
 	 */
-	private void handleDeleteOfTempRepositoryWorkspace(Run<?,?> build, RTCBuildResultAction action, TaskListener listener) {
+	private void performDeletionOfTempRepositoryWorkspace(Run<?,?> build, RTCBuildResultAction action, TaskListener listener) {
 		String workspaceUUID = null;
 		String workspaceName = null;
 		try {
@@ -190,7 +190,8 @@ public class RTCRunListener extends RunListener<Run> {
 				// Try to delete the workspace. If any exception is thrown, then
 				// it is handled and never thrown out of this method
 				String masterBuildToolkit = scm.getDescriptor().getMasterBuildToolkit(scm.getBuildTool(), listener);
-				RTCLoginInfo loginInfo = scm.getLoginInfo(build.getParent(), masterBuildToolkit);
+				RTCLoginInfo loginInfo = scm.getLoginInfo2(build, masterBuildToolkit, listener, 
+														Helper.isDebugEnabled(build, listener));
 				boolean debug = Boolean.parseBoolean(Helper.getStringBuildParameter(build, RTCJobProperties.DEBUG_PROPERTY, listener));
 
 				RTCFacadeWrapper facade = RTCFacadeFactory.getFacade(masterBuildToolkit, debug?listener.getLogger():null);

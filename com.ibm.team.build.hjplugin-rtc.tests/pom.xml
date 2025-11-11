@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2024 IBM Corporation and others.
+    Copyright (c) 2016, 2025 IBM Corporation and others.
     All rights reserved. This program and the accompanying materials
     are made available under the terms of the Eclipse Public License v1.0
     which accompanies this distribution, and is available at
@@ -19,7 +19,7 @@
   
   
 	<properties>
-        <tycho-version>1.7.0</tycho-version>
+        <tycho-version>2.7.5</tycho-version>
 		<rtc-client-p2repo-url>${env.RTC_Client_p2Repo}</rtc-client-p2repo-url>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.build.outputEncoding>UTF-8</project.build.outputEncoding>
@@ -32,10 +32,10 @@
         <buildtoolkit>${env.buildtoolkit}</buildtoolkit>
         <configured>false</configured>
         <rtcJarVersion>2.4.5</rtcJarVersion>
-        <java.version>11</java.version>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <maven.compiler.release>11</maven.compiler.release>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
         <excludeTests>**/UnknownIT.java</excludeTests>
         <includeTests>**/*IT.java</includeTests>
         <excludeTestsSureFire>**/UnknownTests.java</excludeTestsSureFire>
@@ -144,7 +144,19 @@
 							<echo>${buildtoolkitContents}</echo>
 							
 							<!--  Enumerate all non p2 maven dependencies in dependency folder and create a string with full paths -->
-							<fileset id="dependencyFileSet" dir="${dependencyFolder}" includes="*" casesensitive="true"/>
+							<fileset id="dependencyFileSet" dir="${dependencyFolder}" includes="*" casesensitive="true">
+								<exclude name="com.ibm.team.build.common-*.jar" />
+								<exclude name="com.ibm.team.calm.foundation.common-*.jar" />
+								<exclude name="com.ibm.team.filesystem.common-*.jar" />
+								<exclude name="com.ibm.team.filesystem.common.workitems-*.jar" />
+								<exclude name="com.ibm.team.filesystem.reviews.common-*.jar" />
+								<exclude name="com.ibm.team.foundation.common-*.jar" />
+								<exclude name="com.ibm.team.process.common-*.jar" />
+								<exclude name="com.ibm.team.repository.common-*.jar" />
+								<exclude name="com.ibm.team.rtc.common-*.jar" />
+								<exclude name="com.ibm.team.scm.common-*.jar" />
+								<exclude name="com.ibm.team.workitem.common-*.jar" />
+							</fileset>
 							<property name="rawDependencyContents" refid="dependencyFileSet"/>
 
 							<loadresource property="dependencyContents">
