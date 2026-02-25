@@ -1376,6 +1376,18 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[Using Dynamic 
 
 [[TeamConcertPlugin-Releases]]
 == Releases
+=== 2.4.5 February 02, 2026
+
+The following improvements and defects are fixed:
+
+* Post Build Deliver step failed when running on separate Jenkins agents in Pipeline jobs.It will now execute successfully.
+* Temporary workspaces created for stream configuration were not being deleted when user credentials were used, are now properly deleted when using user credentials.
+* Post Build Deliver step now properly fails and reports errors when connection failures occur, ensuring build status accurately reflects delivery issues.
+* Upgrade to Jenkins version 2.479.1 and Java 17.
+
+
+
+Note: Team Concert Plugin continues to support LTS versions starting from 2.479.1.
 
 === 2.4.4 March 07, 2024
 
