@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -537,7 +536,7 @@ public class RTCBuildStep extends Step {
 		public FormValidation doCheckWaitBuildInterval(@QueryParameter String waitBuildInterval) {
 			LOGGER.entering(this.getClass().getName(), "doCheckWaitBuildInterval");
 			waitBuildInterval = Util.fixEmptyAndTrim(waitBuildInterval);
-			if (StringUtils.isEmpty(waitBuildInterval)) {
+			if (Util.fixEmpty(waitBuildInterval) == null) {
 				LOGGER.finer("Wait build timeout value missing"); //$NON-NLS-1$
 				return FormValidation.error(Messages.RTCBuildStep_waitBuildInterval_required());
 			}
@@ -571,7 +570,7 @@ public class RTCBuildStep extends Step {
 			LOGGER.entering(this.getClass().getName(), "doCheckWaitBuildTimeout");
 
 			waitBuildTimeout = Util.fixEmptyAndTrim(waitBuildTimeout);
-			if (StringUtils.isEmpty(waitBuildTimeout)) {
+			if (Util.fixEmpty(waitBuildTimeout) == null) {
 				LOGGER.finer("Wait build timeout value missing"); //$NON-NLS-1$
 				return FormValidation.error(Messages.RTCBuildStep_waitBuildTimeout_required());
 			}
