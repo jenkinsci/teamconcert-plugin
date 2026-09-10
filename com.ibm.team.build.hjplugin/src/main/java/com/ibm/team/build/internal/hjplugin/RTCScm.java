@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2013, 2021 IBM Corporation and others.
+ * Copyright © 2013, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -2222,6 +2222,20 @@ public class RTCScm extends SCM {
 						" own build life cycle=\"" + buildResultInfo.ownLifeCycle() + "\""); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 
+			// NEW CODE: Update JobProperty immediately for non-personal builds
+			// This is the earliest point where we know if the build is personal or not
+			if (!buildResultInfo.isPersonalBuild()) {
+				// This is a non-personal build - update JobProperty immediately
+				Helper.updateLastNonPersonalBuildProperty(
+					build.getParent(), 
+					build.getNumber(), 
+					buildResultInfo.getBuildResultUUID()
+				);
+				LOGGER.finer("Updated JobProperty immediately for non-personal build #" + build.getNumber());
+			} else {
+				LOGGER.finer("Skipping JobProperty update for personal build #" + build.getNumber());
+			}
+
 			if (buildResultUUID != null) {
 				// if build started by RTC, record the cause of the build
 				RTCBuildCause rtcBuildCause = new RTCBuildCause(buildResultInfo);
@@ -2770,9 +2784,9 @@ public class RTCScm extends SCM {
         				// has the same job properties like build type, repository URL, build definition id and use it for 
         				/// fetching the property. If no such Build Result action is found, then we should return Change.NONE to 
         				// avoid triggering a build unnecessarily.
-    					RTCBuildResultAction rtcBuildResultAction = project.getLastBuild().getAction(RTCBuildResultAction.class);
-    					if ((rtcBuildResultAction != null) && (rtcBuildResultAction.getBuildProperties() != null) &&
-    							"true".equals(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver"))) {
+    					RTCBuildResultAction rtcBuildResultAction = Helper.getLastNonPersonalBuildAction(project);
+						if ((rtcBuildResultAction == null) || 
+						 (rtcBuildResultAction.getBuildProperties() != null && "true".equals(rtcBuildResultAction.getBuildProperties().get("team_scm_acceptPhaseOver")))) {
     						// snapshot has been created, 
     						// hence further changes would not be taken by the running build...
     						LOGGER.finer("Changes detected and accept phase is over"); 

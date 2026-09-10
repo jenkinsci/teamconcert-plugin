@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2014, 2021 IBM Corporation and others.
+ * Copyright © 2014, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -33,6 +33,7 @@ import com.ibm.team.build.internal.hjplugin.RTCBuildResultAction;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory;
 import com.ibm.team.build.internal.hjplugin.RTCFacadeFactory.RTCFacadeWrapper;
 import com.ibm.team.build.internal.hjplugin.RTCJobProperties;
+import com.ibm.team.build.internal.hjplugin.RTCJobProperty;
 import com.ibm.team.build.internal.hjplugin.RTCLoginInfo;
 
 import hudson.FilePath;
@@ -830,5 +831,79 @@ public class Helper {
 		}
 		return snapshotUUID;
 	}
+
+	/**
+	 * Get the RTCBuildResultAction from the last non-personal build using JobProperty.
+	 * 
+	 * @param job The job to get the last non-personal build for
+	 * @return The RTCBuildResultAction from the last non-personal build, or null if not found
+	 */
+	public static RTCBuildResultAction getLastNonPersonalBuildAction(Job<?, ?> job) {
+		if (job == null) {
+			return null;
+		}
+
+		// Try to get from JobProperty first (O(1) lookup)
+		RTCJobProperty rtcProperty = job.getProperty(RTCJobProperty.class);
+		if (rtcProperty != null && rtcProperty.getLastNonPersonalBuildNumber() > 0) {
+			Run<?, ?> cachedBuild = job.getBuildByNumber(rtcProperty.getLastNonPersonalBuildNumber());
+			if (cachedBuild != null) {
+				RTCBuildResultAction action = cachedBuild.getAction(RTCBuildResultAction.class);
+				if (action != null) {
+					LOGGER.finer("Using JobProperty: last non-personal build #" + cachedBuild.getNumber());
+					return action;
+				}
+			}
+		}
+
+		// Property not set or build not found - search for last non-personal build
+		LOGGER.finer("JobProperty not set, searching for last non-personal build");
+		Run<?, ?> build = job.getLastBuild();
+		while (build != null) {
+			RTCBuildResultAction action = build.getAction(RTCBuildResultAction.class);
+			if (action != null && action.getBuildProperties() != null) {
+				String personalProp = action.getBuildProperties().get("personalBuild");
+				if (!"true".equals(personalProp)) {
+					// Found non-personal build
+					LOGGER.finer("Found last non-personal build #" + build.getNumber());
+					return action;
+				}
+			}
+			build = build.getPreviousBuild();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Update the JobProperty for a non-personal build.
+	 * Should be called as soon as we know the build is non-personal.
+	 * 
+	 * @param job The job
+	 * @param buildNumber The build number
+	 * @param buildUUID The build result UUID
+	 */
+	public static void updateLastNonPersonalBuildProperty(Job<?, ?> job, int buildNumber, String buildUUID) {
+		if (job == null) {
+			return;
+		}
+		
+		try {
+			RTCJobProperty rtcProperty = job.getProperty(RTCJobProperty.class);
+			if (rtcProperty == null) {
+				rtcProperty = new RTCJobProperty(buildNumber, buildUUID);
+				job.addProperty(rtcProperty);
+				LOGGER.finer("Created RTCJobProperty for job " + job.getFullName() + " with build #" + buildNumber);
+			} else {
+				rtcProperty.setLastNonPersonalBuildNumber(buildNumber);
+				rtcProperty.setLastNonPersonalBuildUUID(buildUUID);
+				LOGGER.finer("Updated RTCJobProperty for job " + job.getFullName() + " with build #" + buildNumber);
+			}
+			job.save(); // Persist to config.xml
+		} catch (IOException e) {
+			LOGGER.log(Level.WARNING, "Failed to update RTCJobProperty for job " + job.getFullName(), e);
+		}
+	}
+
 }
  
