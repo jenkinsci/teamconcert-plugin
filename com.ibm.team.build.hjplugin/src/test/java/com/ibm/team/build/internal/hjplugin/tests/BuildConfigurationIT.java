@@ -23,7 +23,6 @@ import java.io.PrintStream;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.lang.SystemUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -311,7 +310,7 @@ public class BuildConfigurationIT extends AbstractTestCase {
 	}
 
 	@Test public void testBadFetchLocationWin() throws Exception {
-		if (Config.DEFAULT.isConfigured() && SystemUtils.IS_OS_WINDOWS) {
+		if (Config.DEFAULT.isConfigured() && System.getProperty("os.name").startsWith("Windows")) {
 			RTCLoginInfo loginInfo = Config.DEFAULT.getLoginInfo();
 			
 			String fetchLocation = "invalid/questionmark?/character/is/not/ok";
