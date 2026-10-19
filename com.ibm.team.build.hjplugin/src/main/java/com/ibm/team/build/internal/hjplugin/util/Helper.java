@@ -25,7 +25,7 @@ import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 import com.ibm.team.build.internal.hjplugin.InvalidCredentialsException;
 import com.ibm.team.build.internal.hjplugin.Messages;
@@ -473,7 +473,7 @@ public class Helper {
 	 * @param build The current build
 	 * @return a map of build URLs and labels.
 	 */
-	@Nonnull
+	@NonNull
 	public static Map<String, String> constructBuildURLMap(Run<?, ?> build) {
 		// Add the following entries
 		// previousBuildUrl and currentBuildUrl is relative

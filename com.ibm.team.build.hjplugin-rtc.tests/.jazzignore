@@ -28,6 +28,7 @@ core.ignore.recursive= \
 	{*.class} 
 
 core.ignore= \
+	{.m2} \
 	{bin} \
 	{dependency} \
 	{target} 

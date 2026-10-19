@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2015 IBM Corporation and others.
+ * Copyright (c) 2015, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 @Extension
 public class RTCBuildEnvironmentContributor extends EnvironmentContributor {
@@ -33,7 +33,7 @@ public class RTCBuildEnvironmentContributor extends EnvironmentContributor {
      * Only the {@link Run} variant is overriden because we are trying to mimic {@link RTCBuildResultAction#buildEnvVars}
      */
 	@Override
-    public void buildEnvironmentFor(@Nonnull Run r, @Nonnull EnvVars env, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public void buildEnvironmentFor(@NonNull Run r, @NonNull EnvVars env, @NonNull TaskListener listener) throws IOException, InterruptedException {
 		LOGGER.finest("RTCBuildEnvironmentContributor.buildEnvironmentFor : Enter"); //$NON-NLS-1$
 		List<RTCBuildResultAction> actions = r.getActions(RTCBuildResultAction.class);
 		for (RTCBuildResultAction action : actions) {

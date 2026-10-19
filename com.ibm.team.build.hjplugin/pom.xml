@@ -14,7 +14,7 @@
 	<parent>
 		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>plugin</artifactId>
-		<version>5.0</version>
+		<version>6.2221.va_045130417c9</version>
 	</parent>
 
 	<groupId>org.jenkins-ci.plugins</groupId>
@@ -79,14 +79,14 @@
         <includeTestsSureFire>**/*Test.java</includeTestsSureFire>
         <dumpLogFiles>false</dumpLogFiles>
         <rtcJarVersion>2.4.6</rtcJarVersion>
-        <!--  minimum Jenkins LTS version with Java 11 compatibility -->
-        <jenkins.version>2.479.1</jenkins.version>
+        <!-- minimum Jenkins version with Java 21 compatibility -->
+        <jenkins.version>2.555.1</jenkins.version>
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <findbugs.skip>true</findbugs.skip>
-		<java.version>17</java.version>
-		<maven.compiler.source>17</maven.compiler.source>      
-		<maven.compiler.target>17</maven.compiler.target>
-		<maven.compiler.release>17</maven.compiler.release>    
+		<java.version>21</java.version>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<maven.compiler.release>21</maven.compiler.release>
 		<test.forkCount>1</test.forkCount>
     </properties>
 
@@ -225,7 +225,7 @@
 							<goal>integration-test</goal>
 						</goals>
 						<configuration>
-							<argLine>-XX:-UseStringDeduplication -XX:+UseG1GC -XX:+CMSClassUnloadingEnabled -XX:-HeapDumpOnOutOfMemoryError --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+							<argLine>-XX:-UseStringDeduplication -XX:+UseG1GC -XX:-HeapDumpOnOutOfMemoryError --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED</argLine>
 							<shutdown>kill</shutdown>
 							<forkCount>${test.forkCount}</forkCount>
 							<reuseForks>true</reuseForks>

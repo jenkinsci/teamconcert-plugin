@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright © 2016, 2021 IBM Corporation and others.
+ * Copyright © 2016, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -58,7 +58,7 @@ public class AbstractTestCase {
 	protected String getUniqueName(String prefix) {
 		String suffix1 = (SimpleDateFormat.getDateTimeInstance
 				(DateFormat.LONG, DateFormat.FULL)).format(new Date()).replace(" ","-")
-				.replace(",", "-").replace(":","-");
+				.replace(",", "-").replace(":","-").replace('\u202F', '-');
 		SecureRandom random = new SecureRandom();
 		Long suffix2 = random.nextLong();
 		return prefix + "_" + suffix1 + "_" + Long.toHexString(suffix2);

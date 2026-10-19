@@ -22,11 +22,11 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 [[TeamConcertPlugin-RationalTeamConcertHelpTopics]]
 === Rational Team Concert Help Topics
 
-. link:https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/t_build_overview.html[Rational Team Concert Build Overview]
-. link:https://jazz.net/help-dev/clm/topic/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit]
-. link:https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/tcreatepasstxt.html[Creating encrypted password files]
-. link:https://jazz.net/help-dev/clm/index.jsp?re=1&topic=/com.ibm.team.build.doc/topics/c_hudson_overview.html&scope=null[Hudson/Jenkins build engine type]
-. link:https://jazz.net/help-dev/clm/index.jsp?re=1&topic=/com.ibm.team.build.doc/topics/tcreateworkspace.html&scope=null[Dedicated build workspaces]
+. link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/t_build_overview.html[Rational Team Concert Build Overview]
+. link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/lifecycle-management/7.2.0?topic=SSYMRC_7.2/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit]
+. link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/tcreatepasstxt.html[Creating encrypted password files]
+. link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/c_hudson_overview.html[Hudson/Jenkins build engine type]
+. link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/tcreateworkspace.html[Dedicated build workspaces]
 
 [[TeamConcertPlugin-Requirements]]
 === Requirements
@@ -43,7 +43,7 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 [[TeamConcertPlugin-RTC]]
 ==== RTC
 
-* This plugin requires link:https://jazz.net/products/rational-team-concert/features/build#build-toolkit[Rational Team Concert Build Toolkit] version 6.0 or newer. Older versions of the plugin supports build toolkit versions starting from 3.0.1.5. See the https://jazz.net/help-dev/clm/topic/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
+* This plugin requires link:https://jazz.net/products/rational-team-concert/features/build#build-toolkit[Rational Team Concert Build Toolkit] version 6.0 or newer. Older versions of the plugin supports build toolkit versions starting from 3.0.1.5. See the https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/lifecycle-management/7.2.0?topic=SSYMRC_7.2/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
 * For all the supported build configurations - Build Definition, Repository Workspace, Stream and Snapshot - *a valid build toolkit should be present on both the master and agent machines* and the Jenkins jobs should be configured to use this toolkit. 
 * Some features depend on specific Rational Team Concert build toolkit or server versions. See below.
 ** Stream configuration works only from build toolkit v 5.0.2 or higher.
@@ -58,7 +58,7 @@ As of 7.0 release, Rational Team Concert is now called Engineering Workflow Mana
 ==== Add a new Build Toolkit
 . Navigate to the Jenkins Global Tool configure page (Jenkins > Manage Jenkins >  Global Tool Configuration) and find the "RTC Build toolkit" section.  This section is used to define one or more build toolkits available to the plugin. If you are using Jenkins 1.x, this will be under (Jenkins -> Manage Jenkins -> Configure System)
 . Click the "RTC Build toolkit installations..." button and add a new build toolkit. 
-.. See the link:https://jazz.net/help-dev/clm/topic/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
+.. See the link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/lifecycle-management/7.2.0?topic=SSYMRC_7.2/com.ibm.jazz.install.doc/topics/t_install_build_toolkit.html[Installing the Build System Toolkit] help topic to learn how to install the build toolkit.
 .. There can be multiple RTC build toolkits associated with one jenkins instance.
 . Click the "Apply" button to apply the changes.
 
@@ -87,20 +87,20 @@ configure RTC SCM with a SCM stream or SCM snapshot.
 
 ==== Configuring for Build Definition
 . To benefit most from the integration between this plugin and RTC Build, select "Build Definition" from the Build Configuration dropdown
-and enter a build definition ID. See the link:https://jazz.net/help-dev/clm/index.jsp?re=1&topic=/com.ibm.team.build.doc/topics/c_hudson_overview.html&scope=null[Hudson/Jenkins build engine type] help topic to learn how to create a Jenkins build definition. Follow these steps to setup a Jenkins Build Definition and
+and enter a build definition ID. See the link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/c_hudson_overview.html[Hudson/Jenkins build engine type] help topic to learn how to create a Jenkins build definition. Follow these steps to setup a Jenkins Build Definition and
 Jenkins Job to avoid a catch-22 situation.  A Jenkins job requires a Hudson/Jenkins build definition and a Hudson/Jenkins build definition
 requires a Jenkins job.  RTC actually won't let you save the build definition without a job selected. However, Jenkins will let you save a job without a build definition.  So it is important to configure your build definition and job this way.
 .. In Jenkins, create the job first using RTC for source control, but
 with no build definition. Leave the _Build Definition_ text box blank. 
 .. Save the Jenkins Job.
 .. In RTC, create a Jenkins build engine that connects to the Jenkins
-server. See https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/t_hudson_build_eng.html[Creating a build engine]. In RTC, create a build definition that uses the build engine created in step b and select the job created in step a. See link:https://jazz.net/help-dev/clm/topic/com.ibm.team.build.doc/topics/t_hudson_build_def.html[Creating a build definition]
+server. See https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/t_hudson_build_eng.html[Creating a build engine]. In RTC, create a build definition that uses the build engine created in step b and select the job created in step a. See link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/t_hudson_build_def.html[Creating a build definition]
 .. Lastly, in Jenkins, open the Jenkins job and set the _Build Definition_ field with the id of the build definition created in step c.
 .. Notice the "Build Configuration" dropdown. This replaces the radio buttons for build definition and build workspace prior to version 1.2.0.0 of the Team Concert Plugin.
 .. Click the "Validate" button to verify the RTC build definition exists.
 
 ==== Configuring for Repository workspace
-. To load a RTC repository workspace into the Jenkins workspace, select "Build Workspace" from the Build Configuration dropdown. See link:https://jazz.net/help-dev/clm/index.jsp?re=1&topic=/com.ibm.team.build.doc/topics/tcreateworkspace.html&scope=null[Dedicated build workspaces] help topic to learn how to create a build workspace.
+. To load a RTC repository workspace into the Jenkins workspace, select "Build Workspace" from the Build Configuration dropdown. See link:https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/tcreateworkspace.html[Dedicated build workspaces] help topic to learn how to create a build workspace.
 . Click the "Validate" button to verify the RTC build workspace exists.
 . To add a "Related Artifact" link to a Jenkins build in all the included work items, select the option *Add Jenkins build link to accepted work items* option.
 [%hardbreaks]
@@ -748,7 +748,7 @@ JVM library path of the agents too.
 . When a jenkins build is configured with an RTC build definition, the
 component load rules specified in the RTC build definition, if any, will
 be applied when loading the jenkins build
-workspace. https://www.ibm.com/support/knowledgecenter/SSCP65_6.0.3/com.ibm.team.build.doc/topics/r_scm_build_loadrules.html[Component
+workspace. https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/r_scm_build_loadrules.html[Component
 load rules in builds] describes how to specify load rules in a build
 definition.
 . When a jenkins build is configured with an RTC repository workspace,
@@ -797,7 +797,7 @@ according to the specified load rules, all the other components are
 loaded as is. `Components to exclude`
 option, in the RTC build definition can be used to restrict which
 components are loaded during the build - for more details refer
-https://www.ibm.com/support/knowledgecenter/SSCP65_6.0.3/com.ibm.team.build.doc/topics/tcreatebuilddefinition.html[Creating
+https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=SSUC3U_7.2/ewm/com.ibm.team.build.doc/topics/tcreatebuilddefinition.html[Creating
 RTC build definitions].
 
 [[TeamConcertPlugin-AdvancedPipelineCapabilities]]
@@ -1130,7 +1130,7 @@ To download an artifact from the build result, use the "Download artifact" task.
 
 If you do not know the full name of the artifact when creating the script, you can retrieve details of all the artifacts starting with a specific prefix using the "List artifact" task. Then, you can use the content id or the file name to download the contents of the artifact to the Jenkins workspace or any folder in the agent where this task runs.
 
-NOTE: The content of the artifact can be stored in the EWM repository or in some external storage. This task will download the content of the artifact which is stored in the EWM repository. Such artifacts can be uploaded to the build result using the artifactPublisher ant task in the EWM build toolkit. This task is similar to the artifactRetriever ant task in the EWM build toolkit. Refer to https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactpublisher[Artifact Publisher] and https://www.ibm.com/docs/en/elm/7.0.2?topic=contributions-artifactretriever[Artifact Retriever].
+NOTE: The content of the artifact can be stored in the EWM repository or in some external storage. This task will download the content of the artifact which is stored in the EWM repository. Such artifacts can be uploaded to the build result using the artifactPublisher ant task in the EWM build toolkit. This task is similar to the artifactRetriever ant task in the EWM build toolkit. Refer to https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=contributions-artifactfilepublisher[Artifact Publisher] and https://www.ibm.com/docs/en/engineering-lifecycle-management-suite/workflow-management/7.2.0?topic=contributions-artifactfileretriever[Artifact Retriever].
  
 To generate the pipeline snippet for download artifact task from an EWM build result, perform the following steps
 

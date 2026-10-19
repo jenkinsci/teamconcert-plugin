@@ -19,7 +19,7 @@
   
   
 	<properties>
-        <tycho-version>2.7.5</tycho-version>
+        <tycho-version>4.0.10</tycho-version>
 		<rtc-client-p2repo-url>${env.RTC_Client_p2Repo}</rtc-client-p2repo-url>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<project.build.outputEncoding>UTF-8</project.build.outputEncoding>
@@ -32,10 +32,10 @@
         <buildtoolkit>${env.buildtoolkit}</buildtoolkit>
         <configured>false</configured>
         <rtcJarVersion>2.4.6</rtcJarVersion>
-        <java.version>17</java.version>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <maven.compiler.release>17</maven.compiler.release>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
         <excludeTests>**/UnknownIT.java</excludeTests>
         <includeTests>**/*IT.java</includeTests>
         <excludeTestsSureFire>**/UnknownTests.java</excludeTestsSureFire>
@@ -189,7 +189,7 @@
 				<artifactId>target-platform-configuration</artifactId>
 				<version>${tycho-version}</version>
 				<configuration>
-					<pomDependencies>consider</pomDependencies>
+					<pomDependencies>wrapAsBundle</pomDependencies>
 				</configuration>
 			</plugin>
 			<plugin>
