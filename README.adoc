@@ -1376,6 +1376,15 @@ https://jazz.net/wiki/bin/view/Main/DynamicLoadRulesJenkinsPlugin[Using Dynamic 
 
 [[TeamConcertPlugin-Releases]]
 == Releases
+=== 2.4.6 October 21, 2026
+
+The following improvements and defects are fixed:
+
+* Polling mechanism failed to schedule a new build when a personal build was in progress despite detecting incoming changes. It will now correctly schedule builds in this scenario.
+* Upgrade to Jenkins version 2.555.1 and Java 21.
+
+Note: Team Concert Plugin continues to support LTS versions starting from 2.555.1.
+
 === 2.4.5 February 02, 2026
 
 The following improvements and defects are fixed:
